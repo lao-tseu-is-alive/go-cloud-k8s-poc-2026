@@ -1,0 +1,292 @@
+// Goéland POC - Core transversal domain model and services.
+//
+// Proto-first API using ConnectRPC (gRPC + JSON/HTTP + REST via Vanguard transcoding).
+// Inspired by patterns in go-cloud-k8s-thing and go-mcp-markdown-notes
+// (modular, clean, observable, protovalidate-first).
+//
+// This file defines the elements that are transversal to every business subject:
+//   - SubjectKind / Permission enums.
+//   - SubjectRef       -> canonical identity of any subject (Case, Document, Thing, Actor...).
+//   - RecordMetadata   -> governance (ownership, confidentiality, soft-delete, locking).
+//   - AuditEvent       -> append-only probative history.
+//   - RelationshipType -> catalogue of allowed typed edges between subject kinds.
+//   - SubjectRelationship -> the actual typed, validated, soft-deletable graph edge.
+//   - CoreService      -> base operations reused by every domain (Document, Case, Thing, Actor).
+//
+// Aligns with the domain model spec sections 4, 5, 7 and governance requirements
+// (traceability, non-destruction, locking, audit).
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// ENUMS
+// =============================================
+
+// SubjectKind enumerates the canonical business subjects. Every SubjectRef has exactly one kind.
+enum SubjectKind {
+  SUBJECT_KIND_UNSPECIFIED = 0;
+  SUBJECT_KIND_CASE = 1; // Affaire / dossier métier
+  SUBJECT_KIND_DOCUMENT = 2; // Pièce documentaire (first implemented component)
+  SUBJECT_KIND_THING = 3; // Objet métier/territorial (parcelle, bâtiment...)
+  SUBJECT_KIND_ACTOR = 4; // Personne ou organisation externe
+  SUBJECT_KIND_USER = 5; // Utilisateur interne (future)
+  SUBJECT_KIND_ORG_UNIT = 6; // Unité organisationnelle (future)
+}
+
+// Permission is the simple, ordered permission model for the POC.
+// Later replaceable by Casbin/OpenFGA or go-cloud-k8s-user-group integration.
+enum Permission {
+  PERMISSION_UNSPECIFIED = 0;
+  PERMISSION_NONE = 1;
+  PERMISSION_READ = 2;
+  PERMISSION_CONTRIBUTE = 3; // add timeline, attach docs
+  PERMISSION_MANAGE = 4; // edit metadata, relations, participants
+  PERMISSION_FULL_CONTROL = 5; // close, logical delete, change owner
+}
+
+// =============================================
+// CORE MESSAGES (transversal)
+// =============================================
+
+// SubjectRef is the canonical identity of any business subject.
+// Every Case, Document, Thing and Actor owns exactly one SubjectRef entry.
+message SubjectRef {
+  string id = 1 [(buf.validate.field).string.uuid = true]; // UUID
+  SubjectKind kind = 2 [(buf.validate.field).enum.defined_only = true];
+  string display_label = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  string canonical_url = 4 [(buf.validate.field).string.max_len = 2048]; // stable external permalink / URI
+  google.protobuf.Timestamp created_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RecordMetadata is the 1:1 governance record attached to every SubjectRef.
+// It implements non-destructive lifecycle, ownership, confidentiality and locking.
+message RecordMetadata {
+  // subject_id is server-assigned. When RecordMetadata is used as an input for
+  // initial governance it is left empty, so the uuid rule is skipped when unset.
+  string subject_id = 1 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  google.protobuf.Timestamp created_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string created_by = 3; // user id or "system"
+  google.protobuf.Timestamp updated_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string updated_by = 5;
+  google.protobuf.Timestamp deleted_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY]; // soft delete
+  string deleted_by = 7;
+  string owner_user_id = 8;
+  string owner_org_id = 9;
+  int32 confidentiality_level = 10 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 5
+  ]; // 0=public ... 5=secret
+  int32 version = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  bool is_locked = 12; // set on formal validation/closure -> immutable
+  google.protobuf.Timestamp locked_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string locked_by = 14;
+  string retention_until = 15; // ISO date or policy reference (records management)
+  string sort_final = 16; // CONSERVER | ELIMINER | ARCHIVER | VERSER_SAE
+  map<string, string> metadata = 17; // extra governance attributes
+}
+
+// AuditEvent is an append-only probative audit record, written on every mutation.
+message AuditEvent {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string subject_id = 2 [(buf.validate.field).string.uuid = true];
+  string event_type = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ]; // e.g. DOCUMENT_CREATED, RELATIONSHIP_LINKED, VALIDATION_PERFORMED
+  string actor_user_id = 4;
+  google.protobuf.Timestamp occurred_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  google.protobuf.Struct before_state = 6; // snapshot of critical fields before
+  google.protobuf.Struct after_state = 7; // snapshot after
+  string reason = 8 [(buf.validate.field).string.max_len = 2000];
+  string correlation_id = 9; // groups multi-subject actions
+  string request_id = 10;
+  google.protobuf.Struct metadata = 11;
+}
+
+// RelationshipType defines an allowed typed relation between two subject kinds.
+message RelationshipType {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ]; // e.g. CASE_HAS_DOCUMENT, DOCUMENT_REPRESENTS_THING, DOCUMENT_PREVIOUS_VERSION
+  string label = 3 [(buf.validate.field).string.max_len = 200];
+  SubjectKind source_kind = 4 [(buf.validate.field).enum.defined_only = true];
+  SubjectKind target_kind = 5 [(buf.validate.field).enum.defined_only = true];
+  bool is_directed = 6;
+  string inverse_label = 7 [(buf.validate.field).string.max_len = 200];
+  string description = 8 [(buf.validate.field).string.max_len = 2000];
+  bool is_active = 9;
+}
+
+// SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
+message SubjectRelationship {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  SubjectRef source = 2;
+  SubjectRef target = 3;
+  RelationshipType relationship_type = 4;
+  string role_detail = 5 [(buf.validate.field).string.max_len = 500]; // e.g. "mandataire principal", "plan de masse v2"
+  google.protobuf.Timestamp valid_from = 6;
+  google.protobuf.Timestamp valid_to = 7;
+  google.protobuf.Timestamp created_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string created_by = 9;
+  google.protobuf.Timestamp deleted_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+message CreateSubjectRefRequest {
+  SubjectKind kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string display_label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  string canonical_url = 3 [(buf.validate.field).string.max_len = 2048];
+  RecordMetadata initial_metadata = 4; // owner, confidentiality etc.
+  string actor_user_id = 5; // who creates (for audit + ownership)
+}
+
+message CreateSubjectRefResponse {
+  SubjectRef subject_ref = 1;
+  RecordMetadata metadata = 2;
+  AuditEvent created_event = 3;
+}
+
+message GetSubjectRefRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  bool include_metadata = 2;
+  bool include_audit_summary = 3; // recent audit events
+}
+
+message GetSubjectRefResponse {
+  SubjectRef subject_ref = 1;
+  RecordMetadata metadata = 2;
+  repeated AuditEvent recent_audit = 3;
+}
+
+message LinkSubjectsRequest {
+  string source_subject_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_subject_id = 2 [(buf.validate.field).string.uuid = true];
+  string relationship_type_code = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  string role_detail = 4 [(buf.validate.field).string.max_len = 500];
+  string actor_user_id = 5;
+  google.protobuf.Timestamp valid_from = 6;
+}
+
+message LinkSubjectsResponse {
+  SubjectRelationship relationship = 1;
+  AuditEvent audit_event = 2;
+}
+
+message UnlinkSubjectsRequest {
+  string relationship_id = 1 [(buf.validate.field).string.uuid = true];
+  string actor_user_id = 2;
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+message UnlinkSubjectsResponse {
+  string relationship_id = 1;
+  AuditEvent audit_event = 2;
+}
+
+message ListRelationshipsRequest {
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  bool outgoing = 2; // true = edges from this subject, false = edges into it
+  string relationship_type_code = 3 [(buf.validate.field).string.max_len = 100]; // optional filter
+  int32 page_size = 4 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  string page_token = 5 [(buf.validate.field).string.max_len = 1024];
+}
+
+message ListRelationshipsResponse {
+  repeated SubjectRelationship relationships = 1;
+  string next_page_token = 2;
+  int32 total_size = 3;
+}
+
+message ListRelationshipTypesRequest {
+  bool only_active = 1;
+  SubjectKind source_kind = 2; // optional filter (UNSPECIFIED = any)
+  SubjectKind target_kind = 3; // optional filter (UNSPECIFIED = any)
+}
+
+message ListRelationshipTypesResponse {
+  repeated RelationshipType relationship_types = 1;
+}
+
+message ListAuditEventsRequest {
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  string event_type = 2 [(buf.validate.field).string.max_len = 100];
+  google.protobuf.Timestamp from = 3;
+  google.protobuf.Timestamp to = 4;
+  int32 page_size = 5 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  string page_token = 6 [(buf.validate.field).string.max_len = 1024];
+}
+
+message ListAuditEventsResponse {
+  repeated AuditEvent events = 1;
+  string next_page_token = 2;
+  int32 total_size = 3;
+}
+
+// =============================================
+// CORE SERVICE
+// =============================================
+
+// CoreService exposes the transversal primitives reused by every domain component.
+service CoreService {
+  // Create a canonical subject identity + its record_metadata in one transaction.
+  // Every other create (Document, Case, Thing, Actor) calls this first.
+  rpc CreateSubjectRef(CreateSubjectRefRequest) returns (CreateSubjectRefResponse);
+
+  // Retrieve a subject with optional governance + audit info.
+  rpc GetSubjectRef(GetSubjectRefRequest) returns (GetSubjectRefResponse);
+
+  // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
+  rpc LinkSubjects(LinkSubjectsRequest) returns (LinkSubjectsResponse);
+
+  // Soft-delete an existing relationship (non-destructive) and write an audit event.
+  rpc UnlinkSubjects(UnlinkSubjectsRequest) returns (UnlinkSubjectsResponse);
+
+  // List outgoing or incoming relationships for a subject (graph traversal primitive).
+  rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse);
+
+  // List the catalogue of allowed relationship types (optionally filtered).
+  rpc ListRelationshipTypes(ListRelationshipTypesRequest) returns (ListRelationshipTypesResponse);
+
+  // Full probative history for compliance / reconstruction.
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+}

@@ -1,0 +1,287 @@
+// Goéland POC - Document component (modern GED slice).
+//
+// Proto-first definition for DocumentService + supporting messages.
+// This component implements a first-class, probative, relational document entity
+// that can live standalone or be embedded in affaires (via CoreService relationships).
+//
+// Modern GED features added beyond the basic model:
+//   - Strong cryptographic integrity (sha256 + verification timestamp).
+//   - External reference without duplication (external_system + external_id + storage_ref as URI)
+//     for interop with Alfresco / SharePoint / legacy Goéland.
+//   - Explicit + graph versioning (previous_version_id + DOCUMENT_PREVIOUS_VERSION relationships).
+//   - Records management preparation (is_record, is_final, locked via record_metadata).
+//   - Full-text search ready (dedicated SearchDocuments RPC over a generated tsvector).
+//   - Classification (document_type + metadata).
+//   - Non-destructive, auditable, confidential by default via Core + record_metadata.
+//
+// Minimal scenario: create DOCUMENT, link to CASE (CASE_HAS_DOCUMENT),
+// link to THING (DOCUMENT_REPRESENTS_THING), then finalize/lock.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// DOCUMENT SPECIFIC ENUMS / MESSAGES
+// =============================================
+
+// DocumentStatus is the lifecycle state of a document.
+enum DocumentStatus {
+  DOCUMENT_STATUS_UNSPECIFIED = 0;
+  DOCUMENT_STATUS_DRAFT = 1;
+  DOCUMENT_STATUS_FINAL = 2; // is_final = true
+  DOCUMENT_STATUS_SUPERSEDED = 3;
+  DOCUMENT_STATUS_ARCHIVED = 4;
+}
+
+// DocumentType is a controlled classification (behavior + category).
+message DocumentType {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ]; // e.g. PLAN, INCOMING_LETTER, DECISION
+  string label = 3 [(buf.validate.field).string.max_len = 200];
+  string description = 4 [(buf.validate.field).string.max_len = 2000];
+  string category = 5 [(buf.validate.field).string.max_len = 100]; // ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...
+  bool is_active = 6;
+}
+
+// Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
+// Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
+message Document {
+  SubjectRef subject_ref = 1; // embedded canonical identity (kind = DOCUMENT)
+  DocumentType document_type = 2;
+  string title = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  string description = 4 [(buf.validate.field).string.max_len = 4000];
+  string official_date = 5; // ISO date of the document itself (legal probative date)
+  string storage_ref = 6 [(buf.validate.field).string.max_len = 2048]; // URI: minio://..., alfresco://..., internal://...
+  string external_system = 7 [(buf.validate.field).string.max_len = 100]; // "alfresco", "minio", "sharepoint", "goeland-legacy"
+  string external_id = 8 [(buf.validate.field).string.max_len = 200]; // authoritative id in external system (prevents duplication)
+  string external_url = 9 [(buf.validate.field).string.max_len = 2048]; // clickable link if available
+  string mime_type = 10 [(buf.validate.field).string.max_len = 255];
+  int64 file_size_bytes = 11 [(buf.validate.field).int64.gte = 0];
+  string sha256 = 12 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"]; // hex SHA-256 (integrity + dedup key)
+  google.protobuf.Timestamp sha256_verified_at = 13;
+  int32 version = 14 [(buf.validate.field).int32.gte = 0];
+  string previous_version_id = 15; // explicit chain (also mirrored in a relationship)
+  bool is_final = 16; // business final (signed, approved)
+  bool is_record = 17; // declared record for retention / records management
+  string language = 18 [(buf.validate.field).string.max_len = 10]; // ISO 639, e.g. "fr", "de"
+  int32 page_count = 19 [(buf.validate.field).int32.gte = 0];
+  DocumentStatus status = 20;
+  google.protobuf.Struct metadata = 21; // classification, keywords, extracted entities...
+  google.protobuf.Timestamp created_at = 22 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string created_by = 23;
+  google.protobuf.Timestamp updated_at = 24 [(google.api.field_behavior) = OUTPUT_ONLY];
+  RecordMetadata record_metadata = 25; // governance (confidentiality, locked, owner...)
+}
+
+// CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+message CreateDocumentRequest {
+  string document_type_code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  string title = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  string official_date = 4;
+  string storage_ref = 5 [(buf.validate.field).string.max_len = 2048];
+  string external_system = 6 [(buf.validate.field).string.max_len = 100];
+  string external_id = 7 [(buf.validate.field).string.max_len = 200];
+  string external_url = 8 [(buf.validate.field).string.max_len = 2048];
+  string mime_type = 9 [(buf.validate.field).string.max_len = 255];
+  int64 file_size_bytes = 10 [(buf.validate.field).int64.gte = 0];
+  string sha256 = 11 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
+  int32 version = 12 [(buf.validate.field).int32.gte = 0];
+  string previous_version_id = 13; // link to older version if applicable
+  bool is_final = 14;
+  bool is_record = 15;
+  string language = 16 [(buf.validate.field).string.max_len = 10];
+  int32 page_count = 17 [(buf.validate.field).int32.gte = 0];
+  google.protobuf.Struct metadata = 18;
+  string actor_user_id = 19; // for ownership + audit
+  RecordMetadata initial_governance = 20; // confidentiality, owner_org etc.
+  // Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.
+  string link_to_case_id = 21;
+}
+
+message CreateDocumentResponse {
+  Document document = 1;
+  AuditEvent created_event = 2;
+  optional SubjectRelationship initial_relationship = 3; // set when link_to_case_id was provided
+}
+
+message GetDocumentRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true]; // subject_ref id
+  bool include_relationships = 2; // to cases, things, previous versions
+  bool include_audit = 3;
+}
+
+message GetDocumentResponse {
+  Document document = 1;
+  repeated SubjectRelationship relationships = 2;
+  repeated AuditEvent recent_audit = 3;
+}
+
+// UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
+message UpdateDocumentMetadataRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string title = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  string official_date = 4;
+  string language = 5 [(buf.validate.field).string.max_len = 10];
+  google.protobuf.Struct metadata = 6;
+  string actor_user_id = 7;
+  string reason = 8 [(buf.validate.field).string.max_len = 2000]; // for audit
+}
+
+message UpdateDocumentMetadataResponse {
+  Document document = 1;
+  AuditEvent update_event = 2;
+}
+
+// FinalizeDocumentRequest marks a document final and optionally locks its governance record (immutable).
+message FinalizeDocumentRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string actor_user_id = 2;
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+  bool also_lock_governance = 4; // also set record_metadata.is_locked
+}
+
+message FinalizeDocumentResponse {
+  Document document = 1;
+  AuditEvent finalize_event = 2;
+}
+
+// VerifyDocumentIntegrityRequest verifies / records the integrity hash.
+message VerifyDocumentIntegrityRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string expected_sha256 = 2 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"]; // optional; must match stored when provided
+}
+
+message VerifyDocumentIntegrityResponse {
+  bool verified = 1;
+  string actual_sha256 = 2;
+  google.protobuf.Timestamp verified_at = 3;
+  string storage_ref_checked = 4;
+}
+
+// SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
+message SearchDocumentsRequest {
+  string query = 1 [(buf.validate.field).string.max_len = 500]; // plain text
+  string document_type_code = 2 [(buf.validate.field).string.max_len = 100];
+  string case_id = 3; // filter via relationship
+  string thing_id = 4;
+  int32 confidentiality_max = 5 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 5
+  ];
+  bool only_records = 6;
+  bool only_final = 7;
+  bool include_deleted = 8;
+  int32 page_size = 9 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  string page_token = 10 [(buf.validate.field).string.max_len = 1024];
+}
+
+message SearchDocumentsResponse {
+  repeated Document documents = 1;
+  string next_page_token = 2;
+  int32 total_size = 3;
+}
+
+// LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
+// with document-specific validation + audit context).
+message LinkDocumentRequest {
+  string document_id = 1 [(buf.validate.field).string.uuid = true];
+  string target_subject_id = 2 [(buf.validate.field).string.uuid = true];
+  string relationship_type_code = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ]; // e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
+  string role_detail = 4 [(buf.validate.field).string.max_len = 500];
+  string actor_user_id = 5;
+}
+
+message LinkDocumentResponse {
+  SubjectRelationship relationship = 1;
+  AuditEvent audit_event = 2;
+}
+
+message DeleteDocumentRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string actor_user_id = 2;
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+message DeleteDocumentResponse {
+  string deleted_document_id = 1;
+  AuditEvent delete_event = 2;
+}
+
+message ListDocumentTypesRequest {
+  bool only_active = 1;
+}
+
+message ListDocumentTypesResponse {
+  repeated DocumentType document_types = 1;
+}
+
+// =============================================
+// DOCUMENT SERVICE
+// =============================================
+
+// DocumentService is the modern-GED document component of the Goéland POC.
+service DocumentService {
+  // Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+  rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse);
+
+  // Retrieve a document with context (relationships to cases/things, recent history).
+  rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse);
+
+  // Update mutable metadata only (respects locking).
+  rpc UpdateDocumentMetadata(UpdateDocumentMetadataRequest) returns (UpdateDocumentMetadataResponse);
+
+  // Business finalization + optional governance lock. Critical for probative documents.
+  rpc FinalizeDocument(FinalizeDocumentRequest) returns (FinalizeDocumentResponse);
+
+  // Integrity check / re-compute. Supports migration and long-term trust.
+  rpc VerifyDocumentIntegrity(VerifyDocumentIntegrityRequest) returns (VerifyDocumentIntegrityResponse);
+
+  // Full-text + filtered search (leverages the generated tsvector + GIN index).
+  rpc SearchDocuments(SearchDocumentsRequest) returns (SearchDocumentsResponse);
+
+  // Convenience wrapper around Core.LinkSubjects for document-centric use.
+  rpc LinkDocument(LinkDocumentRequest) returns (LinkDocumentResponse);
+
+  // Soft-delete a document (non-destructive) and write an audit event.
+  rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse);
+
+  // List the controlled document types (classification catalogue).
+  rpc ListDocumentTypes(ListDocumentTypesRequest) returns (ListDocumentTypesResponse);
+}

@@ -1,0 +1,33 @@
+version: v2
+plugins:
+  # 1. Generate Go code (protobuf messages + enums)
+  - local: protoc-gen-go
+    out: gen
+    opt: paths=source_relative
+
+  # 2. Generate ConnectRPC code (Go service interfaces + clients, used with Vanguard for REST transcoding)
+  - local: protoc-gen-connect-go
+    out: gen
+    opt:
+      - paths=source_relative
+
+  # 3. Generate OpenAPI v2 (Swagger) - the verification/documentation step
+  - remote: buf.build/grpc-ecosystem/openapiv2
+    out: api/openapi
+    opt:
+      - json_names_for_fields=true # camelCase JSON field names
+      - output_format=yaml
+      - allow_merge=true
+      - merge_file_name=goeland
+      - simple_operation_ids=true
+
+managed:
+  enabled: true
+  disable:
+    - file_option: go_package_prefix
+      module: buf.build/googleapis/googleapis
+    - file_option: go_package_prefix
+      module: buf.build/bufbuild/protovalidate
+  override:
+    - file_option: go_package_prefix
+      value: github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen
