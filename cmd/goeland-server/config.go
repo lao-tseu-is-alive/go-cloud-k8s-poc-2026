@@ -18,6 +18,8 @@ const (
 	defaultShutdownPeriod = 10 * time.Second
 	defaultMaxConnections = 10
 	defaultRequestTimeout = 10 * time.Second
+	defaultDocumentPath   = "./go_documents"
+	defaultMaxUploadBytes = 100 << 20 // 100 MiB
 )
 
 // serverConfig holds all runtime configuration, loaded from environment variables.
@@ -34,6 +36,11 @@ type serverConfig struct {
 	MaxConnections int32
 	ShutdownPeriod time.Duration
 	RequestTimeout time.Duration
+	// DocumentPath is the local directory where uploaded document blobs are
+	// stored (referenced by documents via an internal:// storage_ref).
+	DocumentPath string
+	// MaxUploadBytes caps the size of a single multipart upload.
+	MaxUploadBytes int64
 }
 
 // loadConfig reads and validates all environment variables.
@@ -78,6 +85,10 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+	maxUploadBytes, err := envInt64("GOELAND_MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
+	if err != nil || maxUploadBytes < 1 {
+		return serverConfig{}, fmt.Errorf("GOELAND_MAX_UPLOAD_BYTES must be a positive integer")
+	}
 
 	config := serverConfig{
 		ListenAddress:  listenAddress,
@@ -92,6 +103,8 @@ func loadConfig() (serverConfig, error) {
 		MaxConnections: int32(maxConnections),
 		ShutdownPeriod: time.Duration(shutdownSeconds) * time.Second,
 		RequestTimeout: time.Duration(requestTimeoutSeconds) * time.Second,
+		DocumentPath:   envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
+		MaxUploadBytes: maxUploadBytes,
 	}
 	if config.AuthMode == "dev" && config.DevToken == "" {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")

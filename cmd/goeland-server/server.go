@@ -2,9 +2,11 @@ package main
 
 import (
 	"context"
+	"embed"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"io/fs"
 	"log/slog"
 	"net"
 	"net/http"
@@ -18,11 +20,15 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
 )
 
 const maxRequestBodyBytes = 8 << 20 // 8 MiB
+
+//go:embed goeland-front/dist/*
+var frontendFiles embed.FS
 
 // authScopes are granted to every authenticated caller in this POC.
 var authScopes = []string{"goeland:read", "goeland:write"}
@@ -65,6 +71,14 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, err
 	}
 
+	// Local blob store for uploaded document files (referenced by documents via
+	// an internal:// storage_ref). The directory is created if missing.
+	blobStore, err := filestore.New(config.DocumentPath)
+	if err != nil {
+		return nil, fmt.Errorf("document blob store: %w", err)
+	}
+	log.Info("document blob store ready", "path", blobStore.Root(), "max_upload_bytes", config.MaxUploadBytes)
+
 	coreMod, err := coremodule.New(ctx, coremodule.Config{RequestTimeout: config.RequestTimeout}, coremodule.Deps{
 		Pool:     pool,
 		Verifier: verifier,
@@ -90,17 +104,42 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
 	}
 
+	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
+
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler(pool))
 	mux.HandleFunc("GET /readiness", readinessHandler(pool))
 	mux.HandleFunc("GET /goAppInfo", appInfoHandler)
+	mux.HandleFunc("GET /config", frontendConfigHandler(config))
+
+	// Binary upload/download live OUTSIDE the proto contract (metadata-first):
+	// the client uploads bytes here, then calls CreateDocument with the returned
+	// storage_ref. These literal paths are more specific than the "/api/"
+	// transcoder subtree, so http.ServeMux routes them here first. They carry
+	// their own bearer-token check since they bypass the Connect interceptor,
+	// and their own (larger) body cap for file payloads.
+	mux.Handle("POST /api/documents/upload",
+		httpAuthMiddleware(verifier, log, http.MaxBytesHandler(uploadHandler(blobStore, log), config.MaxUploadBytes)))
+	mux.Handle("GET /api/documents/download",
+		httpAuthMiddleware(verifier, log, downloadHandler(blobStore, log)))
+
 	// The Vanguard transcoder serves BOTH the Connect/gRPC RPC paths
 	// (/goeland.v1.<Service>/<Method>) and the REST bindings declared via
-	// google.api.http (/api/...). Mount it as the catch-all; the specific health
-	// endpoints above win by http.ServeMux pattern specificity.
-	mux.Handle("/", http.MaxBytesHandler(transcoder, maxRequestBodyBytes))
+	// google.api.http (/api/...). Mount it on those explicit prefixes so the
+	// embedded SPA can own "/" as the catch-all fallback below.
+	transcoderHandler := http.MaxBytesHandler(transcoder, maxRequestBodyBytes)
+	mux.Handle("/api/", transcoderHandler)
+	for _, name := range serviceNames {
+		mux.Handle("/"+name+"/", transcoderHandler)
+	}
 
-	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
+	// Serve the embedded Vuetify frontend (SPA fallback to index.html).
+	frontendFS, err := fs.Sub(frontendFiles, "goeland-front/dist")
+	if err != nil {
+		return nil, fmt.Errorf("sub-filesystem for frontend: %w", err)
+	}
+	mux.Handle("/", spaHandler(http.FileServer(http.FS(frontendFS)), frontendFS))
+
 	log.Info("registered services", "services", serviceNames)
 
 	cleanup = false
@@ -109,6 +148,26 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, mux))),
 		log:     log,
 	}, nil
+}
+
+// spaHandler serves static assets from the embedded frontend FS and falls back to
+// index.html for any path that does not match an embedded file, enabling client-side
+// routing in the Vuetify SPA.
+func spaHandler(fileServer http.Handler, frontendFS fs.FS) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if r.URL.Path == "/" {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		// Serve the file when it exists in the embedded FS; otherwise fall back
+		// to index.html so the SPA router can handle the route client-side.
+		if _, err := fs.Stat(frontendFS, r.URL.Path[1:]); err == nil {
+			fileServer.ServeHTTP(w, r)
+			return
+		}
+		r.URL.Path = "/"
+		fileServer.ServeHTTP(w, r)
+	}
 }
 
 // buildTokenVerifier selects the verifier for the configured auth mode.

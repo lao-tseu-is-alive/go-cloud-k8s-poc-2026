@@ -28,6 +28,9 @@
 # Dependencies
 # vendor/
 
+# Local document blob storage (GOELAND_DOCUMENT_PATH)
+go_documents/
+
 # Generated / build
 /bin/
 proto_third_party/*
@@ -40,3 +43,4 @@ reports/
 /notes-client
 /notes-mcp
 /goeland-server
+cmd/goeland-server/goeland-front/dist
