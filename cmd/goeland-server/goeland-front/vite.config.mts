@@ -46,5 +46,15 @@ export default defineConfig({
   },
   server: {
     port: 3000,
+    // Proxy the Goéland server surface to the Go backend during development so
+    // the SPA can call the same relative paths it uses when embedded/served by
+    // the Go server in production.
+    proxy: {
+      '/api': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+      '/config': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+      '/health': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+      '/readiness': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+      '/goAppInfo': { target: 'http://127.0.0.1:8080', changeOrigin: true },
+    },
   },
 })

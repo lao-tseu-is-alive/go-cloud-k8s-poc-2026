@@ -1,0 +1,76 @@
+{
+  "resource": "Document",
+  "protoMessage": "goeland.v1.Document",
+  "service": "goeland.v1.DocumentService",
+  "labelKey": "resources.document.label",
+  "pluralLabelKey": "resources.document.plural",
+  "primaryField": "title",
+  "identityField": "subjectRef.id",
+  "statusField": "status",
+  "lockField": "recordMetadata.isLocked",
+  "deletedField": "recordMetadata.deletedAt",
+  "finalField": "isFinal",
+  "pages": [
+    {
+      "name": "DocumentListPage",
+      "route": "/documents",
+      "kind": "list",
+      "serviceMethod": "SearchDocuments",
+      "titleKey": "pages.documents.list.title",
+      "filters": [
+        { "field": "query", "component": "v-text-field", "labelKey": "fields.search.query" },
+        { "field": "documentTypeCode", "component": "DocumentTypeSelect", "labelKey": "fields.document.document_type" },
+        { "field": "onlyRecords", "component": "v-switch", "labelKey": "fields.document.only_records" },
+        { "field": "onlyFinal", "component": "v-switch", "labelKey": "fields.document.only_final" },
+        { "field": "includeDeleted", "component": "v-switch", "labelKey": "fields.document.include_deleted" }
+      ],
+      "table": {
+        "serverSide": true,
+        "itemsField": "documents",
+        "nextPageTokenField": "nextPageToken",
+        "totalSizeField": "totalSize",
+        "columns": [
+          { "field": "title", "labelKey": "fields.document.title", "primary": true },
+          { "field": "documentType.label", "labelKey": "fields.document.document_type" },
+          { "field": "status", "labelKey": "fields.document.status", "component": "DocumentStatusChip" },
+          { "field": "officialDate", "labelKey": "fields.document.official_date", "format": "date" },
+          { "field": "isFinal", "labelKey": "fields.document.is_final", "component": "boolean-chip" },
+          { "field": "createdAt", "labelKey": "fields.common.created_at", "format": "datetime" }
+        ],
+        "rowClickRoute": "/documents/:subjectRef.id"
+      }
+    },
+    {
+      "name": "DocumentCreatePage",
+      "route": "/documents/new",
+      "kind": "create",
+      "serviceMethod": "CreateDocument",
+      "titleKey": "pages.documents.create.title",
+      "uploadFirst": true,
+      "fields": ["file", "documentTypeCode", "title", "description", "officialDate", "language", "isRecord"]
+    },
+    {
+      "name": "DocumentDetailPage",
+      "route": "/documents/:id",
+      "kind": "detail",
+      "serviceMethod": "GetDocument",
+      "titleField": "document.title",
+      "requestOptions": { "includeRelationships": true, "includeAudit": true },
+      "sections": [
+        { "id": "summary", "labelKey": "sections.document.summary", "component": "DocumentMetadataForm" },
+        { "id": "storage", "labelKey": "sections.document.storage" },
+        { "id": "integrity", "labelKey": "sections.document.integrity", "component": "DocumentIntegrityPanel" },
+        { "id": "relationships", "labelKey": "sections.document.relationships", "component": "DocumentRelationshipsPanel" },
+        { "id": "governance", "labelKey": "sections.document.governance", "component": "RecordMetadataPanel" },
+        { "id": "audit", "labelKey": "sections.document.audit", "component": "DocumentAuditPanel" }
+      ],
+      "actions": [
+        { "id": "updateMetadata", "labelKey": "actions.document.updateMetadata", "serviceMethod": "UpdateDocumentMetadata", "kind": "primary", "visibleWhen": "!isLocked && !deletedAt" },
+        { "id": "finalize", "labelKey": "actions.document.finalize", "serviceMethod": "FinalizeDocument", "kind": "critical", "confirmationDialog": "DocumentFinalizeDialog", "visibleWhen": "!isFinal && !isLocked && !deletedAt" },
+        { "id": "verifyIntegrity", "labelKey": "actions.document.verifyIntegrity", "serviceMethod": "VerifyDocumentIntegrity", "kind": "secondary", "visibleWhen": "!!storageRef && !deletedAt" },
+        { "id": "link", "labelKey": "actions.document.link", "serviceMethod": "LinkDocument", "kind": "secondary", "confirmationDialog": "LinkSubjectDialog", "visibleWhen": "!deletedAt" },
+        { "id": "delete", "labelKey": "actions.document.delete", "serviceMethod": "DeleteDocument", "kind": "danger", "requiresReason": true, "visibleWhen": "!deletedAt && !isLocked" }
+      ]
+    }
+  ]
+}

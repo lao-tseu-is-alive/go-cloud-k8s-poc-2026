@@ -1,0 +1,47 @@
+{
+  "resource": "Core",
+  "components": [
+    {
+      "name": "SubjectIdentityCard",
+      "protoMessage": "goeland.v1.SubjectRef",
+      "fields": ["kind", "display_label", "canonical_url", "created_at", "id"]
+    },
+    {
+      "name": "RecordMetadataPanel",
+      "protoMessage": "goeland.v1.RecordMetadata",
+      "readonly": true,
+      "sections": [
+        { "id": "lifecycle", "fields": ["created_at", "created_by", "updated_at", "updated_by", "deleted_at", "deleted_by"] },
+        { "id": "ownership", "fields": ["owner_user_id", "owner_org_id", "confidentiality_level"] },
+        { "id": "locking", "fields": ["version", "is_locked", "locked_at", "locked_by"] },
+        { "id": "retention", "fields": ["retention_until", "sort_final"] }
+      ]
+    },
+    {
+      "name": "AuditTimeline",
+      "protoMessage": "goeland.v1.AuditEvent",
+      "display": "timeline-or-table",
+      "readonly": true,
+      "fields": ["occurred_at", "event_type", "actor_user_id", "reason", "correlation_id", "request_id", "before_state", "after_state"]
+    },
+    {
+      "name": "RelationshipTable",
+      "protoMessage": "goeland.v1.SubjectRelationship",
+      "fields": ["source.display_label", "relationship_type.label", "target.display_label", "role_detail", "valid_from", "created_at", "deleted_at"]
+    },
+    {
+      "name": "RelationshipTypeSelect",
+      "protoMessage": "goeland.v1.RelationshipType",
+      "valueField": "code",
+      "labelField": "label",
+      "filterBy": ["source_kind", "target_kind"],
+      "serviceMethod": "ListRelationshipTypes"
+    },
+    {
+      "name": "LinkSubjectDialog",
+      "serviceMethod": "LinkSubjects",
+      "sendsCode": "relationship_type_code",
+      "fields": ["target_subject_id", "relationship_type_code", "role_detail"]
+    }
+  ]
+}

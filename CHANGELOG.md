@@ -6,6 +6,45 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+## [0.2.0] - 2026-07-07
+
+First embedded web UI for the POC plus document file upload. The document
+component is now exercisable end-to-end from the browser by an authenticated
+user (dev-token or JWT via `go-cloud-k8s-auth`). Verified against PostgreSQL
+(Go build/vet/tests green; frontend type-check, lint, and build green).
+
+### Added
+
+- **Embedded web UI** (`cmd/goeland-server/goeland-front`): a Vue 3 + Vuetify 4
+  SPA (Vite/bun, vue-i18n, Pinia, vue-router) embedded via `//go:embed` and served
+  at `/` with SPA fallback to `index.html`. First vertical slice of the **Document**
+  module — search/list, create (with file upload), detail, edit metadata, finalize,
+  verify integrity, link/unlink subjects, soft-delete — plus read-only **governance**
+  and **audit** panels and the transversal **Core** components (subject identity,
+  record metadata, audit timeline, relationship table). Bilingual (fr-CH default, en)
+  with strict codes-to-API / labels-via-i18n discipline and state rules
+  (locked/final/deleted disable mutations; audit is read-only; critical actions are
+  dialog-confirmed). Typed REST-fetch client with humanized/translated errors.
+- **Document file upload** (metadata-first): out-of-proto `POST /api/documents/upload`
+  (multipart) streams bytes to a local blob store, computes sha256/size/mime
+  server-side, and returns an `internal://…` `storage_ref` that the client passes to
+  `CreateDocument` (so validation/governance/audit still flow through the proto path).
+  `GET /api/documents/download?ref=…` streams a blob back. Both endpoints carry their
+  own bearer check (they bypass the Connect interceptor) and a larger body cap. New
+  `pkg/document/filestore` package with unit tests and a path-traversal guard.
+- **`GET /config`** endpoint exposing `{authMode, authBaseUrl}` so the SPA drives
+  either dev-token or JWT (silent-mint from the `go-cloud-k8s-auth` SSO session) auth.
+- **Makefile `front-build`** target (`bun install && bun run build`), wired as a
+  prerequisite of `run` and `build` so the embedded `dist/` is current before
+  `go build`/`go test` (required by `go:embed`).
+- Config: `GOELAND_DOCUMENT_PATH` (default `./go_documents`, gitignored) and
+  `GOELAND_MAX_UPLOAD_BYTES` (default 100 MiB).
+
+### Changed
+
+- The Vanguard transcoder is now mounted on explicit prefixes (`/api/` and each RPC
+  service path) instead of the root catch-all, letting the embedded SPA own `/`.
+
 ## [0.1.0] - 2026-07-07
 
 Hardening pass from the technical review (`reports/report_20260707_codex.md`, all 10
@@ -87,6 +126,7 @@ quick wins) plus a first-class REST surface. Verified end-to-end against Postgre
 - Bundleable `pkg/<domain>/module` pattern; `cmd/goeland-server` composes both
   modules on one shared pool/transcoder/auth verifier.
 
+[0.2.0]: #020---2026-07-07
 [0.1.0]: #010---2026-07-07
 [0.0.2]: #002---2026-07-06
 [0.0.1]: #001---2026-07-06

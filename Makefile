@@ -22,6 +22,7 @@ else
 endif
 
 APP_EXECUTABLE := goeland-server
+FRONTEND_DIR := cmd/$(APP_EXECUTABLE)/goeland-front
 MIGRATIONS_DIR := pkg/core/module/db/migrations
 APP_REVISION := $(shell git describe --dirty --always 2>/dev/null || echo "unknown")
 BUILD := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
@@ -31,8 +32,8 @@ LDFLAGS := -ldflags "-X ${APP_REPOSITORY}/pkg/version.Revision=${APP_REVISION} -
 MAKEFLAGS += --silent
 
 .PHONY: run
-## run:	generate, then run the goeland-server binary [DEFAULT RULE]
-run: generate mod-download
+## run:	generate, build the frontend, then run the goeland-server binary [DEFAULT RULE]
+run: generate mod-download front-build
 	go run $(LDFLAGS) ./cmd/$(APP_EXECUTABLE)
 
 .PHONY: mod-download
@@ -40,14 +41,20 @@ mod-download:
 	@echo "  >  Downloading go modules dependencies..."
 	go mod download
 
+.PHONY: front-build
+## front-build:	install deps + build the embedded Vue/Vuetify frontend (dist/)
+front-build:
+	@echo "  >  Building embedded frontend with bun in $(FRONTEND_DIR) ..."
+	cd $(FRONTEND_DIR) && bun install && bun run build
+
 .PHONY: generate
 ## generate:	run buf lint + generate (protobuf, ConnectRPC, OpenAPI)
 generate:
 	./scripts/buf_generate.sh
 
 .PHONY: build
-## build:	compile the server binary into bin/
-build: clean mod-download test
+## build:	build the frontend, run tests, then compile the server binary into bin/
+build: clean mod-download front-build test
 	@echo "  >  Building your app binary inside bin directory..."
 	CGO_ENABLED=0 go build ${LDFLAGS} -a -o bin/$(APP_EXECUTABLE) ./cmd/$(APP_EXECUTABLE)
 

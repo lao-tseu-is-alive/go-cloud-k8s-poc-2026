@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "Goéland",
+    "subtitle": "POC — Document management",
+    "language": "Language"
+  },
+  "nav": {
+    "documents": "Documents",
+    "createDocument": "New document"
+  },
+  "auth": {
+    "notConnected": "Not connected",
+    "connected": "Connected",
+    "signIn": "Sign in",
+    "signOut": "Sign out",
+    "devTokenLabel": "Development token",
+    "devTokenHint": "Dev mode: paste the server's static token.",
+    "apply": "Apply",
+    "unreachable": "Authentication service unreachable."
+  },
+  "resources": {
+    "document": { "label": "Document", "plural": "Documents" }
+  },
+  "pages": {
+    "documents": {
+      "list": { "title": "Documents" },
+      "detail": { "title": "Document details" },
+      "create": { "title": "Create document" }
+    }
+  },
+  "sections": {
+    "document": {
+      "summary": "Summary",
+      "storage": "Storage",
+      "integrity": "Integrity",
+      "relationships": "Relationships",
+      "governance": "Governance",
+      "audit": "Audit"
+    },
+    "recordMetadata": {
+      "lifecycle": "Lifecycle",
+      "ownership": "Ownership",
+      "locking": "Locking",
+      "retention": "Retention"
+    }
+  },
+  "fields": {
+    "document": {
+      "title": "Title",
+      "description": "Description",
+      "official_date": "Official date",
+      "document_type": "Document type",
+      "storage_ref": "Storage reference",
+      "external_system": "External system",
+      "external_id": "External identifier",
+      "external_url": "External link",
+      "mime_type": "MIME type",
+      "file_size_bytes": "File size",
+      "sha256": "SHA-256 fingerprint",
+      "sha256_verified_at": "Last SHA-256 verification",
+      "version": "Version",
+      "previous_version_id": "Previous version",
+      "is_final": "Finalized",
+      "is_record": "Record",
+      "language": "Document language",
+      "page_count": "Page count",
+      "status": "Status",
+      "metadata": "Metadata",
+      "file": "File",
+      "only_records": "Records only",
+      "only_final": "Final documents only",
+      "include_deleted": "Include deleted"
+    },
+    "recordMetadata": {
+      "created_at": "Created at",
+      "created_by": "Created by",
+      "updated_at": "Updated at",
+      "updated_by": "Updated by",
+      "deleted_at": "Deleted at",
+      "deleted_by": "Deleted by",
+      "owner_user_id": "Owner user",
+      "owner_org_id": "Owner org unit",
+      "confidentiality_level": "Confidentiality level",
+      "version": "Version",
+      "is_locked": "Locked",
+      "locked_at": "Locked at",
+      "locked_by": "Locked by",
+      "retention_until": "Retain until",
+      "sort_final": "Sort final"
+    },
+    "subject": {
+      "kind": "Subject kind",
+      "display_label": "Label",
+      "canonical_url": "Canonical URL",
+      "created_at": "Created at",
+      "id": "Identifier"
+    },
+    "relationship": {
+      "source": "Source",
+      "type": "Relationship type",
+      "target": "Target",
+      "role_detail": "Role detail",
+      "valid_from": "Valid from",
+      "valid_to": "Valid to",
+      "created_at": "Created at",
+      "created_by": "Created by",
+      "deleted_at": "Deleted at",
+      "target_subject_id": "Target subject id"
+    },
+    "audit": {
+      "occurred_at": "Occurred at",
+      "event_type": "Event type",
+      "actor_user_id": "Actor",
+      "reason": "Reason",
+      "correlation_id": "Correlation",
+      "request_id": "Request",
+      "before_state": "Before state",
+      "after_state": "After state"
+    },
+    "search": { "query": "Search" },
+    "common": { "created_at": "Created at", "actions": "Actions" }
+  },
+  "actions": {
+    "document": {
+      "create": "Create document",
+      "updateMetadata": "Update metadata",
+      "finalize": "Finalize document",
+      "verifyIntegrity": "Verify integrity",
+      "delete": "Delete document",
+      "download": "Download",
+      "link": "Link to subject"
+    },
+    "common": {
+      "save": "Save",
+      "cancel": "Cancel",
+      "close": "Close",
+      "open": "Open",
+      "search": "Search",
+      "reset": "Reset",
+      "confirm": "Confirm",
+      "back": "Back",
+      "refresh": "Refresh"
+    }
+  },
+  "upload": {
+    "chooseFile": "Choose a file",
+    "uploading": "Uploading…",
+    "uploaded": "File uploaded",
+    "replace": "Replace file",
+    "computed": "Fingerprint and size computed by the server"
+  },
+  "finalize": {
+    "title": "Finalize document",
+    "reason": "Reason",
+    "alsoLock": "Also lock governance (immutable)"
+  },
+  "delete": {
+    "title": "Delete document",
+    "reason": "Deletion reason"
+  },
+  "link": {
+    "title": "Link document to a subject",
+    "chooseType": "Relationship type",
+    "targetId": "Target subject id"
+  },
+  "integrity": {
+    "verified": "Verified",
+    "notVerified": "Not verified",
+    "expected": "Expected fingerprint (optional)",
+    "check": "Verify"
+  },
+  "states": {
+    "draft": "Draft",
+    "final": "Final",
+    "locked": "Locked",
+    "deleted": "Deleted",
+    "record": "Record",
+    "confidential": "Confidential"
+  },
+  "enums": {
+    "DocumentStatus": {
+      "DOCUMENT_STATUS_UNSPECIFIED": "Unspecified status",
+      "DOCUMENT_STATUS_DRAFT": "Draft",
+      "DOCUMENT_STATUS_FINAL": "Final",
+      "DOCUMENT_STATUS_SUPERSEDED": "Superseded",
+      "DOCUMENT_STATUS_ARCHIVED": "Archived"
+    },
+    "SubjectKind": {
+      "SUBJECT_KIND_UNSPECIFIED": "Unspecified kind",
+      "SUBJECT_KIND_CASE": "Case",
+      "SUBJECT_KIND_DOCUMENT": "Document",
+      "SUBJECT_KIND_THING": "Thing",
+      "SUBJECT_KIND_ACTOR": "Actor",
+      "SUBJECT_KIND_USER": "User",
+      "SUBJECT_KIND_ORG_UNIT": "Organizational unit"
+    },
+    "Permission": {
+      "PERMISSION_UNSPECIFIED": "Unspecified permission",
+      "PERMISSION_NONE": "No access",
+      "PERMISSION_READ": "Read",
+      "PERMISSION_CONTRIBUTE": "Contribute",
+      "PERMISSION_MANAGE": "Manage",
+      "PERMISSION_FULL_CONTROL": "Full control"
+    }
+  },
+  "validation": {
+    "required": "This field is required.",
+    "minLength": "This field must contain at least {min} characters.",
+    "maxLength": "This field must not exceed {max} characters.",
+    "uuid": "Invalid identifier.",
+    "sha256": "The SHA-256 fingerprint must contain 64 hexadecimal characters.",
+    "pattern": "Invalid field format."
+  },
+  "errors": {
+    "unauthenticated": "Authentication required.",
+    "permission_denied": "Access denied.",
+    "not_found": "Item not found.",
+    "already_exists": "This item already exists.",
+    "failed_precondition": "Operation not allowed in the document's current state.",
+    "invalid_argument": "Invalid data."
+  },
+  "messages": {
+    "document": {
+      "lockedCannotEdit": "This document is locked and can no longer be modified.",
+      "deletedReadOnly": "This document is soft-deleted (read only).",
+      "finalizeConfirm": "Finalizing makes the document a record. Do you confirm?",
+      "finalizeSuccess": "The document has been finalized.",
+      "updateSuccess": "Metadata updated.",
+      "createSuccess": "Document created.",
+      "integrityVerified": "The document integrity was verified.",
+      "integrityFailed": "The document integrity could not be verified.",
+      "deleteConfirm": "The document will be soft-deleted. It stays preserved in history.",
+      "deleted": "The document was soft-deleted.",
+      "linked": "Relationship created."
+    },
+    "common": {
+      "loading": "Loading…",
+      "error": "An error occurred.",
+      "noData": "No data to display.",
+      "signInRequired": "Sign in to access the application."
+    }
+  }
+}

@@ -1,0 +1,243 @@
+{
+  "app": {
+    "title": "Goéland",
+    "subtitle": "POC — Gestion documentaire",
+    "language": "Langue"
+  },
+  "nav": {
+    "documents": "Documents",
+    "createDocument": "Nouveau document"
+  },
+  "auth": {
+    "notConnected": "Non connecté",
+    "connected": "Connecté",
+    "signIn": "Se connecter",
+    "signOut": "Se déconnecter",
+    "devTokenLabel": "Jeton de développement",
+    "devTokenHint": "Mode dev : collez le jeton statique du serveur.",
+    "apply": "Appliquer",
+    "unreachable": "Service d'authentification injoignable."
+  },
+  "resources": {
+    "document": { "label": "Document", "plural": "Documents" }
+  },
+  "pages": {
+    "documents": {
+      "list": { "title": "Documents" },
+      "detail": { "title": "Détail du document" },
+      "create": { "title": "Créer un document" }
+    }
+  },
+  "sections": {
+    "document": {
+      "summary": "Résumé",
+      "storage": "Stockage",
+      "integrity": "Intégrité",
+      "relationships": "Relations",
+      "governance": "Gouvernance",
+      "audit": "Audit"
+    },
+    "recordMetadata": {
+      "lifecycle": "Cycle de vie",
+      "ownership": "Propriété",
+      "locking": "Verrouillage",
+      "retention": "Conservation"
+    }
+  },
+  "fields": {
+    "document": {
+      "title": "Titre",
+      "description": "Description",
+      "official_date": "Date officielle",
+      "document_type": "Type de document",
+      "storage_ref": "Référence de stockage",
+      "external_system": "Système externe",
+      "external_id": "Identifiant externe",
+      "external_url": "Lien externe",
+      "mime_type": "Type MIME",
+      "file_size_bytes": "Taille du fichier",
+      "sha256": "Empreinte SHA-256",
+      "sha256_verified_at": "Dernière vérification SHA-256",
+      "version": "Version",
+      "previous_version_id": "Version précédente",
+      "is_final": "Finalisé",
+      "is_record": "Document probant",
+      "language": "Langue du document",
+      "page_count": "Nombre de pages",
+      "status": "Statut",
+      "metadata": "Métadonnées",
+      "file": "Fichier",
+      "only_records": "Seulement les documents probants",
+      "only_final": "Seulement les documents finalisés",
+      "include_deleted": "Inclure les supprimés"
+    },
+    "recordMetadata": {
+      "created_at": "Créé le",
+      "created_by": "Créé par",
+      "updated_at": "Modifié le",
+      "updated_by": "Modifié par",
+      "deleted_at": "Supprimé le",
+      "deleted_by": "Supprimé par",
+      "owner_user_id": "Utilisateur propriétaire",
+      "owner_org_id": "Unité propriétaire",
+      "confidentiality_level": "Niveau de confidentialité",
+      "version": "Version",
+      "is_locked": "Verrouillé",
+      "locked_at": "Verrouillé le",
+      "locked_by": "Verrouillé par",
+      "retention_until": "Conserver jusqu'au",
+      "sort_final": "Sort final"
+    },
+    "subject": {
+      "kind": "Type de sujet",
+      "display_label": "Libellé",
+      "canonical_url": "URL canonique",
+      "created_at": "Créé le",
+      "id": "Identifiant"
+    },
+    "relationship": {
+      "source": "Source",
+      "type": "Type de relation",
+      "target": "Cible",
+      "role_detail": "Détail du rôle",
+      "valid_from": "Valide dès",
+      "valid_to": "Valide jusqu'au",
+      "created_at": "Créé le",
+      "created_by": "Créé par",
+      "deleted_at": "Supprimé le",
+      "target_subject_id": "Identifiant du sujet cible"
+    },
+    "audit": {
+      "occurred_at": "Survenu le",
+      "event_type": "Type d'événement",
+      "actor_user_id": "Acteur",
+      "reason": "Motif",
+      "correlation_id": "Corrélation",
+      "request_id": "Requête",
+      "before_state": "État avant",
+      "after_state": "État après"
+    },
+    "search": { "query": "Recherche" },
+    "common": { "created_at": "Créé le", "actions": "Actions" }
+  },
+  "actions": {
+    "document": {
+      "create": "Créer le document",
+      "updateMetadata": "Modifier les métadonnées",
+      "finalize": "Finaliser le document",
+      "verifyIntegrity": "Vérifier l'intégrité",
+      "delete": "Supprimer le document",
+      "download": "Télécharger",
+      "link": "Lier à un sujet"
+    },
+    "common": {
+      "save": "Enregistrer",
+      "cancel": "Annuler",
+      "close": "Fermer",
+      "open": "Ouvrir",
+      "search": "Rechercher",
+      "reset": "Réinitialiser",
+      "confirm": "Confirmer",
+      "back": "Retour",
+      "refresh": "Actualiser"
+    }
+  },
+  "upload": {
+    "chooseFile": "Choisir un fichier",
+    "uploading": "Téléversement…",
+    "uploaded": "Fichier téléversé",
+    "replace": "Remplacer le fichier",
+    "computed": "Empreinte et taille calculées par le serveur"
+  },
+  "finalize": {
+    "title": "Finaliser le document",
+    "reason": "Motif",
+    "alsoLock": "Verrouiller aussi la gouvernance (immuable)"
+  },
+  "delete": {
+    "title": "Supprimer le document",
+    "reason": "Motif de la suppression"
+  },
+  "link": {
+    "title": "Lier le document à un sujet",
+    "chooseType": "Type de relation",
+    "targetId": "Identifiant du sujet cible"
+  },
+  "integrity": {
+    "verified": "Vérifié",
+    "notVerified": "Non vérifié",
+    "expected": "Empreinte attendue (optionnel)",
+    "check": "Vérifier"
+  },
+  "states": {
+    "draft": "Brouillon",
+    "final": "Final",
+    "locked": "Verrouillé",
+    "deleted": "Supprimé",
+    "record": "Probant",
+    "confidential": "Confidentiel"
+  },
+  "enums": {
+    "DocumentStatus": {
+      "DOCUMENT_STATUS_UNSPECIFIED": "Statut non précisé",
+      "DOCUMENT_STATUS_DRAFT": "Brouillon",
+      "DOCUMENT_STATUS_FINAL": "Final",
+      "DOCUMENT_STATUS_SUPERSEDED": "Remplacé",
+      "DOCUMENT_STATUS_ARCHIVED": "Archivé"
+    },
+    "SubjectKind": {
+      "SUBJECT_KIND_UNSPECIFIED": "Type non précisé",
+      "SUBJECT_KIND_CASE": "Affaire",
+      "SUBJECT_KIND_DOCUMENT": "Document",
+      "SUBJECT_KIND_THING": "Objet",
+      "SUBJECT_KIND_ACTOR": "Acteur",
+      "SUBJECT_KIND_USER": "Utilisateur",
+      "SUBJECT_KIND_ORG_UNIT": "Unité organisationnelle"
+    },
+    "Permission": {
+      "PERMISSION_UNSPECIFIED": "Permission non précisée",
+      "PERMISSION_NONE": "Aucun accès",
+      "PERMISSION_READ": "Lecture",
+      "PERMISSION_CONTRIBUTE": "Contribution",
+      "PERMISSION_MANAGE": "Gestion",
+      "PERMISSION_FULL_CONTROL": "Contrôle complet"
+    }
+  },
+  "validation": {
+    "required": "Ce champ est obligatoire.",
+    "minLength": "Ce champ doit contenir au moins {min} caractères.",
+    "maxLength": "Ce champ ne peut pas dépasser {max} caractères.",
+    "uuid": "Identifiant invalide.",
+    "sha256": "L'empreinte SHA-256 doit contenir 64 caractères hexadécimaux.",
+    "pattern": "Le format de ce champ est invalide."
+  },
+  "errors": {
+    "unauthenticated": "Authentification requise.",
+    "permission_denied": "Accès refusé.",
+    "not_found": "Élément introuvable.",
+    "already_exists": "Cet élément existe déjà.",
+    "failed_precondition": "Opération impossible dans l'état actuel du document.",
+    "invalid_argument": "Données invalides."
+  },
+  "messages": {
+    "document": {
+      "lockedCannotEdit": "Ce document est verrouillé et ne peut plus être modifié.",
+      "deletedReadOnly": "Ce document est supprimé logiquement (lecture seule).",
+      "finalizeConfirm": "La finalisation rend le document probant. Confirmez-vous cette action ?",
+      "finalizeSuccess": "Le document a été finalisé.",
+      "updateSuccess": "Métadonnées mises à jour.",
+      "createSuccess": "Document créé.",
+      "integrityVerified": "L'intégrité du document a été vérifiée.",
+      "integrityFailed": "L'intégrité du document n'a pas pu être vérifiée.",
+      "deleteConfirm": "Le document sera supprimé logiquement. Il restera conservé dans l'historique.",
+      "deleted": "Le document a été supprimé logiquement.",
+      "linked": "Relation créée."
+    },
+    "common": {
+      "loading": "Chargement…",
+      "error": "Une erreur est survenue.",
+      "noData": "Aucune donnée à afficher.",
+      "signInRequired": "Connectez-vous pour accéder à l'application."
+    }
+  }
+}
