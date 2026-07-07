@@ -49,7 +49,8 @@ Document component (`pkg/document`), a first-class subject (`document.id` **is**
 - no-duplication external references (`external_system` / `external_id` / `external_url` / `storage_ref`);
 - versioning (`version` + `previous_version_id`);
 - records-management prep (`is_final`, `is_record`, `status`, governance locking);
-- full-text search via a generated `search_vector` (`tsvector`) + GIN index;
+- accent-insensitive full-text search via a generated `search_vector` (`tsvector`,
+  accent-folded with `unaccent`) + GIN index — "chateau" matches "château";
 - controlled classification (`document_type`).
 
 Every mutation is **non-destructive** (logical delete via `record_metadata.deleted_at`)
@@ -74,7 +75,7 @@ cmd/goeland-server/      server: pool, migrate, wire modules onto one shared tra
 ## Prerequisites
 
 - Go 1.26+
-- PostgreSQL 14+ with **PostGIS**, **pgcrypto** and **pg_trgm** available
+- PostgreSQL 14+ with **PostGIS**, **pgcrypto**, **pg_trgm** and **unaccent** available
   (e.g. the `postgis/postgis` image, or `apt install postgresql-16-postgis-3`)
 - [`buf`](https://buf.build) (regenerate code), [`dbmate`](https://github.com/amacneil/dbmate) (optional, for CLI migrations)
 
@@ -146,6 +147,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0002_relationships.sql       relationship_type + subject_relationship
 0003_document.sql            document_type + document (+ generated search_vector, trigger)
 0004_seed_reference_data.sql seed subject kinds, relationship types, document types
+0005_document_unaccent_search.sql  accent-insensitive full-text search (immutable_unaccent)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -175,19 +177,19 @@ make db-up      apply migrations (dbmate)
 
 Helper scripts for the dev loop and ops (all run from the repo root):
 
-| Script | Purpose |
-|--------|---------|
-| `createLocalDBAndUser.sh <name>` | Create a local role + database, enable pgcrypto/pg_trgm/postgis (as admin), and write `.env` |
-| `install_go_protobuf_tools.sh`   | Install `buf`, `protoc-gen-go`, `protoc-gen-connect-go` |
-| `buf_generate.sh`                | `buf lint` + `buf dep update` + `buf generate` (used by `make generate`) |
-| `getAppInfo.sh`                  | Export `APP_NAME`/`APP_VERSION`/… from `pkg/version/version.go` (sourced by other scripts) |
-| `GoRunWithEnv.sh [main] [env]`   | `go run` the server with version ldflags + a dotenv loaded |
-| `GoTestWithEnv.sh [env]`         | `go test -race` with coverage + a dotenv loaded |
-| `execWithEnv.sh <bin> [env]`     | Run a compiled binary with a dotenv loaded |
-| `get_jwt_token.sh [env]`         | Fetch a JWT from go-cloud-k8s-auth (jwt mode testing) |
-| `01_build_image_locally.sh`      | Build the container image, tagged from `version.go` (optional trivy scan) |
-| `02_tag_new_release_github.sh`   | Tag + push `v<version>` (refuses a dirty tree) |
-| `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run) |
+| Script | Purpose                                                                                               |
+|--------|-------------------------------------------------------------------------------------------------------|
+| `createLocalDBAndUser.sh <name>` | Create a local role + database, enable pgcrypto/pg_trgm/unaccent/postgis (as admin), and write `.env` |
+| `install_go_protobuf_tools.sh`   | Install `buf`, `protoc-gen-go`, `protoc-gen-connect-go`                                               |
+| `buf_generate.sh`                | `buf lint` + `buf dep update` + `buf generate` (used by `make generate`)                              |
+| `getAppInfo.sh`                  | Export `APP_NAME`/`APP_VERSION`/… from `pkg/version/version.go` (sourced by other scripts)            |
+| `GoRunWithEnv.sh [main] [env]`   | `go run` the server with version ldflags + a dotenv loaded                                            |
+| `GoTestWithEnv.sh [env]`         | `go test -race` with coverage + a dotenv loaded                                                       |
+| `execWithEnv.sh <bin> [env]`     | Run a compiled binary with a dotenv loaded                                                            |
+| `get_jwt_token.sh [env]`         | Fetch a JWT from go-cloud-k8s-auth (jwt mode testing)                                                 |
+| `01_build_image_locally.sh`      | Build the container image, tagged from `version.go` (optional trivy scan)                             |
+| `02_tag_new_release_github.sh`   | Tag + push `v<version>` (refuses a dirty tree)                                                        |
+| `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 
 ## Design rules honoured
 

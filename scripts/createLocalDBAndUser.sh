@@ -103,10 +103,11 @@ if ! run_as_postgres "createdb --owner=${DB_NAME} ${DB_NAME}"; then
     exit 1
 fi
 
-echo "Enabling required extensions (pgcrypto, pg_trgm, postgis) in ${DB_NAME}"
+echo "Enabling required extensions (pgcrypto, pg_trgm, unaccent and postgis) in ${DB_NAME}"
 run_as_postgres "psql --dbname=${DB_NAME} --set=ON_ERROR_STOP=1 \
     --command \"CREATE EXTENSION IF NOT EXISTS pgcrypto;\" \
     --command \"CREATE EXTENSION IF NOT EXISTS pg_trgm;\" \
+    --command \"CREATE EXTENSION IF NOT EXISTS unaccent;\" \
     --command \"CREATE EXTENSION IF NOT EXISTS postgis;\""
 
 trap - EXIT

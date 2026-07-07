@@ -54,7 +54,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0004 (dbmate format)
+  │   └── db/migrations/     0001..0005 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 cmd/goeland-server/          server: pool → migrate → wire both modules → one shared transcoder
@@ -75,7 +75,7 @@ There is no frontend in this project.
 
 Helper scripts live in `scripts/` (all run from the repo root; documented in the
 README's Scripts table). Notable ones: `createLocalDBAndUser.sh` (creates the
-role/db and enables pgcrypto/pg_trgm/postgis as admin so the app role's
+role/db and enables pgcrypto/pg_trgm/unaccent/postgis as admin so the app role's
 `CREATE EXTENSION IF NOT EXISTS` is a privilege-free no-op),
 `install_go_protobuf_tools.sh`, `getAppInfo.sh` (sourced by build/release scripts
 to read `pkg/version/version.go`), `GoRunWithEnv.sh` / `GoTestWithEnv.sh` /
@@ -183,6 +183,12 @@ only the struct + SQL projection.
   write an `audit_event` (in the same transaction as the mutation).
 - Relationships are typed and validated: source/target kinds must match the
   `relationship_type`; an active-edge partial unique index enforces uniqueness.
+- `document.search_vector` is a Postgres **`GENERATED ALWAYS AS (...) STORED`**
+  column — the app must NOT insert/scan it; Postgres computes it on every
+  write. It is accent-folded via `immutable_unaccent()` (migration 0005), an
+  IMMUTABLE wrapper around `unaccent()` (the raw `unaccent()` is only STABLE and
+  cannot be used in a generated column/index). `searchDocumentsSQL` folds the
+  query term through the same wrapper so search is accent-insensitive.
 
 ## Database migrations
 
@@ -201,7 +207,7 @@ only the struct + SQL projection.
 - `make db-down` rolls back the latest migration; the `0004` seed-down `DELETE`
   will fail if documents still reference a `document_type`, so a clean rollback
   assumes no domain data — expected for a reset, not a bug.
-- Requires PostGIS, pgcrypto, pg_trgm available on the server.
+- Requires PostGIS, pgcrypto, pg_trgm, unaccent available on the server.
 - **Never** run migrations or a migrating server startup against an unknown,
   shared, staging, or production database without explicit approval and verified
   config.

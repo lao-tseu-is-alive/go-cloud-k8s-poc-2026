@@ -18,7 +18,7 @@ COPY --from=builder /app/bin/goeland-server .
 # --- Database ---------------------------------------------------------------
 # Provide either DATABASE_URL (full DSN, takes precedence) or the individual
 # DB_* variables. DB_PASSWORD is required when DATABASE_URL is not set.
-# The database must have the PostGIS, pgcrypto and pg_trgm extensions available.
+# The database must have the PostGIS, pgcrypto, pg_trgm and unaccent extensions available.
 ENV DATABASE_URL=""
 ENV DB_HOST="127.0.0.1"
 ENV DB_PORT="5432"

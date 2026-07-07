@@ -71,11 +71,13 @@ COUNT(*) OVER() AS total_count`
 
 // searchDocumentsSQL performs full-text search over the generated tsvector plus
 // governance and relationship filters.
+// The query term is folded through immutable_unaccent() (migration 0005) so it
+// matches the equally accent-folded search_vector: "chateau" finds "château".
 const searchDocumentsSQL = `
 SELECT ` + searchDocumentColumns + `
 FROM document d
 JOIN record_metadata rm ON rm.subject_id = d.id
-WHERE ($1 = '' OR d.search_vector @@ plainto_tsquery('simple', $1))
+WHERE ($1 = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_unaccent($1)))
   AND ($2 = '' OR d.document_type_id = (SELECT id FROM document_type WHERE code = $2))
   AND rm.confidentiality_level <= $3
   AND (NOT $4 OR d.is_record)

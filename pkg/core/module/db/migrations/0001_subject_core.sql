@@ -19,6 +19,7 @@
 -- disruptive migration. PostGIS must be available on the server (postgis image).
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS unaccent;
 CREATE EXTENSION IF NOT EXISTS postgis;
 
 -- Controlled list of subject kinds -------------------------------------------
