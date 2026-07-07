@@ -38,12 +38,6 @@ SET is_final = true, status = 2
 WHERE d.id = $1
 RETURNING ` + documentColumns + `;`
 
-const touchDocumentVerifiedAtSQL = `
-UPDATE document d
-SET sha256_verified_at = now()
-WHERE d.id = $1
-RETURNING ` + documentColumns + `;`
-
 // --- document_type -----------------------------------------------------------
 
 const documentTypeColumns = `id, code, label, description, category, is_active`

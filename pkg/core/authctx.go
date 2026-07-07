@@ -29,12 +29,16 @@ func RequireCaller(ctx context.Context, scope string) (*authadapter.Authenticate
 	return user, nil
 }
 
-// ActorID returns the actor id to record for audit/ownership: the explicit
-// request value when provided, otherwise the authenticated user's app id.
-func ActorID(user *authadapter.AuthenticatedUser, requestActorID string) string {
-	if requestActorID != "" {
-		return requestActorID
-	}
+// OperatorID returns the identity of the *operator* — the authenticated system
+// user (employee) performing the mutation — to record for audit and ownership.
+//
+// It is ALWAYS derived from the authenticated principal and is never taken from
+// the request, so a caller cannot forge who performed an operation. This is a
+// distinct concept from a domain ACTOR (an external person/organization, e.g. a
+// document's author): domain actors are never authenticated and are recorded as
+// ACTOR subjects linked by typed relationships (DOCUMENT_AUTHORED_BY_ACTOR, ...),
+// not through this operator identity.
+func OperatorID(user *authadapter.AuthenticatedUser) string {
 	if user != nil {
 		return strconv.FormatInt(user.AppUserID, 10)
 	}
@@ -67,6 +71,8 @@ func MapError(err error) *connect.Error {
 	case errors.Is(err, ErrKindMismatch):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, ErrLocked):
+		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, ErrDeleted):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	default:
 		return nil

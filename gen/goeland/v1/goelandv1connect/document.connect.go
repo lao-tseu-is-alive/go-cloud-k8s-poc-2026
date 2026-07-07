@@ -5,7 +5,9 @@
 // that can live standalone or be embedded in affaires (via CoreService relationships).
 //
 // Modern GED features added beyond the basic model:
-//   - Strong cryptographic integrity (sha256 + verification timestamp).
+//   - Cryptographic integrity metadata (sha256 registered at creation). NOTE:
+//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
+//     comparison only (it does not read storage bytes); real streamed hashing is a roadmap item.
 //   - External reference without duplication (external_system + external_id + storage_ref as URI)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Explicit + graph versioning (previous_version_id + DOCUMENT_PREVIOUS_VERSION relationships).
@@ -91,7 +93,9 @@ type DocumentServiceClient interface {
 	UpdateDocumentMetadata(context.Context, *connect.Request[v1.UpdateDocumentMetadataRequest]) (*connect.Response[v1.UpdateDocumentMetadataResponse], error)
 	// Business finalization + optional governance lock. Critical for probative documents.
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
-	// Integrity check / re-compute. Supports migration and long-term trust.
+	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
+	// expected sha256 against the registered hash. It does NOT read storage bytes
+	// and writes nothing (hence read-scoped). Real streamed verification is future work.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)
@@ -239,7 +243,9 @@ type DocumentServiceHandler interface {
 	UpdateDocumentMetadata(context.Context, *connect.Request[v1.UpdateDocumentMetadataRequest]) (*connect.Response[v1.UpdateDocumentMetadataResponse], error)
 	// Business finalization + optional governance lock. Critical for probative documents.
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
-	// Integrity check / re-compute. Supports migration and long-term trust.
+	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
+	// expected sha256 against the registered hash. It does NOT read storage bytes
+	// and writes nothing (hence read-scoped). Real streamed verification is future work.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)

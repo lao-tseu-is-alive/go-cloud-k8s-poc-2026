@@ -776,7 +776,6 @@ type CreateSubjectRefRequest struct {
 	DisplayLabel    string                 `protobuf:"bytes,2,opt,name=display_label,json=displayLabel,proto3" json:"display_label,omitempty"`
 	CanonicalUrl    string                 `protobuf:"bytes,3,opt,name=canonical_url,json=canonicalUrl,proto3" json:"canonical_url,omitempty"`
 	InitialMetadata *RecordMetadata        `protobuf:"bytes,4,opt,name=initial_metadata,json=initialMetadata,proto3" json:"initial_metadata,omitempty"` // owner, confidentiality etc.
-	ActorUserId     string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`           // who creates (for audit + ownership)
 	unknownFields   protoimpl.UnknownFields
 	sizeCache       protoimpl.SizeCache
 }
@@ -837,13 +836,6 @@ func (x *CreateSubjectRefRequest) GetInitialMetadata() *RecordMetadata {
 		return x.InitialMetadata
 	}
 	return nil
-}
-
-func (x *CreateSubjectRefRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
-	}
-	return ""
 }
 
 type CreateSubjectRefResponse struct {
@@ -1032,7 +1024,6 @@ type LinkSubjectsRequest struct {
 	TargetSubjectId      string                 `protobuf:"bytes,2,opt,name=target_subject_id,json=targetSubjectId,proto3" json:"target_subject_id,omitempty"`
 	RelationshipTypeCode string                 `protobuf:"bytes,3,opt,name=relationship_type_code,json=relationshipTypeCode,proto3" json:"relationship_type_code,omitempty"`
 	RoleDetail           string                 `protobuf:"bytes,4,opt,name=role_detail,json=roleDetail,proto3" json:"role_detail,omitempty"`
-	ActorUserId          string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	ValidFrom            *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=valid_from,json=validFrom,proto3" json:"valid_from,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
@@ -1092,13 +1083,6 @@ func (x *LinkSubjectsRequest) GetRelationshipTypeCode() string {
 func (x *LinkSubjectsRequest) GetRoleDetail() string {
 	if x != nil {
 		return x.RoleDetail
-	}
-	return ""
-}
-
-func (x *LinkSubjectsRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
 	}
 	return ""
 }
@@ -1165,7 +1149,6 @@ func (x *LinkSubjectsResponse) GetAuditEvent() *AuditEvent {
 type UnlinkSubjectsRequest struct {
 	state          protoimpl.MessageState `protogen:"open.v1"`
 	RelationshipId string                 `protobuf:"bytes,1,opt,name=relationship_id,json=relationshipId,proto3" json:"relationship_id,omitempty"`
-	ActorUserId    string                 `protobuf:"bytes,2,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Reason         string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
@@ -1204,13 +1187,6 @@ func (*UnlinkSubjectsRequest) Descriptor() ([]byte, []int) {
 func (x *UnlinkSubjectsRequest) GetRelationshipId() string {
 	if x != nil {
 		return x.RelationshipId
-	}
-	return ""
-}
-
-func (x *UnlinkSubjectsRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
 	}
 	return ""
 }
@@ -1663,7 +1639,7 @@ var File_goeland_v1_core_proto protoreflect.FileDescriptor
 const file_goeland_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"\x15goeland/v1/core.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x80\x02\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\x80\x02\n" +
 	"\n" +
 	"SubjectRef\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x125\n" +
@@ -1751,14 +1727,13 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"created_by\x18\t \x01(\tR\tcreatedBy\x12>\n" +
 	"\n" +
 	"deleted_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tdeletedAt\"\xa0\x02\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tdeletedAt\"\xfc\x01\n" +
 	"\x17CreateSubjectRefRequest\x127\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x17.goeland.v1.SubjectKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x122\n" +
 	"\rdisplay_label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fdisplayLabel\x12-\n" +
 	"\rcanonical_url\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\fcanonicalUrl\x12E\n" +
-	"\x10initial_metadata\x18\x04 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0finitialMetadata\x12\"\n" +
-	"\ractor_user_id\x18\x05 \x01(\tR\vactorUserId\"\xc8\x01\n" +
+	"\x10initial_metadata\x18\x04 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0finitialMetadata\"\xc8\x01\n" +
 	"\x18CreateSubjectRefResponse\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x126\n" +
@@ -1772,23 +1747,21 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x126\n" +
 	"\bmetadata\x18\x02 \x01(\v2\x1a.goeland.v1.RecordMetadataR\bmetadata\x129\n" +
-	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xcf\x02\n" +
+	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xab\x02\n" +
 	"\x13LinkSubjectsRequest\x124\n" +
 	"\x11source_subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceSubjectId\x124\n" +
 	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12B\n" +
 	"\x16relationship_type_code\x18\x03 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
 	"\vrole_detail\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\n" +
-	"roleDetail\x12\"\n" +
-	"\ractor_user_id\x18\x05 \x01(\tR\vactorUserId\x129\n" +
+	"roleDetail\x129\n" +
 	"\n" +
 	"valid_from\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tvalidFrom\"\x94\x01\n" +
 	"\x14LinkSubjectsResponse\x12C\n" +
 	"\frelationship\x18\x01 \x01(\v2\x1f.goeland.v1.SubjectRelationshipR\frelationship\x127\n" +
 	"\vaudit_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent\"\x90\x01\n" +
+	"auditEvent\"l\n" +
 	"\x15UnlinkSubjectsRequest\x121\n" +
-	"\x0frelationship_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0erelationshipId\x12\"\n" +
-	"\ractor_user_id\x18\x02 \x01(\tR\vactorUserId\x12 \n" +
+	"\x0frelationship_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0erelationshipId\x12 \n" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"z\n" +
 	"\x16UnlinkSubjectsResponse\x12'\n" +
 	"\x0frelationship_id\x18\x01 \x01(\tR\x0erelationshipId\x127\n" +
@@ -1848,15 +1821,15 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x0fPERMISSION_READ\x10\x02\x12\x19\n" +
 	"\x15PERMISSION_CONTRIBUTE\x10\x03\x12\x15\n" +
 	"\x11PERMISSION_MANAGE\x10\x04\x12\x1b\n" +
-	"\x17PERMISSION_FULL_CONTROL\x10\x052\x9a\x05\n" +
-	"\vCoreService\x12]\n" +
-	"\x10CreateSubjectRef\x12#.goeland.v1.CreateSubjectRefRequest\x1a$.goeland.v1.CreateSubjectRefResponse\x12T\n" +
-	"\rGetSubjectRef\x12 .goeland.v1.GetSubjectRefRequest\x1a!.goeland.v1.GetSubjectRefResponse\x12Q\n" +
-	"\fLinkSubjects\x12\x1f.goeland.v1.LinkSubjectsRequest\x1a .goeland.v1.LinkSubjectsResponse\x12W\n" +
-	"\x0eUnlinkSubjects\x12!.goeland.v1.UnlinkSubjectsRequest\x1a\".goeland.v1.UnlinkSubjectsResponse\x12`\n" +
-	"\x11ListRelationships\x12$.goeland.v1.ListRelationshipsRequest\x1a%.goeland.v1.ListRelationshipsResponse\x12l\n" +
-	"\x15ListRelationshipTypes\x12(.goeland.v1.ListRelationshipTypesRequest\x1a).goeland.v1.ListRelationshipTypesResponse\x12Z\n" +
-	"\x0fListAuditEvents\x12\".goeland.v1.ListAuditEventsRequest\x1a#.goeland.v1.ListAuditEventsResponseB\xb1\x01\n" +
+	"\x17PERMISSION_FULL_CONTROL\x10\x052\x9e\a\n" +
+	"\vCoreService\x12w\n" +
+	"\x10CreateSubjectRef\x12#.goeland.v1.CreateSubjectRefRequest\x1a$.goeland.v1.CreateSubjectRefResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/subjects\x12p\n" +
+	"\rGetSubjectRef\x12 .goeland.v1.GetSubjectRefRequest\x1a!.goeland.v1.GetSubjectRefResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/subjects/{id}\x12p\n" +
+	"\fLinkSubjects\x12\x1f.goeland.v1.LinkSubjectsRequest\x1a .goeland.v1.LinkSubjectsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/relationships\x12\x85\x01\n" +
+	"\x0eUnlinkSubjects\x12!.goeland.v1.UnlinkSubjectsRequest\x1a\".goeland.v1.UnlinkSubjectsResponse\",\x82\xd3\xe4\x93\x02&*$/api/relationships/{relationship_id}\x12\x92\x01\n" +
+	"\x11ListRelationships\x12$.goeland.v1.ListRelationshipsRequest\x1a%.goeland.v1.ListRelationshipsResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/subjects/{subject_id}/relationships\x12\x8d\x01\n" +
+	"\x15ListRelationshipTypes\x12(.goeland.v1.ListRelationshipTypesRequest\x1a).goeland.v1.ListRelationshipTypesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/relationship-types\x12\x84\x01\n" +
+	"\x0fListAuditEvents\x12\".goeland.v1.ListAuditEventsRequest\x1a#.goeland.v1.ListAuditEventsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/subjects/{subject_id}/auditB\xb1\x01\n" +
 	"\x0ecom.goeland.v1B\tCoreProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"

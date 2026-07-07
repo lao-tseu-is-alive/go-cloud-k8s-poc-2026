@@ -60,9 +60,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Document, *core.
 	in.Governance.Kind = core.SubjectKindDocument
 	in.Governance.DisplayLabel = in.Title
 	in.Governance.CanonicalURL = in.ExternalURL
-	in.Governance.ActorUserID = in.ActorUserID
+	in.Governance.OperatorID = in.OperatorID
 	if in.Governance.OwnerUserID == "" {
-		in.Governance.OwnerUserID = in.ActorUserID
+		in.Governance.OwnerUserID = in.OperatorID
 	}
 	doc, ev, rel, err := s.repo.Create(ctx, in)
 	if err != nil {
@@ -121,11 +121,11 @@ func (s *Service) UpdateMetadata(ctx context.Context, id uuid.UUID, in UpdateInp
 }
 
 // Finalize marks a document final and optionally locks its governance record.
-func (s *Service) Finalize(ctx context.Context, id uuid.UUID, actorUserID, reason string, alsoLock bool) (*Document, *core.AuditEvent, error) {
+func (s *Service) Finalize(ctx context.Context, id uuid.UUID, operatorID, reason string, alsoLock bool) (*Document, *core.AuditEvent, error) {
 	if id == uuid.Nil {
 		return nil, nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
 	}
-	doc, ev, err := s.repo.Finalize(ctx, id, actorUserID, reason, alsoLock)
+	doc, ev, err := s.repo.Finalize(ctx, id, operatorID, reason, alsoLock)
 	if err != nil {
 		return nil, nil, fmt.Errorf("finalize document: %w", err)
 	}
@@ -178,11 +178,11 @@ func (s *Service) Link(ctx context.Context, in core.LinkInput) (*core.SubjectRel
 }
 
 // SoftDelete logically deletes a document.
-func (s *Service) SoftDelete(ctx context.Context, id uuid.UUID, actorUserID, reason string) (*core.AuditEvent, error) {
+func (s *Service) SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error) {
 	if id == uuid.Nil {
 		return nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
 	}
-	ev, err := s.repo.SoftDelete(ctx, id, actorUserID, reason)
+	ev, err := s.repo.SoftDelete(ctx, id, operatorID, reason)
 	if err != nil {
 		return nil, fmt.Errorf("delete document: %w", err)
 	}

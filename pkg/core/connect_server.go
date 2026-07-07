@@ -40,7 +40,7 @@ func (s *ConnectServer) CreateSubjectRef(ctx context.Context, req *connect.Reque
 		Kind:         SubjectKindFromProto(msg.Kind),
 		DisplayLabel: msg.DisplayLabel,
 		CanonicalURL: msg.CanonicalUrl,
-		ActorUserID:  ActorID(user, msg.ActorUserId),
+		OperatorID:   OperatorID(user),
 	}
 	if gov := msg.InitialMetadata; gov != nil {
 		in.OwnerUserID = gov.OwnerUserId
@@ -51,7 +51,7 @@ func (s *ConnectServer) CreateSubjectRef(ctx context.Context, req *connect.Reque
 		in.Metadata = gov.Metadata
 	}
 	if in.OwnerUserID == "" {
-		in.OwnerUserID = in.ActorUserID
+		in.OwnerUserID = in.OperatorID
 	}
 	ref, md, ev, err := s.service.CreateSubjectRef(ctx, in)
 	if err != nil {
@@ -103,7 +103,7 @@ func (s *ConnectServer) LinkSubjects(ctx context.Context, req *connect.Request[g
 		TargetSubjectID:      targetID,
 		RelationshipTypeCode: req.Msg.RelationshipTypeCode,
 		RoleDetail:           req.Msg.RoleDetail,
-		ActorUserID:          ActorID(user, req.Msg.ActorUserId),
+		OperatorID:           OperatorID(user),
 		ValidFrom:            TimePtrFromProto(req.Msg.ValidFrom),
 	})
 	if err != nil {
@@ -125,7 +125,7 @@ func (s *ConnectServer) UnlinkSubjects(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	_, ev, err := s.service.UnlinkSubjects(ctx, id, ActorID(user, req.Msg.ActorUserId), req.Msg.Reason)
+	_, ev, err := s.service.UnlinkSubjects(ctx, id, OperatorID(user), req.Msg.Reason)
 	if err != nil {
 		return nil, s.mapError(err)
 	}

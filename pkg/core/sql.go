@@ -24,6 +24,12 @@ SELECT ` + subjectRefColumns + `
 FROM subject_ref
 WHERE id = ANY($1::uuid[]);`
 
+// updateSubjectRefLabelSQL keeps the canonical display_label in sync with a
+// domain entity's human label (e.g. a document title) so graph projections
+// never show a stale label.
+const updateSubjectRefLabelSQL = `
+UPDATE subject_ref SET display_label = $2 WHERE id = $1;`
+
 // --- record_metadata ---------------------------------------------------------
 
 const recordMetadataColumns = `
@@ -42,6 +48,14 @@ const getRecordMetadataSQL = `
 SELECT ` + recordMetadataColumns + `
 FROM record_metadata
 WHERE subject_id = $1;`
+
+// getRecordMetadataForUpdateSQL locks the governance row for the duration of the
+// transaction so a check-then-mutate (lock/deleted guard) is atomic against races.
+const getRecordMetadataForUpdateSQL = `
+SELECT ` + recordMetadataColumns + `
+FROM record_metadata
+WHERE subject_id = $1
+FOR UPDATE;`
 
 // lockRecordMetadataSQL sets the immutable flag and bumps the version.
 const lockRecordMetadataSQL = `
@@ -126,7 +140,15 @@ SET deleted_at = now(), deleted_by = $2
 WHERE id = $1 AND deleted_at IS NULL
 RETURNING ` + subjectRelationshipColumns + `;`
 
-const listRelationshipsColumns = subjectRelationshipColumns + `,
+// subjectRelationshipListColumns qualifies each column with the sr alias because
+// listRelationshipsSQL joins relationship_type (which also has id/... columns);
+// an unqualified projection would be ambiguous. Output column names are unchanged,
+// so the relationshipListRow db tags still match.
+const subjectRelationshipListColumns = `
+sr.id, sr.source_subject_id, sr.target_subject_id, sr.relationship_type_id, sr.role_detail,
+sr.valid_from, sr.valid_to, sr.created_at, sr.created_by, sr.deleted_at`
+
+const listRelationshipsColumns = subjectRelationshipListColumns + `,
 COUNT(*) OVER() AS total_count`
 
 // listRelationshipsSQL lists active edges either outgoing from ($2 = true) or

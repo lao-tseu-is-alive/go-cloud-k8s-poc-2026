@@ -118,7 +118,7 @@ type CreateSubjectInput struct {
 	Kind                 SubjectKind
 	DisplayLabel         string
 	CanonicalURL         string
-	ActorUserID          string
+	OperatorID           string
 	OwnerUserID          string
 	OwnerOrgID           string
 	ConfidentialityLevel int32
@@ -133,7 +133,7 @@ type LinkInput struct {
 	TargetSubjectID      uuid.UUID
 	RelationshipTypeCode string
 	RoleDetail           string
-	ActorUserID          string
+	OperatorID           string
 	ValidFrom            *time.Time
 }
 

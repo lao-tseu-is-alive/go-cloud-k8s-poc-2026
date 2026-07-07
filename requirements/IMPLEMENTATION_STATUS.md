@@ -89,9 +89,37 @@ Not betterments, just a different-but-equivalent option chosen for consistency:
 
 ### 3c. Known gaps (LESS than the spec — backlog, not enhancements)
 
-- **Security is scope-based only** (`goeland:read` / `goeland:write`). The `Permission`
+- **Authorization is scope-based only** (`goeland:read` / `goeland:write`). The `Permission`
   enum exists in proto, but `access_grant`, per-subject grants and deny-by-default
   confidentiality (spec §10) are **not** enforced yet. Tracked in §1 (🟡) and §5.
+
+### 3d. Review quick-wins applied (2026-07-07, from `reports/report_20260707_codex.md`)
+
+Hardened after the technical review (all verified end-to-end):
+
+- 🔒 **Trustworthy attribution** — the operator is always the authenticated principal
+  (`core.OperatorID`); the forgeable request `actor_user_id` field was removed. Operator ≠
+  domain ACTOR (see AGENTS.md).
+- 🔒 **Honest integrity** — `VerifyDocumentIntegrity` is now non-mutating and non-probative
+  (stored-hash comparison; blank expected ≠ verified; reads no bytes).
+- 🔒 **Lifecycle invariants** — update/finalize/delete/link reject locked/soft-deleted
+  records atomically (`EnsureMutableTx`, `SELECT … FOR UPDATE`).
+- 🔎 **Audit correlation** — `X-Request-ID` is propagated into every `audit_event.request_id`;
+  access logs capture status + bytes.
+- 🔗 **Consistency** — title updates sync `subject_ref.display_label`; `previous_version_id`
+  now also creates the `DOCUMENT_PREVIOUS_VERSION` edge; inactive document/relationship types
+  are rejected. (Also fixed a latent ambiguous-`id` bug in the relationships JOIN query.)
+- 🌐 **REST surface** — `CoreService` and `DocumentService` RPCs carry `google.api.http`
+  annotations (spec §13.3/§13.6), so Vanguard serves them as REST/JSON (`/api/documents/...`,
+  `/api/subjects/...`, `/api/relationships/...`) alongside Connect/gRPC, and the generated
+  OpenAPI documents real paths.
+- 🧱 **Ops** — Dockerfile ships CA roots + version ldflags + pinned builder; the ConfigMap
+  helper no longer emits secrets.
+- ✅ **Tests** — added unit tests for operator identity, error mapping, request-id context,
+  document validation, lock propagation, and hash comparison.
+
+Still open from the review (bigger than quick-wins): a real authorization/confidentiality
+policy, streamed probative hashing, DB integration tests, CI, metrics/tracing.
 
 ---
 

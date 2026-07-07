@@ -1,16 +1,26 @@
 # Stage 1 – Go binary
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
-FROM golang:1-alpine AS builder
+# Pin the builder to the module's Go minor version for reproducibility.
+FROM golang:1.26-alpine AS builder
 LABEL maintainer="cgil"
-RUN apk add --no-cache make git
+# git: for module VCS metadata; ca-certificates: copied into the scratch runtime.
+RUN apk add --no-cache git ca-certificates
 WORKDIR /app
 COPY go.mod go.sum ./
-RUN make mod-download
+RUN go mod download
 COPY . .
-RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo -o bin/goeland-server ./cmd/goeland-server
+# Inject version provenance so the container's /goAppInfo reports real values
+# (pass with: --build-arg APP_REVISION=$(git describe --always) --build-arg BUILD_STAMP=$(date -u +%FT%TZ)).
+ARG APP_REVISION=unknown
+ARG BUILD_STAMP=unknown
+RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
+    -ldflags "-X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.Revision=${APP_REVISION} -X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.BuildStamp=${BUILD_STAMP}" \
+    -o bin/goeland-server ./cmd/goeland-server
 
 # Stage 2 – Minimal runtime image
 FROM scratch
+# CA roots so outbound HTTPS (PAT introspection, certificate-verifying PostgreSQL TLS) works.
+COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt
 USER 1221:1221
 WORKDIR /goapp
 COPY --from=builder /app/bin/goeland-server .

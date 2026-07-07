@@ -9,14 +9,569 @@ consumes:
   - application/json
 produces:
   - application/json
-paths: {}
+paths:
+  /api/document-types:
+    get:
+      summary: List the controlled document types (classification catalogue).
+      operationId: ListDocumentTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListDocumentTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - DocumentService
+  /api/documents:
+    post:
+      summary: Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+      operationId: CreateDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateDocumentRequest'
+      tags:
+        - DocumentService
+  /api/documents/search:
+    get:
+      summary: Full-text + filtered search (leverages the generated tsvector + GIN index).
+      operationId: SearchDocuments
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchDocumentsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: plain text
+          in: query
+          required: false
+          type: string
+        - name: documentTypeCode
+          in: query
+          required: false
+          type: string
+        - name: caseId
+          description: filter via relationship
+          in: query
+          required: false
+          type: string
+        - name: thingId
+          in: query
+          required: false
+          type: string
+        - name: confidentialityMax
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: onlyRecords
+          in: query
+          required: false
+          type: boolean
+        - name: onlyFinal
+          in: query
+          required: false
+          type: boolean
+        - name: includeDeleted
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          in: query
+          required: false
+          type: string
+      tags:
+        - DocumentService
+  /api/documents/{documentId}/links:
+    post:
+      summary: Convenience wrapper around Core.LinkSubjects for document-centric use.
+      operationId: LinkDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1LinkDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: documentId
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceLinkDocumentBody'
+      tags:
+        - DocumentService
+  /api/documents/{id}:
+    get:
+      summary: Retrieve a document with context (relationships to cases/things, recent history).
+      operationId: GetDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: subject_ref id
+          in: path
+          required: true
+          type: string
+        - name: includeRelationships
+          description: to cases, things, previous versions
+          in: query
+          required: false
+          type: boolean
+        - name: includeAudit
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - DocumentService
+    delete:
+      summary: Soft-delete a document (non-destructive) and write an audit event.
+      operationId: DeleteDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DeleteDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: reason
+          in: query
+          required: false
+          type: string
+      tags:
+        - DocumentService
+    patch:
+      summary: Update mutable metadata only (respects locking).
+      operationId: UpdateDocumentMetadata
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateDocumentMetadataResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceUpdateDocumentMetadataBody'
+      tags:
+        - DocumentService
+  /api/documents/{id}/finalize:
+    post:
+      summary: Business finalization + optional governance lock. Critical for probative documents.
+      operationId: FinalizeDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1FinalizeDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceFinalizeDocumentBody'
+      tags:
+        - DocumentService
+  /api/documents/{id}/integrity:
+    get:
+      summary: |-
+        Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
+        expected sha256 against the registered hash. It does NOT read storage bytes
+        and writes nothing (hence read-scoped). Real streamed verification is future work.
+      operationId: VerifyDocumentIntegrity
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1VerifyDocumentIntegrityResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: expectedSha256
+          description: optional; must match stored when provided
+          in: query
+          required: false
+          type: string
+      tags:
+        - DocumentService
+  /api/relationship-types:
+    get:
+      summary: List the catalogue of allowed relationship types (optionally filtered).
+      operationId: ListRelationshipTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListRelationshipTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          in: query
+          required: false
+          type: boolean
+        - name: sourceKind
+          description: |-
+            optional filter (UNSPECIFIED = any)
+
+             - SUBJECT_KIND_CASE: Affaire / dossier métier
+             - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
+             - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
+             - SUBJECT_KIND_ACTOR: Personne ou organisation externe
+             - SUBJECT_KIND_USER: Utilisateur interne (future)
+             - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+          in: query
+          required: false
+          type: string
+          enum:
+            - SUBJECT_KIND_UNSPECIFIED
+            - SUBJECT_KIND_CASE
+            - SUBJECT_KIND_DOCUMENT
+            - SUBJECT_KIND_THING
+            - SUBJECT_KIND_ACTOR
+            - SUBJECT_KIND_USER
+            - SUBJECT_KIND_ORG_UNIT
+          default: SUBJECT_KIND_UNSPECIFIED
+        - name: targetKind
+          description: |-
+            optional filter (UNSPECIFIED = any)
+
+             - SUBJECT_KIND_CASE: Affaire / dossier métier
+             - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
+             - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
+             - SUBJECT_KIND_ACTOR: Personne ou organisation externe
+             - SUBJECT_KIND_USER: Utilisateur interne (future)
+             - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+          in: query
+          required: false
+          type: string
+          enum:
+            - SUBJECT_KIND_UNSPECIFIED
+            - SUBJECT_KIND_CASE
+            - SUBJECT_KIND_DOCUMENT
+            - SUBJECT_KIND_THING
+            - SUBJECT_KIND_ACTOR
+            - SUBJECT_KIND_USER
+            - SUBJECT_KIND_ORG_UNIT
+          default: SUBJECT_KIND_UNSPECIFIED
+      tags:
+        - CoreService
+  /api/relationships:
+    post:
+      summary: Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
+      operationId: LinkSubjects
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1LinkSubjectsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1LinkSubjectsRequest'
+      tags:
+        - CoreService
+  /api/relationships/{relationshipId}:
+    delete:
+      summary: Soft-delete an existing relationship (non-destructive) and write an audit event.
+      operationId: UnlinkSubjects
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UnlinkSubjectsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: relationshipId
+          in: path
+          required: true
+          type: string
+        - name: reason
+          in: query
+          required: false
+          type: string
+      tags:
+        - CoreService
+  /api/subjects:
+    post:
+      summary: |-
+        Create a canonical subject identity + its record_metadata in one transaction.
+        Every other create (Document, Case, Thing, Actor) calls this first.
+      operationId: CreateSubjectRef
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateSubjectRefResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateSubjectRefRequest'
+      tags:
+        - CoreService
+  /api/subjects/{id}:
+    get:
+      summary: Retrieve a subject with optional governance + audit info.
+      operationId: GetSubjectRef
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetSubjectRefResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: includeMetadata
+          in: query
+          required: false
+          type: boolean
+        - name: includeAuditSummary
+          description: recent audit events
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - CoreService
+  /api/subjects/{subjectId}/audit:
+    get:
+      summary: Full probative history for compliance / reconstruction.
+      operationId: ListAuditEvents
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListAuditEventsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          type: string
+        - name: eventType
+          in: query
+          required: false
+          type: string
+        - name: from
+          in: query
+          required: false
+          type: string
+          format: date-time
+        - name: to
+          in: query
+          required: false
+          type: string
+          format: date-time
+        - name: pageSize
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          in: query
+          required: false
+          type: string
+      tags:
+        - CoreService
+  /api/subjects/{subjectId}/relationships:
+    get:
+      summary: |-
+        List relationships for a subject (graph traversal primitive). Use the `outgoing`
+        query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
+      operationId: ListRelationships
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListRelationshipsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          in: path
+          required: true
+          type: string
+        - name: outgoing
+          description: true = edges from this subject, false = edges into it
+          in: query
+          required: false
+          type: boolean
+        - name: relationshipTypeCode
+          description: optional filter
+          in: query
+          required: false
+          type: string
+        - name: pageSize
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          in: query
+          required: false
+          type: string
+      tags:
+        - CoreService
 definitions:
+  DocumentServiceFinalizeDocumentBody:
+    type: object
+    properties:
+      reason:
+        type: string
+      alsoLockGovernance:
+        type: boolean
+        title: also set record_metadata.is_locked
+    description: FinalizeDocumentRequest marks a document final and optionally locks its governance record (immutable).
+  DocumentServiceLinkDocumentBody:
+    type: object
+    properties:
+      targetSubjectId:
+        type: string
+      relationshipTypeCode:
+        type: string
+        title: e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
+      roleDetail:
+        type: string
+    description: |-
+      LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
+      with document-specific validation + audit context).
+    required:
+      - relationshipTypeCode
+  DocumentServiceUpdateDocumentMetadataBody:
+    type: object
+    properties:
+      title:
+        type: string
+      description:
+        type: string
+      officialDate:
+        type: string
+      language:
+        type: string
+      metadata:
+        type: object
+      reason:
+        type: string
+        title: for audit
+    description: UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
   protobufAny:
     type: object
     properties:
       '@type':
         type: string
     additionalProperties: {}
+  protobufNullValue:
+    type: string
+    enum:
+      - NULL_VALUE
+    default: NULL_VALUE
+    description: |-
+      `NullValue` is a singleton enumeration to represent the null value for the
+      `Value` type union.
+
+      The JSON representation for `NullValue` is JSON `null`.
+
+       - NULL_VALUE: Null value.
   rpcStatus:
     type: object
     properties:
@@ -30,3 +585,553 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/protobufAny'
+  v1AuditEvent:
+    type: object
+    properties:
+      id:
+        type: string
+      subjectId:
+        type: string
+      eventType:
+        type: string
+        title: e.g. DOCUMENT_CREATED, RELATIONSHIP_LINKED, VALIDATION_PERFORMED
+      actorUserId:
+        type: string
+      occurredAt:
+        type: string
+        format: date-time
+        readOnly: true
+      beforeState:
+        type: object
+        title: snapshot of critical fields before
+      afterState:
+        type: object
+        title: snapshot after
+      reason:
+        type: string
+      correlationId:
+        type: string
+        title: groups multi-subject actions
+      requestId:
+        type: string
+      metadata:
+        type: object
+    description: AuditEvent is an append-only probative audit record, written on every mutation.
+    required:
+      - eventType
+  v1CreateDocumentRequest:
+    type: object
+    properties:
+      documentTypeCode:
+        type: string
+      title:
+        type: string
+      description:
+        type: string
+      officialDate:
+        type: string
+      storageRef:
+        type: string
+      externalSystem:
+        type: string
+      externalId:
+        type: string
+      externalUrl:
+        type: string
+      mimeType:
+        type: string
+      fileSizeBytes:
+        type: string
+        format: int64
+      sha256:
+        type: string
+      version:
+        type: integer
+        format: int32
+      previousVersionId:
+        type: string
+        title: link to older version if applicable
+      isFinal:
+        type: boolean
+      isRecord:
+        type: boolean
+      language:
+        type: string
+      pageCount:
+        type: integer
+        format: int32
+      metadata:
+        type: object
+      initialGovernance:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: |-
+          NOTE: the acting operator is derived server-side from the authenticated
+          principal (never trusted from the client). A document's AUTHOR is a separate,
+          external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
+
+          confidentiality, owner_org etc.
+      linkToCaseId:
+        type: string
+        description: 'Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.'
+    description: CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+    required:
+      - documentTypeCode
+      - title
+  v1CreateDocumentResponse:
+    type: object
+    properties:
+      document:
+        $ref: '#/definitions/v1Document'
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+      initialRelationship:
+        $ref: '#/definitions/v1SubjectRelationship'
+        title: set when link_to_case_id was provided
+  v1CreateSubjectRefRequest:
+    type: object
+    properties:
+      kind:
+        $ref: '#/definitions/v1SubjectKind'
+      displayLabel:
+        type: string
+      canonicalUrl:
+        type: string
+      initialMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: owner, confidentiality etc.
+    required:
+      - displayLabel
+  v1CreateSubjectRefResponse:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+      metadata:
+        $ref: '#/definitions/v1RecordMetadata'
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1DeleteDocumentResponse:
+    type: object
+    properties:
+      deletedDocumentId:
+        type: string
+      deleteEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1Document:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        title: embedded canonical identity (kind = DOCUMENT)
+      documentType:
+        $ref: '#/definitions/v1DocumentType'
+      title:
+        type: string
+      description:
+        type: string
+      officialDate:
+        type: string
+        title: ISO date of the document itself (legal probative date)
+      storageRef:
+        type: string
+        description: 'URI: minio://..., alfresco://..., internal://...'
+      externalSystem:
+        type: string
+        title: '"alfresco", "minio", "sharepoint", "goeland-legacy"'
+      externalId:
+        type: string
+        title: authoritative id in external system (prevents duplication)
+      externalUrl:
+        type: string
+        title: clickable link if available
+      mimeType:
+        type: string
+      fileSizeBytes:
+        type: string
+        format: int64
+      sha256:
+        type: string
+        title: hex SHA-256 (integrity + dedup key)
+      sha256VerifiedAt:
+        type: string
+        format: date-time
+      version:
+        type: integer
+        format: int32
+      previousVersionId:
+        type: string
+        title: explicit chain (also mirrored in a relationship)
+      isFinal:
+        type: boolean
+        title: business final (signed, approved)
+      isRecord:
+        type: boolean
+        title: declared record for retention / records management
+      language:
+        type: string
+        title: ISO 639, e.g. "fr", "de"
+      pageCount:
+        type: integer
+        format: int32
+      status:
+        $ref: '#/definitions/v1DocumentStatus'
+      metadata:
+        type: object
+        description: classification, keywords, extracted entities...
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+      createdBy:
+        type: string
+      updatedAt:
+        type: string
+        format: date-time
+        readOnly: true
+      recordMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        title: governance (confidentiality, locked, owner...)
+    description: |-
+      Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
+      Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
+    required:
+      - title
+  v1DocumentStatus:
+    type: string
+    enum:
+      - DOCUMENT_STATUS_UNSPECIFIED
+      - DOCUMENT_STATUS_DRAFT
+      - DOCUMENT_STATUS_FINAL
+      - DOCUMENT_STATUS_SUPERSEDED
+      - DOCUMENT_STATUS_ARCHIVED
+    default: DOCUMENT_STATUS_UNSPECIFIED
+    description: |-
+      DocumentStatus is the lifecycle state of a document.
+
+       - DOCUMENT_STATUS_FINAL: is_final = true
+  v1DocumentType:
+    type: object
+    properties:
+      id:
+        type: string
+      code:
+        type: string
+        title: e.g. PLAN, INCOMING_LETTER, DECISION
+      label:
+        type: string
+      description:
+        type: string
+      category:
+        type: string
+        description: ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...
+      isActive:
+        type: boolean
+    description: DocumentType is a controlled classification (behavior + category).
+    required:
+      - code
+  v1FinalizeDocumentResponse:
+    type: object
+    properties:
+      document:
+        $ref: '#/definitions/v1Document'
+      finalizeEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1GetDocumentResponse:
+    type: object
+    properties:
+      document:
+        $ref: '#/definitions/v1Document'
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+  v1GetSubjectRefResponse:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+      metadata:
+        $ref: '#/definitions/v1RecordMetadata'
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+  v1LinkDocumentResponse:
+    type: object
+    properties:
+      relationship:
+        $ref: '#/definitions/v1SubjectRelationship'
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1LinkSubjectsRequest:
+    type: object
+    properties:
+      sourceSubjectId:
+        type: string
+      targetSubjectId:
+        type: string
+      relationshipTypeCode:
+        type: string
+      roleDetail:
+        type: string
+      validFrom:
+        type: string
+        format: date-time
+    required:
+      - relationshipTypeCode
+  v1LinkSubjectsResponse:
+    type: object
+    properties:
+      relationship:
+        $ref: '#/definitions/v1SubjectRelationship'
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1ListAuditEventsResponse:
+    type: object
+    properties:
+      events:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+      nextPageToken:
+        type: string
+      totalSize:
+        type: integer
+        format: int32
+  v1ListDocumentTypesResponse:
+    type: object
+    properties:
+      documentTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DocumentType'
+  v1ListRelationshipTypesResponse:
+    type: object
+    properties:
+      relationshipTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RelationshipType'
+  v1ListRelationshipsResponse:
+    type: object
+    properties:
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+      nextPageToken:
+        type: string
+      totalSize:
+        type: integer
+        format: int32
+  v1RecordMetadata:
+    type: object
+    properties:
+      subjectId:
+        type: string
+        description: |-
+          subject_id is server-assigned. When RecordMetadata is used as an input for
+          initial governance it is left empty, so the uuid rule is skipped when unset.
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+      createdBy:
+        type: string
+        title: user id or "system"
+      updatedAt:
+        type: string
+        format: date-time
+        readOnly: true
+      updatedBy:
+        type: string
+      deletedAt:
+        type: string
+        format: date-time
+        title: soft delete
+        readOnly: true
+      deletedBy:
+        type: string
+      ownerUserId:
+        type: string
+      ownerOrgId:
+        type: string
+      confidentialityLevel:
+        type: integer
+        format: int32
+        title: 0=public ... 5=secret
+      version:
+        type: integer
+        format: int32
+        readOnly: true
+      isLocked:
+        type: boolean
+        title: set on formal validation/closure -> immutable
+      lockedAt:
+        type: string
+        format: date-time
+        readOnly: true
+      lockedBy:
+        type: string
+      retentionUntil:
+        type: string
+        title: ISO date or policy reference (records management)
+      sortFinal:
+        type: string
+        title: CONSERVER | ELIMINER | ARCHIVER | VERSER_SAE
+      metadata:
+        type: object
+        additionalProperties:
+          type: string
+        title: extra governance attributes
+    description: |-
+      RecordMetadata is the 1:1 governance record attached to every SubjectRef.
+      It implements non-destructive lifecycle, ownership, confidentiality and locking.
+  v1RelationshipType:
+    type: object
+    properties:
+      id:
+        type: string
+      code:
+        type: string
+        title: e.g. CASE_HAS_DOCUMENT, DOCUMENT_REPRESENTS_THING, DOCUMENT_PREVIOUS_VERSION
+      label:
+        type: string
+      sourceKind:
+        $ref: '#/definitions/v1SubjectKind'
+      targetKind:
+        $ref: '#/definitions/v1SubjectKind'
+      isDirected:
+        type: boolean
+      inverseLabel:
+        type: string
+      description:
+        type: string
+      isActive:
+        type: boolean
+    description: RelationshipType defines an allowed typed relation between two subject kinds.
+    required:
+      - code
+  v1SearchDocumentsResponse:
+    type: object
+    properties:
+      documents:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Document'
+      nextPageToken:
+        type: string
+      totalSize:
+        type: integer
+        format: int32
+  v1SubjectKind:
+    type: string
+    enum:
+      - SUBJECT_KIND_UNSPECIFIED
+      - SUBJECT_KIND_CASE
+      - SUBJECT_KIND_DOCUMENT
+      - SUBJECT_KIND_THING
+      - SUBJECT_KIND_ACTOR
+      - SUBJECT_KIND_USER
+      - SUBJECT_KIND_ORG_UNIT
+    default: SUBJECT_KIND_UNSPECIFIED
+    description: |-
+      SubjectKind enumerates the canonical business subjects. Every SubjectRef has exactly one kind.
+
+       - SUBJECT_KIND_CASE: Affaire / dossier métier
+       - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
+       - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
+       - SUBJECT_KIND_ACTOR: Personne ou organisation externe
+       - SUBJECT_KIND_USER: Utilisateur interne (future)
+       - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+  v1SubjectRef:
+    type: object
+    properties:
+      id:
+        type: string
+        title: UUID
+      kind:
+        $ref: '#/definitions/v1SubjectKind'
+      displayLabel:
+        type: string
+      canonicalUrl:
+        type: string
+        title: stable external permalink / URI
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+    description: |-
+      SubjectRef is the canonical identity of any business subject.
+      Every Case, Document, Thing and Actor owns exactly one SubjectRef entry.
+    required:
+      - displayLabel
+  v1SubjectRelationship:
+    type: object
+    properties:
+      id:
+        type: string
+      source:
+        $ref: '#/definitions/v1SubjectRef'
+      target:
+        $ref: '#/definitions/v1SubjectRef'
+      relationshipType:
+        $ref: '#/definitions/v1RelationshipType'
+      roleDetail:
+        type: string
+        title: e.g. "mandataire principal", "plan de masse v2"
+      validFrom:
+        type: string
+        format: date-time
+      validTo:
+        type: string
+        format: date-time
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+      createdBy:
+        type: string
+      deletedAt:
+        type: string
+        format: date-time
+        readOnly: true
+    description: 'SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.'
+  v1UnlinkSubjectsResponse:
+    type: object
+    properties:
+      relationshipId:
+        type: string
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1UpdateDocumentMetadataResponse:
+    type: object
+    properties:
+      document:
+        $ref: '#/definitions/v1Document'
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1VerifyDocumentIntegrityResponse:
+    type: object
+    properties:
+      verified:
+        type: boolean
+      actualSha256:
+        type: string
+      verifiedAt:
+        type: string
+        format: date-time
+      storageRefChecked:
+        type: string

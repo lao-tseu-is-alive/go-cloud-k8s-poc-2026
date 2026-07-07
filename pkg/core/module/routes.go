@@ -48,14 +48,15 @@ func (m *Module) ServiceNames() []string {
 }
 
 // RegisterRoutes mounts this module's transcoder on mux for standalone mode.
+// The transcoder serves both the Connect/gRPC RPC paths and any REST bindings
+// (google.api.http), so it is mounted as the catch-all. Bundle callers use
+// VanguardServices() + one shared transcoder instead.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) error {
 	transcoder, err := vanguard.NewTranscoder(m.VanguardServices())
 	if err != nil {
 		return fmt.Errorf("core module: build transcoder: %w", err)
 	}
-	for _, name := range m.ServiceNames() {
-		mux.Handle("/"+name+"/", http.MaxBytesHandler(transcoder, maxRequestBodyBytes))
-	}
+	mux.Handle("/", http.MaxBytesHandler(transcoder, maxRequestBodyBytes))
 	m.deps.Logger.Info("core module routes registered", "service", goelandv1connect.CoreServiceName)
 	return nil
 }

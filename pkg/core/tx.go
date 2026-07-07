@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -34,7 +35,7 @@ func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInpu
 		metadata = map[string]string{}
 	}
 	rows, err := q.Query(ctx, insertRecordMetadataSQL,
-		subjectID, in.ActorUserID, in.OwnerUserID, in.OwnerOrgID,
+		subjectID, in.OperatorID, in.OwnerUserID, in.OwnerOrgID,
 		in.ConfidentialityLevel, in.RetentionUntil, in.SortFinal, metadata)
 	if err != nil {
 		return nil, err
@@ -53,9 +54,15 @@ func InsertAuditEventTx(ctx context.Context, q Querier, ev AuditEvent) (*AuditEv
 	if metadata == nil {
 		metadata = map[string]any{}
 	}
+	// Stamp the request id from context when the caller didn't set one explicitly,
+	// so the audit trail is correlatable with HTTP access logs.
+	requestID := ev.RequestID
+	if requestID == "" {
+		requestID = RequestIDFromContext(ctx)
+	}
 	rows, err := q.Query(ctx, insertAuditEventSQL,
 		ev.SubjectID, ev.EventType, ev.ActorUserID, ev.BeforeState, ev.AfterState,
-		ev.Reason, correlation, ev.RequestID, metadata)
+		ev.Reason, correlation, requestID, metadata)
 	if err != nil {
 		return nil, err
 	}
@@ -102,9 +109,50 @@ func GetRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID) (*
 	return md, nil
 }
 
+// UpdateSubjectLabelTx keeps the canonical subject_ref.display_label in sync with
+// a domain entity's human label (e.g. a document title) within the same transaction.
+func UpdateSubjectLabelTx(ctx context.Context, q Querier, subjectID uuid.UUID, label string) error {
+	_, err := q.Exec(ctx, updateSubjectRefLabelSQL, subjectID, label)
+	return err
+}
+
+// GetRecordMetadataForUpdateTx loads a subject's governance record and locks the
+// row for the current transaction (SELECT ... FOR UPDATE). Returns ErrNotFound when absent.
+func GetRecordMetadataForUpdateTx(ctx context.Context, q Querier, subjectID uuid.UUID) (*RecordMetadata, error) {
+	rows, err := q.Query(ctx, getRecordMetadataForUpdateSQL, subjectID)
+	if err != nil {
+		return nil, err
+	}
+	md, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[RecordMetadata])
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	return md, nil
+}
+
+// EnsureMutableTx loads a subject's governance row FOR UPDATE and rejects the
+// mutation when the record is soft-deleted (ErrDeleted) or, unless allowLocked,
+// locked (ErrLocked). It returns the locked row so callers can reuse it. This is
+// the single lifecycle guard used by every mutating path (update, finalize,
+// delete, link) so the "no writes to locked/deleted records" invariant is real
+// and enforced atomically.
+func EnsureMutableTx(ctx context.Context, q Querier, subjectID uuid.UUID, allowLocked bool) (*RecordMetadata, error) {
+	md, err := GetRecordMetadataForUpdateTx(ctx, q, subjectID)
+	if err != nil {
+		return nil, err
+	}
+	if md.DeletedAt != nil {
+		return nil, ErrDeleted
+	}
+	if !allowLocked && md.IsLocked {
+		return nil, ErrLocked
+	}
+	return md, nil
+}
+
 // LockRecordMetadataTx sets the immutable flag on a subject's governance record using q.
-func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, actorUserID string) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, lockRecordMetadataSQL, subjectID, actorUserID)
+func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
+	rows, err := q.Query(ctx, lockRecordMetadataSQL, subjectID, operatorID)
 	if err != nil {
 		return nil, err
 	}
@@ -116,8 +164,8 @@ func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, a
 }
 
 // SoftDeleteRecordMetadataTx logically deletes a subject's governance record using q.
-func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, actorUserID string) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, softDeleteRecordMetadataSQL, subjectID, actorUserID)
+func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
+	rows, err := q.Query(ctx, softDeleteRecordMetadataSQL, subjectID, operatorID)
 	if err != nil {
 		return nil, err
 	}
@@ -143,11 +191,22 @@ func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelat
 	if err != nil {
 		return nil, err
 	}
+	if !rt.IsActive {
+		return nil, fmt.Errorf("%w: relationship type %q is inactive", ErrInvalidInput, in.RelationshipTypeCode)
+	}
 	if source.Kind != rt.SourceKind || target.Kind != rt.TargetKind {
 		return nil, ErrKindMismatch
 	}
+	// A relationship must not reference a soft-deleted subject on either end
+	// (locked subjects may still be linked — locking freezes content, not references).
+	if _, err := EnsureMutableTx(ctx, q, in.SourceSubjectID, true); err != nil {
+		return nil, err
+	}
+	if _, err := EnsureMutableTx(ctx, q, in.TargetSubjectID, true); err != nil {
+		return nil, err
+	}
 	rows, err := q.Query(ctx, insertSubjectRelationshipSQL,
-		in.SourceSubjectID, in.TargetSubjectID, rt.ID, in.RoleDetail, in.ValidFrom, in.ActorUserID)
+		in.SourceSubjectID, in.TargetSubjectID, rt.ID, in.RoleDetail, in.ValidFrom, in.OperatorID)
 	if err != nil {
 		return nil, mapConflict(err)
 	}

@@ -100,11 +100,11 @@ func (s *Service) LinkSubjects(ctx context.Context, in LinkInput) (*SubjectRelat
 }
 
 // UnlinkSubjects soft-deletes an existing relationship.
-func (s *Service) UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, actorUserID, reason string) (*SubjectRelationship, *AuditEvent, error) {
+func (s *Service) UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, operatorID, reason string) (*SubjectRelationship, *AuditEvent, error) {
 	if relationshipID == uuid.Nil {
 		return nil, nil, fmt.Errorf("%w: relationship id is required", ErrInvalidInput)
 	}
-	rel, ev, err := s.repo.UnlinkSubjects(ctx, relationshipID, actorUserID, reason)
+	rel, ev, err := s.repo.UnlinkSubjects(ctx, relationshipID, operatorID, reason)
 	if err != nil {
 		return nil, nil, fmt.Errorf("unlink subjects: %w", err)
 	}

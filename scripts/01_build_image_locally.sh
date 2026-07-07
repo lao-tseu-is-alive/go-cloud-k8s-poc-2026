@@ -46,7 +46,12 @@ else
 fi
 
 echo "## building ${IMAGE}:${APP_VERSION} + ${IMAGE}:latest ..."
-$DOCKER_BIN build -t "${IMAGE}:latest" -t "${IMAGE}:${APP_VERSION}" .
+APP_REVISION="$(git describe --dirty --always 2>/dev/null || echo unknown)"
+BUILD_STAMP="$(date -u +%Y-%m-%dT%H:%M:%SZ)"
+$DOCKER_BIN build \
+  --build-arg APP_REVISION="${APP_REVISION}" \
+  --build-arg BUILD_STAMP="${BUILD_STAMP}" \
+  -t "${IMAGE}:latest" -t "${IMAGE}:${APP_VERSION}" .
 
 echo "## ✓ built. Try it locally:"
 echo "   ${DOCKER_BIN} run --rm -p 8080:8080 --env-file .env --name ${APP_NAME_SNAKE} ${IMAGE}:${APP_VERSION}"

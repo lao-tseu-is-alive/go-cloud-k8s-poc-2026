@@ -5,7 +5,9 @@
 // that can live standalone or be embedded in affaires (via CoreService relationships).
 //
 // Modern GED features added beyond the basic model:
-//   - Strong cryptographic integrity (sha256 + verification timestamp).
+//   - Cryptographic integrity metadata (sha256 registered at creation). NOTE:
+//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
+//     comparison only (it does not read storage bytes); real streamed hashing is a roadmap item.
 //   - External reference without duplication (external_system + external_id + storage_ref as URI)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Explicit + graph versioning (previous_version_id + DOCUMENT_PREVIOUS_VERSION relationships).
@@ -444,8 +446,10 @@ type CreateDocumentRequest struct {
 	Language          string                 `protobuf:"bytes,16,opt,name=language,proto3" json:"language,omitempty"`
 	PageCount         int32                  `protobuf:"varint,17,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
 	Metadata          *structpb.Struct       `protobuf:"bytes,18,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	ActorUserId       string                 `protobuf:"bytes,19,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`                 // for ownership + audit
-	InitialGovernance *RecordMetadata        `protobuf:"bytes,20,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"` // confidentiality, owner_org etc.
+	// NOTE: the acting operator is derived server-side from the authenticated
+	// principal (never trusted from the client). A document's AUTHOR is a separate,
+	// external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
+	InitialGovernance *RecordMetadata `protobuf:"bytes,20,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"` // confidentiality, owner_org etc.
 	// Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.
 	LinkToCaseId  string `protobuf:"bytes,21,opt,name=link_to_case_id,json=linkToCaseId,proto3" json:"link_to_case_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
@@ -606,13 +610,6 @@ func (x *CreateDocumentRequest) GetMetadata() *structpb.Struct {
 		return x.Metadata
 	}
 	return nil
-}
-
-func (x *CreateDocumentRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
-	}
-	return ""
 }
 
 func (x *CreateDocumentRequest) GetInitialGovernance() *RecordMetadata {
@@ -818,7 +815,6 @@ type UpdateDocumentMetadataRequest struct {
 	OfficialDate  string                 `protobuf:"bytes,4,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
 	Language      string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
 	Metadata      *structpb.Struct       `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	ActorUserId   string                 `protobuf:"bytes,7,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"` // for audit
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -896,13 +892,6 @@ func (x *UpdateDocumentMetadataRequest) GetMetadata() *structpb.Struct {
 	return nil
 }
 
-func (x *UpdateDocumentMetadataRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
-	}
-	return ""
-}
-
 func (x *UpdateDocumentMetadataRequest) GetReason() string {
 	if x != nil {
 		return x.Reason
@@ -966,7 +955,6 @@ func (x *UpdateDocumentMetadataResponse) GetUpdateEvent() *AuditEvent {
 type FinalizeDocumentRequest struct {
 	state              protoimpl.MessageState `protogen:"open.v1"`
 	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ActorUserId        string                 `protobuf:"bytes,2,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Reason             string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	AlsoLockGovernance bool                   `protobuf:"varint,4,opt,name=also_lock_governance,json=alsoLockGovernance,proto3" json:"also_lock_governance,omitempty"` // also set record_metadata.is_locked
 	unknownFields      protoimpl.UnknownFields
@@ -1006,13 +994,6 @@ func (*FinalizeDocumentRequest) Descriptor() ([]byte, []int) {
 func (x *FinalizeDocumentRequest) GetId() string {
 	if x != nil {
 		return x.Id
-	}
-	return ""
-}
-
-func (x *FinalizeDocumentRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
 	}
 	return ""
 }
@@ -1389,7 +1370,6 @@ type LinkDocumentRequest struct {
 	TargetSubjectId      string                 `protobuf:"bytes,2,opt,name=target_subject_id,json=targetSubjectId,proto3" json:"target_subject_id,omitempty"`
 	RelationshipTypeCode string                 `protobuf:"bytes,3,opt,name=relationship_type_code,json=relationshipTypeCode,proto3" json:"relationship_type_code,omitempty"` // e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
 	RoleDetail           string                 `protobuf:"bytes,4,opt,name=role_detail,json=roleDetail,proto3" json:"role_detail,omitempty"`
-	ActorUserId          string                 `protobuf:"bytes,5,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	unknownFields        protoimpl.UnknownFields
 	sizeCache            protoimpl.SizeCache
 }
@@ -1452,13 +1432,6 @@ func (x *LinkDocumentRequest) GetRoleDetail() string {
 	return ""
 }
 
-func (x *LinkDocumentRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
-	}
-	return ""
-}
-
 type LinkDocumentResponse struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Relationship  *SubjectRelationship   `protobuf:"bytes,1,opt,name=relationship,proto3" json:"relationship,omitempty"`
@@ -1514,7 +1487,6 @@ func (x *LinkDocumentResponse) GetAuditEvent() *AuditEvent {
 type DeleteDocumentRequest struct {
 	state         protoimpl.MessageState `protogen:"open.v1"`
 	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ActorUserId   string                 `protobuf:"bytes,2,opt,name=actor_user_id,json=actorUserId,proto3" json:"actor_user_id,omitempty"`
 	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1553,13 +1525,6 @@ func (*DeleteDocumentRequest) Descriptor() ([]byte, []int) {
 func (x *DeleteDocumentRequest) GetId() string {
 	if x != nil {
 		return x.Id
-	}
-	return ""
-}
-
-func (x *DeleteDocumentRequest) GetActorUserId() string {
-	if x != nil {
-		return x.ActorUserId
 	}
 	return ""
 }
@@ -1716,7 +1681,7 @@ var File_goeland_v1_document_proto protoreflect.FileDescriptor
 const file_goeland_v1_document_proto_rawDesc = "" +
 	"\n" +
 	"\x19goeland/v1/document.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd8\x01\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd8\x01\n" +
 	"\fDocumentType\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
@@ -1758,7 +1723,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"created_by\x18\x17 \x01(\tR\tcreatedBy\x12>\n" +
 	"\n" +
 	"updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
-	"\x0frecord_metadata\x18\x19 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\"\xae\a\n" +
+	"\x0frecord_metadata\x18\x19 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\"\x8a\a\n" +
 	"\x15CreateDocumentRequest\x12:\n" +
 	"\x12document_type_code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x10documentTypeCode\x12#\n" +
 	"\x05title\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
@@ -1782,8 +1747,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"R\blanguage\x12&\n" +
 	"\n" +
 	"page_count\x18\x11 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\tpageCount\x123\n" +
-	"\bmetadata\x18\x12 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12\"\n" +
-	"\ractor_user_id\x18\x13 \x01(\tR\vactorUserId\x12I\n" +
+	"\bmetadata\x18\x12 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12I\n" +
 	"\x12initial_governance\x18\x14 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x11initialGovernance\x12%\n" +
 	"\x0flink_to_case_id\x18\x15 \x01(\tR\flinkToCaseId\"\xf9\x01\n" +
 	"\x16CreateDocumentResponse\x120\n" +
@@ -1798,7 +1762,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\x13GetDocumentResponse\x120\n" +
 	"\bdocument\x18\x01 \x01(\v2\x14.goeland.v1.DocumentR\bdocument\x12E\n" +
 	"\rrelationships\x18\x02 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x129\n" +
-	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xcc\x02\n" +
+	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xa8\x02\n" +
 	"\x1dUpdateDocumentMetadataRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x05title\x18\x02 \x01(\tB\n" +
@@ -1807,15 +1771,13 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\rofficial_date\x18\x04 \x01(\tR\fofficialDate\x12#\n" +
 	"\blanguage\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"R\blanguage\x123\n" +
-	"\bmetadata\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12\"\n" +
-	"\ractor_user_id\x18\a \x01(\tR\vactorUserId\x12 \n" +
+	"\bmetadata\x18\x06 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12 \n" +
 	"\x06reason\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x8d\x01\n" +
 	"\x1eUpdateDocumentMetadataResponse\x120\n" +
 	"\bdocument\x18\x01 \x01(\v2\x14.goeland.v1.DocumentR\bdocument\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xab\x01\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\x87\x01\n" +
 	"\x17FinalizeDocumentRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\"\n" +
-	"\ractor_user_id\x18\x02 \x01(\tR\vactorUserId\x12 \n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x120\n" +
 	"\x14also_lock_governance\x18\x04 \x01(\bR\x12alsoLockGovernance\"\x8b\x01\n" +
 	"\x18FinalizeDocumentResponse\x120\n" +
@@ -1849,22 +1811,20 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\tdocuments\x18\x01 \x03(\v2\x14.goeland.v1.DocumentR\tdocuments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x89\x02\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\xe5\x01\n" +
 	"\x13LinkDocumentRequest\x12)\n" +
 	"\vdocument_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"documentId\x124\n" +
 	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12B\n" +
 	"\x16relationship_type_code\x18\x03 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
 	"\vrole_detail\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\n" +
-	"roleDetail\x12\"\n" +
-	"\ractor_user_id\x18\x05 \x01(\tR\vactorUserId\"\x94\x01\n" +
+	"roleDetail\"\x94\x01\n" +
 	"\x14LinkDocumentResponse\x12C\n" +
 	"\frelationship\x18\x01 \x01(\v2\x1f.goeland.v1.SubjectRelationshipR\frelationship\x127\n" +
 	"\vaudit_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent\"w\n" +
+	"auditEvent\"S\n" +
 	"\x15DeleteDocumentRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\"\n" +
-	"\ractor_user_id\x18\x02 \x01(\tR\vactorUserId\x12 \n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x83\x01\n" +
 	"\x16DeleteDocumentResponse\x12.\n" +
 	"\x13deleted_document_id\x18\x01 \x01(\tR\x11deletedDocumentId\x129\n" +
@@ -1879,17 +1839,17 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\x15DOCUMENT_STATUS_DRAFT\x10\x01\x12\x19\n" +
 	"\x15DOCUMENT_STATUS_FINAL\x10\x02\x12\x1e\n" +
 	"\x1aDOCUMENT_STATUS_SUPERSEDED\x10\x03\x12\x1c\n" +
-	"\x18DOCUMENT_STATUS_ARCHIVED\x10\x042\xe8\x06\n" +
-	"\x0fDocumentService\x12W\n" +
-	"\x0eCreateDocument\x12!.goeland.v1.CreateDocumentRequest\x1a\".goeland.v1.CreateDocumentResponse\x12N\n" +
-	"\vGetDocument\x12\x1e.goeland.v1.GetDocumentRequest\x1a\x1f.goeland.v1.GetDocumentResponse\x12o\n" +
-	"\x16UpdateDocumentMetadata\x12).goeland.v1.UpdateDocumentMetadataRequest\x1a*.goeland.v1.UpdateDocumentMetadataResponse\x12]\n" +
-	"\x10FinalizeDocument\x12#.goeland.v1.FinalizeDocumentRequest\x1a$.goeland.v1.FinalizeDocumentResponse\x12r\n" +
-	"\x17VerifyDocumentIntegrity\x12*.goeland.v1.VerifyDocumentIntegrityRequest\x1a+.goeland.v1.VerifyDocumentIntegrityResponse\x12Z\n" +
-	"\x0fSearchDocuments\x12\".goeland.v1.SearchDocumentsRequest\x1a#.goeland.v1.SearchDocumentsResponse\x12Q\n" +
-	"\fLinkDocument\x12\x1f.goeland.v1.LinkDocumentRequest\x1a .goeland.v1.LinkDocumentResponse\x12W\n" +
-	"\x0eDeleteDocument\x12!.goeland.v1.DeleteDocumentRequest\x1a\".goeland.v1.DeleteDocumentResponse\x12`\n" +
-	"\x11ListDocumentTypes\x12$.goeland.v1.ListDocumentTypesRequest\x1a%.goeland.v1.ListDocumentTypesResponseB\xb5\x01\n" +
+	"\x18DOCUMENT_STATUS_ARCHIVED\x10\x042\x9c\t\n" +
+	"\x0fDocumentService\x12r\n" +
+	"\x0eCreateDocument\x12!.goeland.v1.CreateDocumentRequest\x1a\".goeland.v1.CreateDocumentResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/documents\x12k\n" +
+	"\vGetDocument\x12\x1e.goeland.v1.GetDocumentRequest\x1a\x1f.goeland.v1.GetDocumentResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/documents/{id}\x12\x8f\x01\n" +
+	"\x16UpdateDocumentMetadata\x12).goeland.v1.UpdateDocumentMetadataRequest\x1a*.goeland.v1.UpdateDocumentMetadataResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*2\x13/api/documents/{id}\x12\x86\x01\n" +
+	"\x10FinalizeDocument\x12#.goeland.v1.FinalizeDocumentRequest\x1a$.goeland.v1.FinalizeDocumentResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/documents/{id}/finalize\x12\x99\x01\n" +
+	"\x17VerifyDocumentIntegrity\x12*.goeland.v1.VerifyDocumentIntegrityRequest\x1a+.goeland.v1.VerifyDocumentIntegrityResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/documents/{id}/integrity\x12y\n" +
+	"\x0fSearchDocuments\x12\".goeland.v1.SearchDocumentsRequest\x1a#.goeland.v1.SearchDocumentsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/documents/search\x12\x80\x01\n" +
+	"\fLinkDocument\x12\x1f.goeland.v1.LinkDocumentRequest\x1a .goeland.v1.LinkDocumentResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/documents/{document_id}/links\x12t\n" +
+	"\x0eDeleteDocument\x12!.goeland.v1.DeleteDocumentRequest\x1a\".goeland.v1.DeleteDocumentResponse\"\x1b\x82\xd3\xe4\x93\x02\x15*\x13/api/documents/{id}\x12}\n" +
+	"\x11ListDocumentTypes\x12$.goeland.v1.ListDocumentTypesRequest\x1a%.goeland.v1.ListDocumentTypesResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/document-typesB\xb5\x01\n" +
 	"\x0ecom.goeland.v1B\rDocumentProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"

@@ -54,7 +54,7 @@ func (r *PostgresRepository) CreateSubject(ctx context.Context, in CreateSubject
 	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
 		SubjectID:   ref.ID,
 		EventType:   "SUBJECT_CREATED",
-		ActorUserID: in.ActorUserID,
+		ActorUserID: in.OperatorID,
 		AfterState:  map[string]any{"kind": string(ref.Kind), "display_label": ref.DisplayLabel},
 	})
 	if err != nil {
@@ -99,7 +99,7 @@ func (r *PostgresRepository) LinkSubjects(ctx context.Context, in LinkInput) (*S
 	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
 		SubjectID:   in.SourceSubjectID,
 		EventType:   "RELATIONSHIP_LINKED",
-		ActorUserID: in.ActorUserID,
+		ActorUserID: in.OperatorID,
 		AfterState: map[string]any{
 			"relationship_id": rel.ID.String(),
 			"type":            in.RelationshipTypeCode,
@@ -116,14 +116,14 @@ func (r *PostgresRepository) LinkSubjects(ctx context.Context, in LinkInput) (*S
 }
 
 // UnlinkSubjects soft-deletes a relationship and writes a RELATIONSHIP_UNLINKED audit event.
-func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, actorUserID, reason string) (*SubjectRelationship, *AuditEvent, error) {
+func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, operatorID, reason string) (*SubjectRelationship, *AuditEvent, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin unlink subjects: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	rows, err := tx.Query(ctx, softDeleteRelationshipSQL, relationshipID, actorUserID)
+	rows, err := tx.Query(ctx, softDeleteRelationshipSQL, relationshipID, operatorID)
 	if err != nil {
 		return nil, nil, fmt.Errorf("soft delete relationship: %w", err)
 	}
@@ -134,7 +134,7 @@ func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID 
 	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
 		SubjectID:   rel.SourceSubjectID,
 		EventType:   "RELATIONSHIP_UNLINKED",
-		ActorUserID: actorUserID,
+		ActorUserID: operatorID,
 		Reason:      reason,
 		BeforeState: map[string]any{"relationship_id": rel.ID.String()},
 	})

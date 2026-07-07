@@ -69,7 +69,7 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		Language:          msg.Language,
 		PageCount:         msg.PageCount,
 		Metadata:          structToMap(msg.Metadata),
-		ActorUserID:       core.ActorID(user, msg.ActorUserId),
+		OperatorID:        core.OperatorID(user),
 		LinkToCaseID:      linkCase,
 	}
 	if gov := msg.InitialGovernance; gov != nil {
@@ -145,7 +145,7 @@ func (s *ConnectServer) UpdateDocumentMetadata(ctx context.Context, req *connect
 		OfficialDate: officialDate,
 		Language:     req.Msg.Language,
 		Metadata:     structToMap(req.Msg.Metadata),
-		ActorUserID:  core.ActorID(user, req.Msg.ActorUserId),
+		OperatorID:   core.OperatorID(user),
 		Reason:       req.Msg.Reason,
 	})
 	if err != nil {
@@ -167,7 +167,7 @@ func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	doc, ev, err := s.service.Finalize(ctx, id, core.ActorID(user, req.Msg.ActorUserId), req.Msg.Reason, req.Msg.AlsoLockGovernance)
+	doc, ev, err := s.service.Finalize(ctx, id, core.OperatorID(user), req.Msg.Reason, req.Msg.AlsoLockGovernance)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
@@ -177,7 +177,9 @@ func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Reque
 	}), nil
 }
 
-// VerifyDocumentIntegrity verifies a document's stored hash.
+// VerifyDocumentIntegrity performs a non-mutating, non-probative stored-hash
+// comparison (it does not read bytes from storage). See Service.Verify. It runs
+// under the read scope precisely because it writes nothing.
 func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connect.Request[goelandv1.VerifyDocumentIntegrityRequest]) (*connect.Response[goelandv1.VerifyDocumentIntegrityResponse], error) {
 	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
 		return nil, err
@@ -194,11 +196,12 @@ func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connec
 	if doc.SHA256 != nil {
 		actual = *doc.SHA256
 	}
+	// storage_ref_checked is left empty on purpose: no storage bytes were read.
 	return connect.NewResponse(&goelandv1.VerifyDocumentIntegrityResponse{
 		Verified:          verified,
 		ActualSha256:      actual,
 		VerifiedAt:        core.TimestampPtrOrNil(doc.SHA256VerifiedAt),
-		StorageRefChecked: doc.StorageRef,
+		StorageRefChecked: "",
 	}), nil
 }
 
@@ -260,7 +263,7 @@ func (s *ConnectServer) LinkDocument(ctx context.Context, req *connect.Request[g
 		TargetSubjectID:      targetID,
 		RelationshipTypeCode: req.Msg.RelationshipTypeCode,
 		RoleDetail:           req.Msg.RoleDetail,
-		ActorUserID:          core.ActorID(user, req.Msg.ActorUserId),
+		OperatorID:           core.OperatorID(user),
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -281,7 +284,7 @@ func (s *ConnectServer) DeleteDocument(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	ev, err := s.service.SoftDelete(ctx, id, core.ActorID(user, req.Msg.ActorUserId), req.Msg.Reason)
+	ev, err := s.service.SoftDelete(ctx, id, core.OperatorID(user), req.Msg.Reason)
 	if err != nil {
 		return nil, s.mapError(err)
 	}

@@ -17,7 +17,8 @@ conventions of `go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
 - **Proto-first** API defined in `proto/goeland/v1/` (`core.proto`, `document.proto`),
   generated with **buf** into `gen/`.
 - **ConnectRPC + Vanguard**: each service is a Connect handler wrapped in a Vanguard
-  transcoder, reachable over Connect, gRPC and gRPC-Web on the standard RPC path.
+  transcoder — reachable over Connect, gRPC and gRPC-Web on the RPC path, **and** as
+  REST/JSON via `google.api.http` annotations (documented in the generated OpenAPI).
 - **protovalidate** enforces request validation at the edge (declarative rules in the proto).
 - **pgx (raw SQL)** with `db:"..."` struct tags and named row scanning — no ORM.
 - **Bundleable module pattern** (`pkg/<domain>/module`): each domain exposes
@@ -45,7 +46,8 @@ Transversal core (`pkg/core`):
 Document component (`pkg/document`), a first-class subject (`document.id` **is** a
 `subject_ref.id` of kind DOCUMENT, pinned by a composite FK):
 
-- cryptographic integrity (`sha256` + `sha256_verified_at`);
+- cryptographic integrity metadata (`sha256` registered at creation; `VerifyDocumentIntegrity`
+  is a non-mutating, non-probative stored-hash comparison — real streamed hashing is future work);
 - no-duplication external references (`external_system` / `external_id` / `external_url` / `storage_ref`);
 - versioning (`version` + `previous_version_id`);
 - records-management prep (`is_final`, `is_record`, `status`, governance locking);
@@ -61,7 +63,7 @@ and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 ```
 proto/goeland/v1/        core.proto, document.proto        (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
-api/openapi/             generated OpenAPI (goeland.swagger.yaml)
+api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
@@ -103,7 +105,13 @@ Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: 
 
 ## Calling the API
 
-Services (fully-qualified names, path = `/<service>/<Method>`):
+Every RPC is reachable two ways via the Vanguard transcoder:
+
+1. **REST/JSON** (from `google.api.http` annotations) — plain HTTP, documented in
+   `api/openapi/goeland.swagger.yaml`. **No special header needed.**
+2. **Connect / gRPC / gRPC-Web** on `/<fully-qualified-service>/<Method>`.
+
+Services:
 
 - `goeland.v1.CoreService` — `CreateSubjectRef`, `GetSubjectRef`, `LinkSubjects`,
   `UnlinkSubjects`, `ListRelationships`, `ListRelationshipTypes`, `ListAuditEvents`
@@ -111,31 +119,51 @@ Services (fully-qualified names, path = `/<service>/<Method>`):
   `UpdateDocumentMetadata`, `FinalizeDocument`, `VerifyDocumentIntegrity`,
   `SearchDocuments`, `LinkDocument`, `DeleteDocument`, `ListDocumentTypes`
 
-> **Connect over curl:** unary Connect JSON requests must send the
-> `Connect-Protocol-Version: 1` header, otherwise Vanguard treats the
-> `application/json` POST as a (non-existent) REST route and returns 404.
+### REST (recommended for curl / browsers)
+
+Both services are annotated (see `api/openapi/goeland.swagger.yaml` for the full contract).
+
+DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
+`PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
+`GET /api/documents/{id}/integrity` · `GET /api/documents/search` ·
+`POST /api/documents/{id}/links` · `DELETE /api/documents/{id}`.
+
+CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/relationships` ·
+`DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
+`GET /api/relationship-types` · `GET /api/subjects/{subjectId}/audit`.
 
 ```bash
 BASE=http://127.0.0.1:8088
-H=(-H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' -H 'Connect-Protocol-Version: 1')
+AUTH='Authorization: Bearer devtoken'
 
 # List seeded document types
-curl -s "${H[@]}" -d '{"onlyActive":true}' $BASE/goeland.v1.DocumentService/ListDocumentTypes
+curl -s -H "$AUTH" "$BASE/api/document-types?onlyActive=true"
 
 # Create a document (creates subject_ref + record_metadata + audit atomically)
-curl -s "${H[@]}" -d '{
+curl -s -H "$AUTH" -H 'Content-Type: application/json' -d '{
   "documentTypeCode":"PLAN","title":"Plan de masse v1",
   "storageRef":"minio://plans/plan-1234.pdf","mimeType":"application/pdf",
   "sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
   "initialGovernance":{"confidentialityLevel":1,"ownerOrgId":"OPC"}
-}' $BASE/goeland.v1.DocumentService/CreateDocument
+}' "$BASE/api/documents"
 
-# Full-text search
-curl -s "${H[@]}" -d '{"query":"masse"}' $BASE/goeland.v1.DocumentService/SearchDocuments
+# Full-text search + finalize
+curl -s -H "$AUTH" "$BASE/api/documents/search?query=masse"
+curl -s -H "$AUTH" -H 'Content-Type: application/json' -d '{"reason":"signed","alsoLockGovernance":true}' \
+  "$BASE/api/documents/<DOC_ID>/finalize"
+```
 
-# Finalize + lock (document becomes immutable; later updates return failed_precondition)
-curl -s "${H[@]}" -d '{"id":"<DOC_ID>","reason":"signed","alsoLockGovernance":true}' \
-  $BASE/goeland.v1.DocumentService/FinalizeDocument
+### Connect / gRPC (RPC path)
+
+> **Connect over curl:** unary Connect JSON requests on the RPC path must send the
+> `Connect-Protocol-Version: 1` header (this is a Connect-protocol requirement, and
+> only applies to the `/goeland.v1.*` RPC path — the REST `/api/*` paths above do not
+> need it).
+
+```bash
+curl -s -H 'Authorization: Bearer devtoken' -H 'Content-Type: application/json' \
+  -H 'Connect-Protocol-Version: 1' \
+  -d '{"onlyActive":true}' $BASE/goeland.v1.DocumentService/ListDocumentTypes
 ```
 
 ## Migrations

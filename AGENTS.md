@@ -54,7 +54,7 @@ subjects that reuse the core primitives.
 ```text
 proto/goeland/v1/            core.proto, document.proto        (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
-api/openapi/                 generated OpenAPI (goeland.swagger.yaml, never hand-edit)
+api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
 pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosystem-wide)
 pkg/core/                    transversal domain
@@ -73,7 +73,9 @@ cmd/goeland-server/          server: pool → migrate → wire both modules → 
 - `make test` — all Go tests with the race detector + `coverage.out`.
 - `make lint` — `go vet ./...` + `buf lint`.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
-- `make generate` — lint protos, update buf deps, regenerate Go/Connect/OpenAPI.
+- `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
+  OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,
+  annotate it (see `document.proto`) so it gets a REST binding + OpenAPI entry.
 - `make db-status | db-up | db-down` — dbmate against `.env`.
 - `make db-new name=add_case` — scaffold a new migration.
 
@@ -99,47 +101,66 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
   (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`).
 
-Scopes: `goeland:read` (read RPCs), `goeland:write` (mutations). The audit
-actor is the request's `actor_user_id` when set, else the authenticated app
-user id. Env vars are `GOELAND_*`; DB vars are `DB_*` / `DATABASE_URL`.
+Scopes: `goeland:read` (read RPCs), `goeland:write` (mutations). Env vars are
+`GOELAND_*`; DB vars are `DB_*` / `DATABASE_URL`.
 
-## API routing & the Connect-over-curl gotcha
+### Operator vs domain ACTOR — do not conflate
 
-RPC paths are `/<fully-qualified-service>/<Method>`:
+Two distinct identities; keep them separate:
 
-```text
-/goeland.v1.CoreService/<Method>
-/goeland.v1.DocumentService/<Method>
-```
+- **Operator** = the authenticated system user (employee) performing a mutation.
+  ALWAYS derived server-side via `core.OperatorID(user)` — never from the request
+  (requests carry no `actor_user_id`; the field was removed to prevent forgery).
+  Recorded in `audit_event.actor_user_id`, `record_metadata.created_by`/`owner_user_id`,
+  `subject_relationship.created_by`.
+- **Domain ACTOR** = an external person/organization (subject kind `ACTOR`), e.g. a
+  document's author. Never authenticated; recorded as an `ACTOR` subject linked by a
+  typed relationship (`DOCUMENT_AUTHORED_BY_ACTOR`, `CASE_HAS_ACTOR_REQUESTER`, ...).
+  When the Actor slice lands, authors go here — never through the operator identity.
 
-Plus `/health`, `/readiness`, `/goAppInfo`.
+## API routing — two surfaces (REST + RPC)
 
-⚠️ **Unary Connect JSON requests MUST send `Connect-Protocol-Version: 1`.**
-There are no `google.api.http` annotations, so Vanguard exposes no REST routes;
-without that header it treats an `application/json` POST as a (non-existent)
-REST route and returns **404 "Not Found"** (10-byte body — that is Vanguard, not
-the Go mux, whose 404 is "404 page not found"). Real Connect clients send the
-header automatically; only hand-rolled curl needs it added.
+The shared Vanguard transcoder is mounted as the catch-all (`/`) in the server; the
+specific `/health`, `/readiness`, `/goAppInfo` routes win by ServeMux specificity.
+It serves every RPC two ways:
 
-Example:
+1. **REST/JSON** from `google.api.http` annotations, e.g. `GET /api/documents/{id}`,
+   `POST /api/documents`. Plain HTTP — **no special header**. Documented in the
+   generated OpenAPI. When you add an RPC, add an annotation (see `document.proto`)
+   or it will have no REST binding / OpenAPI entry.
+2. **Connect / gRPC / gRPC-Web** on `/<fully-qualified-service>/<Method>`
+   (`/goeland.v1.DocumentService/...`).
+
+⚠️ **Connect-over-curl gotcha (RPC path only):** a unary Connect JSON request on the
+`/goeland.v1.*` RPC path MUST send `Connect-Protocol-Version: 1`; otherwise Vanguard
+treats the `application/json` POST as REST, finds no matching REST route on that path,
+and returns 404. This is a Connect-protocol requirement — real Connect clients send it
+automatically. The REST `/api/*` paths do **not** need it.
 
 ```bash
-curl -s \
-  -H 'Authorization: Bearer <dev-token>' \
-  -H 'Content-Type: application/json' \
+# REST (no header):
+curl -s -H 'Authorization: Bearer <dev-token>' \
+  'http://127.0.0.1:8088/api/document-types?onlyActive=true'
+
+# Connect on the RPC path (header required):
+curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/json' \
   -H 'Connect-Protocol-Version: 1' \
   -d '{"onlyActive":true}' \
   http://127.0.0.1:8088/goeland.v1.DocumentService/ListDocumentTypes
 ```
 
+Both `CoreService` and `DocumentService` are annotated, so both have REST bindings
+(CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
+`/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`).
+
 ## Generated code and protobuf
 
 - `proto/` is the source of truth. Never hand-edit `gen/` or `api/openapi/`.
 - After changing protos, run `make generate` then `make lint`.
-- `make generate` may change `buf.lock`, `gen/`, `api/openapi/` — review and
+- `make generate` may change `buf.lock`, `gen/` and `api/openapi/` — review and
   commit intended generated changes together.
-- Requires `buf`, local `protoc-gen-go` + `protoc-gen-connect-go`, and the
-  remote OpenAPI plugin.
+- Requires `buf`, local `protoc-gen-go` + `protoc-gen-connect-go`, and the remote
+  OpenAPI plugin.
 - protovalidate's `ignore` enum in the pinned buf schema is
   **`IGNORE_IF_ZERO_VALUE`** (not `IGNORE_IF_UNPOPULATED`). It is used on
   `RecordMetadata.subject_id` so that message doubles as an input (initial

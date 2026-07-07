@@ -82,7 +82,7 @@ type CreateInput struct {
 	Language          string
 	PageCount         int32
 	Metadata          map[string]any
-	ActorUserID       string
+	OperatorID        string
 	Governance        core.CreateSubjectInput // owner/confidentiality carried from the request
 	LinkToCaseID      *uuid.UUID
 }
@@ -94,7 +94,7 @@ type UpdateInput struct {
 	OfficialDate *time.Time
 	Language     string
 	Metadata     map[string]any
-	ActorUserID  string
+	OperatorID   string
 	Reason       string
 }
 

@@ -12,8 +12,11 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
-// caseHasDocumentCode is the relationship type used to auto-link a new document to a case.
-const caseHasDocumentCode = "CASE_HAS_DOCUMENT"
+// Relationship type codes used by document creation for atomic auto-linking.
+const (
+	caseHasDocumentCode         = "CASE_HAS_DOCUMENT"
+	documentPreviousVersionCode = "DOCUMENT_PREVIOUS_VERSION"
+)
 
 // PostgresRepository implements Repository with pgx, composing core primitives.
 type PostgresRepository struct {
@@ -53,12 +56,15 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 	if err != nil {
 		return nil, nil, nil, err
 	}
+	if !docType.IsActive {
+		return nil, nil, nil, fmt.Errorf("%w: document type %q is inactive", core.ErrInvalidInput, in.DocumentTypeCode)
+	}
 
 	rows, err := tx.Query(ctx, insertDocumentSQL,
 		ref.ID, docType.ID, in.Title, in.Description, in.OfficialDate, in.StorageRef,
 		in.ExternalSystem, in.ExternalID, in.ExternalURL, in.MimeType, in.FileSizeBytes, nullableString(in.SHA256),
 		normalizeVersion(in.Version), in.PreviousVersionID, in.IsFinal, in.IsRecord, in.Language, in.PageCount,
-		statusForInsert(in.IsFinal), documentMetadata(in.Metadata), in.ActorUserID)
+		statusForInsert(in.IsFinal), documentMetadata(in.Metadata), in.OperatorID)
 	if err != nil {
 		return nil, nil, nil, mapDBError(err)
 	}
@@ -70,11 +76,24 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   ref.ID,
 		EventType:   "DOCUMENT_CREATED",
-		ActorUserID: in.ActorUserID,
+		ActorUserID: in.OperatorID,
 		AfterState:  map[string]any{"title": doc.Title, "document_type": docType.Code},
 	})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+
+	// Mirror the explicit previous_version_id as a typed graph edge so the two
+	// representations stay consistent (proto documents this mirroring).
+	if in.PreviousVersionID != nil && *in.PreviousVersionID != uuid.Nil {
+		if _, err := core.LinkSubjectsTx(ctx, tx, core.LinkInput{
+			SourceSubjectID:      ref.ID,
+			TargetSubjectID:      *in.PreviousVersionID,
+			RelationshipTypeCode: documentPreviousVersionCode,
+			OperatorID:           in.OperatorID,
+		}); err != nil {
+			return nil, nil, nil, fmt.Errorf("link previous version: %w", err)
+		}
 	}
 
 	var rel *core.SubjectRelationship
@@ -83,7 +102,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 			SourceSubjectID:      *in.LinkToCaseID,
 			TargetSubjectID:      ref.ID,
 			RelationshipTypeCode: caseHasDocumentCode,
-			ActorUserID:          in.ActorUserID,
+			OperatorID:           in.OperatorID,
 		})
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("auto-link document to case: %w", err)
@@ -91,7 +110,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 		if _, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 			SubjectID:   ref.ID,
 			EventType:   "RELATIONSHIP_LINKED",
-			ActorUserID: in.ActorUserID,
+			ActorUserID: in.OperatorID,
 			AfterState:  map[string]any{"type": caseHasDocumentCode, "case": in.LinkToCaseID.String()},
 		}); err != nil {
 			return nil, nil, nil, fmt.Errorf("insert link audit_event: %w", err)
@@ -131,12 +150,9 @@ func (r *PostgresRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, i
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	md, err := core.GetRecordMetadataTx(ctx, tx, id)
-	if err != nil {
+	// Reject the mutation atomically if the record is locked or soft-deleted.
+	if _, err := core.EnsureMutableTx(ctx, tx, id, false); err != nil {
 		return nil, nil, err
-	}
-	if md.IsLocked {
-		return nil, nil, core.ErrLocked
 	}
 	rows, err := tx.Query(ctx, updateDocumentMetadataSQL,
 		id, in.Title, in.Description, in.OfficialDate, in.Language, documentMetadata(in.Metadata))
@@ -147,10 +163,14 @@ func (r *PostgresRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, i
 	if err != nil {
 		return nil, nil, mapDBError(err)
 	}
+	// Keep the canonical subject label in sync with the new title (QW5).
+	if err := core.UpdateSubjectLabelTx(ctx, tx, id, doc.Title); err != nil {
+		return nil, nil, fmt.Errorf("sync subject label: %w", err)
+	}
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   id,
 		EventType:   "DOCUMENT_METADATA_UPDATED",
-		ActorUserID: in.ActorUserID,
+		ActorUserID: in.OperatorID,
 		Reason:      in.Reason,
 		AfterState:  map[string]any{"title": doc.Title},
 	})
@@ -167,13 +187,17 @@ func (r *PostgresRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, i
 }
 
 // Finalize marks a document final and optionally locks its governance record.
-func (r *PostgresRepository) Finalize(ctx context.Context, id uuid.UUID, actorUserID, reason string, alsoLock bool) (*Document, *core.AuditEvent, error) {
+func (r *PostgresRepository) Finalize(ctx context.Context, id uuid.UUID, operatorID, reason string, alsoLock bool) (*Document, *core.AuditEvent, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, nil, fmt.Errorf("begin finalize document: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	// Reject finalizing a locked (already immutable) or soft-deleted document.
+	if _, err := core.EnsureMutableTx(ctx, tx, id, false); err != nil {
+		return nil, nil, err
+	}
 	rows, err := tx.Query(ctx, finalizeDocumentSQL, id)
 	if err != nil {
 		return nil, nil, fmt.Errorf("finalize document: %w", err)
@@ -183,14 +207,14 @@ func (r *PostgresRepository) Finalize(ctx context.Context, id uuid.UUID, actorUs
 		return nil, nil, mapDBError(err)
 	}
 	if alsoLock {
-		if _, err := core.LockRecordMetadataTx(ctx, tx, id, actorUserID); err != nil {
+		if _, err := core.LockRecordMetadataTx(ctx, tx, id, operatorID); err != nil {
 			return nil, nil, err
 		}
 	}
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   id,
 		EventType:   "DOCUMENT_FINALIZED",
-		ActorUserID: actorUserID,
+		ActorUserID: operatorID,
 		Reason:      reason,
 		AfterState:  map[string]any{"is_final": true, "locked": alsoLock},
 	})
@@ -206,9 +230,16 @@ func (r *PostgresRepository) Finalize(ctx context.Context, id uuid.UUID, actorUs
 	return doc, ev, nil
 }
 
-// Verify compares the stored hash with expectedSHA256 (when provided) and records
-// the verification timestamp. For the POC no file bytes are read; trust is based
-// on the stored, previously-registered hash.
+// Verify performs an HONEST, NON-MUTATING stored-hash comparison.
+//
+// It does NOT read any bytes from storage_ref and writes nothing to the database,
+// so it is deliberately non-probative: it only answers "does the caller's expected
+// hash match the hash that was registered for this document?". "verified" therefore
+// requires BOTH a non-empty expected hash and a matching stored hash — a blank
+// expected hash is never treated as verified (that would be false assurance).
+//
+// Real probative verification (streaming the stored bytes, recomputing SHA-256,
+// writing an audited verification event under a write scope) is a roadmap item.
 func (r *PostgresRepository) Verify(ctx context.Context, id uuid.UUID, expectedSHA256 string) (*Document, bool, error) {
 	doc, err := r.Get(ctx, id)
 	if err != nil {
@@ -218,22 +249,14 @@ func (r *PostgresRepository) Verify(ctx context.Context, id uuid.UUID, expectedS
 	if doc.SHA256 != nil {
 		stored = *doc.SHA256
 	}
-	verified := stored != "" && (expectedSHA256 == "" || equalFold(stored, expectedSHA256))
-	if !verified {
-		return doc, false, nil
-	}
-	rows, err := r.pool.Query(ctx, touchDocumentVerifiedAtSQL, id)
-	if err != nil {
-		return nil, false, fmt.Errorf("touch verified_at: %w", err)
-	}
-	updated, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Document])
-	if err != nil {
-		return nil, false, mapDBError(err)
-	}
-	if err := r.hydrate(ctx, updated); err != nil {
-		return nil, false, err
-	}
-	return updated, true, nil
+	return doc, hashMatches(stored, expectedSHA256), nil
+}
+
+// hashMatches reports whether a caller's expected hash matches the stored hash.
+// BOTH must be non-empty — a blank expected hash is never a match, so the check
+// cannot produce false assurance.
+func hashMatches(stored, expected string) bool {
+	return expected != "" && stored != "" && equalFold(stored, expected)
 }
 
 // Link creates a typed relationship from the document, delegating to core.
@@ -246,20 +269,24 @@ func (r *PostgresRepository) Link(ctx context.Context, in core.LinkInput) (*core
 }
 
 // SoftDelete logically deletes the document via its governance record and writes an audit event.
-func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, actorUserID, reason string) (*core.AuditEvent, error) {
+func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("begin delete document: %w", err)
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	if _, err := core.SoftDeleteRecordMetadataTx(ctx, tx, id, actorUserID); err != nil {
+	// Reject deleting an already soft-deleted document (locked is allowed to be retired).
+	if _, err := core.EnsureMutableTx(ctx, tx, id, true); err != nil {
+		return nil, err
+	}
+	if _, err := core.SoftDeleteRecordMetadataTx(ctx, tx, id, operatorID); err != nil {
 		return nil, err
 	}
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   id,
 		EventType:   "DOCUMENT_DELETED",
-		ActorUserID: actorUserID,
+		ActorUserID: operatorID,
 		Reason:      reason,
 	})
 	if err != nil {

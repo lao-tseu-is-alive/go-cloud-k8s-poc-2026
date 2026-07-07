@@ -13,7 +13,7 @@ type Repository interface {
 	GetSubject(ctx context.Context, id uuid.UUID) (*SubjectRef, error)
 	GetRecordMetadata(ctx context.Context, subjectID uuid.UUID) (*RecordMetadata, error)
 	LinkSubjects(ctx context.Context, in LinkInput) (*SubjectRelationship, *AuditEvent, error)
-	UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, actorUserID, reason string) (*SubjectRelationship, *AuditEvent, error)
+	UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, operatorID, reason string) (*SubjectRelationship, *AuditEvent, error)
 	ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error)
 	ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error)
 	AppendAuditEvent(ctx context.Context, ev AuditEvent) (*AuditEvent, error)

@@ -15,4 +15,6 @@ var (
 	ErrKindMismatch = errors.New("subject kind does not match relationship type")
 	// ErrLocked is returned when a mutation targets a locked (immutable) record.
 	ErrLocked = errors.New("record is locked")
+	// ErrDeleted is returned when a mutation targets a soft-deleted record.
+	ErrDeleted = errors.New("record is deleted")
 )

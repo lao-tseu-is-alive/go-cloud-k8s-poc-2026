@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs/pkg/goHttpEcho"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
@@ -90,14 +91,16 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	}
 
 	mux := http.NewServeMux()
-	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
-	for _, name := range serviceNames {
-		mux.Handle("/"+name+"/", http.MaxBytesHandler(transcoder, maxRequestBodyBytes))
-	}
 	mux.Handle("GET /health", healthHandler(pool))
 	mux.HandleFunc("GET /readiness", readinessHandler(pool))
 	mux.HandleFunc("GET /goAppInfo", appInfoHandler)
+	// The Vanguard transcoder serves BOTH the Connect/gRPC RPC paths
+	// (/goeland.v1.<Service>/<Method>) and the REST bindings declared via
+	// google.api.http (/api/...). Mount it as the catch-all; the specific health
+	// endpoints above win by http.ServeMux pattern specificity.
+	mux.Handle("/", http.MaxBytesHandler(transcoder, maxRequestBodyBytes))
 
+	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
 	log.Info("registered services", "services", serviceNames)
 
 	cleanup = false
@@ -213,9 +216,9 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(writer).Encode(value)
 }
 
-type requestIDKey struct{}
-
-// requestIDMiddleware ensures every request has an X-Request-ID and stores it in context.
+// requestIDMiddleware ensures every request has an X-Request-ID and stores it in
+// the context (via the shared core key) so the value reaches the service layer and
+// is stamped onto every audit_event.
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		id := request.Header.Get("X-Request-ID")
@@ -223,32 +226,51 @@ func requestIDMiddleware(next http.Handler) http.Handler {
 			id = uuid.NewString()
 		}
 		writer.Header().Set("X-Request-ID", id)
-		ctx := context.WithValue(request.Context(), requestIDKey{}, id)
+		ctx := core.WithRequestID(request.Context(), id)
 		next.ServeHTTP(writer, request.WithContext(ctx))
 	})
 }
 
-func requestIDFromContext(ctx context.Context) string {
-	if id, ok := ctx.Value(requestIDKey{}).(string); ok {
-		return id
-	}
-	return ""
+// statusRecorder captures the response status and byte count for access logging.
+// It forwards Flush so Connect/gRPC-Web streaming still works.
+type statusRecorder struct {
+	http.ResponseWriter
+	status int
+	bytes  int
 }
 
-// requestLogMiddleware logs method, path and elapsed time for every request.
+func (r *statusRecorder) WriteHeader(code int) {
+	r.status = code
+	r.ResponseWriter.WriteHeader(code)
+}
+
+func (r *statusRecorder) Write(b []byte) (int, error) {
+	n, err := r.ResponseWriter.Write(b)
+	r.bytes += n
+	return n, err
+}
+
+func (r *statusRecorder) Flush() {
+	if f, ok := r.ResponseWriter.(http.Flusher); ok {
+		f.Flush()
+	}
+}
+
+// requestLogMiddleware logs method, path, status, bytes and elapsed time per request.
+// Note: the authenticated user is intentionally not logged here — it is established
+// inside the Connect auth interceptor and is not visible to this outer middleware.
+// The operator identity is captured on the audit_event instead.
 func requestLogMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		started := time.Now()
-		next.ServeHTTP(writer, request)
-		userID := ""
-		if u, err := authadapter.RequireUser(request.Context()); err == nil {
-			userID = fmt.Sprintf("%d", u.AppUserID)
-		}
+		rec := &statusRecorder{ResponseWriter: writer, status: http.StatusOK}
+		next.ServeHTTP(rec, request)
 		log.Info("HTTP request",
 			"method", request.Method,
 			"path", request.URL.Path,
-			"request_id", requestIDFromContext(request.Context()),
-			"user_id", userID,
+			"status", rec.status,
+			"bytes", rec.bytes,
+			"request_id", core.RequestIDFromContext(request.Context()),
 			"duration", time.Since(started),
 		)
 	})
@@ -259,7 +281,7 @@ func recoverMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		defer func() {
 			if recovered := recover(); recovered != nil {
-				log.Error("HTTP panic", "panic", recovered, "request_id", requestIDFromContext(request.Context()), "stack", string(debug.Stack()))
+				log.Error("HTTP panic", "panic", recovered, "request_id", core.RequestIDFromContext(request.Context()), "stack", string(debug.Stack()))
 				writeJSON(writer, http.StatusInternalServerError, map[string]string{"error": "internal error"})
 			}
 		}()

@@ -85,7 +85,8 @@ type CoreServiceClient interface {
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
-	// List outgoing or incoming relationships for a subject (graph traversal primitive).
+	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
+	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error)
 	// List the catalogue of allowed relationship types (optionally filtered).
 	ListRelationshipTypes(context.Context, *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error)
@@ -206,7 +207,8 @@ type CoreServiceHandler interface {
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
-	// List outgoing or incoming relationships for a subject (graph traversal primitive).
+	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
+	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error)
 	// List the catalogue of allowed relationship types (optionally filtered).
 	ListRelationshipTypes(context.Context, *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error)

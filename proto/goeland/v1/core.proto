@@ -21,6 +21,7 @@ syntax = "proto3";
 package goeland.v1;
 
 import "buf/validate/validate.proto";
+import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
 import "google/protobuf/struct.proto";
 import "google/protobuf/timestamp.proto";
@@ -167,7 +168,8 @@ message CreateSubjectRefRequest {
   ];
   string canonical_url = 3 [(buf.validate.field).string.max_len = 2048];
   RecordMetadata initial_metadata = 4; // owner, confidentiality etc.
-  string actor_user_id = 5; // who creates (for audit + ownership)
+  // NOTE: the acting operator is derived server-side from the authenticated
+  // principal (never trusted from the client) and recorded as audit_event.actor_user_id.
 }
 
 message CreateSubjectRefResponse {
@@ -197,7 +199,6 @@ message LinkSubjectsRequest {
     (buf.validate.field).string.max_len = 100
   ];
   string role_detail = 4 [(buf.validate.field).string.max_len = 500];
-  string actor_user_id = 5;
   google.protobuf.Timestamp valid_from = 6;
 }
 
@@ -208,7 +209,6 @@ message LinkSubjectsResponse {
 
 message UnlinkSubjectsRequest {
   string relationship_id = 1 [(buf.validate.field).string.uuid = true];
-  string actor_user_id = 2;
   string reason = 3 [(buf.validate.field).string.max_len = 2000];
 }
 
@@ -267,26 +267,50 @@ message ListAuditEventsResponse {
 // =============================================
 
 // CoreService exposes the transversal primitives reused by every domain component.
+// Every RPC carries a google.api.http annotation so the Vanguard transcoder also
+// exposes it as REST/JSON (mapped from spec §13.6 relationships + subject/audit paths).
+// The Connect/gRPC path /goeland.v1.CoreService/<Method> remains available too.
 service CoreService {
   // Create a canonical subject identity + its record_metadata in one transaction.
   // Every other create (Document, Case, Thing, Actor) calls this first.
-  rpc CreateSubjectRef(CreateSubjectRefRequest) returns (CreateSubjectRefResponse);
+  rpc CreateSubjectRef(CreateSubjectRefRequest) returns (CreateSubjectRefResponse) {
+    option (google.api.http) = {
+      post: "/api/subjects"
+      body: "*"
+    };
+  }
 
   // Retrieve a subject with optional governance + audit info.
-  rpc GetSubjectRef(GetSubjectRefRequest) returns (GetSubjectRefResponse);
+  rpc GetSubjectRef(GetSubjectRefRequest) returns (GetSubjectRefResponse) {
+    option (google.api.http) = {get: "/api/subjects/{id}"};
+  }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
-  rpc LinkSubjects(LinkSubjectsRequest) returns (LinkSubjectsResponse);
+  rpc LinkSubjects(LinkSubjectsRequest) returns (LinkSubjectsResponse) {
+    option (google.api.http) = {
+      post: "/api/relationships"
+      body: "*"
+    };
+  }
 
   // Soft-delete an existing relationship (non-destructive) and write an audit event.
-  rpc UnlinkSubjects(UnlinkSubjectsRequest) returns (UnlinkSubjectsResponse);
+  rpc UnlinkSubjects(UnlinkSubjectsRequest) returns (UnlinkSubjectsResponse) {
+    option (google.api.http) = {delete: "/api/relationships/{relationship_id}"};
+  }
 
-  // List outgoing or incoming relationships for a subject (graph traversal primitive).
-  rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse);
+  // List relationships for a subject (graph traversal primitive). Use the `outgoing`
+  // query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
+  rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse) {
+    option (google.api.http) = {get: "/api/subjects/{subject_id}/relationships"};
+  }
 
   // List the catalogue of allowed relationship types (optionally filtered).
-  rpc ListRelationshipTypes(ListRelationshipTypesRequest) returns (ListRelationshipTypesResponse);
+  rpc ListRelationshipTypes(ListRelationshipTypesRequest) returns (ListRelationshipTypesResponse) {
+    option (google.api.http) = {get: "/api/relationship-types"};
+  }
 
   // Full probative history for compliance / reconstruction.
-  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse);
+  rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {
+    option (google.api.http) = {get: "/api/subjects/{subject_id}/audit"};
+  }
 }
