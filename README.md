@@ -197,7 +197,14 @@ Explicit domain model (no generic EAV); JSONB only for secondary data; critical
 fields as typed columns; non-destructive deletes; every mutation writes an audit
 event; every relationship is typed and validated; boring, explicit, testable API.
 
-## Roadmap (out of scope for this slice)
+## Status & roadmap
+
+The original spec is [`requirements/goeland_poc_domain_model_agent.md`](requirements/goeland_poc_domain_model_agent.md)
+(intent, not updated as work proceeds). The living "what's done / what's left"
+tracker — with intentional deviations from the spec — is
+[`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md).
+
+### Out of scope for this slice
 
 Case (`case_file` + timeline + circulation), Thing (parcelle/bâtiment with PostGIS
 geometry), Actor, a real permission/confidentiality engine, MinIO storage, Meilisearch,

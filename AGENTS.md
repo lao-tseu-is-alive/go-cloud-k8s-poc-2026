@@ -30,6 +30,12 @@ Stack: proto-first (buf) · ConnectRPC + Vanguard · pgx raw SQL with `db:"..."`
 tags · bundleable `pkg/<domain>/module` pattern · embedded dbmate migrations ·
 PostGIS-ready from migration 0001.
 
+**Progress tracking:** the spec (`requirements/goeland_poc_domain_model_agent.md`)
+is the immutable statement of intent — do not rewrite it to match reality; cite it.
+The living state (done / in progress / deviations) is
+`requirements/IMPLEMENTATION_STATUS.md` — **update it (a few lines) at the end of
+each slice**, and add automated tests as you land each new domain.
+
 ### Implemented so far
 
 - **core** (`pkg/core`) — transversal: `subject_ref`, `record_metadata`,
@@ -250,3 +256,20 @@ Explicit domain model (no generic EAV); JSONB only for secondary data; critical
 fields as typed columns; non-destructive deletes; every mutation audited; every
 relationship typed and validated; boring, explicit, testable API; prefer clear
 domain names over technical abstractions.
+
+## Guiding principle — the spec is a floor, not a ceiling
+
+The starting spec (`requirements/goeland_poc_domain_model_agent.md`) is a starting
+point, not a maximum. Several features intentionally go **beyond** it (typed proto
+API, richer GED document, accent-insensitive search — see
+`requirements/IMPLEMENTATION_STATUS.md` §3 "Decided enhancements 🚀").
+
+- **Do not regress** capability or degrade UX just because something is "not in the
+  spec". If you're tempted to remove/simplify a feature that isn't in the spec,
+  check §3 first — if it's a decided enhancement, keep it.
+- The bar is **the best user experience, never at the expense of security,
+  readability, or maintainability.** When a spec item conflicts with that bar,
+  reconcile it explicitly (record it in IMPLEMENTATION_STATUS.md §3) rather than
+  silently dropping to the lesser option.
+- When you add a betterment beyond the spec, record it under §3 with a 🚀 and a
+  one-line rationale so the next agent knows it is deliberate.
