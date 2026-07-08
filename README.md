@@ -29,6 +29,10 @@ conventions of `go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
   future THING component; no geometry columns yet).
 - **Auth** reuses the ecosystem's `authadapter` (JWT from `go-cloud-k8s-auth` +
   personal access token introspection, plus a `dev` mode).
+- **Embedded web UI**: a **Vue 3 + Vuetify 4** SPA (`cmd/goeland-server/goeland-front`,
+  Vite/bun) `//go:embed`ded into the binary and served at `/` — the Document module
+  is exercisable end-to-end from the browser (search/create-with-upload/detail/edit/
+  finalize/verify/link/delete, plus read-only governance & audit).
 
 ## Domain model (this slice)
 
@@ -70,8 +74,11 @@ pkg/core/                transversal domain: model, sql, storage, service, mappe
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
       └── db/migrations/  0001..0004 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
-  └── module/            bundleable module (schema owned by core)
+  ├── module/            bundleable module (schema owned by core)
+  └── filestore/         local blob store for uploaded document bytes
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
+  ├── upload.go          out-of-proto POST /upload + GET /download endpoints
+  └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
 ```
 
 ## Prerequisites
@@ -80,14 +87,20 @@ cmd/goeland-server/      server: pool, migrate, wire modules onto one shared tra
 - PostgreSQL 14+ with **PostGIS**, **pgcrypto**, **pg_trgm** and **unaccent** available
   (e.g. the `postgis/postgis` image, or `apt install postgresql-16-postgis-3`)
 - [`buf`](https://buf.build) (regenerate code), [`dbmate`](https://github.com/amacneil/dbmate) (optional, for CLI migrations)
+- [`bun`](https://bun.sh) to build the embedded frontend (`make front-build`); a
+  clean `go build`/`go test` needs `goeland-front/dist/` present (it is gitignored)
 
 ## Setup
 
 ```bash
 cp .env_sample .env          # then edit DB_PASSWORD / DATABASE_URL
 make db-up                   # apply migrations with dbmate (optional; the server also self-migrates)
-make run                     # buf generate + go run ./cmd/goeland-server
+make run                     # buf generate + build the embedded frontend + go run ./cmd/goeland-server
 ```
+
+`make run` (and `make build`) depend on `make front-build` (`bun install && bun run
+build`), which produces the `goeland-front/dist/` bundle embedded via `//go:embed`.
+Once the server is up, open <http://127.0.0.1:8088/> for the web UI.
 
 The server **migrates on startup** (embedded migrations, guarded by a PG advisory
 lock), so `make db-up` is optional. Both paths share the same `schema_migrations`
@@ -102,6 +115,32 @@ go run ./cmd/goeland-server
 ```
 
 Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: `/readiness`.
+
+## Web UI
+
+Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
+(`cmd/goeland-server/goeland-front`). It is a vertical slice of the Document module —
+search/list, create (with file upload), detail, edit metadata, finalize, verify
+integrity, link/unlink subjects, soft-delete — plus read-only governance and audit
+panels. Bilingual (fr-CH default, en).
+
+- The SPA reads `GET /config` → `{authMode, authBaseUrl}` and drives either `dev`
+  (manual static token) or `jwt` (silent-mint from the `go-cloud-k8s-auth` SSO
+  session) auth.
+- It talks to the server over the **REST/JSON** `/api/...` bindings (plain `fetch`,
+  no generated client).
+- **File upload is metadata-first.** The proto `CreateDocument` takes a `storage_ref`
+  URI, so binary bytes go through two out-of-proto HTTP endpoints (they carry their
+  own bearer check): `POST /api/documents/upload` (multipart, field `file`) stores
+  the bytes, computes sha256/size/mime server-side, and returns an `internal://<uuid>`
+  ref that the UI passes to `CreateDocument`; `GET /api/documents/download?ref=…`
+  streams a blob back. Blobs live under `GOELAND_DOCUMENT_PATH` (default
+  `./go_documents`, gitignored); a single upload is capped by `GOELAND_MAX_UPLOAD_BYTES`
+  (default 100 MiB).
+
+Dev workflow: run the Vite dev server with `cd cmd/goeland-server/goeland-front &&
+bun run dev` (HMR) while the Go server runs separately, or `make run` to rebuild the
+embedded bundle and serve it from the binary.
 
 ## Calling the API
 
@@ -126,7 +165,9 @@ Both services are annotated (see `api/openapi/goeland.swagger.yaml` for the full
 DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
 `PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
 `GET /api/documents/{id}/integrity` · `GET /api/documents/search` ·
-`POST /api/documents/{id}/links` · `DELETE /api/documents/{id}`.
+`POST /api/documents/{id}/links` · `DELETE /api/documents/{id}`. Plus two
+**out-of-proto** binary endpoints (see [Web UI](#web-ui)):
+`POST /api/documents/upload` and `GET /api/documents/download`.
 
 CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/relationships` ·
 `DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
@@ -192,13 +233,14 @@ make db-new name=add_case   # scaffold a new migration
 ## Common make targets
 
 ```
-make run        generate + run the server
-make generate   buf lint + generate (Go, ConnectRPC, OpenAPI)
-make build      test + compile bin/goeland-server
-make test       go test -race with coverage
-make lint       go vet + buf lint
-make fmt        gofmt -w .
-make db-up      apply migrations (dbmate)
+make run          generate + build the frontend + run the server
+make generate     buf lint + generate (Go, ConnectRPC, OpenAPI)
+make front-build  bun install + build the embedded Vue/Vuetify frontend (dist/)
+make build        build the frontend + test + compile bin/goeland-server
+make test         go test -race with coverage
+make lint         go vet + buf lint
+make fmt          gofmt -w .
+make db-up        apply migrations (dbmate)
 ```
 
 ## Scripts (`scripts/`)

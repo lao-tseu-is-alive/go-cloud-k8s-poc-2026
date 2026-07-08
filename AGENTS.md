@@ -28,7 +28,8 @@ It is **not** a re-code of legacy Goéland — it is a clean, durable core:
 
 Stack: proto-first (buf) · ConnectRPC + Vanguard · pgx raw SQL with `db:"..."`
 tags · bundleable `pkg/<domain>/module` pattern · embedded dbmate migrations ·
-PostGIS-ready from migration 0001.
+PostGIS-ready from migration 0001 · an embedded **Vue 3 + Vuetify 4 SPA**
+(`cmd/goeland-server/goeland-front`, `//go:embed`) served at `/`.
 
 **Progress tracking:** the spec (`requirements/goeland_poc_domain_model_agent.md`)
 is the immutable statement of intent — do not rewrite it to match reality; cite it.
@@ -41,6 +42,10 @@ each slice**, and add automated tests as you land each new domain.
 - **core** (`pkg/core`) — transversal: `subject_ref`, `record_metadata`,
   `audit_event`, `relationship_type`, `subject_relationship` → `CoreService`.
 - **document** (`pkg/document`) — modern GED entity → `DocumentService`.
+- **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, a
+  vertical slice of the Document module (list/create+upload/detail/edit/finalize/
+  verify/link/delete) plus read-only governance/audit and core panels. Embedded
+  via `//go:embed` and served at `/`. See "Frontend" below.
 
 ### Not yet built (same foundation)
 
@@ -63,7 +68,12 @@ pkg/core/                    transversal domain
   │   └── db/migrations/     0001..0005 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
+  └── filestore/             local blob store for uploaded document bytes
 cmd/goeland-server/          server: pool → migrate → wire both modules → one shared transcoder
+  ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
+  ├── upload.go              out-of-proto POST /upload + GET /download (own bearer check)
+  ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
+  └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
 ```
 
 ## Commands
@@ -78,8 +88,10 @@ cmd/goeland-server/          server: pool → migrate → wire both modules → 
   annotate it (see `document.proto`) so it gets a REST binding + OpenAPI entry.
 - `make db-status | db-up | db-down` — dbmate against `.env`.
 - `make db-new name=add_case` — scaffold a new migration.
-
-There is no frontend in this project.
+- `make front-build` — `bun install && bun run build` in `goeland-front/` to
+  produce `dist/`. It is a prerequisite of both `make run` and `make build`
+  because `//go:embed goeland-front/dist/*` fails if `dist/` is absent (it is
+  gitignored). On a clean checkout, build the frontend before `go build`/`go test`.
 
 Helper scripts live in `scripts/` (all run from the repo root; documented in the
 README's Scripts table). Notable ones: `createLocalDBAndUser.sh` (creates the
@@ -120,9 +132,10 @@ Two distinct identities; keep them separate:
 
 ## API routing — two surfaces (REST + RPC)
 
-The shared Vanguard transcoder is mounted as the catch-all (`/`) in the server; the
-specific `/health`, `/readiness`, `/goAppInfo` routes win by ServeMux specificity.
-It serves every RPC two ways:
+The shared Vanguard transcoder is mounted on **explicit prefixes** — `/api/` and
+each fully-qualified RPC service path (`/goeland.v1.<Service>/`) — so the embedded
+SPA can own the `/` catch-all. The specific `/health`, `/readiness`, `/goAppInfo`,
+`/config` routes win by ServeMux specificity. The transcoder serves every RPC two ways:
 
 1. **REST/JSON** from `google.api.http` annotations, e.g. `GET /api/documents/{id}`,
    `POST /api/documents`. Plain HTTP — **no special header**. Documented in the
@@ -152,6 +165,38 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 Both `CoreService` and `DocumentService` are annotated, so both have REST bindings
 (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`).
+
+## Frontend (embedded SPA)
+
+`cmd/goeland-server/goeland-front` is a **Vue 3 + Vuetify 4** SPA (Vite, bun,
+Pinia, vue-router, vue-i18n; fr-CH default, en). `make front-build` produces
+`dist/`, which the server embeds with `//go:embed goeland-front/dist/*` and serves
+at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
+**gitignored build artifact** — never hand-edit it; edit `src/` and rebuild.
+
+- **API layer:** plain REST `fetch` against the Vanguard `/api/...` bindings — **no**
+  connect-es codegen. Types are hand-maintained in `src/api/types.ts` and must be
+  kept in sync with the proto by hand. Mind the proto3-JSON quirks: `int64` fields
+  serialize as **strings** (e.g. `fileSizeBytes:"38"`), enums as string names,
+  timestamps as RFC3339.
+- **Auth (dynamic):** the SPA calls `GET /config` → `{authMode, authBaseUrl}` and
+  branches — `dev` uses a manual static token; `jwt` silently mints from
+  `${authBaseUrl}/auth/token` (SSO cookie) and re-mints at ~80% of token lifetime.
+  The token is held **in memory only** and mirrored into the fetch client.
+- **Upload is metadata-first (out-of-proto).** The `DocumentService` proto contract
+  deliberately has **no upload RPC**: `CreateDocument` takes a `storage_ref` URI +
+  metadata. Binary bytes go through two plain-HTTP endpoints that **bypass the
+  Connect interceptor** and carry their own bearer check (`httpAuthMiddleware`):
+  `POST /api/documents/upload` (multipart, field `file`) stores bytes via
+  `pkg/document/filestore`, computes sha256/size/mime server-side, and returns an
+  `internal://<uuid>` ref; the SPA then calls `CreateDocument` with that ref (so
+  validation/governance/audit still flow through the proto path).
+  `GET /api/documents/download?ref=…` streams a blob back.
+- Config: `GOELAND_DOCUMENT_PATH` (blob dir, default `./go_documents`, gitignored)
+  and `GOELAND_MAX_UPLOAD_BYTES` (default 100 MiB).
+
+When you add or change an RPC the SPA uses, update `src/api/types.ts` and the
+relevant `src/api/*` client + component, then `bun run type-check && bun run lint`.
 
 ## Generated code and protobuf
 

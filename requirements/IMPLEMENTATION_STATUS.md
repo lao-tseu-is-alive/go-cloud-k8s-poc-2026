@@ -5,7 +5,7 @@ of each slice (a few lines), and keep it honest.
 
 - **Intent / spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — the original statement of intent. Do not rewrite it to match reality; cite it (e.g. "spec §7.2").
 - **This document (living):** maps each spec area to its current state + records intentional deviations.
-- **Snapshot:** as of **2026-07-07**, app version **0.0.2**. Build/vet/lint/tests green; migrations `0001–0005` applied; verified end-to-end against PostgreSQL.
+- **Snapshot:** as of **2026-07-08**, app version **0.2.1**. Build/vet/lint/tests green; migrations `0001–0005` applied; verified end-to-end against PostgreSQL. Now with an **embedded Vue 3 + Vuetify 4 web UI** (Document module exercisable from the browser) + metadata-first file upload; repository SQL uses pgx **named parameters**.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -21,6 +21,8 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §7 `relationship_type` + `subject_relationship` | ✅ `0002` | ✅ `CoreService.LinkSubjects/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; active-edge partial unique index; soft-delete |
 | §6.2 `document_type` + `document` | ✅ `0003` (+ `0005` unaccent) | ✅ `DocumentService.*` (9 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10), document types (7) | ✅ `0004` | — | ✅ | |
+| §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document module full slice in the browser; core panels read-only; Case/Thing/Actor UI pending their services |
+| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/document/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 `case_type` + `case_file` | ⬜ | ⬜ `CaseService` | ⬜ | next natural slice |
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
@@ -35,7 +37,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
 The 16-step demo needs Case + Thing + Actor + Timeline + Circulation, so it is
-mostly pending. Document-side steps are done and verified via ConnectRPC:
+mostly pending. Document-side steps are done and verified via ConnectRPC **and now
+exercisable from the embedded web UI** (create-with-upload → detail → verify →
+finalize/lock → edit blocked when locked → audit):
 
 - ✅ (7) add a document of type PLAN — `CreateDocument`
 - ✅ (8) link the document to a case — `link_to_case_id` on create / `LinkDocument` (works once a CASE subject exists)
@@ -75,6 +79,18 @@ These are deliberate betterments beyond the spec — keep them:
 - 🚀 **Non-destructive + fully audited by construction**: every mutation writes an
   audit event in the same transaction, soft-delete everywhere. Spec asks for this
   (§17); we treat it as a hard invariant, not an aspiration.
+- 🚀 **Embedded Vue 3 + Vuetify 4 web UI** (`cmd/goeland-server/goeland-front`,
+  `//go:embed`, served at `/`): the Document module is usable end-to-end in the
+  browser (list/create+upload/detail/edit/finalize/verify/link/delete + read-only
+  governance & audit), bilingual fr-CH/en, dynamic `dev`/`jwt` auth via `GET /config`.
+  The spec (§13) offered "REST now, UI later"; a real embedded SPA over the typed
+  REST surface is a betterment — keep it.
+- 🚀 **Metadata-first file upload** kept **out of the proto contract**: `CreateDocument`
+  stays `storage_ref`-only, while binary bytes flow through `POST /api/documents/upload`
+  → `internal://<uuid>` → `CreateDocument` (server computes sha256/size/mime;
+  `pkg/document/filestore`, path-traversal guarded). Preserves proto validation /
+  governance / audit while still supporting real file upload; swap the local blob store
+  for MinIO later without touching the contract.
 
 ### 3b. Neutral architectural choices (vs the spec's suggestions)
 
@@ -130,6 +146,8 @@ policy, streamed probative hashing, DB integration tests, CI, metrics/tracing.
   (create → verify → search → finalize+lock → locked-update rejected → audit).
 - ⬜ Automated DB integration tests (spec §16: relationship / timeline / circulation / audit /
   security) — none yet; add alongside each new domain.
+- 🟡 Frontend has no unit tests yet; the gate is `bun run type-check` + `bun run lint`
+  + `bun run build` (green). Add component/e2e tests as the UI grows.
 
 ---
 
