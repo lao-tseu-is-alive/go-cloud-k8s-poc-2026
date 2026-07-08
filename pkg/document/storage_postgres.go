@@ -60,11 +60,29 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 		return nil, nil, nil, fmt.Errorf("%w: document type %q is inactive", core.ErrInvalidInput, in.DocumentTypeCode)
 	}
 
-	rows, err := tx.Query(ctx, insertDocumentSQL,
-		ref.ID, docType.ID, in.Title, in.Description, in.OfficialDate, in.StorageRef,
-		in.ExternalSystem, in.ExternalID, in.ExternalURL, in.MimeType, in.FileSizeBytes, nullableString(in.SHA256),
-		normalizeVersion(in.Version), in.PreviousVersionID, in.IsFinal, in.IsRecord, in.Language, in.PageCount,
-		statusForInsert(in.IsFinal), documentMetadata(in.Metadata), in.OperatorID)
+	rows, err := tx.Query(ctx, insertDocumentSQL, pgx.NamedArgs{
+		"id":                  ref.ID,
+		"document_type_id":    docType.ID,
+		"title":               in.Title,
+		"description":         in.Description,
+		"official_date":       in.OfficialDate,
+		"storage_ref":         in.StorageRef,
+		"external_system":     in.ExternalSystem,
+		"external_id":         in.ExternalID,
+		"external_url":        in.ExternalURL,
+		"mime_type":           in.MimeType,
+		"file_size_bytes":     in.FileSizeBytes,
+		"sha256":              nullableString(in.SHA256),
+		"version":             normalizeVersion(in.Version),
+		"previous_version_id": in.PreviousVersionID,
+		"is_final":            in.IsFinal,
+		"is_record":           in.IsRecord,
+		"language":            in.Language,
+		"page_count":          in.PageCount,
+		"status":              statusForInsert(in.IsFinal),
+		"metadata":            documentMetadata(in.Metadata),
+		"created_by":          in.OperatorID,
+	})
 	if err != nil {
 		return nil, nil, nil, mapDBError(err)
 	}
@@ -128,7 +146,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Docum
 
 // Get loads a document with its subject, governance and type hydrated.
 func (r *PostgresRepository) Get(ctx context.Context, id uuid.UUID) (*Document, error) {
-	rows, err := r.pool.Query(ctx, getDocumentSQL, id)
+	rows, err := r.pool.Query(ctx, getDocumentSQL, pgx.NamedArgs{"id": id})
 	if err != nil {
 		return nil, fmt.Errorf("get document: %w", err)
 	}
@@ -154,8 +172,14 @@ func (r *PostgresRepository) UpdateMetadata(ctx context.Context, id uuid.UUID, i
 	if _, err := core.EnsureMutableTx(ctx, tx, id, false); err != nil {
 		return nil, nil, err
 	}
-	rows, err := tx.Query(ctx, updateDocumentMetadataSQL,
-		id, in.Title, in.Description, in.OfficialDate, in.Language, documentMetadata(in.Metadata))
+	rows, err := tx.Query(ctx, updateDocumentMetadataSQL, pgx.NamedArgs{
+		"id":            id,
+		"title":         in.Title,
+		"description":   in.Description,
+		"official_date": in.OfficialDate,
+		"language":      in.Language,
+		"metadata":      documentMetadata(in.Metadata),
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("update document metadata: %w", err)
 	}
@@ -198,7 +222,7 @@ func (r *PostgresRepository) Finalize(ctx context.Context, id uuid.UUID, operato
 	if _, err := core.EnsureMutableTx(ctx, tx, id, false); err != nil {
 		return nil, nil, err
 	}
-	rows, err := tx.Query(ctx, finalizeDocumentSQL, id)
+	rows, err := tx.Query(ctx, finalizeDocumentSQL, pgx.NamedArgs{"id": id})
 	if err != nil {
 		return nil, nil, fmt.Errorf("finalize document: %w", err)
 	}
@@ -306,10 +330,18 @@ type documentListRow struct {
 
 // Search runs full-text + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, searchDocumentsSQL,
-		filter.Query, filter.DocumentTypeCode, filter.ConfidentialityMax,
-		filter.OnlyRecords, filter.OnlyFinal, filter.IncludeDeleted,
-		filter.CaseID, filter.ThingID, filter.Limit, filter.Offset)
+	rows, err := r.pool.Query(ctx, searchDocumentsSQL, pgx.NamedArgs{
+		"query":               filter.Query,
+		"document_type_code":  filter.DocumentTypeCode,
+		"confidentiality_max": filter.ConfidentialityMax,
+		"only_records":        filter.OnlyRecords,
+		"only_final":          filter.OnlyFinal,
+		"include_deleted":     filter.IncludeDeleted,
+		"case_id":             filter.CaseID,
+		"thing_id":            filter.ThingID,
+		"limit":               filter.Limit,
+		"offset":              filter.Offset,
+	})
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search documents: %w", err)
 	}
@@ -333,7 +365,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 
 // ListTypes returns the document type catalogue.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*DocumentType, error) {
-	rows, err := r.pool.Query(ctx, listDocumentTypesSQL, onlyActive)
+	rows, err := r.pool.Query(ctx, listDocumentTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {
 		return nil, fmt.Errorf("list document types: %w", err)
 	}
@@ -366,7 +398,7 @@ func (r *PostgresRepository) hydrate(ctx context.Context, doc *Document) error {
 
 // getDocumentTypeByCode loads a document type by code using q. Returns ErrNotFound when unknown.
 func getDocumentTypeByCode(ctx context.Context, q core.Querier, code string) (*DocumentType, error) {
-	rows, err := q.Query(ctx, getDocumentTypeByCodeSQL, code)
+	rows, err := q.Query(ctx, getDocumentTypeByCodeSQL, pgx.NamedArgs{"code": code})
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +411,7 @@ func getDocumentTypeByCode(ctx context.Context, q core.Querier, code string) (*D
 
 // getDocumentTypeByID loads a document type by id using q.
 func getDocumentTypeByID(ctx context.Context, q core.Querier, id uuid.UUID) (*DocumentType, error) {
-	rows, err := q.Query(ctx, getDocumentTypesByIDsSQL, []uuid.UUID{id})
+	rows, err := q.Query(ctx, getDocumentTypesByIDsSQL, pgx.NamedArgs{"ids": []uuid.UUID{id}})
 	if err != nil {
 		return nil, err
 	}

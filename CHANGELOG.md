@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+## [0.2.1] - 2026-07-08
+
+Internal readability refactor with no behavior change. Verified against PostgreSQL
+(Go build, vet, and tests green).
+
+### Changed
+
+- Repository queries now use pgx v5 **named parameters** (`@name` bound through
+  `pgx.NamedArgs`) instead of positional `$1, $2, …` placeholders. The SQL and the
+  Go call sites read against each other by name, so the 21-column document insert and
+  the multi-filter search/list queries are no longer position-fragile. Column-to-`db`-tag
+  scanning is unchanged. The single-parameter migration bookkeeping queries in
+  `pkg/core/module/migrate.go` stay positional.
+
 ## [0.2.0] - 2026-07-07
 
 First embedded web UI for the POC plus document file upload. The document
@@ -126,6 +140,7 @@ quick wins) plus a first-class REST surface. Verified end-to-end against Postgre
 - Bundleable `pkg/<domain>/module` pattern; `cmd/goeland-server` composes both
   modules on one shared pool/transcoder/auth verifier.
 
+[0.2.1]: #021---2026-07-08
 [0.2.0]: #020---2026-07-07
 [0.1.0]: #010---2026-07-07
 [0.0.2]: #002---2026-07-06

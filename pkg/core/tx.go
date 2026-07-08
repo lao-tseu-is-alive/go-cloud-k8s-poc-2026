@@ -21,7 +21,11 @@ type Querier interface {
 
 // InsertSubjectRefTx inserts a canonical subject_ref row using q (pool or tx).
 func InsertSubjectRefTx(ctx context.Context, q Querier, kind SubjectKind, displayLabel, canonicalURL string) (*SubjectRef, error) {
-	rows, err := q.Query(ctx, insertSubjectRefSQL, string(kind), displayLabel, canonicalURL)
+	rows, err := q.Query(ctx, insertSubjectRefSQL, pgx.NamedArgs{
+		"kind":          string(kind),
+		"display_label": displayLabel,
+		"canonical_url": canonicalURL,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -34,9 +38,16 @@ func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInpu
 	if metadata == nil {
 		metadata = map[string]string{}
 	}
-	rows, err := q.Query(ctx, insertRecordMetadataSQL,
-		subjectID, in.OperatorID, in.OwnerUserID, in.OwnerOrgID,
-		in.ConfidentialityLevel, in.RetentionUntil, in.SortFinal, metadata)
+	rows, err := q.Query(ctx, insertRecordMetadataSQL, pgx.NamedArgs{
+		"subject_id":            subjectID,
+		"created_by":            in.OperatorID,
+		"owner_user_id":         in.OwnerUserID,
+		"owner_org_id":          in.OwnerOrgID,
+		"confidentiality_level": in.ConfidentialityLevel,
+		"retention_until":       in.RetentionUntil,
+		"sort_final":            in.SortFinal,
+		"metadata":              metadata,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -60,9 +71,17 @@ func InsertAuditEventTx(ctx context.Context, q Querier, ev AuditEvent) (*AuditEv
 	if requestID == "" {
 		requestID = RequestIDFromContext(ctx)
 	}
-	rows, err := q.Query(ctx, insertAuditEventSQL,
-		ev.SubjectID, ev.EventType, ev.ActorUserID, ev.BeforeState, ev.AfterState,
-		ev.Reason, correlation, requestID, metadata)
+	rows, err := q.Query(ctx, insertAuditEventSQL, pgx.NamedArgs{
+		"subject_id":     ev.SubjectID,
+		"event_type":     ev.EventType,
+		"actor_user_id":  ev.ActorUserID,
+		"before_state":   ev.BeforeState,
+		"after_state":    ev.AfterState,
+		"reason":         ev.Reason,
+		"correlation_id": correlation,
+		"request_id":     requestID,
+		"metadata":       metadata,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +91,7 @@ func InsertAuditEventTx(ctx context.Context, q Querier, ev AuditEvent) (*AuditEv
 // GetRelationshipTypeByCodeTx loads a relationship type by its code using q.
 // Returns ErrNotFound when the code is unknown.
 func GetRelationshipTypeByCodeTx(ctx context.Context, q Querier, code string) (*RelationshipType, error) {
-	rows, err := q.Query(ctx, getRelationshipTypeByCodeSQL, code)
+	rows, err := q.Query(ctx, getRelationshipTypeByCodeSQL, pgx.NamedArgs{"code": code})
 	if err != nil {
 		return nil, err
 	}
@@ -85,7 +104,7 @@ func GetRelationshipTypeByCodeTx(ctx context.Context, q Querier, code string) (*
 
 // GetSubjectRefTx loads a subject_ref by id using q. Returns ErrNotFound when absent.
 func GetSubjectRefTx(ctx context.Context, q Querier, id uuid.UUID) (*SubjectRef, error) {
-	rows, err := q.Query(ctx, getSubjectRefSQL, id)
+	rows, err := q.Query(ctx, getSubjectRefSQL, pgx.NamedArgs{"id": id})
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +117,7 @@ func GetSubjectRefTx(ctx context.Context, q Querier, id uuid.UUID) (*SubjectRef,
 
 // GetRecordMetadataTx loads the governance record for a subject using q. Returns ErrNotFound when absent.
 func GetRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, getRecordMetadataSQL, subjectID)
+	rows, err := q.Query(ctx, getRecordMetadataSQL, pgx.NamedArgs{"subject_id": subjectID})
 	if err != nil {
 		return nil, err
 	}
@@ -112,14 +131,17 @@ func GetRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID) (*
 // UpdateSubjectLabelTx keeps the canonical subject_ref.display_label in sync with
 // a domain entity's human label (e.g. a document title) within the same transaction.
 func UpdateSubjectLabelTx(ctx context.Context, q Querier, subjectID uuid.UUID, label string) error {
-	_, err := q.Exec(ctx, updateSubjectRefLabelSQL, subjectID, label)
+	_, err := q.Exec(ctx, updateSubjectRefLabelSQL, pgx.NamedArgs{
+		"id":            subjectID,
+		"display_label": label,
+	})
 	return err
 }
 
 // GetRecordMetadataForUpdateTx loads a subject's governance record and locks the
 // row for the current transaction (SELECT ... FOR UPDATE). Returns ErrNotFound when absent.
 func GetRecordMetadataForUpdateTx(ctx context.Context, q Querier, subjectID uuid.UUID) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, getRecordMetadataForUpdateSQL, subjectID)
+	rows, err := q.Query(ctx, getRecordMetadataForUpdateSQL, pgx.NamedArgs{"subject_id": subjectID})
 	if err != nil {
 		return nil, err
 	}
@@ -152,7 +174,10 @@ func EnsureMutableTx(ctx context.Context, q Querier, subjectID uuid.UUID, allowL
 
 // LockRecordMetadataTx sets the immutable flag on a subject's governance record using q.
 func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, lockRecordMetadataSQL, subjectID, operatorID)
+	rows, err := q.Query(ctx, lockRecordMetadataSQL, pgx.NamedArgs{
+		"subject_id":  subjectID,
+		"operator_id": operatorID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -165,7 +190,10 @@ func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, o
 
 // SoftDeleteRecordMetadataTx logically deletes a subject's governance record using q.
 func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
-	rows, err := q.Query(ctx, softDeleteRecordMetadataSQL, subjectID, operatorID)
+	rows, err := q.Query(ctx, softDeleteRecordMetadataSQL, pgx.NamedArgs{
+		"subject_id":  subjectID,
+		"operator_id": operatorID,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -205,8 +233,14 @@ func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelat
 	if _, err := EnsureMutableTx(ctx, q, in.TargetSubjectID, true); err != nil {
 		return nil, err
 	}
-	rows, err := q.Query(ctx, insertSubjectRelationshipSQL,
-		in.SourceSubjectID, in.TargetSubjectID, rt.ID, in.RoleDetail, in.ValidFrom, in.OperatorID)
+	rows, err := q.Query(ctx, insertSubjectRelationshipSQL, pgx.NamedArgs{
+		"source_subject_id":    in.SourceSubjectID,
+		"target_subject_id":    in.TargetSubjectID,
+		"relationship_type_id": rt.ID,
+		"role_detail":          in.RoleDetail,
+		"valid_from":           in.ValidFrom,
+		"created_by":           in.OperatorID,
+	})
 	if err != nil {
 		return nil, mapConflict(err)
 	}

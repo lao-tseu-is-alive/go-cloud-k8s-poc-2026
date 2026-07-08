@@ -73,7 +73,7 @@ func (r *PostgresRepository) GetSubject(ctx context.Context, id uuid.UUID) (*Sub
 
 // GetRecordMetadata loads the governance record for a subject.
 func (r *PostgresRepository) GetRecordMetadata(ctx context.Context, subjectID uuid.UUID) (*RecordMetadata, error) {
-	rows, err := r.pool.Query(ctx, getRecordMetadataSQL, subjectID)
+	rows, err := r.pool.Query(ctx, getRecordMetadataSQL, pgx.NamedArgs{"subject_id": subjectID})
 	if err != nil {
 		return nil, fmt.Errorf("get record_metadata: %w", err)
 	}
@@ -123,7 +123,10 @@ func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
-	rows, err := tx.Query(ctx, softDeleteRelationshipSQL, relationshipID, operatorID)
+	rows, err := tx.Query(ctx, softDeleteRelationshipSQL, pgx.NamedArgs{
+		"id":          relationshipID,
+		"operator_id": operatorID,
+	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("soft delete relationship: %w", err)
 	}
@@ -169,8 +172,13 @@ type relationshipListRow struct {
 
 // ListRelationships returns a page of active relationships for a subject, hydrated with subject refs and types.
 func (r *PostgresRepository) ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error) {
-	rows, err := r.pool.Query(ctx, listRelationshipsSQL,
-		filter.SubjectID, filter.Outgoing, filter.RelationshipTypeCode, filter.Limit, filter.Offset)
+	rows, err := r.pool.Query(ctx, listRelationshipsSQL, pgx.NamedArgs{
+		"subject_id":             filter.SubjectID,
+		"outgoing":               filter.Outgoing,
+		"relationship_type_code": filter.RelationshipTypeCode,
+		"limit":                  filter.Limit,
+		"offset":                 filter.Offset,
+	})
 	if err != nil {
 		return RelationshipResult{}, fmt.Errorf("list relationships: %w", err)
 	}
@@ -207,7 +215,7 @@ func (r *PostgresRepository) hydrateRelationships(ctx context.Context, rels []*S
 		typeIDs = append(typeIDs, rel.RelationshipTypeID)
 	}
 
-	subjectRows, err := r.pool.Query(ctx, getSubjectRefsByIDsSQL, subjectIDs)
+	subjectRows, err := r.pool.Query(ctx, getSubjectRefsByIDsSQL, pgx.NamedArgs{"ids": subjectIDs})
 	if err != nil {
 		return fmt.Errorf("hydrate subjects: %w", err)
 	}
@@ -220,7 +228,7 @@ func (r *PostgresRepository) hydrateRelationships(ctx context.Context, rels []*S
 		subjectByID[s.ID] = s
 	}
 
-	typeRows, err := r.pool.Query(ctx, getRelationshipTypesByIDsSQL, typeIDs)
+	typeRows, err := r.pool.Query(ctx, getRelationshipTypesByIDsSQL, pgx.NamedArgs{"ids": typeIDs})
 	if err != nil {
 		return fmt.Errorf("hydrate relationship types: %w", err)
 	}
@@ -243,7 +251,11 @@ func (r *PostgresRepository) hydrateRelationships(ctx context.Context, rels []*S
 
 // ListRelationshipTypes returns the catalogue of relationship types, optionally filtered.
 func (r *PostgresRepository) ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error) {
-	rows, err := r.pool.Query(ctx, listRelationshipTypesSQL, onlyActive, string(sourceKind), string(targetKind))
+	rows, err := r.pool.Query(ctx, listRelationshipTypesSQL, pgx.NamedArgs{
+		"only_active": onlyActive,
+		"source_kind": string(sourceKind),
+		"target_kind": string(targetKind),
+	})
 	if err != nil {
 		return nil, fmt.Errorf("list relationship types: %w", err)
 	}
@@ -272,8 +284,14 @@ type auditListRow struct {
 
 // ListAuditEvents returns a page of audit events for a subject, newest first.
 func (r *PostgresRepository) ListAuditEvents(ctx context.Context, filter AuditFilter) (AuditResult, error) {
-	rows, err := r.pool.Query(ctx, listAuditEventsSQL,
-		filter.SubjectID, filter.EventType, filter.From, filter.To, filter.Limit, filter.Offset)
+	rows, err := r.pool.Query(ctx, listAuditEventsSQL, pgx.NamedArgs{
+		"subject_id": filter.SubjectID,
+		"event_type": filter.EventType,
+		"from":       filter.From,
+		"to":         filter.To,
+		"limit":      filter.Limit,
+		"offset":     filter.Offset,
+	})
 	if err != nil {
 		return AuditResult{}, fmt.Errorf("list audit events: %w", err)
 	}
