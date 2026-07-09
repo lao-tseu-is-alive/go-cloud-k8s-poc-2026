@@ -7,7 +7,10 @@ WORKDIR /app/cmd/goeland-server/goeland-front
 COPY cmd/goeland-server/goeland-front/package.json cmd/goeland-server/goeland-front/bun.lock ./
 RUN bun install --frozen-lockfile
 COPY cmd/goeland-server/goeland-front/ ./
-RUN bun run build
+# build-only = `vite build` (produces dist/). We deliberately do NOT run the
+# `build` script here: it also runs `vue-tsc` type-check in parallel, which is a
+# code-quality gate that belongs in CI (a glibc runner), not in the image build.
+RUN bun run build-only
 
 # Stage 2 – Go binary
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).

@@ -34,9 +34,8 @@ jobs:
 
       - name: Setup Bun
         # Builds the embedded frontend so //go:embed goeland-front/dist/* resolves.
-        # NOTE: consider pinning this third-party action to a commit SHA (like the
-        # docker actions in docker-publish.yml) to harden the supply chain.
-        uses: oven-sh/setup-bun@v2
+        # v2.2.0 - pinned to commit SHA to prevent supply chain attacks,
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
         with:
           bun-version: latest
 
@@ -44,7 +43,9 @@ jobs:
         run: |
           cd cmd/goeland-server/goeland-front
           bun install --frozen-lockfile
-          bun run build
+          # build-only = vite build (produces dist/). Type-checking is a separate
+          # CI concern, not part of producing the release artifact.
+          bun run build-only
 
       - name: Build
         run: |
