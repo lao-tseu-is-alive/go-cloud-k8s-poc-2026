@@ -98,6 +98,22 @@ jobs:
         with:
           sarif_file: 'trivy-results.sarif'
 
+      # 4b. Gate: fail the job on fixable HIGH/CRITICAL so a vulnerable image is
+      # never pushed. Runs after the SARIF upload (which reports MEDIUM too) so
+      # findings still reach the Security tab even when this gate fails; reuses
+      # Trivy's DB cached by the scan above (skip-db-update) so it is fast.
+      # pinned to commit SHA to prevent supply chain attacks
+      - name: Fail on HIGH/CRITICAL vulnerabilities
+        uses: aquasecurity/trivy-action@cf5c088a69634cd13ccddc735d7926162c31f9a6
+        with:
+          image-ref: 'goeland-server:test'
+          severity: 'CRITICAL,HIGH'
+          ignore-unfixed: true
+          format: 'table'
+          exit-code: '1'
+          skip-db-update: true
+          trivy-version: '0.69.3'
+
       # 5. Final Push - Only if previous steps (including scan) succeeded
       - name: Extract Docker metadata
         id: meta
