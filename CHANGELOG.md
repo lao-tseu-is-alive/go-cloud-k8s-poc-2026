@@ -6,6 +6,17 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+## [0.3.1] - 2026-07-09
+
+### Fixed
+
+- **CI (`docker-publish`)**: the `Run Unit Tests` step compiled `cmd/goeland-server`,
+  whose `//go:embed goeland-front/dist/*` requires the built SPA, but `dist/` is
+  git-ignored and had not been produced yet on a clean checkout — the job failed with
+  `pattern goeland-front/dist/*: no matching files found`. A Bun setup + frontend build
+  step (mirroring the Dockerfile, with `oven-sh/setup-bun` pinned to a commit SHA) now
+  runs before the tests so the embed resolves.
+
 ## [0.3.0] - 2026-07-09
 
 CI, reproducible container builds, and the first automated database integration
@@ -187,6 +198,7 @@ quick wins) plus a first-class REST surface. Verified end-to-end against Postgre
 - Bundleable `pkg/<domain>/module` pattern; `cmd/goeland-server` composes both
   modules on one shared pool/transcoder/auth verifier.
 
+[0.3.1]: #031---2026-07-09
 [0.3.0]: #030---2026-07-09
 [0.2.1]: #021---2026-07-08
 [0.2.0]: #020---2026-07-07
