@@ -6,6 +6,23 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+1## [0.3.2] - 2026-07-09
+
+### Security
+
+- **Dependency & toolchain bump to clear CVEs in the published image** (Trivy
+  `gobinary` scan of `ghcr.io/.../go-cloud-k8s-poc-2026` went from 22 findings —
+  13 HIGH / 7 MEDIUM — to 1 informational advisory). All findings were in
+  transitive `golang.org/x/*` modules and the Go stdlib; the app imports none of
+  the vulnerable SSH/OpenPGP code paths, but the modules were flagged by version.
+  - `golang.org/x/crypto` v0.46.0 → v0.54.0 (clears the `x/crypto/ssh` disclosure
+    batch, CVE-2026-39827…46598).
+  - `golang.org/x/net` v0.48.0 → v0.57.0 (clears `x/net/html`, `http2`, `idna`).
+  - `golang.org/x/sys` v0.39.0 → v0.47.0.
+  - Go directive `1.26.4` → `1.26.5` (clears stdlib CVE-2026-39822, CVE-2026-42505).
+  - Remaining `GO-2026-5932` (`x/crypto/openpgp` unmaintained) has no fix and is
+    not imported; it is `UNKNOWN` severity and outside the CI Trivy scope.
+
 ## [0.3.1] - 2026-07-09
 
 ### Fixed
@@ -198,6 +215,7 @@ quick wins) plus a first-class REST surface. Verified end-to-end against Postgre
 - Bundleable `pkg/<domain>/module` pattern; `cmd/goeland-server` composes both
   modules on one shared pool/transcoder/auth verifier.
 
+[0.3.2]: #032---2026-07-09
 [0.3.1]: #031---2026-07-09
 [0.3.0]: #030---2026-07-09
 [0.2.1]: #021---2026-07-08
