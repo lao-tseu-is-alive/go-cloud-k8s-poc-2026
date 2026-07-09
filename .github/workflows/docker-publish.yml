@@ -29,6 +29,21 @@ jobs:
           # Single source of truth: the version required in go.mod (currently 1.26.4).
           go-version-file: go.mod
 
+      - name: Set up Bun
+        # v2.2.0 - pinned to commit SHA to prevent supply chain attacks,
+        # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1'
+
+      # The server embeds goeland-front/dist via //go:embed, but dist/ is
+      # git-ignored. Build the frontend first so `go test ./...` (which compiles
+      # cmd/goeland-server) can resolve the embed pattern. `build` also runs the
+      # vue-tsc type-check, the code-quality gate the Dockerfile defers to CI.
+      - name: Build embedded frontend
+        working-directory: cmd/goeland-server/goeland-front
+        run: bun install --frozen-lockfile && bun run build
+
       - name: Run Unit Tests
         run: go test -v ./...
 
