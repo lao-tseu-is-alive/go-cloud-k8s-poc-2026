@@ -1,0 +1,12 @@
+# Trivy vulnerability suppressions.
+# Each entry MUST document why the advisory does not apply and be re-checked
+# whenever dependencies change. Trivy reads this file from the repo root, so it
+# is honored by both the CI scans (docker-publish, cve-trivy-scan) and local runs.
+
+# GO-2026-5932: golang.org/x/crypto/openpgp is unmaintained / unsafe by design.
+# The package is NOT linked into our binary — `go list -deps ./cmd/goeland-server`
+# reports zero openpgp packages. x/crypto is only pulled transitively via Echo's
+# acme/autocert (auto-TLS), and Trivy flags this module-level advisory purely from
+# the x/crypto module version in the binary's build metadata, not from reachable
+# code. UNKNOWN severity, no fix available. Not applicable to this service.
+GO-2026-5932
