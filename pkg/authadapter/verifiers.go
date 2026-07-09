@@ -13,7 +13,7 @@ import (
 // ErrInvalidToken is returned by any TokenVerifier when the supplied token cannot be validated.
 var ErrInvalidToken = errors.New("invalid bearer token")
 
-// JWTVerifier adapts the JWT format issued by go-cloud-k8s-auth to the notes
+// JWTVerifier adapts the JWT format issued by go-cloud-k8s-auth to the
 // service's deliberately small authentication contract.
 type JWTVerifier struct {
 	checker       goHttpEcho.JwtChecker
@@ -31,7 +31,7 @@ func NewJWTVerifier(checker goHttpEcho.JwtChecker, defaultScopes []string) (*JWT
 	}, nil
 }
 
-// VerifyBearerToken parses and validates the JWT, promoting admin users to the "notes:admin" scope.
+// VerifyBearerToken parses and validates the JWT, promoting admin users to the "goeland:admin" scope.
 // The deferred recover converts panics from the upstream JWT checker into ErrInvalidToken.
 func (v *JWTVerifier) VerifyBearerToken(_ context.Context, token string) (user *AuthenticatedUser, err error) {
 	defer func() {
@@ -45,8 +45,8 @@ func (v *JWTVerifier) VerifyBearerToken(_ context.Context, token string) (user *
 		return nil, ErrInvalidToken
 	}
 	scopes := slices.Clone(v.defaultScopes)
-	if claims.User.IsAdmin && !slices.Contains(scopes, "notes:admin") {
-		scopes = append(scopes, "notes:admin")
+	if claims.User.IsAdmin && !slices.Contains(scopes, "goeland:admin") {
+		scopes = append(scopes, "goeland:admin")
 	}
 	return &AuthenticatedUser{
 		AppUserID:   int64(claims.User.UserId),
@@ -57,13 +57,13 @@ func (v *JWTVerifier) VerifyBearerToken(_ context.Context, token string) (user *
 }
 
 // DevTokenVerifier is an explicit local-development verifier. It must only be
-// selected when NOTES_AUTH_MODE=dev.
+// selected when GOELAND_AUTH_MODE=dev.
 type DevTokenVerifier struct {
 	token string
 	user  AuthenticatedUser
 }
 
-// NewDevTokenVerifier creates a verifier that accepts exactly one static token. Must not be used outside NOTES_AUTH_MODE=dev.
+// NewDevTokenVerifier creates a verifier that accepts exactly one static token. Must not be used outside GOELAND_AUTH_MODE=dev.
 func NewDevTokenVerifier(token string, user AuthenticatedUser) (*DevTokenVerifier, error) {
 	if token == "" {
 		return nil, errors.New("development token is required")

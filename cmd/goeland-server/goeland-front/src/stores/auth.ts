@@ -2,7 +2,7 @@ import type { FrontendConfig, TokenResponse, TokenUser } from '@/api/types'
 /**
  * Authentication store (setup style).
  *
- * Bootstraps from GET /config, then supports two modes (like the notes SPA):
+ * Bootstraps from GET /config, then supports two modes :
  *   - dev:  a static token is entered manually for local hacking.
  *   - jwt:  short-lived JWTs are minted silently from the SSO session cookie
  *           at ${authBaseUrl}/auth/token and re-minted before expiry.
@@ -47,7 +47,11 @@ export const useAuthStore = defineStore('auth', () => {
     if (remintTimer) {
       clearTimeout(remintTimer)
     }
-    const delayMs = Math.max(expiresInSeconds * 800, 30_000)
+    // Re-mint at ~80% of the token lifetime, but never after it expires: for
+    // short-lived tokens we cap the delay to at least 5s before expiry, and keep
+    // a 1s floor so a zero/degenerate lifetime cannot schedule a tight loop.
+    const lifetimeMs = Math.max(expiresInSeconds, 0) * 1000
+    const delayMs = Math.max(Math.min(lifetimeMs * 0.8, lifetimeMs - 5_000), 1_000)
     remintTimer = setTimeout(() => {
       void mintToken()
     }, delayMs)

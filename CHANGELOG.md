@@ -6,6 +6,53 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+## [0.3.0] - 2026-07-09
+
+CI, reproducible container builds, and the first automated database integration
+tests, from the technical review (`reports/report_20260709_gpt-5.md`, quick wins
+1, 2, 3, 4, 5, 7, 8; #6 metrics/tracing deferred). Verified against PostgreSQL
+(Go build/vet/tests green; integration tests green against a PostGIS database).
+
+### Added
+
+- **Database integration tests** (`pkg/integration`): the embedded migrations are
+  applied to a real PostgreSQL, then a document is walked through its whole lifecycle
+  — create, full-text search, metadata update, link to an ACTOR subject, finalize+lock,
+  locked-update rejection (`ErrLocked`), soft delete, deleted-mutation rejection
+  (`ErrDeleted`), and audit-trail assertions — plus a migrations idempotency + seed-data
+  check. Gated on `GOELAND_TEST_DATABASE_URL` and skipped when unset, so `go test ./...`
+  stays green without a database. The target DB needs the PostGIS/pgcrypto/pg_trgm/unaccent
+  extensions.
+- **CI** (`.github/workflows`): `cve-trivy-scan` (Trivy image CVE scan on push/PR to
+  `main`), `docker-publish` (unit tests + build/scan/publish the image on version tags),
+  and `release` (cross-compiled `linux/amd64` + `linux/arm64` binaries on version tags).
+  The Go version is sourced from `go.mod` (`go-version-file`) and third-party actions are
+  pinned to commit SHAs; Trivy uses a post-incident-safe pinned version.
+- **`docs/PRODUCTION_READINESS.md`**: deployment contract covering required PostgreSQL
+  extensions, startup-migration behavior, blob-storage persistence, auth settings, health/
+  readiness probes, secrets, and the known POC limitations (coarse authz, node-local blobs).
+
+### Changed
+
+- **Self-contained Docker build**: the image now builds the embedded Vue/Vuetify frontend
+  in a dedicated `oven/bun` stage before the Go build, so `docker build` is reproducible
+  from a clean checkout. Previously `//go:embed goeland-front/dist/*` required a pre-built,
+  git-ignored `dist/` to already be present in the build context. `.dockerignore` now
+  excludes `node_modules`/`dist` to keep the context lean.
+- **Deterministic Go package discovery**: `make test` and `make lint` exclude packages under
+  the frontend `node_modules` tree, so `bun install` no longer pollutes `go list ./...`
+  (previously a `flatted/golang` package leaked into `./...`).
+- **Admin scope naming**: the wildcard admin scope is now `goeland:admin` (was the stale
+  cross-project `notes:admin`) across the auth adapter and its tests. This is internal
+  naming only — the scope is assigned from the verified `IsAdmin` claim, not read from
+  client-supplied token scopes — so no external token depends on the old string.
+
+### Fixed
+
+- **Frontend token remint** (`src/stores/auth.ts`): JWTs are re-minted at ~80% of their
+  lifetime and never scheduled past expiry. The previous 30-second floor could schedule a
+  remint *after* a short-lived token had already expired, causing an avoidable auth lapse.
+
 ## [0.2.1] - 2026-07-08
 
 Internal readability refactor with no behavior change. Verified against PostgreSQL
@@ -140,6 +187,7 @@ quick wins) plus a first-class REST surface. Verified end-to-end against Postgre
 - Bundleable `pkg/<domain>/module` pattern; `cmd/goeland-server` composes both
   modules on one shared pool/transcoder/auth verifier.
 
+[0.3.0]: #030---2026-07-09
 [0.2.1]: #021---2026-07-08
 [0.2.0]: #020---2026-07-07
 [0.1.0]: #010---2026-07-07

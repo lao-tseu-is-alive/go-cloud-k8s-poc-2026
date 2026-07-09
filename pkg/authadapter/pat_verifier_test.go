@@ -44,7 +44,7 @@ func newIntrospectionServer(t *testing.T, active map[string]introspectResponse, 
 func TestPatVerifier(t *testing.T) {
 	var calls atomic.Int64
 	server := newIntrospectionServer(t, map[string]introspectResponse{
-		"pat_good": {Active: true, Email: "jane@example.com", Name: "Jane", Scopes: []string{"notes:read", "notes:write"}},
+		"pat_good": {Active: true, Email: "jane@example.com", Name: "Jane", Scopes: []string{"goeland:read", "goeland:write"}},
 	}, &calls)
 	defer server.Close()
 

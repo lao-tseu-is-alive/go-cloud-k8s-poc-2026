@@ -11,7 +11,7 @@ import (
 )
 
 func TestNewInterceptor(t *testing.T) {
-	verifier, err := NewDevTokenVerifier("test-token", AuthenticatedUser{AppUserID: 42, Scopes: []string{"notes:read"}})
+	verifier, err := NewDevTokenVerifier("test-token", AuthenticatedUser{AppUserID: 42, Scopes: []string{"goeland:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -84,18 +84,18 @@ func TestNewInterceptor(t *testing.T) {
 }
 
 func TestHasScopeAdminWildcard(t *testing.T) {
-	admin := &AuthenticatedUser{AppUserID: 1, Scopes: []string{"notes:admin"}}
-	for _, scope := range []string{"notes:read", "notes:write", "notes:mcp", "notes:anything"} {
+	admin := &AuthenticatedUser{AppUserID: 1, Scopes: []string{"goeland:admin"}}
+	for _, scope := range []string{"goeland:read", "goeland:write", "goeland:mcp", "goeland:anything"} {
 		if !admin.HasScope(scope) {
 			t.Errorf("admin should satisfy scope %q", scope)
 		}
 	}
-	readOnly := &AuthenticatedUser{AppUserID: 1, Scopes: []string{"notes:read"}}
-	if readOnly.HasScope("notes:write") {
-		t.Error("read-only user should not have notes:write scope")
+	readOnly := &AuthenticatedUser{AppUserID: 1, Scopes: []string{"goeland:read"}}
+	if readOnly.HasScope("goeland:write") {
+		t.Error("read-only user should not have goeland:write scope")
 	}
-	if readOnly.HasScope("notes:admin") {
-		t.Error("read-only user should not have notes:admin scope")
+	if readOnly.HasScope("goeland:admin") {
+		t.Error("read-only user should not have goeland:admin scope")
 	}
 }
 

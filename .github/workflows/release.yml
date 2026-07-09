@@ -1,0 +1,79 @@
+name: Release
+
+on:
+  push:
+    # Publish semver tags as releases.
+    tags: [ 'v[0-9]+.[0-9]+.[0-9]+' ]
+
+
+permissions:
+  contents: write # Grant write access to repository contents
+  actions: read # Grant read access to repository actions
+  discussions: read # Grant read access to repository discussions
+
+jobs:
+  build:
+    name: Build and Release
+    runs-on: ubuntu-latest # Use ubuntu-latest to build, as it supports cross-compilation
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4 # Action to checkout your repository code
+      - name: Set env
+        run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+      - name: Preparing Test Env
+        run: |
+          echo $RELEASE_VERSION
+          echo ${{ env.RELEASE_VERSION }}
+      - name: Setup Go
+        uses: actions/setup-go@v5 # Action to set up the Go environment
+        with:
+          # Single source of truth: the version required in go.mod (currently 1.26.4).
+          go-version-file: go.mod
+      - run: go version
+
+      - name: Setup Bun
+        # Builds the embedded frontend so //go:embed goeland-front/dist/* resolves.
+        # NOTE: consider pinning this third-party action to a commit SHA (like the
+        # docker actions in docker-publish.yml) to harden the supply chain.
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Build embedded frontend
+        run: |
+          cd cmd/goeland-server/goeland-front
+          bun install --frozen-lockfile
+          bun run build
+
+      - name: Build
+        run: |
+          # Set environment variables for cross-compilation
+          # GOOS: target operating system
+          # GOARCH: target architecture
+          # CGO_ENABLED=0: Disable CGO for static linking (recommended for portability)
+          LDFLAGS="-s -w -X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.Revision=$(git describe --dirty --always) -X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.BuildStamp=$(date -u '+%Y-%m-%dT%H:%M:%SZ')"
+          GOOS=linux GOARCH=amd64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o goeland-server-linux-amd64 ./cmd/goeland-server
+          GOOS=linux GOARCH=arm64 CGO_ENABLED=0 go build -ldflags="${LDFLAGS}" -o goeland-server-linux-arm64 ./cmd/goeland-server
+
+      - name: Create Archives
+        run: |
+          tar -czvf goeland-server-linux-amd64.tar.gz goeland-server-linux-amd64
+          tar -czvf goeland-server-linux-arm64.tar.gz goeland-server-linux-arm64
+
+      - name: Calculate Sha256 hash
+        run: |
+          sha256sum goeland-server-* > SHA256.txt
+
+      - name: Upload Release Asset for Linux
+        # v2.2.2 - pinned to commit SHA to prevent supply chain attacks,
+        # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
+        uses: softprops/action-gh-release@da05d552573ad5aba039eaac05058a918a7bf631
+        with:
+          body:  Release ${{ env.RELEASE_VERSION }}
+          files: |
+            goeland-server-linux-amd64.tar.gz
+            goeland-server-linux-arm64.tar.gz
+            SHA256.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }} # Automatically provided by GitHub Actions

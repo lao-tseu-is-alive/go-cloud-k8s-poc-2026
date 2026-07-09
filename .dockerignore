@@ -1,5 +1,8 @@
 .idea
 *.md
+# Frontend deps/output are rebuilt inside the dedicated bun stage.
+**/node_modules
+cmd/goeland-server/goeland-front/dist
 .env
 .env_sample
 .gitignore

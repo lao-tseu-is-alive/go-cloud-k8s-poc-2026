@@ -10,7 +10,7 @@ import (
 )
 
 func TestDevTokenVerifier(t *testing.T) {
-	verifier, err := NewDevTokenVerifier("secret", AuthenticatedUser{AppUserID: 42, Scopes: []string{"notes:read"}})
+	verifier, err := NewDevTokenVerifier("secret", AuthenticatedUser{AppUserID: 42, Scopes: []string{"goeland:read"}})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -18,15 +18,15 @@ func TestDevTokenVerifier(t *testing.T) {
 		t.Fatal("wrong token was accepted")
 	}
 	user, err := verifier.VerifyBearerToken(context.Background(), "secret")
-	if err != nil || user.AppUserID != 42 || !user.HasScope("notes:read") {
+	if err != nil || user.AppUserID != 42 || !user.HasScope("goeland:read") {
 		t.Fatalf("user = %#v, error = %v", user, err)
 	}
 }
 
 func TestJWTVerifierMapsAuthClaims(t *testing.T) {
 	logger := slog.New(slog.NewTextHandler(io.Discard, nil))
-	checker := goHttpEcho.NewJwtChecker("test-secret", "test-issuer", "notes", "jwt", 5, logger)
-	verifier, err := NewJWTVerifier(checker, []string{"notes:read", "notes:write"})
+	checker := goHttpEcho.NewJwtChecker("test-secret", "test-issuer", "goeland", "jwt", 5, logger)
+	verifier, err := NewJWTVerifier(checker, []string{"goeland:read", "goeland:write"})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -40,7 +40,7 @@ func TestJWTVerifierMapsAuthClaims(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if user.AppUserID != 77 || !user.HasScope("notes:write") || !user.HasScope("notes:admin") {
+	if user.AppUserID != 77 || !user.HasScope("goeland:write") || !user.HasScope("goeland:admin") {
 		t.Fatalf("unexpected mapped user: %#v", user)
 	}
 }

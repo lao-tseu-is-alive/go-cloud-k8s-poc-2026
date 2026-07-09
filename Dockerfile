@@ -1,4 +1,15 @@
-# Stage 1 – Go binary
+# Stage 1 – Frontend build
+# Builds the embedded Vue/Vuetify SPA so the image is reproducible from a clean
+# checkout (dist/ is git-ignored). Mirrors the `make front-build` step.
+FROM oven/bun:1-alpine AS frontend
+WORKDIR /app/cmd/goeland-server/goeland-front
+# Install deps first (cached until the manifest/lockfile change).
+COPY cmd/goeland-server/goeland-front/package.json cmd/goeland-server/goeland-front/bun.lock ./
+RUN bun install --frozen-lockfile
+COPY cmd/goeland-server/goeland-front/ ./
+RUN bun run build
+
+# Stage 2 – Go binary
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
 # Pin the builder to the module's Go minor version for reproducibility.
 FROM golang:1.26-alpine AS builder
@@ -9,6 +20,9 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
+# Bring in the freshly built frontend so //go:embed goeland-front/dist/* resolves
+# (this overrides any stale/absent dist from the build context).
+COPY --from=frontend /app/cmd/goeland-server/goeland-front/dist ./cmd/goeland-server/goeland-front/dist
 # Inject version provenance so the container's /goAppInfo reports real values
 # (pass with: --build-arg APP_REVISION=$(git describe --always) --build-arg BUILD_STAMP=$(date -u +%FT%TZ)).
 ARG APP_REVISION=unknown
@@ -17,7 +31,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -a -installsuffix cgo \
     -ldflags "-X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.Revision=${APP_REVISION} -X github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version.BuildStamp=${BUILD_STAMP}" \
     -o bin/goeland-server ./cmd/goeland-server
 
-# Stage 2 – Minimal runtime image
+# Stage 3 – Minimal runtime image
 FROM scratch
 # CA roots so outbound HTTPS (PAT introspection, certificate-verifying PostgreSQL TLS) works.
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/ca-certificates.crt

@@ -39,8 +39,8 @@ proto_third_party/*
 /how_to_add_mcp_to_claude.txt
 /.ogcode/ogcode.db
 reports/
-/notes-server
-/notes-client
-/notes-mcp
+
 /goeland-server
+/goeland-client
+/goeland-mcp
 cmd/goeland-server/goeland-front/dist

@@ -38,10 +38,10 @@ func RequireUser(ctx context.Context) (*AuthenticatedUser, error) {
 	return user, nil
 }
 
-// HasScope reports whether the user holds the given scope. The "notes:admin" scope acts as a wildcard and satisfies any scope check.
+// HasScope reports whether the user holds the given scope. The "goeland:admin" scope acts as a wildcard and satisfies any scope check.
 func (u *AuthenticatedUser) HasScope(scope string) bool {
 	for _, candidate := range u.Scopes {
-		if candidate == scope || candidate == "notes:admin" {
+		if candidate == scope || candidate == "goeland:admin" {
 			return true
 		}
 	}

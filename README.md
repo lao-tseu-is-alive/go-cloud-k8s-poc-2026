@@ -72,13 +72,16 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0004 (dbmate format)
+      └── db/migrations/  0001..0005 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   ├── module/            bundleable module (schema owned by core)
   └── filestore/         local blob store for uploaded document bytes
+pkg/integration/         env-gated PostgreSQL integration tests (migrations + document lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /download endpoints
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
+.github/workflows/       CI: Trivy CVE scan, image build/scan/publish, binary release
+docs/                    PRODUCTION_READINESS.md (deployment contract)
 ```
 
 ## Prerequisites
@@ -243,6 +246,24 @@ make fmt          gofmt -w .
 make db-up        apply migrations (dbmate)
 ```
 
+## Testing & CI
+
+`make test` runs the unit tests. The database **integration tests** in `pkg/integration`
+(migrations idempotency + full document lifecycle) are gated on `GOELAND_TEST_DATABASE_URL`
+and skip when it is unset, so the default run needs no database. To run them against a
+disposable PostGIS database:
+
+```bash
+GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmode=disable' \
+    go test ./pkg/integration/...
+```
+
+CI lives in [`.github/workflows`](.github/workflows): `cve-trivy-scan` (image CVE scan on
+push/PR to `main`), `docker-publish` (unit tests + build/scan/publish the image on version
+tags), and `release` (cross-compiled binaries on version tags). The Go version is sourced
+from `go.mod`, and third-party actions are pinned to commit SHAs. The container image is
+self-contained: it builds the embedded frontend in a `bun` stage before the Go build.
+
 ## Scripts (`scripts/`)
 
 Helper scripts for the dev loop and ops (all run from the repo root):
@@ -272,7 +293,9 @@ event; every relationship is typed and validated; boring, explicit, testable API
 The original spec is [`requirements/goeland_poc_domain_model_agent.md`](requirements/goeland_poc_domain_model_agent.md)
 (intent, not updated as work proceeds). The living "what's done / what's left"
 tracker — with intentional deviations from the spec — is
-[`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md).
+[`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md). For
+deployment (required extensions, migrations, storage, auth, probes, secrets, and the known
+POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
 
 ### Out of scope for this slice
 

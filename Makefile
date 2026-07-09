@@ -26,7 +26,11 @@ FRONTEND_DIR := cmd/$(APP_EXECUTABLE)/goeland-front
 MIGRATIONS_DIR := pkg/core/module/db/migrations
 APP_REVISION := $(shell git describe --dirty --always 2>/dev/null || echo "unknown")
 BUILD := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
-PACKAGES := $(shell go list ./... | grep -v /vendor/)
+# Exclude vendored code and any Go packages that live inside the frontend's
+# node_modules tree (e.g. flatted/golang) so `bun install` cannot pollute
+# Go package discovery for test/vet/coverage.
+PACKAGES := $(shell go list ./... | grep -vE '/vendor/|/node_modules/')
+COVER_PACKAGES := $(shell go list ./... | grep -vE '/vendor/|/node_modules/' | paste -sd,)
 LDFLAGS := -ldflags "-X ${APP_REPOSITORY}/pkg/version.Revision=${APP_REVISION} -X ${APP_REPOSITORY}/pkg/version.BuildStamp=${BUILD}"
 
 MAKEFLAGS += --silent
@@ -62,12 +66,12 @@ build: clean mod-download front-build test
 ## test:	run all Go tests with the race detector + coverage
 test: mod-download
 	@echo "  >  Running all tests..."
-	go test -race -coverprofile coverage.out -coverpkg=./... ./...
+	go test -race -coverprofile coverage.out -coverpkg=$(COVER_PACKAGES) $(PACKAGES)
 
 .PHONY: lint
 ## lint:	run go vet + buf lint
 lint:
-	go vet ./...
+	go vet $(PACKAGES)
 	buf lint
 
 .PHONY: fmt

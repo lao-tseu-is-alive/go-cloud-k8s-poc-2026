@@ -69,19 +69,28 @@ pkg/core/                    transversal domain
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
   └── filestore/             local blob store for uploaded document bytes
+pkg/integration/             env-gated DB integration tests (migrations + document lifecycle)
 cmd/goeland-server/          server: pool → migrate → wire both modules → one shared transcoder
   ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
   ├── upload.go              out-of-proto POST /upload + GET /download (own bearer check)
   ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
+.github/workflows/           CI: cve-trivy-scan, docker-publish, release
+docs/                        PRODUCTION_READINESS.md (deployment contract)
 ```
 
 ## Commands
 
 - `make run` — `buf generate` + run the server from source (default `127.0.0.1:8080`).
 - `make build` — test + build `bin/goeland-server`.
-- `make test` — all Go tests with the race detector + `coverage.out`.
-- `make lint` — `go vet ./...` + `buf lint`.
+- `make test` — all Go tests with the race detector + `coverage.out`. Package discovery
+  excludes the frontend `node_modules` tree, so it is stable after `bun install`.
+- `make lint` — `go vet` (same filtered package set) + `buf lint`.
+- **DB integration tests** (`pkg/integration`) are gated on `GOELAND_TEST_DATABASE_URL`
+  and skip when unset. Run them against a disposable PostGIS database (needs PostGIS/
+  pgcrypto/pg_trgm/unaccent):
+  `GOELAND_TEST_DATABASE_URL='postgres://…?sslmode=disable' go test ./pkg/integration/...`.
+  Do not point them at a working database — they migrate and write test rows.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,
@@ -92,6 +101,8 @@ cmd/goeland-server/          server: pool → migrate → wire both modules → 
   produce `dist/`. It is a prerequisite of both `make run` and `make build`
   because `//go:embed goeland-front/dist/*` fails if `dist/` is absent (it is
   gitignored). On a clean checkout, build the frontend before `go build`/`go test`.
+  The **Docker image** is self-contained: it builds the frontend in a dedicated `bun`
+  stage before the Go build, so `docker build` works from a clean checkout.
 
 Helper scripts live in `scripts/` (all run from the repo root; documented in the
 README's Scripts table). Notable ones: `createLocalDBAndUser.sh` (creates the
@@ -309,9 +320,10 @@ Rules:
 
 - Keep changes scoped; follow existing package boundaries and patterns.
 - Add/update tests for behavioral changes; prefer focused `go test ./path/...`.
-  DB-touching integration tests need a live PostgreSQL (there are none yet;
-  current tests are pure unit tests: pagination, kind validation, migration
-  parser).
+  Pure unit tests cover pagination, kind validation, the migration parser, and
+  authadapter. DB-touching behavior is covered by the env-gated integration tests in
+  `pkg/integration` (see Commands) — extend those (or add a sibling package following
+  the same pattern) when you touch SQL, migrations, or transaction invariants.
 - Run `make lint` for Go or protobuf changes.
 - Do not hand-edit generated files to make tests pass.
 - Do not revert unrelated work in a dirty worktree.

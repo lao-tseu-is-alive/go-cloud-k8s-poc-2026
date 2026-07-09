@@ -135,19 +135,43 @@ Hardened after the technical review (all verified end-to-end):
   document validation, lock propagation, and hash comparison.
 
 Still open from the review (bigger than quick-wins): a real authorization/confidentiality
-policy, streamed probative hashing, DB integration tests, CI, metrics/tracing.
+policy, streamed probative hashing, metrics/tracing.
+
+### 3e. Review quick-wins applied (2026-07-09, from `reports/report_20260709_gpt-5.md`)
+
+- 🧪 **DB integration tests** — new `pkg/integration` package (see §4), env-gated on
+  `GOELAND_TEST_DATABASE_URL`; migrations idempotency/seed + full document lifecycle.
+- 🏗️ **CI** — three GitHub Actions workflows added (`cve-trivy-scan`, `docker-publish`,
+  `release`), with Go version sourced from `go.mod` and third-party actions SHA-pinned.
+- 📦 **Self-contained Docker build** — the image now builds the embedded frontend in a
+  dedicated `bun` stage before the Go build, so it is reproducible from a clean checkout
+  (previously `//go:embed dist/*` required a pre-built, git-ignored `dist/`).
+- 🧹 **Deterministic package discovery** — `make test`/`make lint` exclude Go packages under
+  the frontend `node_modules` tree, so `bun install` no longer pollutes `go list ./...`.
+- 🔐 **Admin scope naming** — the wildcard admin scope is now `goeland:admin` (was the stale
+  cross-project `notes:admin`).
+- ⏱️ **Token remint** — the SPA now re-mints JWTs at ~80% of lifetime and never schedules a
+  remint past expiry (previously a 30s floor could fire after short-lived tokens expired).
+- 📄 **Production-readiness doc** — [docs/PRODUCTION_READINESS.md](../docs/PRODUCTION_READINESS.md).
+
+Still open (kept for later): Prometheus/OpenTelemetry instrumentation (#6).
 
 ---
 
 ## 4. Tests
 
 - ✅ Pure unit tests: pagination, subject-kind validation, dbmate migration parser, authadapter.
-- 🟡 Migrations + full document lifecycle verified **manually** end-to-end against PostgreSQL
-  (create → verify → search → finalize+lock → locked-update rejected → audit).
-- ⬜ Automated DB integration tests (spec §16: relationship / timeline / circulation / audit /
-  security) — none yet; add alongside each new domain.
+- ✅ Automated DB integration tests (`pkg/integration`): migrations idempotency + seed data,
+  and the full document lifecycle (create → search → metadata update → link → finalize+lock →
+  locked-update rejected → soft delete → deleted-mutation rejected → audit trail). Env-gated on
+  `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
+  `go test ./...` stays green without a database.
+- ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /
+  security) — add alongside each new domain, following the `pkg/integration` pattern.
 - 🟡 Frontend has no unit tests yet; the gate is `bun run type-check` + `bun run lint`
   + `bun run build` (green). Add component/e2e tests as the UI grows.
+- ✅ CI (`.github/workflows`): Trivy image CVE scan on push/PR to `main`; unit tests +
+  image build/scan/publish on version tags; cross-compiled binary release on version tags.
 
 ---
 
