@@ -6,6 +6,22 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 This POC uses [Semantic Versioning](https://semver.org/); while pre-1.0, a breaking
 change bumps the **minor** version and features/fixes bump the **patch** version.
 
+## [Unreleased]
+
+### Security
+
+- **CI vulnerability gate**: `docker-publish` and `cve-trivy-scan` now fail on fixable
+  HIGH/CRITICAL Trivy findings. In `docker-publish` the gate runs before the push step,
+  so a vulnerable image is never published; both jobs still upload SARIF to the Security
+  tab (the gate runs after the upload and reuses the cached DB).
+- **Weekly re-scan**: `cve-trivy-scan` now also runs on a schedule (Mondays 06:00 UTC)
+  to catch CVE drift against an already-shipped image, since new advisories can turn a
+  previously clean image red with no code change.
+- **`.trivyignore`**: documents and suppresses `GO-2026-5932` (`x/crypto/openpgp` is
+  unmaintained but not linked into the binary — it is pulled transitively via Echo's
+  `acme/autocert`, and the advisory is matched only from the module version in build
+  metadata). Scoped to that one advisory so real CVEs still surface and still trip the gate.
+
 ## [0.3.2] - 2026-07-09
 
 ### Security

@@ -266,9 +266,12 @@ GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmo
 ```
 
 CI lives in [`.github/workflows`](.github/workflows): `cve-trivy-scan` (image CVE scan on
-push/PR to `main`), `docker-publish` (unit tests + build/scan/publish the image on version
-tags), and `release` (cross-compiled binaries on version tags). The Go version is sourced
-from `go.mod`, and third-party actions are pinned to commit SHAs. The container image is
+push/PR to `main` **and a weekly schedule**), `docker-publish` (unit tests + build/scan/publish
+the image on version tags), and `release` (cross-compiled binaries on version tags). Both Trivy
+jobs upload SARIF to the Security tab **and fail on fixable HIGH/CRITICAL findings** — in
+`docker-publish` this gates the publish step, so a vulnerable image is never pushed. Documented
+non-applicable advisories are suppressed in [`.trivyignore`](.trivyignore). The Go version is
+sourced from `go.mod`, and third-party actions are pinned to commit SHAs. The container image is
 self-contained: it builds the embedded frontend in a `bun` stage before the Go build.
 
 ## Scripts (`scripts/`)
