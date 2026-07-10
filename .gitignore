@@ -40,6 +40,9 @@ proto_third_party/*
 /.ogcode/ogcode.db
 reports/
 
+# Local cross-session scratch backlog (not a deliverable)
+/TODO_NEXT.md
+
 /goeland-server
 /goeland-client
 /goeland-mcp
