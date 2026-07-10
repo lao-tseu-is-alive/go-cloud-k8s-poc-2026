@@ -22,6 +22,21 @@ const router = createRouter({
       name: 'document-detail',
       component: () => import('@/pages/documents/DocumentDetailPage.vue'),
     },
+    {
+      path: '/actors',
+      name: 'actors',
+      component: () => import('@/pages/actors/ActorListPage.vue'),
+    },
+    {
+      path: '/actors/new',
+      name: 'actor-create',
+      component: () => import('@/pages/actors/ActorCreatePage.vue'),
+    },
+    {
+      path: '/actors/:id',
+      name: 'actor-detail',
+      component: () => import('@/pages/actors/ActorDetailPage.vue'),
+    },
   ],
 })
 

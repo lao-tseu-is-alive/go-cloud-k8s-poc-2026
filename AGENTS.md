@@ -42,22 +42,29 @@ each slice**, and add automated tests as you land each new domain.
 - **core** (`pkg/core`) — transversal: `subject_ref`, `record_metadata`,
   `audit_event`, `relationship_type`, `subject_relationship` → `CoreService`.
 - **document** (`pkg/document`) — modern GED entity → `DocumentService`.
-- **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, a
-  vertical slice of the Document module (list/create+upload/detail/edit/finalize/
-  verify/link/delete) plus read-only governance/audit and core panels. Embedded
-  via `//go:embed` and served at `/`. See "Frontend" below.
+- **actor** (`pkg/actor`) — external persons & organizations → `ActorService`.
+  Modelled from the real production `Acteur` schema (`actor_kind` PERSON/ORGANIZATION,
+  typed `actor_contact`, seeded `organization_category`). Roles are NOT columns —
+  actors attach via typed `CoreService` relationships (`CASE_HAS_ACTOR_*`,
+  `DOCUMENT_*_ACTOR`); persons carry no PII (register link only).
+- **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
+  slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
+  delete) and the Actor module (list/create/detail/edit/activate/delete), plus read-only
+  governance/audit and core panels. Embedded via `//go:embed` and served at `/`.
+  See "Frontend" below.
 
 ### Not yet built (same foundation)
 
 Case (`case_file` + timeline + circulation), Thing (parcelle/bâtiment with
-PostGIS geometry), Actor, a real permission/confidentiality engine, storage
-(MinIO), search (Meilisearch), workflow. Design new domains as first-class
-subjects that reuse the core primitives.
+PostGIS geometry), a real permission/confidentiality engine, storage (MinIO),
+search (Meilisearch), workflow. The Actor domain continues too (addresses, and the
+full production role vocabulary mapped onto `relationship_type` with Case/Thing).
+Design new domains as first-class subjects that reuse the core primitives.
 
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto        (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -65,12 +72,14 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0005 (dbmate format)
+  │   └── db/migrations/     0001..0006 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
   └── filestore/             local blob store for uploaded document bytes
-pkg/integration/             env-gated DB integration tests (migrations + document lifecycle)
-cmd/goeland-server/          server: pool → migrate → wire both modules → one shared transcoder
+pkg/actor/                   actor domain: persons & organizations (reuses core primitives)
+  └── module/                bundleable module (NO migrations; core owns schema)
+pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
+cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
   ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
   ├── upload.go              out-of-proto POST /upload + GET /download (own bearer check)
   ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
@@ -137,9 +146,10 @@ Two distinct identities; keep them separate:
   Recorded in `audit_event.actor_user_id`, `record_metadata.created_by`/`owner_user_id`,
   `subject_relationship.created_by`.
 - **Domain ACTOR** = an external person/organization (subject kind `ACTOR`), e.g. a
-  document's author. Never authenticated; recorded as an `ACTOR` subject linked by a
-  typed relationship (`DOCUMENT_AUTHORED_BY_ACTOR`, `CASE_HAS_ACTOR_REQUESTER`, ...).
-  When the Actor slice lands, authors go here — never through the operator identity.
+  document's author. Never authenticated; managed by `ActorService` (`pkg/actor`) and
+  recorded as an `ACTOR` subject linked by a typed relationship
+  (`DOCUMENT_AUTHORED_BY_ACTOR`, `CASE_HAS_ACTOR_REQUESTER`, ...). Authors go here —
+  never through the operator identity.
 
 ## API routing — two surfaces (REST + RPC)
 
@@ -173,9 +183,10 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
   http://127.0.0.1:8088/goeland.v1.DocumentService/ListDocumentTypes
 ```
 
-Both `CoreService` and `DocumentService` are annotated, so both have REST bindings
-(CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
-`/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`).
+`CoreService`, `DocumentService` and `ActorService` are all annotated, so each has REST
+bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
+`/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`; ActorService:
+`/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`).
 
 ## Frontend (embedded SPA)
 

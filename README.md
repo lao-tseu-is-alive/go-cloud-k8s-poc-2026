@@ -15,14 +15,15 @@ administrative case management) as a clean, durable domain model:
 > **auditability**.
 
 This first slice implements the **transversal core** (subjects, governance,
-relationships, audit) and the **Document** component (a modern GED entity), keeping
-the proto-first Go / gRPC / ConnectRPC / PostgreSQL approach and the structural
-conventions of `go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
+relationships, audit), the **Document** component (a modern GED entity) and the
+**Actor** component (external persons & organizations), keeping the proto-first Go /
+gRPC / ConnectRPC / PostgreSQL approach and the structural conventions of
+`go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
 
 ## Architecture at a glance
 
-- **Proto-first** API defined in `proto/goeland/v1/` (`core.proto`, `document.proto`),
-  generated with **buf** into `gen/`.
+- **Proto-first** API defined in `proto/goeland/v1/` (`core.proto`, `document.proto`,
+  `actor.proto`), generated with **buf** into `gen/`.
 - **ConnectRPC + Vanguard**: each service is a Connect handler wrapped in a Vanguard
   transcoder — reachable over Connect, gRPC and gRPC-Web on the RPC path, **and** as
   REST/JSON via `google.api.http` annotations (documented in the generated OpenAPI).
@@ -37,9 +38,9 @@ conventions of `go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
 - **Auth** reuses the ecosystem's `authadapter` (JWT from `go-cloud-k8s-auth` +
   personal access token introspection, plus a `dev` mode).
 - **Embedded web UI**: a **Vue 3 + Vuetify 4** SPA (`cmd/goeland-server/goeland-front`,
-  Vite/bun) `//go:embed`ded into the binary and served at `/` — the Document module
-  is exercisable end-to-end from the browser (search/create-with-upload/detail/edit/
-  finalize/verify/link/delete, plus read-only governance & audit).
+  Vite/bun) `//go:embed`ded into the binary and served at `/` — the Document and
+  Actor modules are exercisable end-to-end from the browser (search/create/detail/edit
+  + lifecycle actions, plus read-only governance & audit).
 
 ## Domain model (this slice)
 
@@ -66,24 +67,43 @@ Document component (`pkg/document`), a first-class subject (`document.id` **is**
   accent-folded with `unaccent`) + GIN index — "chateau" matches "château";
 - controlled classification (`document_type`).
 
+Actor component (`pkg/actor`), also a first-class subject (`actor.id` **is** a
+`subject_ref.id` of kind ACTOR), modelled from the real production `Acteur` schema:
+
+- `actor_kind` discriminates a physical **PERSON** from a moral **ORGANIZATION**
+  (flattened `ActMoral` / `ActPhys*` specialization, guarded by DB CHECK constraints);
+- organization fields (`legal_name`, `organization_category` classification, complement);
+- **no personal data** for persons — only an `is_ch_register` flag + opaque
+  `ch_register_ref` (civil-registry identity stays in the source system);
+- typed `actor_contact` channels + business identifiers (IDE fédéral, TVA, débiteur
+  ABACUS, registre du commerce), kept queryable rather than in a JSON blob;
+- accent-insensitive name search via a generated `search_vector`;
+- business `is_active` deactivation, distinct from soft-delete.
+
+Roles are **not** columns on the actor: actors attach to cases/documents/things only
+through typed `relationship_type` edges (`CASE_HAS_ACTOR_*`, `DOCUMENT_*_ACTOR`), so the
+production role vocabulary grows with the Case/Thing slices.
+
 Every mutation is **non-destructive** (logical delete via `record_metadata.deleted_at`)
 and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 
 ## Project structure
 
 ```
-proto/goeland/v1/        core.proto, document.proto        (API contract)
+proto/goeland/v1/        core.proto, document.proto, actor.proto  (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
 api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0005 (dbmate format)
+      └── db/migrations/  0001..0006 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   ├── module/            bundleable module (schema owned by core)
   └── filestore/         local blob store for uploaded document bytes
-pkg/integration/         env-gated PostgreSQL integration tests (migrations + document lifecycle)
+pkg/actor/               actor domain: persons & organizations (reuses core primitives)
+  └── module/            bundleable module (schema owned by core)
+pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /download endpoints
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
@@ -129,10 +149,12 @@ Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: 
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
-(`cmd/goeland-server/goeland-front`). It is a vertical slice of the Document module —
-search/list, create (with file upload), detail, edit metadata, finalize, verify
-integrity, link/unlink subjects, soft-delete — plus read-only governance and audit
-panels. Bilingual (fr-CH default, en).
+(`cmd/goeland-server/goeland-front`). It exposes vertical slices of two modules:
+the **Document** module — search/list, create (with file upload), detail, edit metadata,
+finalize, verify integrity, link/unlink subjects, soft-delete — and the **Actor** module
+— search/list, create (person/organization with typed contacts), detail, edit,
+activate/deactivate, soft-delete, plus read-only incoming relationships. Both add
+read-only governance and audit panels. Bilingual (fr-CH default, en).
 
 - The SPA reads `GET /config` → `{authMode, authBaseUrl}` and drives either `dev`
   (manual static token) or `jwt` (silent-mint from the `go-cloud-k8s-auth` SSO
@@ -167,10 +189,12 @@ Services:
 - `goeland.v1.DocumentService` — `CreateDocument`, `GetDocument`,
   `UpdateDocumentMetadata`, `FinalizeDocument`, `VerifyDocumentIntegrity`,
   `SearchDocuments`, `LinkDocument`, `DeleteDocument`, `ListDocumentTypes`
+- `goeland.v1.ActorService` — `CreateActor`, `GetActor`, `UpdateActor`,
+  `SearchActors`, `DeleteActor`, `ListOrganizationCategories`
 
 ### REST (recommended for curl / browsers)
 
-Both services are annotated (see `api/openapi/goeland.swagger.yaml` for the full contract).
+All three services are annotated (see `api/openapi/goeland.swagger.yaml` for the full contract).
 
 DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
 `PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
@@ -178,6 +202,10 @@ DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api
 `POST /api/documents/{id}/links` · `DELETE /api/documents/{id}`. Plus two
 **out-of-proto** binary endpoints (see [Web UI](#web-ui)):
 `POST /api/documents/upload` and `GET /api/documents/download`.
+
+ActorService: `GET /api/organization-categories` · `POST /api/actors` ·
+`GET /api/actors/{id}` · `PATCH /api/actors/{id}` · `GET /api/actors/search` ·
+`DELETE /api/actors/{id}`.
 
 CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/relationships` ·
 `DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
@@ -227,10 +255,11 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0003_document.sql            document_type + document (+ generated search_vector, trigger)
 0004_seed_reference_data.sql seed subject kinds, relationship types, document types
 0005_document_unaccent_search.sql  accent-insensitive full-text search (immutable_unaccent)
+0006_actor.sql               actor + actor_contact + organization_category (+ 33 seeded categories)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
-tables have foreign keys into the core tables. As the POC grows (Case, Thing, Actor),
+and actor tables have foreign keys into the core tables. As the POC grows (Case, Thing),
 migrations can be split per module.
 
 ```bash
@@ -256,7 +285,7 @@ make db-up        apply migrations (dbmate)
 ## Testing & CI
 
 `make test` runs the unit tests. The database **integration tests** in `pkg/integration`
-(migrations idempotency + full document lifecycle) are gated on `GOELAND_TEST_DATABASE_URL`
+(migrations idempotency + full document and actor lifecycles) are gated on `GOELAND_TEST_DATABASE_URL`
 and skip when it is unset, so the default run needs no database. To run them against a
 disposable PostGIS database:
 
@@ -310,6 +339,7 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 ### Out of scope for this slice
 
 Case (`case_file` + timeline + circulation), Thing (parcelle/bâtiment with PostGIS
-geometry), Actor, a real permission/confidentiality engine, MinIO storage, Meilisearch,
-and workflow integration — all designed to sit on top of the same subject/relationship/
-audit foundation.
+geometry), a real permission/confidentiality engine, MinIO storage, Meilisearch, and
+workflow integration — all designed to sit on top of the same subject/relationship/
+audit foundation. (The **Actor** domain and its addresses/role-relationship wiring beyond
+this identity+contacts slice also continue on the same foundation.)

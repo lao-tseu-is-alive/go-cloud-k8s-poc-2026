@@ -6,7 +6,9 @@
   },
   "nav": {
     "documents": "Documents",
-    "createDocument": "Nouveau document"
+    "createDocument": "Nouveau document",
+    "actors": "Acteurs",
+    "createActor": "Nouvel acteur"
   },
   "auth": {
     "notConnected": "Non connecté",
@@ -26,6 +28,11 @@
       "list": { "title": "Documents" },
       "detail": { "title": "Détail du document" },
       "create": { "title": "Créer un document" }
+    },
+    "actors": {
+      "list": { "title": "Acteurs" },
+      "detail": { "title": "Détail de l'acteur" },
+      "create": { "title": "Créer un acteur" }
     }
   },
   "sections": {
@@ -33,6 +40,13 @@
       "summary": "Résumé",
       "storage": "Stockage",
       "integrity": "Intégrité",
+      "relationships": "Relations",
+      "governance": "Gouvernance",
+      "audit": "Audit"
+    },
+    "actor": {
+      "identity": "Identité",
+      "contacts": "Contacts",
       "relationships": "Relations",
       "governance": "Gouvernance",
       "audit": "Audit"
@@ -70,6 +84,23 @@
       "only_records": "Seulement les documents probants",
       "only_final": "Seulement les documents finalisés",
       "include_deleted": "Inclure les supprimés"
+    },
+    "actor": {
+      "actor_kind": "Type d'acteur",
+      "display_name": "Nom",
+      "name_for_search": "Nom de recherche",
+      "legal_name": "Raison sociale",
+      "category": "Catégorie",
+      "org_complement": "Complément",
+      "is_ch_register": "Lié au registre des habitants",
+      "ch_register_ref": "Référence registre",
+      "ch_register_ref_hint": "Clé externe opaque — aucune donnée personnelle n'est stockée.",
+      "publication_code": "Code de publication",
+      "is_active": "Actif",
+      "only_active": "Seulement les actifs",
+      "contact_type": "Type de contact",
+      "contact_value": "Valeur",
+      "contact_primary": "Principal"
     },
     "recordMetadata": {
       "created_at": "Créé le",
@@ -130,6 +161,14 @@
       "download": "Télécharger",
       "link": "Lier à un sujet"
     },
+    "actor": {
+      "create": "Créer l'acteur",
+      "edit": "Modifier l'acteur",
+      "delete": "Supprimer l'acteur",
+      "activate": "Activer",
+      "deactivate": "Désactiver",
+      "addContact": "Ajouter un contact"
+    },
     "common": {
       "save": "Enregistrer",
       "cancel": "Annuler",
@@ -175,9 +214,32 @@
     "locked": "Verrouillé",
     "deleted": "Supprimé",
     "record": "Probant",
-    "confidential": "Confidentiel"
+    "confidential": "Confidentiel",
+    "active": "Actif",
+    "inactive": "Inactif"
   },
   "enums": {
+    "ActorKind": {
+      "ACTOR_KIND_UNSPECIFIED": "Type non précisé",
+      "ACTOR_KIND_PERSON": "Personne physique",
+      "ACTOR_KIND_ORGANIZATION": "Personne morale"
+    },
+    "ContactType": {
+      "CONTACT_TYPE_UNSPECIFIED": "Non précisé",
+      "CONTACT_TYPE_PHONE": "Téléphone",
+      "CONTACT_TYPE_PHONE_PRIVATE": "Téléphone privé",
+      "CONTACT_TYPE_PHONE_PRO": "Téléphone professionnel",
+      "CONTACT_TYPE_MOBILE": "Mobile",
+      "CONTACT_TYPE_FAX": "Fax",
+      "CONTACT_TYPE_EMAIL": "Adresse e-mail",
+      "CONTACT_TYPE_WEBSITE": "Site internet",
+      "CONTACT_TYPE_POSTAL_BOX": "Case postale",
+      "CONTACT_TYPE_IDE_FEDERAL": "IDE fédéral",
+      "CONTACT_TYPE_VAT_NUMBER": "Numéro de TVA",
+      "CONTACT_TYPE_ABACUS_DEBTOR": "N° débiteur ABACUS",
+      "CONTACT_TYPE_COMMERCIAL_REGISTER": "Registre du commerce",
+      "CONTACT_TYPE_OTHER": "Autre"
+    },
     "DocumentStatus": {
       "DOCUMENT_STATUS_UNSPECIFIED": "Statut non précisé",
       "DOCUMENT_STATUS_DRAFT": "Brouillon",
@@ -232,6 +294,15 @@
       "deleteConfirm": "Le document sera supprimé logiquement. Il restera conservé dans l'historique.",
       "deleted": "Le document a été supprimé logiquement.",
       "linked": "Relation créée."
+    },
+    "actor": {
+      "createSuccess": "Acteur créé.",
+      "updateSuccess": "Acteur mis à jour.",
+      "deleted": "L'acteur a été supprimé logiquement.",
+      "deleteConfirm": "L'acteur sera supprimé logiquement. Il restera conservé dans l'historique.",
+      "lockedCannotEdit": "Cet acteur est verrouillé et ne peut plus être modifié.",
+      "deletedReadOnly": "Cet acteur est supprimé logiquement (lecture seule).",
+      "relationshipsHint": "Relations où l'acteur est la cible (rôles depuis une affaire, un document ou un objet)."
     },
     "common": {
       "loading": "Chargement…",

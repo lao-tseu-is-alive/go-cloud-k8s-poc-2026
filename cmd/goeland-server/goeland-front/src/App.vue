@@ -28,6 +28,10 @@
         {{ t('nav.documents') }}
       </v-btn>
 
+      <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-account-multiple" to="/actors" variant="text">
+        {{ t('nav.actors') }}
+      </v-btn>
+
       <v-menu location="bottom end">
         <template #activator="{ props }">
           <v-btn v-bind="props" icon="mdi-translate" variant="text" />

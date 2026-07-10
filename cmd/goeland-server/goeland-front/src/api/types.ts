@@ -98,6 +98,112 @@ export interface GoDocument {
   recordMetadata?: RecordMetadata
 }
 
+// ---- actor ----------------------------------------------------------------
+
+export type ActorKind
+  = | 'ACTOR_KIND_UNSPECIFIED'
+    | 'ACTOR_KIND_PERSON'
+    | 'ACTOR_KIND_ORGANIZATION'
+
+export type ContactType
+  = | 'CONTACT_TYPE_UNSPECIFIED'
+    | 'CONTACT_TYPE_PHONE'
+    | 'CONTACT_TYPE_PHONE_PRIVATE'
+    | 'CONTACT_TYPE_PHONE_PRO'
+    | 'CONTACT_TYPE_MOBILE'
+    | 'CONTACT_TYPE_FAX'
+    | 'CONTACT_TYPE_EMAIL'
+    | 'CONTACT_TYPE_WEBSITE'
+    | 'CONTACT_TYPE_POSTAL_BOX'
+    | 'CONTACT_TYPE_IDE_FEDERAL'
+    | 'CONTACT_TYPE_VAT_NUMBER'
+    | 'CONTACT_TYPE_ABACUS_DEBTOR'
+    | 'CONTACT_TYPE_COMMERCIAL_REGISTER'
+    | 'CONTACT_TYPE_OTHER'
+
+export interface OrganizationCategory {
+  id?: string
+  code: string
+  label: string
+  isActive?: boolean
+}
+
+export interface ActorContact {
+  contactType: ContactType
+  value: string
+  isPrimary?: boolean
+  label?: string
+}
+
+export interface OrganizationDetails {
+  legalName: string
+  categoryCode?: string
+  complement?: string
+}
+
+export interface PersonDetails {
+  isChRegister?: boolean
+  chRegisterRef?: string
+}
+
+export interface GoActor {
+  subjectRef?: SubjectRef
+  actorKind: ActorKind
+  displayName: string
+  nameForSearch?: string
+  isActive?: boolean
+  publicationCode?: number
+  person?: PersonDetails
+  organization?: OrganizationDetails
+  contacts?: ActorContact[]
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  recordMetadata?: RecordMetadata
+}
+
+export interface SearchActorsParams {
+  query?: string
+  actorKind?: ActorKind
+  organizationCategoryCode?: string
+  onlyActive?: boolean
+  includeDeleted?: boolean
+  pageSize?: number
+  pageToken?: string
+}
+
+export interface SearchActorsResponse {
+  actors?: GoActor[]
+  nextPageToken?: string
+  totalSize?: number
+}
+
+export interface GetActorResponse {
+  actor?: GoActor
+  relationships?: SubjectRelationship[]
+  recentAudit?: AuditEvent[]
+}
+
+export interface CreateActorRequest {
+  actorKind: ActorKind
+  displayName: string
+  publicationCode?: number
+  person?: PersonDetails
+  organization?: OrganizationDetails
+  contacts?: ActorContact[]
+}
+
+export interface UpdateActorRequest {
+  displayName?: string
+  isActive?: boolean
+  publicationCode?: number
+  person?: PersonDetails
+  organization?: OrganizationDetails
+  replaceContacts?: boolean
+  contacts?: ActorContact[]
+  reason?: string
+}
+
 export interface RelationshipType {
   id?: string
   code: string

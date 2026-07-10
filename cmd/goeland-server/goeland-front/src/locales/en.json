@@ -6,7 +6,9 @@
   },
   "nav": {
     "documents": "Documents",
-    "createDocument": "New document"
+    "createDocument": "New document",
+    "actors": "Actors",
+    "createActor": "New actor"
   },
   "auth": {
     "notConnected": "Not connected",
@@ -26,6 +28,11 @@
       "list": { "title": "Documents" },
       "detail": { "title": "Document details" },
       "create": { "title": "Create document" }
+    },
+    "actors": {
+      "list": { "title": "Actors" },
+      "detail": { "title": "Actor details" },
+      "create": { "title": "Create actor" }
     }
   },
   "sections": {
@@ -33,6 +40,13 @@
       "summary": "Summary",
       "storage": "Storage",
       "integrity": "Integrity",
+      "relationships": "Relationships",
+      "governance": "Governance",
+      "audit": "Audit"
+    },
+    "actor": {
+      "identity": "Identity",
+      "contacts": "Contacts",
       "relationships": "Relationships",
       "governance": "Governance",
       "audit": "Audit"
@@ -70,6 +84,23 @@
       "only_records": "Records only",
       "only_final": "Final documents only",
       "include_deleted": "Include deleted"
+    },
+    "actor": {
+      "actor_kind": "Actor kind",
+      "display_name": "Name",
+      "name_for_search": "Search name",
+      "legal_name": "Legal name",
+      "category": "Category",
+      "org_complement": "Complement",
+      "is_ch_register": "Linked to population register",
+      "ch_register_ref": "Register reference",
+      "ch_register_ref_hint": "Opaque external key — no personal data is stored.",
+      "publication_code": "Publication code",
+      "is_active": "Active",
+      "only_active": "Active only",
+      "contact_type": "Contact type",
+      "contact_value": "Value",
+      "contact_primary": "Primary"
     },
     "recordMetadata": {
       "created_at": "Created at",
@@ -130,6 +161,14 @@
       "download": "Download",
       "link": "Link to subject"
     },
+    "actor": {
+      "create": "Create actor",
+      "edit": "Edit actor",
+      "delete": "Delete actor",
+      "activate": "Activate",
+      "deactivate": "Deactivate",
+      "addContact": "Add contact"
+    },
     "common": {
       "save": "Save",
       "cancel": "Cancel",
@@ -175,9 +214,32 @@
     "locked": "Locked",
     "deleted": "Deleted",
     "record": "Record",
-    "confidential": "Confidential"
+    "confidential": "Confidential",
+    "active": "Active",
+    "inactive": "Inactive"
   },
   "enums": {
+    "ActorKind": {
+      "ACTOR_KIND_UNSPECIFIED": "Unspecified kind",
+      "ACTOR_KIND_PERSON": "Physical person",
+      "ACTOR_KIND_ORGANIZATION": "Organization"
+    },
+    "ContactType": {
+      "CONTACT_TYPE_UNSPECIFIED": "Unspecified",
+      "CONTACT_TYPE_PHONE": "Phone",
+      "CONTACT_TYPE_PHONE_PRIVATE": "Private phone",
+      "CONTACT_TYPE_PHONE_PRO": "Business phone",
+      "CONTACT_TYPE_MOBILE": "Mobile",
+      "CONTACT_TYPE_FAX": "Fax",
+      "CONTACT_TYPE_EMAIL": "Email address",
+      "CONTACT_TYPE_WEBSITE": "Website",
+      "CONTACT_TYPE_POSTAL_BOX": "Postal box",
+      "CONTACT_TYPE_IDE_FEDERAL": "Federal UID (IDE)",
+      "CONTACT_TYPE_VAT_NUMBER": "VAT number",
+      "CONTACT_TYPE_ABACUS_DEBTOR": "ABACUS debtor no.",
+      "CONTACT_TYPE_COMMERCIAL_REGISTER": "Commercial register",
+      "CONTACT_TYPE_OTHER": "Other"
+    },
     "DocumentStatus": {
       "DOCUMENT_STATUS_UNSPECIFIED": "Unspecified status",
       "DOCUMENT_STATUS_DRAFT": "Draft",
@@ -232,6 +294,15 @@
       "deleteConfirm": "The document will be soft-deleted. It stays preserved in history.",
       "deleted": "The document was soft-deleted.",
       "linked": "Relationship created."
+    },
+    "actor": {
+      "createSuccess": "Actor created.",
+      "updateSuccess": "Actor updated.",
+      "deleted": "The actor was soft-deleted.",
+      "deleteConfirm": "The actor will be soft-deleted. It stays preserved in history.",
+      "lockedCannotEdit": "This actor is locked and can no longer be modified.",
+      "deletedReadOnly": "This actor is soft-deleted (read only).",
+      "relationshipsHint": "Relationships where the actor is the target (roles from a case, document or thing)."
     },
     "common": {
       "loading": "Loading…",

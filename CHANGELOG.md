@@ -8,6 +8,34 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.4.0] - 2026-07-10
+
+### Added
+
+- **Actor component** (`pkg/actor`, spec §6.4) — the external-party domain: physical
+  **persons** and moral **organizations**, modelled from the real production Goéland
+  `Acteur` schema. New `ActorService` (proto-first, `proto/goeland/v1/actor.proto`) with
+  6 RPCs (`CreateActor`, `GetActor`, `UpdateActor`, `SearchActors`, `DeleteActor`,
+  `ListOrganizationCategories`), REST-annotated under `/api/actors`.
+  - Migration `0006_actor.sql`: `actor` (1:1 with an ACTOR `subject_ref`, `actor_kind`
+    PERSON/ORGANIZATION discriminator, accent-insensitive `search_vector`), `actor_contact`
+    (typed contact channels + business identifiers IDE/VAT/ABACUS/registre du commerce), and
+    `organization_category` seeded with the **33 real production categories**. DB CHECK
+    constraints keep person-only and organization-only columns from crossing over.
+  - **Roles stay out of the entity**: actors attach to cases/documents/things only through
+    typed `CoreService` relationships (`CASE_HAS_ACTOR_*`, `DOCUMENT_*_ACTOR`), so the
+    production 46-role vocabulary maps onto `relationship_type` in the later Case/Thing slices.
+  - **No personal data**: the PERSON specialization carries only an `is_ch_register` flag +
+    an opaque `ch_register_ref` — civil-registry identity stays in the source system.
+  - Reuses the core primitives (subject_ref + record_metadata + audit_event) so an actor and
+    its governance are created atomically; every mutation is non-destructive and audited.
+  - **Embedded web UI**: full Actor panel in the Vue 3 + Vuetify 4 SPA (list/search, create
+    with typed contacts, detail/edit, activate/deactivate, soft-delete, read-only governance/
+    audit and incoming relationships), bilingual fr-CH/en.
+  - **Tests**: new `pkg/integration` actor lifecycle + specialization coverage (org create with
+    contacts → search → update/label-sync → case→actor link → soft-delete → audit; person
+    PII-free; organization `legal_name` required), verified against a real PostGIS database.
+
 ## [0.3.3] - 2026-07-10
 
 ### Security

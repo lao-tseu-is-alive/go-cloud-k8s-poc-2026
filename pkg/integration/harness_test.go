@@ -12,6 +12,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
@@ -22,10 +23,11 @@ const testDatabaseURLEnv = "GOELAND_TEST_DATABASE_URL"
 
 // testEnv bundles the wired-up services and pool for one integration test.
 type testEnv struct {
-	ctx     context.Context
-	pool    *pgxpool.Pool
-	coreSvc *core.Service
-	docSvc  *document.Service
+	ctx      context.Context
+	pool     *pgxpool.Pool
+	coreSvc  *core.Service
+	docSvc   *document.Service
+	actorSvc *actor.Service
 }
 
 // newTestEnv connects to the test database named by GOELAND_TEST_DATABASE_URL,
@@ -84,8 +86,16 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("build document service: %v", err)
 	}
+	actorRepo, err := actor.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build actor repository: %v", err)
+	}
+	actorSvc, err := actor.NewService(actorRepo, coreSvc, log)
+	if err != nil {
+		t.Fatalf("build actor service: %v", err)
+	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc}
+	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

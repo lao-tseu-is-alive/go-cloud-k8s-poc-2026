@@ -51,7 +51,8 @@ startup by `coremodule.Migrate`:
   replicas starting concurrently are safe — only one instance migrates at a time.
 - Bookkeeping is in a `schema_migrations` table; already-applied versions are skipped,
   so re-running is a **no-op** (proven by `pkg/integration.TestMigrationsIdempotentAndSeeded`).
-- Migration `0004` seeds reference data (subject kinds, relationship types, document types).
+- Migration `0004` seeds reference data (subject kinds, relationship types, document types);
+  migration `0006` seeds the 33 organization categories used by the Actor component.
 
 There is **no automated down-migration / rollback** path for data-bearing schema changes.
 Treat schema changes as forward-only and take a backup before deploying a new version that
@@ -135,7 +136,7 @@ the full implemented-vs-pending tracker.
 ## Verifying a deployment
 
 Run the database integration tests against a disposable PostGIS database to prove the
-schema and the full document lifecycle work end-to-end:
+schema and the full document and actor lifecycles work end-to-end:
 
 ```bash
 GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmode=disable' \

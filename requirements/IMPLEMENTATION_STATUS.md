@@ -5,7 +5,7 @@ of each slice (a few lines), and keep it honest.
 
 - **Intent / spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — the original statement of intent. Do not rewrite it to match reality; cite it (e.g. "spec §7.2").
 - **This document (living):** maps each spec area to its current state + records intentional deviations.
-- **Snapshot:** as of **2026-07-08**, app version **0.2.1**. Build/vet/lint/tests green; migrations `0001–0005` applied; verified end-to-end against PostgreSQL. Now with an **embedded Vue 3 + Vuetify 4 web UI** (Document module exercisable from the browser) + metadata-first file upload; repository SQL uses pgx **named parameters**.
+- **Snapshot:** as of **2026-07-10**, app version **0.3.3** (Actor slice pending release). Build/vet/lint/tests green; migrations `0001–0006` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor** components live, each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -27,7 +27,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
 | §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
-| §6.4 `actor` | ⬜ | ⬜ `ActorService` | ⬜ | PERSON / ORGANIZATION |
+| §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed contacts (IDE/TVA/ABACUS/RC); 33 seeded categories; roles kept as relationships; persons carry no PII (register link only) |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | ⬜ | — | ⬜ | |
@@ -36,16 +36,18 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo needs Case + Thing + Actor + Timeline + Circulation, so it is
-mostly pending. Document-side steps are done and verified via ConnectRPC **and now
-exercisable from the embedded web UI** (create-with-upload → detail → verify →
-finalize/lock → edit blocked when locked → audit):
+The 16-step demo still needs Case + Thing + Timeline + Circulation, so it is
+partly pending — but **Actor is now done** (persons/organizations creatable and
+linkable as relationship targets). Document- and actor-side steps are done and verified
+via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
+lifecycle → edit blocked when locked → audit):
 
 - ✅ (7) add a document of type PLAN — `CreateDocument`
 - ✅ (8) link the document to a case — `link_to_case_id` on create / `LinkDocument` (works once a CASE subject exists)
 - ✅ (9) link document to a thing (`DOCUMENT_REPRESENTS_THING`) — via `LinkDocument` (relationship type seeded; needs a THING subject)
-- ✅ (16) consult the audit — `GetDocument{includeAudit}` / `CoreService.ListAuditEvents`
-- ⬜ (1–6, 10–15) case creation, thing/actor, timeline add + validate + immutability, circulation + response — pending their services
+- ✅ (16) consult the audit — `GetDocument{includeAudit}` / `GetActor{includeAudit}` / `CoreService.ListAuditEvents`
+- 🟡 actor parties — `ActorService.CreateActor` creates PERSON/ORGANIZATION actors; linking them into a case (`CASE_HAS_ACTOR_*`) works once a CASE subject exists
+- ⬜ (1–6, 10–15) case creation, thing, timeline add + validate + immutability, circulation + response — pending their services
 
 ---
 
@@ -156,14 +158,38 @@ policy, streamed probative hashing, metrics/tracing.
 
 Still open (kept for later): Prometheus/OpenTelemetry instrumentation (#6).
 
+### 3f. Actor slice (2026-07-10) — modelled from real production data
+
+The Actor component (spec §6.4) was designed against the **real production Goéland
+`Acteur` schema**, profiled read-only on a local replica (aggregates only — no PII pulled):
+
+- 🧭 **Reality-checked model** — `Acteur.IsPhysique` → `actor_kind` PERSON/ORGANIZATION;
+  `ActMoral` → organization fields + a 33-term `organization_category` seeded from the real
+  `DicoActMoralCategory`; `ActeurComplement` → typed `actor_contact` (contact channels +
+  business identifiers IDE/TVA/ABACUS/registre du commerce, kept first-class/queryable).
+- 🔗 **Roles are relationships, not attributes** — production's 1.5M-row polymorphic
+  `ActeurRole` table is the legacy form of our typed `subject_relationship`. The actor entity
+  carries **zero** role columns; actors attach to cases/documents/things via `relationship_type`
+  edges, so the real 46-role vocabulary maps in with the Case/Thing slices (nothing blocks it).
+- 🔒 **PII-free by construction** — the PERSON specialization stores only `is_ch_register` +
+  an opaque `ch_register_ref`; no civil-registry personal data enters the POC.
+- 🖥️ **Full vertical slice** — proto-first `ActorService` (6 RPCs) + `0006_actor.sql` +
+  atomic create (subject_ref + record_metadata + contacts + audit) + embedded Vue/Vuetify panel
+  (bilingual) + `pkg/integration` lifecycle/specialization tests, all green against real PostGIS.
+- ⬜ Deferred to later actor slices: addresses (`lien_acteur_adresse`), the CH-register person
+  detail beyond the link flag, and seeding the full production role vocabulary.
+
 ---
 
 ## 4. Tests
 
 - ✅ Pure unit tests: pagination, subject-kind validation, dbmate migration parser, authadapter.
 - ✅ Automated DB integration tests (`pkg/integration`): migrations idempotency + seed data,
-  and the full document lifecycle (create → search → metadata update → link → finalize+lock →
-  locked-update rejected → soft delete → deleted-mutation rejected → audit trail). Env-gated on
+  the full document lifecycle (create → search → metadata update → link → finalize+lock →
+  locked-update rejected → soft delete → deleted-mutation rejected → audit trail), and the
+  **actor lifecycle** (org create with contacts+category → search → update/label-sync →
+  case→actor link → soft-delete+rejection → audit; person PII-free specialization;
+  organization `legal_name` required; 33 categories seeded). Env-gated on
   `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
   `go test ./...` stays green without a database.
 - ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /
@@ -177,13 +203,15 @@ Still open (kept for later): Prometheus/OpenTelemetry instrumentation (#6).
 
 ## 5. Suggested next slices (in order)
 
-1. **Actor** (§6.4) — smallest new subject; unlocks `CASE_HAS_ACTOR_*` links and part of the demo.
-2. **Case** (§6.1) — `case_type` + `case_file` + `CaseService`; the spine of the scenario.
-3. **Timeline** (§8) — `case_timeline_entry` + document links + validation/immutability (spec §17.8).
-4. **Thing** (§6.3) — PostGIS geometry, parcel/building specializations; enables `CASE_CONCERNS_THING`.
-5. **Circulation** (§9) — depends on Case + Timeline.
-6. **Security** (§10) — `access_grant` + confidentiality deny-by-default (or integrate Casbin/OpenFGA).
-7. **Integration tests** for the full §3.1 scenario, added with each slice above.
+0. ✅ **Actor** (§6.4) — *done* (2026-07-10, identity + typed contacts). Later actor slices:
+   addresses (`lien_acteur_adresse`) and seeding the production role vocabulary into `relationship_type`.
+1. **Case** (§6.1) — `case_type` + `case_file` + `CaseService`; the spine of the scenario. Brings
+   the first `CASE`-source relationship types (including expanded `CASE_HAS_ACTOR_*` roles).
+2. **Timeline** (§8) — `case_timeline_entry` + document links + validation/immutability (spec §17.8).
+3. **Thing** (§6.3) — PostGIS geometry, parcel/building specializations; enables `CASE_CONCERNS_THING`.
+4. **Circulation** (§9) — depends on Case + Timeline.
+5. **Security** (§10) — `access_grant` + confidentiality deny-by-default (or integrate Casbin/OpenFGA).
+6. **Integration tests** for the full §3.1 scenario, added with each slice above.
 
 Keep honouring the design rules (spec §17): explicit model, no EAV, JSONB only for
 secondary data, non-destructive deletes, every mutation audited, every relationship

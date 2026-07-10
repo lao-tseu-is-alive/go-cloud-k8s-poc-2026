@@ -17,6 +17,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs/pkg/goHttpEcho"
+	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
@@ -96,15 +97,26 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)
 	}
+	actorMod, err := actormodule.New(ctx, actormodule.Config{RequestTimeout: config.RequestTimeout}, actormodule.Deps{
+		Pool:        pool,
+		Verifier:    verifier,
+		CoreService: coreMod.Service(),
+		Logger:      log,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("actor module: %w", err)
+	}
 
 	// Bundle mode: aggregate every module's Vanguard services into ONE transcoder.
 	services := append(coreMod.VanguardServices(), docMod.VanguardServices()...)
+	services = append(services, actorMod.VanguardServices()...)
 	transcoder, err := vanguard.NewTranscoder(services)
 	if err != nil {
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
 	}
 
 	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
+	serviceNames = append(serviceNames, actorMod.ServiceNames()...)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler(pool))

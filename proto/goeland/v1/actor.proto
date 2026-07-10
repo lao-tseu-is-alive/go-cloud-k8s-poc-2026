@@ -1,0 +1,294 @@
+// Goéland POC - Actor component (external persons & organizations).
+//
+// Proto-first definition for ActorService + supporting messages. An Actor is any
+// external party the administration interacts with: a physical PERSON or a moral
+// ORGANIZATION. Actors are subjects (kind = ACTOR) and are wired into cases,
+// documents and things exclusively through typed CoreService relationships
+// (CASE_HAS_ACTOR_*, DOCUMENT_AUTHORED_BY_ACTOR, ...), never through fields on the
+// actor itself. Roles therefore stay in relationship_type and are added slice by
+// slice as Case / Thing land; this file deliberately keeps Actor role-free.
+//
+// Model informed by the production Goéland (MSSQL) Acteur domain:
+//   - Acteur base: IsPhysique -> ActorKind PERSON | ORGANIZATION; IsFromCH,
+//     IsActive, Name / NameForSearch.
+//   - ActMoral (organization): RaisonSociale + category (DicoActMoralCategory).
+//   - ActeurComplement (typed contact & identity bag): phone / email + business
+//     identifiers IDE Fédéral, N° TVA, N° débiteur ABACUS, commercial-register link.
+// Physical-person register data (ActPhysFromCH) is intentionally NOT modelled here
+// beyond an is_ch_register flag + opaque reference — no personal data is carried.
+//
+// First slice = identity + contacts. Addresses (lien_acteur_adresse) and the full
+// 46-role relationship seeding are separate later slices.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// ACTOR ENUMS / MESSAGES
+// =============================================
+
+// ActorKind discriminates a physical person from a moral organization
+// (production Acteur.IsPhysique).
+enum ActorKind {
+  ACTOR_KIND_UNSPECIFIED = 0;
+  ACTOR_KIND_PERSON = 1; // personne physique (IsPhysique = true)
+  ACTOR_KIND_ORGANIZATION = 2; // personne morale (IsPhysique = false)
+}
+
+// ContactType is the controlled vocabulary for the typed contact / identity bag
+// (production DicoActeurTypeComplement). Values split into contact channels and
+// probative business identifiers; the latter stay first-class so they are
+// queryable (an actor is often located by IDE / VAT / ABACUS debtor number).
+enum ContactType {
+  CONTACT_TYPE_UNSPECIFIED = 0;
+  // -- channels --
+  CONTACT_TYPE_PHONE = 1;
+  CONTACT_TYPE_PHONE_PRIVATE = 2;
+  CONTACT_TYPE_PHONE_PRO = 3;
+  CONTACT_TYPE_MOBILE = 4;
+  CONTACT_TYPE_FAX = 5;
+  CONTACT_TYPE_EMAIL = 6;
+  CONTACT_TYPE_WEBSITE = 7;
+  CONTACT_TYPE_POSTAL_BOX = 8;
+  // -- business identifiers --
+  CONTACT_TYPE_IDE_FEDERAL = 20; // IDE / UID fédéral (CHE-###.###.###)
+  CONTACT_TYPE_VAT_NUMBER = 21; // numéro de TVA
+  CONTACT_TYPE_ABACUS_DEBTOR = 22; // n° débiteur ABACUS
+  CONTACT_TYPE_COMMERCIAL_REGISTER = 23; // lien registre du commerce
+  CONTACT_TYPE_OTHER = 99;
+}
+
+// OrganizationCategory is the controlled classification of a moral person
+// (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
+message OrganizationCategory {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  string label = 3 [(buf.validate.field).string.max_len = 200];
+  bool is_active = 4;
+}
+
+// ActorContact is one typed contact channel or business identifier attached to an
+// actor (production ActeurComplement row: IdTypeComplement + Complement).
+message ActorContact {
+  ContactType contact_type = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string value = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 400
+  ];
+  bool is_primary = 3; // preferred channel of its type
+  string label = 4 [(buf.validate.field).string.max_len = 100]; // optional free note
+}
+
+// OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
+message OrganizationDetails {
+  string legal_name = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ]; // RaisonSociale
+  string category_code = 2 [(buf.validate.field).string.max_len = 100]; // OrganizationCategory.code
+  string complement = 3 [(buf.validate.field).string.max_len = 1000];
+}
+
+// PersonDetails carries the PERSON-only fields. No civil-registry personal data is
+// stored: only whether the person is linked to the CH population register and an
+// opaque reference to it, so real identity stays in the source system.
+message PersonDetails {
+  bool is_ch_register = 1; // production Acteur.IsFromCH (person linked to CH register)
+  string ch_register_ref = 2 [(buf.validate.field).string.max_len = 100]; // opaque external key, no PII
+}
+
+// Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
+message Actor {
+  SubjectRef subject_ref = 1; // embedded canonical identity (kind = ACTOR)
+  ActorKind actor_kind = 2 [(buf.validate.field).enum.defined_only = true];
+  string display_name = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ]; // production Acteur.Name
+  string name_for_search = 4 [(google.api.field_behavior) = OUTPUT_ONLY]; // normalized, accent-insensitive
+  bool is_active = 5; // production Acteur.IsActive (soft-deactivation, distinct from soft-delete)
+  int32 publication_code = 6 [(buf.validate.field).int32.gte = 0]; // production Acteur.CodePublication
+
+  // Kind-specific specialization (mirrors the ActMoral / ActPhys* 1:1 subtypes).
+  oneof specialization {
+    PersonDetails person = 7;
+    OrganizationDetails organization = 8;
+  }
+
+  repeated ActorContact contacts = 9;
+
+  google.protobuf.Timestamp created_at = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+  string created_by = 21;
+  google.protobuf.Timestamp updated_at = 22 [(google.api.field_behavior) = OUTPUT_ONLY];
+  RecordMetadata record_metadata = 23; // governance (confidentiality, locked, owner...)
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
+// via Core internally. The kind-specific block must match actor_kind.
+message CreateActorRequest {
+  ActorKind actor_kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  string display_name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  int32 publication_code = 3 [(buf.validate.field).int32.gte = 0];
+  oneof specialization {
+    PersonDetails person = 4;
+    OrganizationDetails organization = 5;
+  }
+  repeated ActorContact contacts = 6;
+  // NOTE: the acting operator is derived server-side from the authenticated
+  // principal (never trusted from the client).
+  RecordMetadata initial_governance = 7; // confidentiality, owner_org etc.
+}
+
+message CreateActorResponse {
+  Actor actor = 1;
+  AuditEvent created_event = 2;
+}
+
+message GetActorRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true]; // subject_ref id
+  bool include_relationships = 2; // to cases, documents, things
+  bool include_audit = 3;
+}
+
+message GetActorResponse {
+  Actor actor = 1;
+  repeated SubjectRelationship relationships = 2;
+  repeated AuditEvent recent_audit = 3;
+}
+
+// UpdateActorRequest updates mutable fields. Blocked if the record is locked.
+// contacts, when provided, replace the full set (managed as a whole for simplicity).
+message UpdateActorRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string display_name = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  optional bool is_active = 3;
+  optional int32 publication_code = 4 [(buf.validate.field).int32.gte = 0];
+  oneof specialization {
+    PersonDetails person = 5;
+    OrganizationDetails organization = 6;
+  }
+  bool replace_contacts = 7; // when true, `contacts` becomes the new full set
+  repeated ActorContact contacts = 8;
+  string reason = 9 [(buf.validate.field).string.max_len = 2000]; // for audit
+}
+
+message UpdateActorResponse {
+  Actor actor = 1;
+  AuditEvent update_event = 2;
+}
+
+// SearchActorsRequest performs accent-insensitive name search + filters.
+message SearchActorsRequest {
+  string query = 1 [(buf.validate.field).string.max_len = 200]; // matched against name_for_search
+  ActorKind actor_kind = 2; // UNSPECIFIED = any
+  string organization_category_code = 3 [(buf.validate.field).string.max_len = 100];
+  bool only_active = 4;
+  bool include_deleted = 5;
+  int32 page_size = 6 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  string page_token = 7 [(buf.validate.field).string.max_len = 1024];
+}
+
+message SearchActorsResponse {
+  repeated Actor actors = 1;
+  string next_page_token = 2;
+  int32 total_size = 3;
+}
+
+message DeleteActorRequest {
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+message DeleteActorResponse {
+  string deleted_actor_id = 1;
+  AuditEvent delete_event = 2;
+}
+
+message ListOrganizationCategoriesRequest {
+  bool only_active = 1;
+}
+
+message ListOrganizationCategoriesResponse {
+  repeated OrganizationCategory categories = 1;
+}
+
+// =============================================
+// ACTOR SERVICE
+// =============================================
+
+// ActorService is the external-party (person / organization) component of the POC.
+// Every RPC carries a google.api.http annotation so Vanguard also exposes it as
+// REST/JSON; the Connect/gRPC path /goeland.v1.ActorService/<Method> stays available.
+service ActorService {
+  // Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+  rpc CreateActor(CreateActorRequest) returns (CreateActorResponse) {
+    option (google.api.http) = {
+      post: "/api/actors"
+      body: "*"
+    };
+  }
+
+  // Retrieve an actor with optional relationship + audit context.
+  rpc GetActor(GetActorRequest) returns (GetActorResponse) {
+    option (google.api.http) = {get: "/api/actors/{id}"};
+  }
+
+  // Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+  rpc UpdateActor(UpdateActorRequest) returns (UpdateActorResponse) {
+    option (google.api.http) = {
+      patch: "/api/actors/{id}"
+      body: "*"
+    };
+  }
+
+  // Accent-insensitive name search + kind / category / status filters.
+  rpc SearchActors(SearchActorsRequest) returns (SearchActorsResponse) {
+    option (google.api.http) = {get: "/api/actors/search"};
+  }
+
+  // Soft-delete an actor (non-destructive) and write an audit event.
+  rpc DeleteActor(DeleteActorRequest) returns (DeleteActorResponse) {
+    option (google.api.http) = {delete: "/api/actors/{id}"};
+  }
+
+  // List the controlled organization categories (classification catalogue).
+  rpc ListOrganizationCategories(ListOrganizationCategoriesRequest) returns (ListOrganizationCategoriesResponse) {
+    option (google.api.http) = {get: "/api/organization-categories"};
+  }
+}

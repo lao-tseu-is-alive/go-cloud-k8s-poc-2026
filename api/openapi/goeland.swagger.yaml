@@ -4,12 +4,170 @@ info:
   version: version not set
 tags:
   - name: CoreService
+  - name: ActorService
   - name: DocumentService
 consumes:
   - application/json
 produces:
   - application/json
 paths:
+  /api/actors:
+    post:
+      summary: Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+      operationId: CreateActor
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateActorResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: |-
+            CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
+            via Core internally. The kind-specific block must match actor_kind.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateActorRequest'
+      tags:
+        - ActorService
+  /api/actors/search:
+    get:
+      summary: Accent-insensitive name search + kind / category / status filters.
+      operationId: SearchActors
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchActorsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: matched against name_for_search
+          in: query
+          required: false
+          type: string
+        - name: actorKind
+          description: |-
+            UNSPECIFIED = any
+
+             - ACTOR_KIND_PERSON: personne physique (IsPhysique = true)
+             - ACTOR_KIND_ORGANIZATION: personne morale (IsPhysique = false)
+          in: query
+          required: false
+          type: string
+          enum:
+            - ACTOR_KIND_UNSPECIFIED
+            - ACTOR_KIND_PERSON
+            - ACTOR_KIND_ORGANIZATION
+          default: ACTOR_KIND_UNSPECIFIED
+        - name: organizationCategoryCode
+          in: query
+          required: false
+          type: string
+        - name: onlyActive
+          in: query
+          required: false
+          type: boolean
+        - name: includeDeleted
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          in: query
+          required: false
+          type: string
+      tags:
+        - ActorService
+  /api/actors/{id}:
+    get:
+      summary: Retrieve an actor with optional relationship + audit context.
+      operationId: GetActor
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetActorResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: subject_ref id
+          in: path
+          required: true
+          type: string
+        - name: includeRelationships
+          description: to cases, documents, things
+          in: query
+          required: false
+          type: boolean
+        - name: includeAudit
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - ActorService
+    delete:
+      summary: Soft-delete an actor (non-destructive) and write an audit event.
+      operationId: DeleteActor
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DeleteActorResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: reason
+          in: query
+          required: false
+          type: string
+      tags:
+        - ActorService
+    patch:
+      summary: Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+      operationId: UpdateActor
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateActorResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ActorServiceUpdateActorBody'
+      tags:
+        - ActorService
   /api/document-types:
     get:
       summary: List the controlled document types (classification catalogue).
@@ -267,6 +425,26 @@ paths:
           type: string
       tags:
         - DocumentService
+  /api/organization-categories:
+    get:
+      summary: List the controlled organization categories (classification catalogue).
+      operationId: ListOrganizationCategories
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListOrganizationCategoriesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - ActorService
   /api/relationship-types:
     get:
       summary: List the catalogue of allowed relationship types (optionally filtered).
@@ -513,6 +691,34 @@ paths:
       tags:
         - CoreService
 definitions:
+  ActorServiceUpdateActorBody:
+    type: object
+    properties:
+      displayName:
+        type: string
+      isActive:
+        type: boolean
+      publicationCode:
+        type: integer
+        format: int32
+      person:
+        $ref: '#/definitions/v1PersonDetails'
+      organization:
+        $ref: '#/definitions/v1OrganizationDetails'
+      replaceContacts:
+        type: boolean
+        title: when true, `contacts` becomes the new full set
+      contacts:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorContact'
+      reason:
+        type: string
+        title: for audit
+    description: |-
+      UpdateActorRequest updates mutable fields. Blocked if the record is locked.
+      contacts, when provided, replace the full set (managed as a whole for simplicity).
   DocumentServiceFinalizeDocumentBody:
     type: object
     properties:
@@ -585,6 +791,84 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/protobufAny'
+  v1Actor:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        title: embedded canonical identity (kind = ACTOR)
+      actorKind:
+        $ref: '#/definitions/v1ActorKind'
+      displayName:
+        type: string
+        title: production Acteur.Name
+      nameForSearch:
+        type: string
+        title: normalized, accent-insensitive
+        readOnly: true
+      isActive:
+        type: boolean
+        title: production Acteur.IsActive (soft-deactivation, distinct from soft-delete)
+      publicationCode:
+        type: integer
+        format: int32
+        title: production Acteur.CodePublication
+      person:
+        $ref: '#/definitions/v1PersonDetails'
+      organization:
+        $ref: '#/definitions/v1OrganizationDetails'
+      contacts:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorContact'
+      createdAt:
+        type: string
+        format: date-time
+        readOnly: true
+      createdBy:
+        type: string
+      updatedAt:
+        type: string
+        format: date-time
+        readOnly: true
+      recordMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        title: governance (confidentiality, locked, owner...)
+    description: Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
+    required:
+      - displayName
+  v1ActorContact:
+    type: object
+    properties:
+      contactType:
+        $ref: '#/definitions/v1ContactType'
+      value:
+        type: string
+      isPrimary:
+        type: boolean
+        title: preferred channel of its type
+      label:
+        type: string
+        title: optional free note
+    description: |-
+      ActorContact is one typed contact channel or business identifier attached to an
+      actor (production ActeurComplement row: IdTypeComplement + Complement).
+    required:
+      - value
+  v1ActorKind:
+    type: string
+    enum:
+      - ACTOR_KIND_UNSPECIFIED
+      - ACTOR_KIND_PERSON
+      - ACTOR_KIND_ORGANIZATION
+    default: ACTOR_KIND_UNSPECIFIED
+    description: |-
+      ActorKind discriminates a physical person from a moral organization
+      (production Acteur.IsPhysique).
+
+       - ACTOR_KIND_PERSON: personne physique (IsPhysique = true)
+       - ACTOR_KIND_ORGANIZATION: personne morale (IsPhysique = false)
   v1AuditEvent:
     type: object
     properties:
@@ -619,6 +903,75 @@ definitions:
     description: AuditEvent is an append-only probative audit record, written on every mutation.
     required:
       - eventType
+  v1ContactType:
+    type: string
+    enum:
+      - CONTACT_TYPE_UNSPECIFIED
+      - CONTACT_TYPE_PHONE
+      - CONTACT_TYPE_PHONE_PRIVATE
+      - CONTACT_TYPE_PHONE_PRO
+      - CONTACT_TYPE_MOBILE
+      - CONTACT_TYPE_FAX
+      - CONTACT_TYPE_EMAIL
+      - CONTACT_TYPE_WEBSITE
+      - CONTACT_TYPE_POSTAL_BOX
+      - CONTACT_TYPE_IDE_FEDERAL
+      - CONTACT_TYPE_VAT_NUMBER
+      - CONTACT_TYPE_ABACUS_DEBTOR
+      - CONTACT_TYPE_COMMERCIAL_REGISTER
+      - CONTACT_TYPE_OTHER
+    default: CONTACT_TYPE_UNSPECIFIED
+    description: |-
+      ContactType is the controlled vocabulary for the typed contact / identity bag
+      (production DicoActeurTypeComplement). Values split into contact channels and
+      probative business identifiers; the latter stay first-class so they are
+      queryable (an actor is often located by IDE / VAT / ABACUS debtor number).
+
+       - CONTACT_TYPE_PHONE: -- channels --
+       - CONTACT_TYPE_IDE_FEDERAL: -- business identifiers --
+
+      IDE / UID fédéral (CHE-###.###.###)
+       - CONTACT_TYPE_VAT_NUMBER: numéro de TVA
+       - CONTACT_TYPE_ABACUS_DEBTOR: n° débiteur ABACUS
+       - CONTACT_TYPE_COMMERCIAL_REGISTER: lien registre du commerce
+  v1CreateActorRequest:
+    type: object
+    properties:
+      actorKind:
+        $ref: '#/definitions/v1ActorKind'
+      displayName:
+        type: string
+      publicationCode:
+        type: integer
+        format: int32
+      person:
+        $ref: '#/definitions/v1PersonDetails'
+      organization:
+        $ref: '#/definitions/v1OrganizationDetails'
+      contacts:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorContact'
+      initialGovernance:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: |-
+          NOTE: the acting operator is derived server-side from the authenticated
+          principal (never trusted from the client).
+
+          confidentiality, owner_org etc.
+    description: |-
+      CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
+      via Core internally. The kind-specific block must match actor_kind.
+    required:
+      - displayName
+  v1CreateActorResponse:
+    type: object
+    properties:
+      actor:
+        $ref: '#/definitions/v1Actor'
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
   v1CreateDocumentRequest:
     type: object
     properties:
@@ -709,6 +1062,13 @@ definitions:
       metadata:
         $ref: '#/definitions/v1RecordMetadata'
       createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1DeleteActorResponse:
+    type: object
+    properties:
+      deletedActorId:
+        type: string
+      deleteEvent:
         $ref: '#/definitions/v1AuditEvent'
   v1DeleteDocumentResponse:
     type: object
@@ -836,6 +1196,21 @@ definitions:
         $ref: '#/definitions/v1Document'
       finalizeEvent:
         $ref: '#/definitions/v1AuditEvent'
+  v1GetActorResponse:
+    type: object
+    properties:
+      actor:
+        $ref: '#/definitions/v1Actor'
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
   v1GetDocumentResponse:
     type: object
     properties:
@@ -914,6 +1289,14 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1DocumentType'
+  v1ListOrganizationCategoriesResponse:
+    type: object
+    properties:
+      categories:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrganizationCategory'
   v1ListRelationshipTypesResponse:
     type: object
     properties:
@@ -935,6 +1318,49 @@ definitions:
       totalSize:
         type: integer
         format: int32
+  v1OrganizationCategory:
+    type: object
+    properties:
+      id:
+        type: string
+      code:
+        type: string
+      label:
+        type: string
+      isActive:
+        type: boolean
+    description: |-
+      OrganizationCategory is the controlled classification of a moral person
+      (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
+    required:
+      - code
+  v1OrganizationDetails:
+    type: object
+    properties:
+      legalName:
+        type: string
+        title: RaisonSociale
+      categoryCode:
+        type: string
+        title: OrganizationCategory.code
+      complement:
+        type: string
+    description: OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
+    required:
+      - legalName
+  v1PersonDetails:
+    type: object
+    properties:
+      isChRegister:
+        type: boolean
+        title: production Acteur.IsFromCH (person linked to CH register)
+      chRegisterRef:
+        type: string
+        title: opaque external key, no PII
+    description: |-
+      PersonDetails carries the PERSON-only fields. No civil-registry personal data is
+      stored: only whether the person is linked to the CH population register and an
+      opaque reference to it, so real identity stays in the source system.
   v1RecordMetadata:
     type: object
     properties:
@@ -1023,6 +1449,19 @@ definitions:
     description: RelationshipType defines an allowed typed relation between two subject kinds.
     required:
       - code
+  v1SearchActorsResponse:
+    type: object
+    properties:
+      actors:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Actor'
+      nextPageToken:
+        type: string
+      totalSize:
+        type: integer
+        format: int32
   v1SearchDocumentsResponse:
     type: object
     properties:
@@ -1115,6 +1554,13 @@ definitions:
       relationshipId:
         type: string
       auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+  v1UpdateActorResponse:
+    type: object
+    properties:
+      actor:
+        $ref: '#/definitions/v1Actor'
+      updateEvent:
         $ref: '#/definitions/v1AuditEvent'
   v1UpdateDocumentMetadataResponse:
     type: object
