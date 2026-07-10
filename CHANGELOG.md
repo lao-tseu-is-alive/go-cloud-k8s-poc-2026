@@ -8,6 +8,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.3.3] - 2026-07-10
+
 ### Security
 
 - **CI vulnerability gate**: `docker-publish` and `cve-trivy-scan` now fail on fixable

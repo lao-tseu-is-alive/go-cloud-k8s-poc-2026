@@ -24,7 +24,7 @@ var (
 	Repository = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026"
 
 	// Version is the semantic version starting point.
-	Version = "0.3.2"
+	Version = "0.3.3"
 
 	// Revision is auto-filled by the build (do not edit manually).
 	Revision = "unknown"
