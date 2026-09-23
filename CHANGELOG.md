@@ -8,9 +8,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.4.1] - 2026-09-23
+
+This release makes documentation part of the build: **GLD-001** adopts the go-pdf-forge
+documentation quality contract, and one gate (`make release-check`) now runs identically
+locally, in CI and before any publication. No API, wire or schema change.
+
 ### Added
 
-- **Documentation quality contract** (`docs/DOCUMENTATION.md`, slice 1 of 5): the normative
+- **GLD-001** — **Documentation quality contract** (`docs/DOCUMENTATION.md`, slice 1 of 5): the normative
   contract for human and agent contributors, ported from `go-pdf-forge` and referenced from
   `AGENTS.md` and the README.
 - `cmd/doccheck`: parameterized port of the go-pdf-forge checker (`--version-file`,
@@ -39,7 +45,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 - Roadmap and guarded release (slice 5 of 5): `docs/ROADMAP.md` owns implementation order with
   stable `GLD-NNN` task IDs (backlog migrated from the local scratch notes, plus five API-honesty
-  fixes found while documenting the contracts: GLD-003 to GLD-007).
+  fixes found while documenting the contracts, now open roadmap tasks).
   `scripts/check_release_traceability.sh` (with self-tests) enforces done tasks ↔ dated changelog
   sections in both directions; `make roadmap-check` and `make release-traceability-check` join
   `make release-check`, which also requires `goeland-server --version` to report `Version`.

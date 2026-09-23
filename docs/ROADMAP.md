@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.4.0**.
+Tracked version: **v0.4.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec lives in
@@ -21,13 +21,12 @@ rules binding the three are in [DOCUMENTATION.md](DOCUMENTATION.md#roadmap-chang
 
 ## Next action
 
-Release GLD-001 as v0.4.1, then review the proposed v2 requirements with the
-product owner (GLD-002) before starting the Case slice: the review may reorder
-the phases below.
+Review the proposed v2 requirements with the product owner (GLD-002) before
+starting the Case slice: the review may reorder the phases below.
 
 ## Cross-cutting quality
 
-- [~] **GLD-001 — Documentation quality contract**: adopt the
+- [x] **GLD-001 — Documentation quality contract**: adopt the
   [normative contract](DOCUMENTATION.md) in five slices (checker and gates,
   atlas, GoDoc, Protobuf comments, roadmap and guarded release) so drift fails
   `make release-check`, CI and the release workflows.
