@@ -12,7 +12,7 @@
 set -euo pipefail
 
 ENV_FILE="${1:-.env}"
-if [ ! -f "$ENV_FILE" ]; then
+if [[ ! -f "$ENV_FILE" ]]; then
   echo "Error: environment file '$ENV_FILE' not found." >&2
   exit 1
 fi
@@ -28,7 +28,7 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 AUTH_PORT="${PORT:-9090}"
 AUTH_HOST="${AUTH_HOST:-localhost}"
 
-if [ -z "$ADMIN_USER" ] || [ -z "$ADMIN_PASSWORD" ]; then
+if [[ -z "$ADMIN_USER" ]] || [[ -z "$ADMIN_PASSWORD" ]]; then
   echo "Error: ADMIN_USER and ADMIN_PASSWORD must be defined in '$ENV_FILE'." >&2
   exit 1
 fi
@@ -44,7 +44,7 @@ RESPONSE=$(curl -s -X POST \
   "http://$AUTH_HOST:$AUTH_PORT/login")
 
 TOKEN=$(echo "$RESPONSE" | jq -r '.token // empty')
-if [ -z "$TOKEN" ] || [ "$TOKEN" = "null" ]; then
+if [[ -z "$TOKEN" ]] || [[ "$TOKEN" == "null" ]]; then
   echo "Error: failed to fetch token from auth server." >&2
   echo "Server response: $RESPONSE" >&2
   exit 1

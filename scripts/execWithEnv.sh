@@ -13,9 +13,9 @@
 
 echo "## $0 received NUM ARGS : " $#
 ENV_FILENAME='.env'
-if [ $# -eq 1 ]; then
+if [[ $# -eq 1 ]]; then
   BIN_FILENAME=${1}
-elif [ $# -eq 2 ]; then
+elif [[ $# -eq 2 ]]; then
   BIN_FILENAME=${1}
   ENV_FILENAME=${2:-'.env'}
 else
@@ -24,8 +24,8 @@ else
 fi
 
 echo "## will try to run : ${BIN_FILENAME} with env variables in ${ENV_FILENAME} ..."
-if [ -r "$ENV_FILENAME" ]; then
-  if [ -x "$BIN_FILENAME" ]; then
+if [[ -r "$ENV_FILENAME" ]]; then
+  if [[ -x "$BIN_FILENAME" ]]; then
     echo "## will execute $BIN_FILENAME"
     # Load the dotenv file: drop comments/blank lines, escape single quotes and
     # single-quote every value so spaces and special characters survive. `set -a`

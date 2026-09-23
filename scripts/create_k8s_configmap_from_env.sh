@@ -15,7 +15,7 @@
 set -euo pipefail
 
 ENV_FILE="${1:-.env}"
-[ -f "$ENV_FILE" ] || { echo "ERROR: $ENV_FILE not found" >&2; exit 1; }
+[[ -f "$ENV_FILE" ]] || { echo "ERROR: $ENV_FILE not found" >&2; exit 1; }
 
 # Keys that are safe to expose in a ConfigMap.
 NON_SECRET_KEYS=(
@@ -33,10 +33,10 @@ SECRET_KEYS=(DB_PASSWORD DATABASE_URL JWT_SECRET GOELAND_DEV_TOKEN ADMIN_PASSWOR
 cm_args=()
 for key in "${NON_SECRET_KEYS[@]}"; do
   value="$(grep -E "^${key}=" "$ENV_FILE" | head -1 | cut -d= -f2-)"
-  [ -n "$value" ] && cm_args+=(--from-literal="${key}=${value}")
+  [[ -n "$value" ]] && cm_args+=(--from-literal="${key}=${value}")
 done
 
-if [ ${#cm_args[@]} -eq 0 ]; then
+if [[ ${#cm_args[@]} -eq 0 ]]; then
   echo "ERROR: no non-secret keys found in $ENV_FILE" >&2
   exit 1
 fi

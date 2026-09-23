@@ -22,6 +22,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Changed
 
+- Helper scripts (`buf_generate.sh`, `create_k8s_configmap_from_env.sh`, `execWithEnv.sh`,
+  `get_jwt_token.sh`) use bash `[[ … ]]` tests instead of `[ … ]` (SonarQube shell rule).
 - **Spec v2 adopted** as the active statement of intent:
   `requirements/goeland_poc_domain_model_agent_v2.md` (renamed from its review draft); the v1
   spec stays as immutable history. `IMPLEMENTATION_STATUS.md` gains the v2 alignment table

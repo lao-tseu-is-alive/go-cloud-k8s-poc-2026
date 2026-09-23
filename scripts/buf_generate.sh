@@ -1,6 +1,6 @@
 #!/bin/bash
 
-if [ ! -d "./gen" ]; then
+if [[ ! -d "./gen" ]]; then
   mkdir gen
 fi
 # see https://buf.build/docs/lint/
