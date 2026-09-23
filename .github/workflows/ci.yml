@@ -1,0 +1,47 @@
+name: CI
+
+# Runs the repository-owned release gate on every push to main and every pull
+# request, so CI never applies a weaker policy than `make release-check` locally
+# (see docs/DOCUMENTATION.md, "Control chain").
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  release-check:
+    name: make release-check
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Go
+        uses: actions/setup-go@v5
+        with:
+          # Single source of truth: the version required in go.mod.
+          go-version-file: go.mod
+          cache-dependency-path: go.sum
+
+      - name: Setup Bun
+        # v2.2.0 - pinned to commit SHA to prevent supply chain attacks,
+        # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6
+        with:
+          bun-version: '1'
+
+      - name: Install Buf
+        run: go install github.com/bufbuild/buf/cmd/buf@v1.70.0
+
+      # release-check = check (frontend, format, lint, race tests, docs-check)
+      # + version/changelog/scripts consistency + binary build.
+      - name: Release gate
+        run: make release-check

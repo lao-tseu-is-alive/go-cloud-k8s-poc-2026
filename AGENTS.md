@@ -16,6 +16,16 @@ must stay in sync, and the non-obvious gotchas discovered while building the POC
 - `.env` and coverage files are Git-ignored, but that does not make their
   contents safe to expose.
 
+## Documentation quality contract
+
+`docs/DOCUMENTATION.md` is the normative documentation contract for human and
+agent contributors. Read and follow it whenever a change affects Go or
+Protobuf contracts, repository files, stable operational claims, roadmap state
+or a release. Keep the detailed rules centralized there; references in this
+file and the README are entry points, not competing copies. Run
+`make docs-check` for documentation-sensitive changes and `make check` before
+handoff; never bypass a failing documentation gate.
+
 ## What this project is
 
 A proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -84,8 +94,9 @@ cmd/goeland-server/          server: pool → migrate → wire the modules → o
   ├── upload.go              out-of-proto POST /upload + GET /download (own bearer check)
   ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
-.github/workflows/           CI: cve-trivy-scan, docker-publish, release
-docs/                        PRODUCTION_READINESS.md (deployment contract)
+cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas inventory)
+.github/workflows/           CI: ci (make release-check), cve-trivy-scan, docker-publish, release
+docs/                        DOCUMENTATION.md (normative doc contract), PRODUCTION_READINESS.md (deployment contract)
 ```
 
 ## Commands
@@ -95,6 +106,12 @@ docs/                        PRODUCTION_READINESS.md (deployment contract)
 - `make test` — all Go tests with the race detector + `coverage.out`. Package discovery
   excludes the frontend `node_modules` tree, so it is stable after `bun install`.
 - `make lint` — `go vet` (same filtered package set) + `buf lint`.
+- `make docs-check` — `godoc-check` + `atlas-check` (both `cmd/doccheck`) + `docs-assert`
+  (`scripts/check_documentation_claims.sh`). See `docs/DOCUMENTATION.md`.
+- `make check` — the full local gate: `front-check` (frozen bun install, type-check,
+  ESLint, build) + `fmt-check` + `lint` + `test` + `docs-check` + `git diff --check`.
+- `make release-check` — `check` + version/changelog/scripts consistency + binary build.
+  This is exactly what CI (`.github/workflows/ci.yml`) runs on every push and PR.
 - **DB integration tests** (`pkg/integration`) are gated on `GOELAND_TEST_DATABASE_URL`
   and skip when unset. Run them against a disposable PostGIS database (needs PostGIS/
   pgcrypto/pg_trgm/unaccent):
@@ -335,7 +352,7 @@ Rules:
   authadapter. DB-touching behavior is covered by the env-gated integration tests in
   `pkg/integration` (see Commands) — extend those (or add a sibling package following
   the same pattern) when you touch SQL, migrations, or transaction invariants.
-- Run `make lint` for Go or protobuf changes.
+- Run `make lint` for Go or protobuf changes, and `make check` before handoff.
 - Do not hand-edit generated files to make tests pass.
 - Do not revert unrelated work in a dirty worktree.
 

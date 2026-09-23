@@ -8,6 +8,34 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **Documentation quality contract** (`docs/DOCUMENTATION.md`, slice 1 of 5): the normative
+  contract for human and agent contributors, ported from `go-pdf-forge` and referenced from
+  `AGENTS.md` and the README.
+- `cmd/doccheck`: parameterized port of the go-pdf-forge checker (`--version-file`,
+  `--version-name`, `--banner-prefix`) with accepted/rejected-case tests; it refuses a
+  `Version` declared as a variable.
+- `scripts/check_documentation_claims.sh`: executable claims tying stable defaults and security
+  facts (upload limit, blob dir, jwt default, scopes, server-side operator identity, migration
+  lock key) to their sources; reports every failing claim.
+- Make gates `godoc-check`, `atlas-check`, `docs-assert`, `docs-check`, `fmt-check`,
+  `front-check`, `check`, `version-check`, `changelog-check`, `scripts-check`, `binary` and
+  `release-check`; new `.github/workflows/ci.yml` runs `make release-check` on every push/PR.
+
+### Changed
+
+- `pkg/version`: identity values and `Version` are now constants; only `Revision` and
+  `BuildStamp` stay variables injected with `-ldflags -X`.
+- README announces `Current version: **v0.4.0**` (checked by `make version-check`).
+
+### Fixed
+
+- Frontend `bun.lock` regenerated: it predated the `overrides` block of `package.json`, so
+  `bun install --frozen-lockfile` failed with current bun (no package version changed).
+- Pre-existing ESLint (`unicorn/numeric-separators-style`) and `gofmt` (`pkg/actor/model.go`)
+  violations, surfaced by the new gates.
+
 ## [0.4.0] - 2026-07-10
 
 ### Added

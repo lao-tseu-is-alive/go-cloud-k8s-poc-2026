@@ -29,8 +29,10 @@ BUILD := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 # Exclude vendored code and any Go packages that live inside the frontend's
 # node_modules tree (e.g. flatted/golang) so `bun install` cannot pollute
 # Go package discovery for test/vet/coverage.
-PACKAGES := $(shell go list ./... | grep -vE '/vendor/|/node_modules/')
-COVER_PACKAGES := $(shell go list ./... | grep -vE '/vendor/|/node_modules/' | paste -sd,)
+# Recursive (=) on purpose: expanded when a recipe runs, i.e. after front-check
+# or front-build produced dist/, so a clean checkout still lists cmd/goeland-server.
+PACKAGES = $(shell go list ./... | grep -vE '/vendor/|/node_modules/')
+COVER_PACKAGES = $(shell go list ./... | grep -vE '/vendor/|/node_modules/' | paste -sd,)
 LDFLAGS := -ldflags "-X ${APP_REPOSITORY}/pkg/version.Revision=${APP_REVISION} -X ${APP_REPOSITORY}/pkg/version.BuildStamp=${BUILD}"
 
 MAKEFLAGS += --silent
@@ -58,7 +60,11 @@ generate:
 
 .PHONY: build
 ## build:	build the frontend, run tests, then compile the server binary into bin/
-build: clean mod-download front-build test
+build: clean mod-download front-build test binary
+
+.PHONY: binary
+## binary:	compile bin/goeland-server only (expects dist/ to exist)
+binary:
 	@echo "  >  Building your app binary inside bin directory..."
 	CGO_ENABLED=0 go build ${LDFLAGS} -a -o bin/$(APP_EXECUTABLE) ./cmd/$(APP_EXECUTABLE)
 
@@ -78,6 +84,72 @@ lint:
 ## fmt:	format all Go source files
 fmt:
 	gofmt -w .
+
+.PHONY: fmt-check
+## fmt-check:	fail if any Go file needs gofmt or any proto needs buf format
+fmt-check:
+	@unformatted="$$(gofmt -l $$(git ls-files --cached --others --exclude-standard '*.go'))"; \
+		test -z "$$unformatted" || { echo "fmt-check: run gofmt -w on:"; echo "$$unformatted"; exit 1; }
+	buf format -d --exit-code
+
+.PHONY: front-check
+## front-check:	frozen bun install + vue-tsc type-check + eslint + vite build (dist/)
+front-check:
+	@echo "  >  Checking embedded frontend in $(FRONTEND_DIR) ..."
+	cd $(FRONTEND_DIR) && bun install --frozen-lockfile && bun run type-check && bun run lint && bun run build-only
+
+# --- Documentation contract (docs/DOCUMENTATION.md) ---------------------------
+
+.PHONY: godoc-check
+## godoc-check:	require package + exported API GoDoc comments (cmd/doccheck)
+godoc-check:
+	go run ./cmd/doccheck --scope go
+
+.PHONY: atlas-check
+## atlas-check:	require docs/atlas.md to list every non-ignored file exactly once
+atlas-check:
+	go run ./cmd/doccheck --scope atlas
+
+.PHONY: docs-assert
+## docs-assert:	verify load-bearing prose claims against their sources
+docs-assert:
+	bash scripts/check_documentation_claims.sh
+
+.PHONY: docs-check
+## docs-check:	godoc-check + atlas-check + docs-assert
+docs-check: godoc-check atlas-check docs-assert
+
+# --- Quality and release gates ---------------------------------------------------
+
+.PHONY: check
+## check:	full local quality gate (frontend, format, lint, tests, documentation)
+check: front-check fmt-check lint test docs-check
+	git diff --check
+
+.PHONY: version-check
+## version-check:	README must announce the version declared in pkg/version/version.go
+version-check:
+	@test -n "$(APP_VERSION)" || { echo "version-check: cannot read $(VER_SOURCE_CODE)"; exit 1; }
+	@grep -qF 'Current version: **v$(APP_VERSION)**' README.md || { echo "version-check: README does not announce v$(APP_VERSION)"; exit 1; }
+	@echo "version-check: v$(APP_VERSION)"
+
+.PHONY: changelog-check
+## changelog-check:	CHANGELOG.md must hold one dated section for the current version
+changelog-check:
+	@duplicates="$$(sed -n 's/^## \[\([0-9][0-9.]*\)\].*/\1/p' CHANGELOG.md | sort | uniq -d)"; \
+		test -z "$$duplicates" || { echo "changelog-check: duplicate versions: $$duplicates"; exit 1; }
+	@grep -qE '^## \[$(APP_VERSION)\] - [0-9]{4}-[0-9]{2}-[0-9]{2}$$' CHANGELOG.md || { echo "changelog-check: no dated v$(APP_VERSION) section"; exit 1; }
+	@echo "changelog-check: v$(APP_VERSION) documented"
+
+.PHONY: scripts-check
+## scripts-check:	bash syntax check of every helper script
+scripts-check:
+	bash -n scripts/*.sh
+
+.PHONY: release-check
+## release-check:	check + version/changelog/scripts consistency + binary build (CI runs this)
+release-check: check version-check changelog-check scripts-check binary
+	@echo "release-check: v$(APP_VERSION) OK"
 
 .PHONY: clean
 ## clean:	remove binaries and coverage files

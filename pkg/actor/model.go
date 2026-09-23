@@ -115,8 +115,8 @@ type CreateInput struct {
 	DisplayName     string
 	PublicationCode int32
 	// ORGANIZATION specialization.
-	LegalName    string
-	CategoryCode string
+	LegalName     string
+	CategoryCode  string
 	OrgComplement string
 	// PERSON specialization (no PII).
 	IsCHRegister  bool
@@ -150,13 +150,13 @@ type UpdateInput struct {
 
 // SearchFilter controls actor search.
 type SearchFilter struct {
-	Query              string
-	ActorKind          Kind // KindUnspecified = any
+	Query               string
+	ActorKind           Kind // KindUnspecified = any
 	OrganizationCatCode string
-	OnlyActive         bool
-	IncludeDeleted     bool
-	Limit              int
-	Offset             int
+	OnlyActive          bool
+	IncludeDeleted      bool
+	Limit               int
+	Offset              int
 }
 
 // SearchResult holds a page of actors and the total count before pagination.

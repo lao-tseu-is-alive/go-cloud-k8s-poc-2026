@@ -1,7 +1,12 @@
 // Package version provides the version metadata for go-cloud-k8s-poc-2026 (Goéland POC).
+//
+// Identity and release values are constants: Version is the single source of
+// truth read by the Makefile, the release scripts and cmd/doccheck, so it must
+// not be overridable at link time. Only the build provenance variables below
+// are injected with -ldflags -X.
 package version
 
-var (
+const (
 	// AppName is the CamelCase name of the application.
 	AppName = "goelandPoc"
 
@@ -23,11 +28,14 @@ var (
 	// Repository is the full Go module path.
 	Repository = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026"
 
-	// Version is the semantic version starting point.
+	// Version is the semantic version of the source tree, without the "v"
+	// prefix. A release tag must equal "v" + Version.
 	Version = "0.4.0"
+)
 
-	// Revision is auto-filled by the build (do not edit manually).
+var (
+	// Revision is the git revision injected by the build (do not edit manually).
 	Revision = "unknown"
-	// BuildStamp is auto-filled by the build (do not edit manually).
+	// BuildStamp is the UTC build time injected by the build (do not edit manually).
 	BuildStamp = "unknown"
 )

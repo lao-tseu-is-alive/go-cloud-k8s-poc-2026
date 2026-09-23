@@ -5,6 +5,9 @@
 [![Maintainability Rating](https://sonarcloud.io/api/project_badges/measure?project=lao-tseu-is-alive_go-cloud-k8s-poc-2026&metric=sqale_rating)](https://sonarcloud.io/summary/new_code?id=lao-tseu-is-alive_go-cloud-k8s-poc-2026)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=lao-tseu-is-alive_go-cloud-k8s-poc-2026&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=lao-tseu-is-alive_go-cloud-k8s-poc-2026)
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
+[![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
+
+Current version: **v0.4.0** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -19,6 +22,11 @@ relationships, audit), the **Document** component (a modern GED entity) and the
 **Actor** component (external persons & organizations), keeping the proto-first Go /
 gRPC / ConnectRPC / PostgreSQL approach and the structural conventions of
 `go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
+
+The [documentation quality contract](docs/DOCUMENTATION.md) applies to human and agent
+contributors alike: GoDoc and Protobuf contract comments, a file-by-file repository atlas
+and executable claims, all enforced by `make docs-check` inside `make check`, CI and the
+release gate.
 
 ## Architecture at a glance
 
@@ -107,8 +115,9 @@ pkg/integration/         env-gated PostgreSQL integration tests (migrations + do
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /download endpoints
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
-.github/workflows/       CI: Trivy CVE scan, image build/scan/publish, binary release
-docs/                    PRODUCTION_READINESS.md (deployment contract)
+cmd/doccheck/            documentation checker (GoDoc coverage + exact atlas inventory)
+.github/workflows/       CI gate, Trivy CVE scan, image build/scan/publish, binary release
+docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract)
 ```
 
 ## Prerequisites
@@ -279,6 +288,9 @@ make build        build the frontend + test + compile bin/goeland-server
 make test         go test -race with coverage
 make lint         go vet + buf lint
 make fmt          gofmt -w .
+make docs-check   GoDoc coverage + atlas inventory + executable doc claims
+make check        front-check + fmt-check + lint + test + docs-check (run before handoff)
+make release-check  check + version/changelog/scripts consistency + binary (what CI runs)
 make db-up        apply migrations (dbmate)
 ```
 
@@ -294,7 +306,8 @@ GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmo
     go test ./pkg/integration/...
 ```
 
-CI lives in [`.github/workflows`](.github/workflows): `cve-trivy-scan` (image CVE scan on
+CI lives in [`.github/workflows`](.github/workflows): `ci` (runs `make release-check` on
+every push/PR to `main`, the same gate as locally), `cve-trivy-scan` (image CVE scan on
 push/PR to `main` **and a weekly schedule**), `docker-publish` (unit tests + build/scan/publish
 the image on version tags), and `release` (cross-compiled binaries on version tags). Both Trivy
 jobs upload SARIF to the Security tab **and fail on fixable HIGH/CRITICAL findings** — in
@@ -320,6 +333,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `01_build_image_locally.sh`      | Build the container image, tagged from `version.go` (optional trivy scan)                             |
 | `02_tag_new_release_github.sh`   | Tag + push `v<version>` (refuses a dirty tree)                                                        |
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
+| `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
 
 ## Design rules honoured
 

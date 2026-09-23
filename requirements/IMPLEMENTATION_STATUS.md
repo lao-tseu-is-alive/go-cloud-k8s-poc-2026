@@ -94,6 +94,13 @@ These are deliberate betterments beyond the spec — keep them:
   governance / audit while still supporting real file upload; swap the local blob store
   for MinIO later without touching the contract.
 
+- 🚀 **Enforced documentation contract** (2026-09-23, beyond the spec): the
+  [`docs/DOCUMENTATION.md`](../docs/DOCUMENTATION.md) contract ported from `go-pdf-forge`
+  — GoDoc + Protobuf `COMMENTS` coverage, an exact file-by-file atlas, executable claims
+  and one gate (`make release-check`) shared by local runs and CI. Rationale: agents work
+  without memory, and the hand-synced layers (proto ↔ SQL ↔ model ↔ `types.ts`) are the
+  known drift risk. Adoption runs in five slices (status table in the contract).
+
 ### 3b. Neutral architectural choices (vs the spec's suggestions)
 
 Not betterments, just a different-but-equivalent option chosen for consistency:

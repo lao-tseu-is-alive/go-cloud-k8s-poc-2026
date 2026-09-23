@@ -51,7 +51,7 @@ export const useAuthStore = defineStore('auth', () => {
     // short-lived tokens we cap the delay to at least 5s before expiry, and keep
     // a 1s floor so a zero/degenerate lifetime cannot schedule a tight loop.
     const lifetimeMs = Math.max(expiresInSeconds, 0) * 1000
-    const delayMs = Math.max(Math.min(lifetimeMs * 0.8, lifetimeMs - 5_000), 1_000)
+    const delayMs = Math.max(Math.min(lifetimeMs * 0.8, lifetimeMs - 5000), 1000)
     remintTimer = setTimeout(() => {
       void mintToken()
     }, delayMs)
