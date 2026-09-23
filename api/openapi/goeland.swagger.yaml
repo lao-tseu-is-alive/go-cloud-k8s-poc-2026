@@ -4,8 +4,24 @@ info:
   version: version not set
 tags:
   - name: CoreService
+    description: |-
+      CoreService exposes the transversal primitives reused by every domain component.
+      Every RPC carries a google.api.http annotation so the Vanguard transcoder also
+      exposes it as REST/JSON (mapped from spec §13.6 relationships + subject/audit paths).
+      The Connect/gRPC path /goeland.v1.CoreService/<Method> remains available too.
   - name: ActorService
+    description: |-
+      ActorService is the external-party (person / organization) component of the POC.
+      Every RPC carries a google.api.http annotation so Vanguard also exposes it as
+      REST/JSON; the Connect/gRPC path /goeland.v1.ActorService/<Method> stays available.
   - name: DocumentService
+    description: |-
+      DocumentService is the modern-GED document component of the Goéland POC.
+
+      Every RPC carries a google.api.http annotation so the Vanguard transcoder also
+      exposes it as REST/JSON (and the generated OpenAPI documents that surface).
+      REST paths follow the spec (§13.3) with sensible additions for the extra RPCs.
+      The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
 consumes:
   - application/json
 produces:
@@ -13,7 +29,10 @@ produces:
 paths:
   /api/actors:
     post:
-      summary: Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+      summary: |-
+        Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+        Requires goeland:write; everything, including the ACTOR_CREATED audit event,
+        is written in one transaction.
       operationId: CreateActor
       responses:
         "200":
@@ -37,7 +56,9 @@ paths:
         - ActorService
   /api/actors/search:
     get:
-      summary: Accent-insensitive name search + kind / category / status filters.
+      summary: |-
+        Accent-insensitive name search + kind / category / status filters.
+        Requires goeland:read.
       operationId: SearchActors
       responses:
         "200":
@@ -50,16 +71,20 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: query
-          description: matched against name_for_search
+          description: |-
+            query is plain text matched accent-insensitively against the display and
+            legal names (at most 200 characters); empty matches every actor.
           in: query
           required: false
           type: string
         - name: actorKind
           description: |-
-            UNSPECIFIED = any
+            actor_kind restricts results to one kind; UNSPECIFIED means any.
 
-             - ACTOR_KIND_PERSON: personne physique (IsPhysique = true)
-             - ACTOR_KIND_ORGANIZATION: personne morale (IsPhysique = false)
+             - ACTOR_KIND_UNSPECIFIED: ACTOR_KIND_UNSPECIFIED is the zero value; rejected on create and means
+            "any kind" in searches.
+             - ACTOR_KIND_PERSON: ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
+             - ACTOR_KIND_ORGANIZATION: ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
           in: query
           required: false
           type: string
@@ -69,23 +94,30 @@ paths:
             - ACTOR_KIND_ORGANIZATION
           default: ACTOR_KIND_UNSPECIFIED
         - name: organizationCategoryCode
+          description: |-
+            organization_category_code restricts results to one category; empty means
+            any, and an unknown code matches nothing.
           in: query
           required: false
           type: string
         - name: onlyActive
+          description: only_active restricts results to business-active actors.
           in: query
           required: false
           type: boolean
         - name: includeDeleted
+          description: include_deleted also returns soft-deleted actors.
           in: query
           required: false
           type: boolean
         - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
           in: query
           required: false
           type: integer
           format: int32
         - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
           in: query
           required: false
           type: string
@@ -93,7 +125,9 @@ paths:
         - ActorService
   /api/actors/{id}:
     get:
-      summary: Retrieve an actor with optional relationship + audit context.
+      summary: |-
+        Retrieve an actor with optional relationship + audit context.
+        Requires goeland:read; NOT_FOUND when the actor does not exist.
       operationId: GetActor
       responses:
         "200":
@@ -106,23 +140,28 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
-          description: subject_ref id
+          description: id is the actor (subject_ref) UUID.
           in: path
           required: true
           type: string
         - name: includeRelationships
-          description: to cases, documents, things
+          description: |-
+            include_relationships also returns the INCOMING relationships (actors are
+            the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
           in: query
           required: false
           type: boolean
         - name: includeAudit
+          description: include_audit also returns the 20 most recent audit events.
           in: query
           required: false
           type: boolean
       tags:
         - ActorService
     delete:
-      summary: Soft-delete an actor (non-destructive) and write an audit event.
+      summary: |-
+        Soft-delete an actor (non-destructive) and write an audit event.
+        Requires goeland:write.
       operationId: DeleteActor
       responses:
         "200":
@@ -135,17 +174,21 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the actor UUID; an already deleted actor is rejected, a locked one is not.
           in: path
           required: true
           type: string
         - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
           in: query
           required: false
           type: string
       tags:
         - ActorService
     patch:
-      summary: Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+      summary: |-
+        Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+        Requires goeland:write; FAILED_PRECONDITION when the actor is locked or deleted.
       operationId: UpdateActor
       responses:
         "200":
@@ -158,6 +201,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the actor UUID; a locked or deleted actor is rejected.
           in: path
           required: true
           type: string
@@ -170,7 +214,9 @@ paths:
         - ActorService
   /api/document-types:
     get:
-      summary: List the controlled document types (classification catalogue).
+      summary: |-
+        List the controlled document types (classification catalogue).
+        Requires goeland:read.
       operationId: ListDocumentTypes
       responses:
         "200":
@@ -183,6 +229,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: onlyActive
+          description: only_active returns only types offered for new documents.
           in: query
           required: false
           type: boolean
@@ -190,7 +237,10 @@ paths:
         - DocumentService
   /api/documents:
     post:
-      summary: Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+      summary: |-
+        Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+        Requires goeland:write; subject, governance, document, optional links and the
+        DOCUMENT_CREATED audit event are written in one transaction.
       operationId: CreateDocument
       responses:
         "200":
@@ -212,7 +262,9 @@ paths:
         - DocumentService
   /api/documents/search:
     get:
-      summary: Full-text + filtered search (leverages the generated tsvector + GIN index).
+      summary: |-
+        Full-text + filtered search (leverages the generated tsvector + GIN index).
+        Requires goeland:read.
       operationId: SearchDocuments
       responses:
         "200":
@@ -225,46 +277,58 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: query
-          description: plain text
+          description: |-
+            query is plain text matched accent-insensitively against title and
+            description (at most 500 characters); empty matches every document.
           in: query
           required: false
           type: string
         - name: documentTypeCode
+          description: document_type_code restricts results to one type; empty means any.
           in: query
           required: false
           type: string
         - name: caseId
-          description: filter via relationship
+          description: case_id restricts results to documents linked from that case by CASE_HAS_DOCUMENT.
           in: query
           required: false
           type: string
         - name: thingId
+          description: thing_id restricts results to documents with an outgoing link to that thing.
           in: query
           required: false
           type: string
         - name: confidentialityMax
+          description: |-
+            confidentiality_max is the inclusive upper bound on the confidentiality
+            level; 0 means no cap.
           in: query
           required: false
           type: integer
           format: int32
         - name: onlyRecords
+          description: only_records restricts results to declared records.
           in: query
           required: false
           type: boolean
         - name: onlyFinal
+          description: only_final restricts results to finalized documents.
           in: query
           required: false
           type: boolean
         - name: includeDeleted
+          description: include_deleted also returns soft-deleted documents.
           in: query
           required: false
           type: boolean
         - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
           in: query
           required: false
           type: integer
           format: int32
         - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
           in: query
           required: false
           type: string
@@ -272,7 +336,9 @@ paths:
         - DocumentService
   /api/documents/{documentId}/links:
     post:
-      summary: Convenience wrapper around Core.LinkSubjects for document-centric use.
+      summary: |-
+        Convenience wrapper around Core.LinkSubjects for document-centric use.
+        Requires goeland:write; same errors as CoreService.LinkSubjects.
       operationId: LinkDocument
       responses:
         "200":
@@ -285,6 +351,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: documentId
+          description: document_id is the document, used as the source of the edge.
           in: path
           required: true
           type: string
@@ -297,7 +364,9 @@ paths:
         - DocumentService
   /api/documents/{id}:
     get:
-      summary: Retrieve a document with context (relationships to cases/things, recent history).
+      summary: |-
+        Retrieve a document with context (outgoing relationships, recent history).
+        Requires goeland:read; NOT_FOUND when the document does not exist.
       operationId: GetDocument
       responses:
         "200":
@@ -310,23 +379,29 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
-          description: subject_ref id
+          description: id is the document (subject_ref) UUID.
           in: path
           required: true
           type: string
         - name: includeRelationships
-          description: to cases, things, previous versions
+          description: |-
+            include_relationships also returns the document's OUTGOING relationships
+            (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
+            the document: list them with CoreService.ListRelationships(outgoing=false).
           in: query
           required: false
           type: boolean
         - name: includeAudit
+          description: include_audit also returns the 20 most recent audit events.
           in: query
           required: false
           type: boolean
       tags:
         - DocumentService
     delete:
-      summary: Soft-delete a document (non-destructive) and write an audit event.
+      summary: |-
+        Soft-delete a document (non-destructive) and write an audit event.
+        Requires goeland:write.
       operationId: DeleteDocument
       responses:
         "200":
@@ -339,17 +414,23 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: |-
+            id is the document UUID; an already deleted document is rejected, a
+            locked one is not.
           in: path
           required: true
           type: string
         - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
           in: query
           required: false
           type: string
       tags:
         - DocumentService
     patch:
-      summary: Update mutable metadata only (respects locking).
+      summary: |-
+        Update mutable metadata only (respects locking).
+        Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
       operationId: UpdateDocumentMetadata
       responses:
         "200":
@@ -362,6 +443,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the document UUID.
           in: path
           required: true
           type: string
@@ -374,7 +456,9 @@ paths:
         - DocumentService
   /api/documents/{id}/finalize:
     post:
-      summary: Business finalization + optional governance lock. Critical for probative documents.
+      summary: |-
+        Business finalization + optional governance lock. Critical for probative documents.
+        Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
       operationId: FinalizeDocument
       responses:
         "200":
@@ -387,6 +471,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the document UUID; a locked or deleted document is rejected.
           in: path
           required: true
           type: string
@@ -415,11 +500,12 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the document UUID.
           in: path
           required: true
           type: string
         - name: expectedSha256
-          description: optional; must match stored when provided
+          description: expected_sha256 is the caller's hex digest; empty never verifies.
           in: query
           required: false
           type: string
@@ -427,7 +513,9 @@ paths:
         - DocumentService
   /api/organization-categories:
     get:
-      summary: List the controlled organization categories (classification catalogue).
+      summary: |-
+        List the controlled organization categories (classification catalogue).
+        Requires goeland:read.
       operationId: ListOrganizationCategories
       responses:
         "200":
@@ -440,6 +528,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: onlyActive
+          description: only_active returns only categories offered for new organizations.
           in: query
           required: false
           type: boolean
@@ -447,7 +536,9 @@ paths:
         - ActorService
   /api/relationship-types:
     get:
-      summary: List the catalogue of allowed relationship types (optionally filtered).
+      summary: |-
+        List the catalogue of allowed relationship types (optionally filtered).
+        Requires goeland:read.
       operationId: ListRelationshipTypes
       responses:
         "200":
@@ -460,19 +551,23 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: onlyActive
+          description: only_active returns only types that accept new links.
           in: query
           required: false
           type: boolean
         - name: sourceKind
           description: |-
-            optional filter (UNSPECIFIED = any)
+            source_kind restricts the list to one source kind; UNSPECIFIED means any.
 
-             - SUBJECT_KIND_CASE: Affaire / dossier métier
-             - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
-             - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
-             - SUBJECT_KIND_ACTOR: Personne ou organisation externe
-             - SUBJECT_KIND_USER: Utilisateur interne (future)
-             - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+             - SUBJECT_KIND_UNSPECIFIED: SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+            and means "any kind" in filters.
+             - SUBJECT_KIND_CASE: SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+             - SUBJECT_KIND_DOCUMENT: SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+             - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+             - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+            never an authenticated operator.
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
           in: query
           required: false
           type: string
@@ -487,14 +582,17 @@ paths:
           default: SUBJECT_KIND_UNSPECIFIED
         - name: targetKind
           description: |-
-            optional filter (UNSPECIFIED = any)
+            target_kind restricts the list to one target kind; UNSPECIFIED means any.
 
-             - SUBJECT_KIND_CASE: Affaire / dossier métier
-             - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
-             - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
-             - SUBJECT_KIND_ACTOR: Personne ou organisation externe
-             - SUBJECT_KIND_USER: Utilisateur interne (future)
-             - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+             - SUBJECT_KIND_UNSPECIFIED: SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+            and means "any kind" in filters.
+             - SUBJECT_KIND_CASE: SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+             - SUBJECT_KIND_DOCUMENT: SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+             - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+             - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+            never an authenticated operator.
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
           in: query
           required: false
           type: string
@@ -511,7 +609,11 @@ paths:
         - CoreService
   /api/relationships:
     post:
-      summary: Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
+      summary: |-
+        Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
+        Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+        NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
+        soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
       operationId: LinkSubjects
       responses:
         "200":
@@ -524,6 +626,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: body
+          description: LinkSubjectsRequest creates a typed edge between two existing subjects.
           in: body
           required: true
           schema:
@@ -532,7 +635,9 @@ paths:
         - CoreService
   /api/relationships/{relationshipId}:
     delete:
-      summary: Soft-delete an existing relationship (non-destructive) and write an audit event.
+      summary: |-
+        Soft-delete an existing relationship (non-destructive) and write an audit event.
+        Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
       operationId: UnlinkSubjects
       responses:
         "200":
@@ -545,10 +650,12 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: relationshipId
+          description: relationship_id is the active edge to unlink; NOT_FOUND when unknown or already unlinked.
           in: path
           required: true
           type: string
         - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
           in: query
           required: false
           type: string
@@ -559,6 +666,7 @@ paths:
       summary: |-
         Create a canonical subject identity + its record_metadata in one transaction.
         Every other create (Document, Case, Thing, Actor) calls this first.
+        Requires goeland:write; writes a SUBJECT_CREATED audit event.
       operationId: CreateSubjectRef
       responses:
         "200":
@@ -571,6 +679,7 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: body
+          description: CreateSubjectRefRequest creates a bare subject identity with its governance record.
           in: body
           required: true
           schema:
@@ -579,7 +688,9 @@ paths:
         - CoreService
   /api/subjects/{id}:
     get:
-      summary: Retrieve a subject with optional governance + audit info.
+      summary: |-
+        Retrieve a subject with optional governance + audit info.
+        Requires goeland:read; NOT_FOUND when the subject does not exist.
       operationId: GetSubjectRef
       responses:
         "200":
@@ -592,15 +703,17 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: id
+          description: id is the subject UUID.
           in: path
           required: true
           type: string
         - name: includeMetadata
+          description: include_metadata also returns the governance record.
           in: query
           required: false
           type: boolean
         - name: includeAuditSummary
-          description: recent audit events
+          description: include_audit_summary also returns the most recent audit events (newest first).
           in: query
           required: false
           type: boolean
@@ -608,7 +721,9 @@ paths:
         - CoreService
   /api/subjects/{subjectId}/audit:
     get:
-      summary: Full probative history for compliance / reconstruction.
+      summary: |-
+        Full probative history for compliance / reconstruction.
+        Requires goeland:read.
       operationId: ListAuditEvents
       responses:
         "200":
@@ -621,29 +736,35 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: subjectId
+          description: subject_id is the subject whose history is listed.
           in: path
           required: true
           type: string
         - name: eventType
+          description: event_type restricts the list to one event code; empty means any.
           in: query
           required: false
           type: string
         - name: from
+          description: from is the inclusive lower bound on occurred_at; absent means unbounded.
           in: query
           required: false
           type: string
           format: date-time
         - name: to
+          description: to is the inclusive upper bound on occurred_at; absent means unbounded.
           in: query
           required: false
           type: string
           format: date-time
         - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
           in: query
           required: false
           type: integer
           format: int32
         - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
           in: query
           required: false
           type: string
@@ -654,6 +775,7 @@ paths:
       summary: |-
         List relationships for a subject (graph traversal primitive). Use the `outgoing`
         query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
+        Requires goeland:read.
       operationId: ListRelationships
       responses:
         "200":
@@ -666,25 +788,28 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: subjectId
+          description: subject_id is the subject whose edges are listed.
           in: path
           required: true
           type: string
         - name: outgoing
-          description: true = edges from this subject, false = edges into it
+          description: outgoing selects edges from this subject when true, and edges into it when false.
           in: query
           required: false
           type: boolean
         - name: relationshipTypeCode
-          description: optional filter
+          description: relationship_type_code restricts the list to one type; empty means any.
           in: query
           required: false
           type: string
         - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
           in: query
           required: false
           type: integer
           format: int32
         - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
           in: query
           required: false
           type: string
@@ -696,26 +821,36 @@ definitions:
     properties:
       displayName:
         type: string
+        description: |-
+          display_name is the new name (1-200 characters). Validation currently
+          requires it on every update, so it is always applied.
       isActive:
         type: boolean
+        description: is_active activates or deactivates the actor when present.
       publicationCode:
         type: integer
         format: int32
+        description: publication_code replaces the publication code when present.
       person:
         $ref: '#/definitions/v1PersonDetails'
+        description: person replaces the PERSON fields.
       organization:
         $ref: '#/definitions/v1OrganizationDetails'
+        description: organization replaces the ORGANIZATION fields.
       replaceContacts:
         type: boolean
-        title: when true, `contacts` becomes the new full set
+        description: |-
+          replace_contacts, when true, makes contacts the new full set; when false,
+          contacts is ignored and the existing ones are kept.
       contacts:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1ActorContact'
+        description: contacts is the new contact set, used only with replace_contacts.
       reason:
         type: string
-        title: for audit
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
     description: |-
       UpdateActorRequest updates mutable fields. Blocked if the record is locked.
       contacts, when provided, replace the full set (managed as a whole for simplicity).
@@ -724,20 +859,25 @@ definitions:
     properties:
       reason:
         type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
       alsoLockGovernance:
         type: boolean
-        title: also set record_metadata.is_locked
+        description: also_lock_governance also sets record_metadata.is_locked, making the document immutable.
     description: FinalizeDocumentRequest marks a document final and optionally locks its governance record (immutable).
   DocumentServiceLinkDocumentBody:
     type: object
     properties:
       targetSubjectId:
         type: string
+        description: target_subject_id is the subject the edge points to.
       relationshipTypeCode:
         type: string
-        title: e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
+        description: |-
+          relationship_type_code selects a type whose source kind is DOCUMENT, e.g.
+          DOCUMENT_AUTHORED_BY_ACTOR or DOCUMENT_SENT_TO_ACTOR.
       roleDetail:
         type: string
+        description: role_detail optionally qualifies the relation (at most 500 characters).
     description: |-
       LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
       with document-specific validation + audit context).
@@ -748,18 +888,25 @@ definitions:
     properties:
       title:
         type: string
+        description: title is the new required title (1-500 characters).
       description:
         type: string
+        description: description replaces the description (at most 4000 characters).
       officialDate:
         type: string
+        description: official_date replaces the legal date (YYYY-MM-DD); empty clears it.
       language:
         type: string
+        description: language replaces the content language.
       metadata:
         type: object
+        description: metadata replaces the whole extension map.
       reason:
         type: string
-        title: for audit
-    description: UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
+      Every field replaces the stored value (no partial merge).
   protobufAny:
     type: object
     properties:
@@ -796,45 +943,56 @@ definitions:
     properties:
       subjectRef:
         $ref: '#/definitions/v1SubjectRef'
-        title: embedded canonical identity (kind = ACTOR)
+        description: subject_ref is the embedded canonical identity (kind = ACTOR); its id is the actor id.
       actorKind:
         $ref: '#/definitions/v1ActorKind'
+        description: actor_kind is PERSON or ORGANIZATION, fixed at creation.
       displayName:
         type: string
-        title: production Acteur.Name
+        description: |-
+          display_name is the name (1-200 characters, production Acteur.Name),
+          mirrored into the subject label.
       nameForSearch:
         type: string
-        title: normalized, accent-insensitive
+        description: name_for_search is the lower-cased display_name, recomputed on rename.
         readOnly: true
       isActive:
         type: boolean
-        title: production Acteur.IsActive (soft-deactivation, distinct from soft-delete)
+        description: |-
+          is_active is the business activation flag (production Acteur.IsActive),
+          distinct from soft deletion.
       publicationCode:
         type: integer
         format: int32
-        title: production Acteur.CodePublication
+        description: publication_code is the opaque production Acteur.CodePublication.
       person:
         $ref: '#/definitions/v1PersonDetails'
+        description: person is set for ACTOR_KIND_PERSON.
       organization:
         $ref: '#/definitions/v1OrganizationDetails'
+        description: organization is set for ACTOR_KIND_ORGANIZATION.
       contacts:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1ActorContact'
+        description: contacts are the typed contacts, ordered by type then creation time.
       createdAt:
         type: string
         format: date-time
+        description: created_at is the server creation time.
         readOnly: true
       createdBy:
         type: string
+        description: created_by is the operator who created the actor.
       updatedAt:
         type: string
         format: date-time
+        description: updated_at is the last modification time, maintained by the database.
         readOnly: true
       recordMetadata:
         $ref: '#/definitions/v1RecordMetadata'
-        title: governance (confidentiality, locked, owner...)
+        description: record_metadata is the governance record (confidentiality, lock, owner...).
     description: Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
     required:
       - displayName
@@ -843,14 +1001,16 @@ definitions:
     properties:
       contactType:
         $ref: '#/definitions/v1ContactType'
+        description: contact_type is the required, defined contact type.
       value:
         type: string
+        description: value is the channel or identifier (1-400 characters, trimmed).
       isPrimary:
         type: boolean
-        title: preferred channel of its type
+        description: is_primary marks the preferred channel of its type; not enforced as unique.
       label:
         type: string
-        title: optional free note
+        description: label is an optional free note (at most 100 characters).
     description: |-
       ActorContact is one typed contact channel or business identifier attached to an
       actor (production ActeurComplement row: IdTypeComplement + Complement).
@@ -867,40 +1027,59 @@ definitions:
       ActorKind discriminates a physical person from a moral organization
       (production Acteur.IsPhysique).
 
-       - ACTOR_KIND_PERSON: personne physique (IsPhysique = true)
-       - ACTOR_KIND_ORGANIZATION: personne morale (IsPhysique = false)
+       - ACTOR_KIND_UNSPECIFIED: ACTOR_KIND_UNSPECIFIED is the zero value; rejected on create and means
+      "any kind" in searches.
+       - ACTOR_KIND_PERSON: ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
+       - ACTOR_KIND_ORGANIZATION: ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
   v1AuditEvent:
     type: object
     properties:
       id:
         type: string
+        description: id is the server-assigned event UUID.
       subjectId:
         type: string
+        description: subject_id is the subject the event is about.
       eventType:
         type: string
-        title: e.g. DOCUMENT_CREATED, RELATIONSHIP_LINKED, VALIDATION_PERFORMED
+        description: |-
+          event_type is an upper-case code (1-100 characters), e.g. DOCUMENT_CREATED,
+          RELATIONSHIP_LINKED or DOCUMENT_FINALIZED.
       actorUserId:
         type: string
+        description: |-
+          actor_user_id is the authenticated operator who caused the event (not a
+          domain ACTOR subject), derived server-side.
       occurredAt:
         type: string
         format: date-time
+        description: occurred_at is the server time of the event.
         readOnly: true
       beforeState:
         type: object
-        title: snapshot of critical fields before
+        description: |-
+          before_state is a snapshot of the changed critical fields before the
+          mutation; absent for creations.
       afterState:
         type: object
-        title: snapshot after
+        description: after_state is a snapshot of the changed critical fields after the mutation.
       reason:
         type: string
+        description: reason is the operator-supplied justification (at most 2000 characters).
       correlationId:
         type: string
-        title: groups multi-subject actions
+        description: |-
+          correlation_id groups the events of one multi-subject action; empty when
+          the event stands alone.
       requestId:
         type: string
+        description: request_id is the HTTP request identifier the event was written under.
       metadata:
         type: object
-    description: AuditEvent is an append-only probative audit record, written on every mutation.
+        description: metadata is secondary context for the event.
+    description: |-
+      AuditEvent is an append-only probative audit record, written on every mutation
+      in the same transaction as the change it records.
     required:
       - eventType
   v1ContactType:
@@ -927,39 +1106,53 @@ definitions:
       probative business identifiers; the latter stay first-class so they are
       queryable (an actor is often located by IDE / VAT / ABACUS debtor number).
 
-       - CONTACT_TYPE_PHONE: -- channels --
-       - CONTACT_TYPE_IDE_FEDERAL: -- business identifiers --
-
-      IDE / UID fédéral (CHE-###.###.###)
-       - CONTACT_TYPE_VAT_NUMBER: numéro de TVA
-       - CONTACT_TYPE_ABACUS_DEBTOR: n° débiteur ABACUS
-       - CONTACT_TYPE_COMMERCIAL_REGISTER: lien registre du commerce
+       - CONTACT_TYPE_UNSPECIFIED: CONTACT_TYPE_UNSPECIFIED is the zero value; rejected on input.
+       - CONTACT_TYPE_PHONE: CONTACT_TYPE_PHONE is a general phone number (channel).
+       - CONTACT_TYPE_PHONE_PRIVATE: CONTACT_TYPE_PHONE_PRIVATE is a private phone number (channel).
+       - CONTACT_TYPE_PHONE_PRO: CONTACT_TYPE_PHONE_PRO is a professional phone number (channel).
+       - CONTACT_TYPE_MOBILE: CONTACT_TYPE_MOBILE is a mobile phone number (channel).
+       - CONTACT_TYPE_FAX: CONTACT_TYPE_FAX is a fax number (channel).
+       - CONTACT_TYPE_EMAIL: CONTACT_TYPE_EMAIL is an e-mail address (channel).
+       - CONTACT_TYPE_WEBSITE: CONTACT_TYPE_WEBSITE is a website URL (channel).
+       - CONTACT_TYPE_POSTAL_BOX: CONTACT_TYPE_POSTAL_BOX is a postal box / case postale (channel).
+       - CONTACT_TYPE_IDE_FEDERAL: CONTACT_TYPE_IDE_FEDERAL is the federal IDE / UID business identifier (CHE-###.###.###).
+       - CONTACT_TYPE_VAT_NUMBER: CONTACT_TYPE_VAT_NUMBER is a VAT (TVA) number.
+       - CONTACT_TYPE_ABACUS_DEBTOR: CONTACT_TYPE_ABACUS_DEBTOR is the ABACUS accounting debtor number.
+       - CONTACT_TYPE_COMMERCIAL_REGISTER: CONTACT_TYPE_COMMERCIAL_REGISTER is a commercial register (registre du commerce) link.
+       - CONTACT_TYPE_OTHER: CONTACT_TYPE_OTHER is any other channel; label should describe it.
   v1CreateActorRequest:
     type: object
     properties:
       actorKind:
         $ref: '#/definitions/v1ActorKind'
+        description: actor_kind is the required kind; UNSPECIFIED is rejected.
       displayName:
         type: string
+        description: display_name is the required name (1-200 characters, trimmed).
       publicationCode:
         type: integer
         format: int32
+        description: publication_code is the opaque legacy publication code.
       person:
         $ref: '#/definitions/v1PersonDetails'
+        description: person carries the PERSON fields.
       organization:
         $ref: '#/definitions/v1OrganizationDetails'
+        description: organization carries the ORGANIZATION fields.
       contacts:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1ActorContact'
+        description: contacts are the initial typed contacts.
       initialGovernance:
         $ref: '#/definitions/v1RecordMetadata'
         description: |-
+          initial_governance optionally sets the owner, confidentiality and records
+          fields; the owner defaults to the operator.
+
           NOTE: the acting operator is derived server-side from the authenticated
           principal (never trusted from the client).
-
-          confidentiality, owner_org etc.
     description: |-
       CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
       via Core internally. The kind-specific block must match actor_kind.
@@ -970,62 +1163,89 @@ definitions:
     properties:
       actor:
         $ref: '#/definitions/v1Actor'
+        description: actor is the created actor with its contacts and governance.
       createdEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the ACTOR_CREATED audit event.
+    description: CreateActorResponse returns the created actor.
   v1CreateDocumentRequest:
     type: object
     properties:
       documentTypeCode:
         type: string
+        description: document_type_code is the required code of an existing document type.
       title:
         type: string
+        description: title is the required title (1-500 characters); surrounding whitespace is trimmed.
       description:
         type: string
+        description: description is optional free text (at most 4000 characters).
       officialDate:
         type: string
+        description: official_date is the optional legal date as YYYY-MM-DD.
       storageRef:
         type: string
+        description: |-
+          storage_ref is the URI of the bytes, typically the internal:// ref returned
+          by POST /api/documents/upload.
       externalSystem:
         type: string
+        description: external_system names the external system of record, if any.
       externalId:
         type: string
+        description: external_id identifies the document inside external_system.
       externalUrl:
         type: string
+        description: external_url links to the external document; it becomes the subject's canonical URL.
       mimeType:
         type: string
+        description: mime_type is the media type of the bytes.
       fileSizeBytes:
         type: string
         format: int64
+        description: file_size_bytes is the size of the bytes in bytes.
       sha256:
         type: string
+        description: |-
+          sha256 is the hex digest of the bytes; empty when unknown. Digests are
+          unique across documents; a duplicate currently surfaces as INTERNAL.
       version:
         type: integer
         format: int32
+        description: version is the document version; 0 means 1.
       previousVersionId:
         type: string
-        title: link to older version if applicable
+        description: previous_version_id, when set, links to the older version with DOCUMENT_PREVIOUS_VERSION.
       isFinal:
         type: boolean
+        description: is_final creates the document directly in DOCUMENT_STATUS_FINAL.
       isRecord:
         type: boolean
+        description: is_record declares the document a record.
       language:
         type: string
+        description: language is the ISO 639 content language.
       pageCount:
         type: integer
         format: int32
+        description: page_count is the number of pages.
       metadata:
         type: object
+        description: metadata holds secondary extension data.
       initialGovernance:
         $ref: '#/definitions/v1RecordMetadata'
         description: |-
+          initial_governance optionally sets the owner, confidentiality and records
+          fields; the owner defaults to the operator.
+
           NOTE: the acting operator is derived server-side from the authenticated
           principal (never trusted from the client). A document's AUTHOR is a separate,
           external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
-
-          confidentiality, owner_org etc.
       linkToCaseId:
         type: string
-        description: 'Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.'
+        description: |-
+          link_to_case_id is an optional convenience: auto-link the new document to
+          this case with CASE_HAS_DOCUMENT in the same transaction.
     description: CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
     required:
       - documentTypeCode
@@ -1035,23 +1255,37 @@ definitions:
     properties:
       document:
         $ref: '#/definitions/v1Document'
+        description: document is the created document with its governance.
       createdEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the DOCUMENT_CREATED audit event.
       initialRelationship:
         $ref: '#/definitions/v1SubjectRelationship'
-        title: set when link_to_case_id was provided
+        description: |-
+          initial_relationship is the CASE_HAS_DOCUMENT edge; set only when
+          link_to_case_id was provided.
+    description: CreateDocumentResponse returns the created document and its side effects.
   v1CreateSubjectRefRequest:
     type: object
     properties:
       kind:
         $ref: '#/definitions/v1SubjectKind'
+        description: kind is the required subject kind; UNSPECIFIED is rejected.
       displayLabel:
         type: string
+        description: display_label is the required human label (1-500 characters).
       canonicalUrl:
         type: string
+        description: canonical_url is an optional stable permalink (at most 2048 characters).
       initialMetadata:
         $ref: '#/definitions/v1RecordMetadata'
-        description: owner, confidentiality etc.
+        description: |-
+          initial_metadata optionally sets the owner, confidentiality, retention,
+          sort_final and metadata of the new governance record.
+
+          NOTE: the acting operator is derived server-side from the authenticated
+           principal (never trusted from the client) and recorded as audit_event.actor_user_id.
+    description: CreateSubjectRefRequest creates a bare subject identity with its governance record.
     required:
       - displayLabel
   v1CreateSubjectRefResponse:
@@ -1059,98 +1293,136 @@ definitions:
     properties:
       subjectRef:
         $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the created identity.
       metadata:
         $ref: '#/definitions/v1RecordMetadata'
+        description: metadata is the created governance record.
       createdEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the SUBJECT_CREATED audit event.
+    description: CreateSubjectRefResponse returns the created identity, governance and audit event.
   v1DeleteActorResponse:
     type: object
     properties:
       deletedActorId:
         type: string
+        description: deleted_actor_id is the soft-deleted actor.
       deleteEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: delete_event is the ACTOR_DELETED audit event.
+    description: DeleteActorResponse confirms a soft delete.
   v1DeleteDocumentResponse:
     type: object
     properties:
       deletedDocumentId:
         type: string
+        description: deleted_document_id is the soft-deleted document.
       deleteEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: delete_event is the DOCUMENT_DELETED audit event.
+    description: DeleteDocumentResponse confirms a soft delete.
   v1Document:
     type: object
     properties:
       subjectRef:
         $ref: '#/definitions/v1SubjectRef'
-        title: embedded canonical identity (kind = DOCUMENT)
+        description: subject_ref is the embedded canonical identity (kind = DOCUMENT); its id is the document id.
       documentType:
         $ref: '#/definitions/v1DocumentType'
+        description: document_type is the classification chosen at creation.
       title:
         type: string
+        description: title is the document title (1-500 characters), mirrored into the subject label.
       description:
         type: string
+        description: description is free text (at most 4000 characters).
       officialDate:
         type: string
-        title: ISO date of the document itself (legal probative date)
+        description: |-
+          official_date is the legal probative date of the document itself, as
+          YYYY-MM-DD; empty when unknown.
       storageRef:
         type: string
-        description: 'URI: minio://..., alfresco://..., internal://...'
+        description: |-
+          storage_ref is the URI of the bytes: internal://... (upload endpoint),
+          minio://... or alfresco://...; empty for metadata-only documents.
       externalSystem:
         type: string
-        title: '"alfresco", "minio", "sharepoint", "goeland-legacy"'
+        description: |-
+          external_system names the system of record: alfresco, minio, sharepoint
+          or goeland-legacy; empty when internal.
       externalId:
         type: string
-        title: authoritative id in external system (prevents duplication)
+        description: external_id is the authoritative id in external_system (prevents duplication).
       externalUrl:
         type: string
-        title: clickable link if available
+        description: external_url is a clickable link to the external document, if available.
       mimeType:
         type: string
+        description: mime_type is the media type of the bytes (at most 255 characters).
       fileSizeBytes:
         type: string
         format: int64
+        description: |-
+          file_size_bytes is the size of the bytes in bytes; 0 when unknown.
+          Serialized as a JSON string (int64).
       sha256:
         type: string
-        title: hex SHA-256 (integrity + dedup key)
+        description: |-
+          sha256 is the registered hex SHA-256 (integrity and deduplication key:
+          unique across documents); empty when unknown.
       sha256VerifiedAt:
         type: string
         format: date-time
+        description: |-
+          sha256_verified_at is reserved for probative re-verification of the stored
+          bytes; currently never set.
       version:
         type: integer
         format: int32
+        description: version is the document version, at least 1 once stored.
       previousVersionId:
         type: string
-        title: explicit chain (also mirrored in a relationship)
+        description: |-
+          previous_version_id is the document this one supersedes; also mirrored as
+          a DOCUMENT_PREVIOUS_VERSION relationship. Empty for a first version.
       isFinal:
         type: boolean
-        title: business final (signed, approved)
+        description: is_final reports a business-final document (signed, approved).
       isRecord:
         type: boolean
-        title: declared record for retention / records management
+        description: is_record declares a record for retention / records management.
       language:
         type: string
-        title: ISO 639, e.g. "fr", "de"
+        description: |-
+          language is the ISO 639 content language, e.g. "fr" or "de" (at most 10
+          characters); unrelated to the UI locale.
       pageCount:
         type: integer
         format: int32
+        description: page_count is the number of pages; 0 when unknown.
       status:
         $ref: '#/definitions/v1DocumentStatus'
+        description: status is the lifecycle state.
       metadata:
         type: object
-        description: classification, keywords, extracted entities...
+        description: 'metadata holds secondary data: classification, keywords, extracted entities...'
       createdAt:
         type: string
         format: date-time
+        description: created_at is the server creation time.
         readOnly: true
       createdBy:
         type: string
+        description: created_by is the operator who created the document.
       updatedAt:
         type: string
         format: date-time
+        description: updated_at is the last modification time, maintained by the database.
         readOnly: true
       recordMetadata:
         $ref: '#/definitions/v1RecordMetadata'
-        title: governance (confidentiality, locked, owner...)
+        description: record_metadata is the governance record (confidentiality, lock, owner...).
     description: |-
       Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
       Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
@@ -1168,25 +1440,39 @@ definitions:
     description: |-
       DocumentStatus is the lifecycle state of a document.
 
-       - DOCUMENT_STATUS_FINAL: is_final = true
+       - DOCUMENT_STATUS_UNSPECIFIED: DOCUMENT_STATUS_UNSPECIFIED is the zero value; never stored.
+       - DOCUMENT_STATUS_DRAFT: DOCUMENT_STATUS_DRAFT is the initial, editable state.
+       - DOCUMENT_STATUS_FINAL: DOCUMENT_STATUS_FINAL marks a finalized document (is_final = true).
+       - DOCUMENT_STATUS_SUPERSEDED: DOCUMENT_STATUS_SUPERSEDED marks a document replaced by a newer version.
+       - DOCUMENT_STATUS_ARCHIVED: DOCUMENT_STATUS_ARCHIVED marks a document handed over to archiving.
   v1DocumentType:
     type: object
     properties:
       id:
         type: string
+        description: id is the catalogue row UUID.
       code:
         type: string
-        title: e.g. PLAN, INCOMING_LETTER, DECISION
+        description: |-
+          code is the unique stable key (1-100 characters), e.g. PLAN,
+          INCOMING_LETTER or DECISION.
       label:
         type: string
+        description: label is the human label (at most 200 characters).
       description:
         type: string
+        description: description documents the business meaning (at most 2000 characters).
       category:
         type: string
-        description: ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...
+        description: |-
+          category groups types: ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...;
+          empty when uncategorized.
       isActive:
         type: boolean
-    description: DocumentType is a controlled classification (behavior + category).
+        description: is_active reports whether the type is offered for new documents.
+    description: |-
+      DocumentType is a controlled classification (behavior + category).
+      Types are seeded reference data; a document's type is fixed at creation.
     required:
       - code
   v1FinalizeDocumentResponse:
@@ -1194,71 +1480,97 @@ definitions:
     properties:
       document:
         $ref: '#/definitions/v1Document'
+        description: document is the finalized document.
       finalizeEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: finalize_event is the DOCUMENT_FINALIZED audit event.
+    description: FinalizeDocumentResponse returns the finalized document.
   v1GetActorResponse:
     type: object
     properties:
       actor:
         $ref: '#/definitions/v1Actor'
+        description: actor is the actor with its contacts and governance.
       relationships:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are the incoming edges; empty unless include_relationships was set.
       recentAudit:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+    description: GetActorResponse returns an actor and the requested context.
   v1GetDocumentResponse:
     type: object
     properties:
       document:
         $ref: '#/definitions/v1Document'
+        description: document is the document with its governance.
       relationships:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are the outgoing edges; empty unless include_relationships was set.
       recentAudit:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+    description: GetDocumentResponse returns a document and the requested context.
   v1GetSubjectRefResponse:
     type: object
     properties:
       subjectRef:
         $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the subject identity.
       metadata:
         $ref: '#/definitions/v1RecordMetadata'
+        description: metadata is the governance record; absent unless include_metadata was set.
       recentAudit:
         type: array
         items:
           type: object
           $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit holds the latest audit events; empty unless include_audit_summary was set.
+    description: GetSubjectRefResponse returns a subject and the requested optional parts.
   v1LinkDocumentResponse:
     type: object
     properties:
       relationship:
         $ref: '#/definitions/v1SubjectRelationship'
+        description: relationship is the created edge.
       auditEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_LINKED audit event.
+    description: LinkDocumentResponse returns the created edge.
   v1LinkSubjectsRequest:
     type: object
     properties:
       sourceSubjectId:
         type: string
+        description: source_subject_id is the subject the edge starts from.
       targetSubjectId:
         type: string
+        description: target_subject_id is the subject the edge points to.
       relationshipTypeCode:
         type: string
+        description: |-
+          relationship_type_code selects an active RelationshipType whose kinds must
+          match the two subjects (FAILED_PRECONDITION otherwise).
       roleDetail:
         type: string
+        description: role_detail optionally qualifies the relation (at most 500 characters).
       validFrom:
         type: string
         format: date-time
+        description: valid_from is the optional business start of validity.
+    description: LinkSubjectsRequest creates a typed edge between two existing subjects.
     required:
       - relationshipTypeCode
   v1LinkSubjectsResponse:
@@ -1266,8 +1578,11 @@ definitions:
     properties:
       relationship:
         $ref: '#/definitions/v1SubjectRelationship'
+        description: relationship is the created edge, hydrated with both subjects and the type.
       auditEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_LINKED audit event.
+    description: LinkSubjectsResponse returns the created edge and its audit event.
   v1ListAuditEventsResponse:
     type: object
     properties:
@@ -1276,11 +1591,15 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1AuditEvent'
+        description: events are the audit events of this page, newest first.
       nextPageToken:
         type: string
+        description: next_page_token fetches the next page; empty on the last page.
       totalSize:
         type: integer
         format: int32
+        description: total_size is the number of matching events across all pages.
+    description: ListAuditEventsResponse is one page of audit events.
   v1ListDocumentTypesResponse:
     type: object
     properties:
@@ -1289,6 +1608,8 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1DocumentType'
+        description: document_types are the matching types.
+    description: ListDocumentTypesResponse returns the matching catalogue entries.
   v1ListOrganizationCategoriesResponse:
     type: object
     properties:
@@ -1297,6 +1618,8 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1OrganizationCategory'
+        description: categories are the matching categories, ordered by label.
+    description: ListOrganizationCategoriesResponse returns the matching categories.
   v1ListRelationshipTypesResponse:
     type: object
     properties:
@@ -1305,6 +1628,8 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1RelationshipType'
+        description: relationship_types are the matching types.
+    description: ListRelationshipTypesResponse returns the matching catalogue entries.
   v1ListRelationshipsResponse:
     type: object
     properties:
@@ -1313,22 +1638,30 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are the edges of this page, hydrated with subjects and types.
       nextPageToken:
         type: string
+        description: next_page_token fetches the next page; empty on the last page.
       totalSize:
         type: integer
         format: int32
+        description: total_size is the number of matching edges across all pages.
+    description: ListRelationshipsResponse is one page of edges.
   v1OrganizationCategory:
     type: object
     properties:
       id:
         type: string
+        description: id is the catalogue row UUID.
       code:
         type: string
+        description: code is the unique stable key (1-100 characters) used by requests and filters.
       label:
         type: string
+        description: label is the human label (at most 200 characters).
       isActive:
         type: boolean
+        description: is_active reports whether the category is offered for new organizations.
     description: |-
       OrganizationCategory is the controlled classification of a moral person
       (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
@@ -1339,12 +1672,13 @@ definitions:
     properties:
       legalName:
         type: string
-        title: RaisonSociale
+        description: legal_name is the required legal name / RaisonSociale (1-200 characters).
       categoryCode:
         type: string
-        title: OrganizationCategory.code
+        description: category_code is an OrganizationCategory.code; empty leaves the organization uncategorized.
       complement:
         type: string
+        description: complement is an optional name complement (at most 1000 characters).
     description: OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
     required:
       - legalName
@@ -1353,10 +1687,12 @@ definitions:
     properties:
       isChRegister:
         type: boolean
-        title: production Acteur.IsFromCH (person linked to CH register)
+        description: |-
+          is_ch_register reports whether the person is linked to the CH population
+          register (production Acteur.IsFromCH).
       chRegisterRef:
         type: string
-        title: opaque external key, no PII
+        description: ch_register_ref is an opaque external register key (at most 100 characters); never PII.
     description: |-
       PersonDetails carries the PERSON-only fields. No civil-registry personal data is
       stored: only whether the person is linked to the CH population register and an
@@ -1372,81 +1708,113 @@ definitions:
       createdAt:
         type: string
         format: date-time
+        description: created_at is the server creation time.
         readOnly: true
       createdBy:
         type: string
-        title: user id or "system"
+        description: created_by is the operator who created the subject, or "system" for imports.
       updatedAt:
         type: string
         format: date-time
+        description: updated_at is the last governance mutation time; absent until the first update.
         readOnly: true
       updatedBy:
         type: string
+        description: updated_by is the operator of the last mutation; empty until then.
       deletedAt:
         type: string
         format: date-time
-        title: soft delete
+        description: |-
+          deleted_at marks a logical (soft) delete; absent while the subject is live.
+          Records are never physically deleted.
         readOnly: true
       deletedBy:
         type: string
+        description: deleted_by is the operator who soft-deleted the subject; empty while live.
       ownerUserId:
         type: string
+        description: owner_user_id is the owning user; on creation it defaults to the operator.
       ownerOrgId:
         type: string
+        description: owner_org_id is the owning organizational unit; empty when unset.
       confidentialityLevel:
         type: integer
         format: int32
-        title: 0=public ... 5=secret
+        description: |-
+          confidentiality_level ranges from 0 (public) to 5 (secret); recorded but not
+          yet enforced by a permission engine.
       version:
         type: integer
         format: int32
+        description: version starts at 1 and is incremented by every governance mutation.
         readOnly: true
       isLocked:
         type: boolean
-        title: set on formal validation/closure -> immutable
+        description: is_locked is set on formal validation or closure; a locked subject is immutable.
       lockedAt:
         type: string
         format: date-time
+        description: locked_at is the lock time; absent while unlocked.
         readOnly: true
       lockedBy:
         type: string
+        description: locked_by is the operator who locked the subject; empty while unlocked.
       retentionUntil:
         type: string
-        title: ISO date or policy reference (records management)
+        description: |-
+          retention_until is an ISO date or a records-management policy reference;
+          empty when no retention rule applies.
       sortFinal:
         type: string
-        title: CONSERVER | ELIMINER | ARCHIVER | VERSER_SAE
+        description: |-
+          sort_final is the archival disposition: CONSERVER, ELIMINER, ARCHIVER or
+          VERSER_SAE; empty when undecided.
       metadata:
         type: object
         additionalProperties:
           type: string
-        title: extra governance attributes
+        description: metadata holds secondary governance attributes; never critical fields.
     description: |-
       RecordMetadata is the 1:1 governance record attached to every SubjectRef.
       It implements non-destructive lifecycle, ownership, confidentiality and locking.
+      As an input (initial governance) only the owner, confidentiality, retention,
+      sort_final and metadata fields are read; the rest is server-managed.
   v1RelationshipType:
     type: object
     properties:
       id:
         type: string
+        description: id is the catalogue row UUID.
       code:
         type: string
-        title: e.g. CASE_HAS_DOCUMENT, DOCUMENT_REPRESENTS_THING, DOCUMENT_PREVIOUS_VERSION
+        description: |-
+          code is the unique stable key (1-100 characters), e.g. CASE_HAS_DOCUMENT,
+          DOCUMENT_AUTHORED_BY_ACTOR or DOCUMENT_PREVIOUS_VERSION.
       label:
         type: string
+        description: label is the human label read from source to target (at most 200 characters).
       sourceKind:
         $ref: '#/definitions/v1SubjectKind'
+        description: source_kind is the required kind of the source subject.
       targetKind:
         $ref: '#/definitions/v1SubjectKind'
+        description: target_kind is the required kind of the target subject.
       isDirected:
         type: boolean
+        description: is_directed reports whether the edge reads one way only.
       inverseLabel:
         type: string
+        description: inverse_label is the human label read from target to source; empty when none.
       description:
         type: string
+        description: description documents the business meaning (at most 2000 characters).
       isActive:
         type: boolean
-    description: RelationshipType defines an allowed typed relation between two subject kinds.
+        description: is_active reports whether new links of this type may be created.
+    description: |-
+      RelationshipType defines an allowed typed relation between two subject kinds.
+      Types are seeded reference data; a link is accepted only when the subjects'
+      kinds equal source_kind and target_kind.
     required:
       - code
   v1SearchActorsResponse:
@@ -1457,11 +1825,15 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1Actor'
+        description: actors are the actors of this page.
       nextPageToken:
         type: string
+        description: next_page_token fetches the next page; empty on the last page.
       totalSize:
         type: integer
         format: int32
+        description: total_size is the number of matching actors across all pages.
+    description: SearchActorsResponse is one page of matching actors.
   v1SearchDocumentsResponse:
     type: object
     properties:
@@ -1470,11 +1842,15 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1Document'
+        description: documents are the documents of this page.
       nextPageToken:
         type: string
+        description: next_page_token fetches the next page; empty on the last page.
       totalSize:
         type: integer
         format: int32
+        description: total_size is the number of matching documents across all pages.
+    description: SearchDocumentsResponse is one page of matching documents.
   v1SubjectKind:
     type: string
     enum:
@@ -1489,28 +1865,36 @@ definitions:
     description: |-
       SubjectKind enumerates the canonical business subjects. Every SubjectRef has exactly one kind.
 
-       - SUBJECT_KIND_CASE: Affaire / dossier métier
-       - SUBJECT_KIND_DOCUMENT: Pièce documentaire (first implemented component)
-       - SUBJECT_KIND_THING: Objet métier/territorial (parcelle, bâtiment...)
-       - SUBJECT_KIND_ACTOR: Personne ou organisation externe
-       - SUBJECT_KIND_USER: Utilisateur interne (future)
-       - SUBJECT_KIND_ORG_UNIT: Unité organisationnelle (future)
+       - SUBJECT_KIND_UNSPECIFIED: SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+      and means "any kind" in filters.
+       - SUBJECT_KIND_CASE: SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+       - SUBJECT_KIND_DOCUMENT: SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+       - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+       - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+      never an authenticated operator.
+       - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
+       - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
   v1SubjectRef:
     type: object
     properties:
       id:
         type: string
-        title: UUID
+        description: id is the server-assigned UUID shared by the domain entity and its governance record.
       kind:
         $ref: '#/definitions/v1SubjectKind'
+        description: kind is the immutable subject kind.
       displayLabel:
         type: string
+        description: |-
+          display_label is the human label (1-500 characters), kept in sync with the
+          domain entity's own label, e.g. a document title.
       canonicalUrl:
         type: string
-        title: stable external permalink / URI
+        description: canonical_url is an optional stable external permalink or URI (at most 2048 characters).
       createdAt:
         type: string
         format: date-time
+        description: created_at is the server creation time.
         readOnly: true
     description: |-
       SubjectRef is the canonical identity of any business subject.
@@ -1522,62 +1906,93 @@ definitions:
     properties:
       id:
         type: string
+        description: id is the server-assigned edge UUID.
       source:
         $ref: '#/definitions/v1SubjectRef'
+        description: source is the subject the edge starts from.
       target:
         $ref: '#/definitions/v1SubjectRef'
+        description: target is the subject the edge points to.
       relationshipType:
         $ref: '#/definitions/v1RelationshipType'
+        description: relationship_type is the validated type of the edge.
       roleDetail:
         type: string
-        title: e.g. "mandataire principal", "plan de masse v2"
+        description: |-
+          role_detail qualifies the relation in free text (at most 500 characters),
+          e.g. "mandataire principal" or "plan de masse v2".
       validFrom:
         type: string
         format: date-time
+        description: valid_from is the optional business start of validity.
       validTo:
         type: string
         format: date-time
+        description: valid_to is the optional business end of validity.
       createdAt:
         type: string
         format: date-time
+        description: created_at is the server creation time.
         readOnly: true
       createdBy:
         type: string
+        description: created_by is the operator who created the edge.
       deletedAt:
         type: string
         format: date-time
+        description: deleted_at marks an unlinked (soft-deleted) edge; absent while active.
         readOnly: true
-    description: 'SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.'
+    description: |-
+      SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
+      At most one active edge exists per (source, target, type).
   v1UnlinkSubjectsResponse:
     type: object
     properties:
       relationshipId:
         type: string
+        description: relationship_id is the unlinked edge.
       auditEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_UNLINKED audit event.
+    description: UnlinkSubjectsResponse confirms an unlink.
   v1UpdateActorResponse:
     type: object
     properties:
       actor:
         $ref: '#/definitions/v1Actor'
+        description: actor is the updated actor.
       updateEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the ACTOR_UPDATED audit event.
+    description: UpdateActorResponse returns the updated actor.
   v1UpdateDocumentMetadataResponse:
     type: object
     properties:
       document:
         $ref: '#/definitions/v1Document'
+        description: document is the updated document.
       updateEvent:
         $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the DOCUMENT_METADATA_UPDATED audit event.
+    description: UpdateDocumentMetadataResponse returns the updated document.
   v1VerifyDocumentIntegrityResponse:
     type: object
     properties:
       verified:
         type: boolean
+        description: |-
+          verified is true only when expected_sha256 and the registered hash are both
+          non-empty and equal (case-insensitive).
       actualSha256:
         type: string
+        description: actual_sha256 is the registered hash; empty when none was registered.
       verifiedAt:
         type: string
         format: date-time
+        description: verified_at is the last probative verification time; currently never set.
       storageRefChecked:
         type: string
+        description: |-
+          storage_ref_checked is the storage reference whose bytes were hashed;
+          always empty because no bytes are read yet.
+    description: VerifyDocumentIntegrityResponse reports the non-probative hash comparison.

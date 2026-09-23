@@ -50,11 +50,16 @@ const (
 type DocumentStatus int32
 
 const (
+	// DOCUMENT_STATUS_UNSPECIFIED is the zero value; never stored.
 	DocumentStatus_DOCUMENT_STATUS_UNSPECIFIED DocumentStatus = 0
-	DocumentStatus_DOCUMENT_STATUS_DRAFT       DocumentStatus = 1
-	DocumentStatus_DOCUMENT_STATUS_FINAL       DocumentStatus = 2 // is_final = true
-	DocumentStatus_DOCUMENT_STATUS_SUPERSEDED  DocumentStatus = 3
-	DocumentStatus_DOCUMENT_STATUS_ARCHIVED    DocumentStatus = 4
+	// DOCUMENT_STATUS_DRAFT is the initial, editable state.
+	DocumentStatus_DOCUMENT_STATUS_DRAFT DocumentStatus = 1
+	// DOCUMENT_STATUS_FINAL marks a finalized document (is_final = true).
+	DocumentStatus_DOCUMENT_STATUS_FINAL DocumentStatus = 2
+	// DOCUMENT_STATUS_SUPERSEDED marks a document replaced by a newer version.
+	DocumentStatus_DOCUMENT_STATUS_SUPERSEDED DocumentStatus = 3
+	// DOCUMENT_STATUS_ARCHIVED marks a document handed over to archiving.
+	DocumentStatus_DOCUMENT_STATUS_ARCHIVED DocumentStatus = 4
 )
 
 // Enum value maps for DocumentStatus.
@@ -103,14 +108,23 @@ func (DocumentStatus) EnumDescriptor() ([]byte, []int) {
 }
 
 // DocumentType is a controlled classification (behavior + category).
+// Types are seeded reference data; a document's type is fixed at creation.
 type DocumentType struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"` // e.g. PLAN, INCOMING_LETTER, DECISION
-	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
-	Description   string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	Category      string                 `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"` // ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...
-	IsActive      bool                   `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the catalogue row UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// code is the unique stable key (1-100 characters), e.g. PLAN,
+	// INCOMING_LETTER or DECISION.
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// label is the human label (at most 200 characters).
+	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// description documents the business meaning (at most 2000 characters).
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// category groups types: ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...;
+	// empty when uncategorized.
+	Category string `protobuf:"bytes,5,opt,name=category,proto3" json:"category,omitempty"`
+	// is_active reports whether the type is offered for new documents.
+	IsActive      bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -190,34 +204,67 @@ func (x *DocumentType) GetIsActive() bool {
 // Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
 // Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
 type Document struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	SubjectRef        *SubjectRef            `protobuf:"bytes,1,opt,name=subject_ref,json=subjectRef,proto3" json:"subject_ref,omitempty"` // embedded canonical identity (kind = DOCUMENT)
-	DocumentType      *DocumentType          `protobuf:"bytes,2,opt,name=document_type,json=documentType,proto3" json:"document_type,omitempty"`
-	Title             string                 `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
-	Description       string                 `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
-	OfficialDate      string                 `protobuf:"bytes,5,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`       // ISO date of the document itself (legal probative date)
-	StorageRef        string                 `protobuf:"bytes,6,opt,name=storage_ref,json=storageRef,proto3" json:"storage_ref,omitempty"`             // URI: minio://..., alfresco://..., internal://...
-	ExternalSystem    string                 `protobuf:"bytes,7,opt,name=external_system,json=externalSystem,proto3" json:"external_system,omitempty"` // "alfresco", "minio", "sharepoint", "goeland-legacy"
-	ExternalId        string                 `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`             // authoritative id in external system (prevents duplication)
-	ExternalUrl       string                 `protobuf:"bytes,9,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`          // clickable link if available
-	MimeType          string                 `protobuf:"bytes,10,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
-	FileSizeBytes     int64                  `protobuf:"varint,11,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"`
-	Sha256            string                 `protobuf:"bytes,12,opt,name=sha256,proto3" json:"sha256,omitempty"` // hex SHA-256 (integrity + dedup key)
-	Sha256VerifiedAt  *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=sha256_verified_at,json=sha256VerifiedAt,proto3" json:"sha256_verified_at,omitempty"`
-	Version           int32                  `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
-	PreviousVersionId string                 `protobuf:"bytes,15,opt,name=previous_version_id,json=previousVersionId,proto3" json:"previous_version_id,omitempty"` // explicit chain (also mirrored in a relationship)
-	IsFinal           bool                   `protobuf:"varint,16,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`                                // business final (signed, approved)
-	IsRecord          bool                   `protobuf:"varint,17,opt,name=is_record,json=isRecord,proto3" json:"is_record,omitempty"`                             // declared record for retention / records management
-	Language          string                 `protobuf:"bytes,18,opt,name=language,proto3" json:"language,omitempty"`                                              // ISO 639, e.g. "fr", "de"
-	PageCount         int32                  `protobuf:"varint,19,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
-	Status            DocumentStatus         `protobuf:"varint,20,opt,name=status,proto3,enum=goeland.v1.DocumentStatus" json:"status,omitempty"`
-	Metadata          *structpb.Struct       `protobuf:"bytes,21,opt,name=metadata,proto3" json:"metadata,omitempty"` // classification, keywords, extracted entities...
-	CreatedAt         *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	CreatedBy         string                 `protobuf:"bytes,23,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	UpdatedAt         *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	RecordMetadata    *RecordMetadata        `protobuf:"bytes,25,opt,name=record_metadata,json=recordMetadata,proto3" json:"record_metadata,omitempty"` // governance (confidentiality, locked, owner...)
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// subject_ref is the embedded canonical identity (kind = DOCUMENT); its id is the document id.
+	SubjectRef *SubjectRef `protobuf:"bytes,1,opt,name=subject_ref,json=subjectRef,proto3" json:"subject_ref,omitempty"`
+	// document_type is the classification chosen at creation.
+	DocumentType *DocumentType `protobuf:"bytes,2,opt,name=document_type,json=documentType,proto3" json:"document_type,omitempty"`
+	// title is the document title (1-500 characters), mirrored into the subject label.
+	Title string `protobuf:"bytes,3,opt,name=title,proto3" json:"title,omitempty"`
+	// description is free text (at most 4000 characters).
+	Description string `protobuf:"bytes,4,opt,name=description,proto3" json:"description,omitempty"`
+	// official_date is the legal probative date of the document itself, as
+	// YYYY-MM-DD; empty when unknown.
+	OfficialDate string `protobuf:"bytes,5,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
+	// storage_ref is the URI of the bytes: internal://... (upload endpoint),
+	// minio://... or alfresco://...; empty for metadata-only documents.
+	StorageRef string `protobuf:"bytes,6,opt,name=storage_ref,json=storageRef,proto3" json:"storage_ref,omitempty"`
+	// external_system names the system of record: alfresco, minio, sharepoint
+	// or goeland-legacy; empty when internal.
+	ExternalSystem string `protobuf:"bytes,7,opt,name=external_system,json=externalSystem,proto3" json:"external_system,omitempty"`
+	// external_id is the authoritative id in external_system (prevents duplication).
+	ExternalId string `protobuf:"bytes,8,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	// external_url is a clickable link to the external document, if available.
+	ExternalUrl string `protobuf:"bytes,9,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
+	// mime_type is the media type of the bytes (at most 255 characters).
+	MimeType string `protobuf:"bytes,10,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	// file_size_bytes is the size of the bytes in bytes; 0 when unknown.
+	// Serialized as a JSON string (int64).
+	FileSizeBytes int64 `protobuf:"varint,11,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"`
+	// sha256 is the registered hex SHA-256 (integrity and deduplication key:
+	// unique across documents); empty when unknown.
+	Sha256 string `protobuf:"bytes,12,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// sha256_verified_at is reserved for probative re-verification of the stored
+	// bytes; currently never set.
+	Sha256VerifiedAt *timestamppb.Timestamp `protobuf:"bytes,13,opt,name=sha256_verified_at,json=sha256VerifiedAt,proto3" json:"sha256_verified_at,omitempty"`
+	// version is the document version, at least 1 once stored.
+	Version int32 `protobuf:"varint,14,opt,name=version,proto3" json:"version,omitempty"`
+	// previous_version_id is the document this one supersedes; also mirrored as
+	// a DOCUMENT_PREVIOUS_VERSION relationship. Empty for a first version.
+	PreviousVersionId string `protobuf:"bytes,15,opt,name=previous_version_id,json=previousVersionId,proto3" json:"previous_version_id,omitempty"`
+	// is_final reports a business-final document (signed, approved).
+	IsFinal bool `protobuf:"varint,16,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`
+	// is_record declares a record for retention / records management.
+	IsRecord bool `protobuf:"varint,17,opt,name=is_record,json=isRecord,proto3" json:"is_record,omitempty"`
+	// language is the ISO 639 content language, e.g. "fr" or "de" (at most 10
+	// characters); unrelated to the UI locale.
+	Language string `protobuf:"bytes,18,opt,name=language,proto3" json:"language,omitempty"`
+	// page_count is the number of pages; 0 when unknown.
+	PageCount int32 `protobuf:"varint,19,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
+	// status is the lifecycle state.
+	Status DocumentStatus `protobuf:"varint,20,opt,name=status,proto3,enum=goeland.v1.DocumentStatus" json:"status,omitempty"`
+	// metadata holds secondary data: classification, keywords, extracted entities...
+	Metadata *structpb.Struct `protobuf:"bytes,21,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// created_at is the server creation time.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// created_by is the operator who created the document.
+	CreatedBy string `protobuf:"bytes,23,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// updated_at is the last modification time, maintained by the database.
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,24,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// record_metadata is the governance record (confidentiality, lock, owner...).
+	RecordMetadata *RecordMetadata `protobuf:"bytes,25,opt,name=record_metadata,json=recordMetadata,proto3" json:"record_metadata,omitempty"`
+	unknownFields  protoimpl.UnknownFields
+	sizeCache      protoimpl.SizeCache
 }
 
 func (x *Document) Reset() {
@@ -427,30 +474,54 @@ func (x *Document) GetRecordMetadata() *RecordMetadata {
 
 // CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
 type CreateDocumentRequest struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	DocumentTypeCode  string                 `protobuf:"bytes,1,opt,name=document_type_code,json=documentTypeCode,proto3" json:"document_type_code,omitempty"`
-	Title             string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description       string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	OfficialDate      string                 `protobuf:"bytes,4,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
-	StorageRef        string                 `protobuf:"bytes,5,opt,name=storage_ref,json=storageRef,proto3" json:"storage_ref,omitempty"`
-	ExternalSystem    string                 `protobuf:"bytes,6,opt,name=external_system,json=externalSystem,proto3" json:"external_system,omitempty"`
-	ExternalId        string                 `protobuf:"bytes,7,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
-	ExternalUrl       string                 `protobuf:"bytes,8,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
-	MimeType          string                 `protobuf:"bytes,9,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
-	FileSizeBytes     int64                  `protobuf:"varint,10,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"`
-	Sha256            string                 `protobuf:"bytes,11,opt,name=sha256,proto3" json:"sha256,omitempty"`
-	Version           int32                  `protobuf:"varint,12,opt,name=version,proto3" json:"version,omitempty"`
-	PreviousVersionId string                 `protobuf:"bytes,13,opt,name=previous_version_id,json=previousVersionId,proto3" json:"previous_version_id,omitempty"` // link to older version if applicable
-	IsFinal           bool                   `protobuf:"varint,14,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`
-	IsRecord          bool                   `protobuf:"varint,15,opt,name=is_record,json=isRecord,proto3" json:"is_record,omitempty"`
-	Language          string                 `protobuf:"bytes,16,opt,name=language,proto3" json:"language,omitempty"`
-	PageCount         int32                  `protobuf:"varint,17,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
-	Metadata          *structpb.Struct       `protobuf:"bytes,18,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document_type_code is the required code of an existing document type.
+	DocumentTypeCode string `protobuf:"bytes,1,opt,name=document_type_code,json=documentTypeCode,proto3" json:"document_type_code,omitempty"`
+	// title is the required title (1-500 characters); surrounding whitespace is trimmed.
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// description is optional free text (at most 4000 characters).
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// official_date is the optional legal date as YYYY-MM-DD.
+	OfficialDate string `protobuf:"bytes,4,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
+	// storage_ref is the URI of the bytes, typically the internal:// ref returned
+	// by POST /api/documents/upload.
+	StorageRef string `protobuf:"bytes,5,opt,name=storage_ref,json=storageRef,proto3" json:"storage_ref,omitempty"`
+	// external_system names the external system of record, if any.
+	ExternalSystem string `protobuf:"bytes,6,opt,name=external_system,json=externalSystem,proto3" json:"external_system,omitempty"`
+	// external_id identifies the document inside external_system.
+	ExternalId string `protobuf:"bytes,7,opt,name=external_id,json=externalId,proto3" json:"external_id,omitempty"`
+	// external_url links to the external document; it becomes the subject's canonical URL.
+	ExternalUrl string `protobuf:"bytes,8,opt,name=external_url,json=externalUrl,proto3" json:"external_url,omitempty"`
+	// mime_type is the media type of the bytes.
+	MimeType string `protobuf:"bytes,9,opt,name=mime_type,json=mimeType,proto3" json:"mime_type,omitempty"`
+	// file_size_bytes is the size of the bytes in bytes.
+	FileSizeBytes int64 `protobuf:"varint,10,opt,name=file_size_bytes,json=fileSizeBytes,proto3" json:"file_size_bytes,omitempty"`
+	// sha256 is the hex digest of the bytes; empty when unknown. Digests are
+	// unique across documents; a duplicate currently surfaces as INTERNAL.
+	Sha256 string `protobuf:"bytes,11,opt,name=sha256,proto3" json:"sha256,omitempty"`
+	// version is the document version; 0 means 1.
+	Version int32 `protobuf:"varint,12,opt,name=version,proto3" json:"version,omitempty"`
+	// previous_version_id, when set, links to the older version with DOCUMENT_PREVIOUS_VERSION.
+	PreviousVersionId string `protobuf:"bytes,13,opt,name=previous_version_id,json=previousVersionId,proto3" json:"previous_version_id,omitempty"`
+	// is_final creates the document directly in DOCUMENT_STATUS_FINAL.
+	IsFinal bool `protobuf:"varint,14,opt,name=is_final,json=isFinal,proto3" json:"is_final,omitempty"`
+	// is_record declares the document a record.
+	IsRecord bool `protobuf:"varint,15,opt,name=is_record,json=isRecord,proto3" json:"is_record,omitempty"`
+	// language is the ISO 639 content language.
+	Language string `protobuf:"bytes,16,opt,name=language,proto3" json:"language,omitempty"`
+	// page_count is the number of pages.
+	PageCount int32 `protobuf:"varint,17,opt,name=page_count,json=pageCount,proto3" json:"page_count,omitempty"`
+	// metadata holds secondary extension data.
+	Metadata *structpb.Struct `protobuf:"bytes,18,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// initial_governance optionally sets the owner, confidentiality and records
+	// fields; the owner defaults to the operator.
+	//
 	// NOTE: the acting operator is derived server-side from the authenticated
 	// principal (never trusted from the client). A document's AUTHOR is a separate,
 	// external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
-	InitialGovernance *RecordMetadata `protobuf:"bytes,20,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"` // confidentiality, owner_org etc.
-	// Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.
+	InitialGovernance *RecordMetadata `protobuf:"bytes,20,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"`
+	// link_to_case_id is an optional convenience: auto-link the new document to
+	// this case with CASE_HAS_DOCUMENT in the same transaction.
 	LinkToCaseId  string `protobuf:"bytes,21,opt,name=link_to_case_id,json=linkToCaseId,proto3" json:"link_to_case_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -626,11 +697,16 @@ func (x *CreateDocumentRequest) GetLinkToCaseId() string {
 	return ""
 }
 
+// CreateDocumentResponse returns the created document and its side effects.
 type CreateDocumentResponse struct {
-	state               protoimpl.MessageState `protogen:"open.v1"`
-	Document            *Document              `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
-	CreatedEvent        *AuditEvent            `protobuf:"bytes,2,opt,name=created_event,json=createdEvent,proto3" json:"created_event,omitempty"`
-	InitialRelationship *SubjectRelationship   `protobuf:"bytes,3,opt,name=initial_relationship,json=initialRelationship,proto3,oneof" json:"initial_relationship,omitempty"` // set when link_to_case_id was provided
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document is the created document with its governance.
+	Document *Document `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	// created_event is the DOCUMENT_CREATED audit event.
+	CreatedEvent *AuditEvent `protobuf:"bytes,2,opt,name=created_event,json=createdEvent,proto3" json:"created_event,omitempty"`
+	// initial_relationship is the CASE_HAS_DOCUMENT edge; set only when
+	// link_to_case_id was provided.
+	InitialRelationship *SubjectRelationship `protobuf:"bytes,3,opt,name=initial_relationship,json=initialRelationship,proto3,oneof" json:"initial_relationship,omitempty"`
 	unknownFields       protoimpl.UnknownFields
 	sizeCache           protoimpl.SizeCache
 }
@@ -686,13 +762,19 @@ func (x *CreateDocumentResponse) GetInitialRelationship() *SubjectRelationship {
 	return nil
 }
 
+// GetDocumentRequest reads one document with optional context.
 type GetDocumentRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                                  // subject_ref id
-	IncludeRelationships bool                   `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"` // to cases, things, previous versions
-	IncludeAudit         bool                   `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document (subject_ref) UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// include_relationships also returns the document's OUTGOING relationships
+	// (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
+	// the document: list them with CoreService.ListRelationships(outgoing=false).
+	IncludeRelationships bool `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"`
+	// include_audit also returns the 20 most recent audit events.
+	IncludeAudit  bool `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetDocumentRequest) Reset() {
@@ -746,11 +828,15 @@ func (x *GetDocumentRequest) GetIncludeAudit() bool {
 	return false
 }
 
+// GetDocumentResponse returns a document and the requested context.
 type GetDocumentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Document      *Document              `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document is the document with its governance.
+	Document *Document `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	// relationships are the outgoing edges; empty unless include_relationships was set.
 	Relationships []*SubjectRelationship `protobuf:"bytes,2,rep,name=relationships,proto3" json:"relationships,omitempty"`
-	RecentAudit   []*AuditEvent          `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`
+	// recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+	RecentAudit   []*AuditEvent `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -807,15 +893,23 @@ func (x *GetDocumentResponse) GetRecentAudit() []*AuditEvent {
 }
 
 // UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
+// Every field replaces the stored value (no partial merge).
 type UpdateDocumentMetadataRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Title         string                 `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
-	Description   string                 `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
-	OfficialDate  string                 `protobuf:"bytes,4,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
-	Language      string                 `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
-	Metadata      *structpb.Struct       `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
-	Reason        string                 `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"` // for audit
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// title is the new required title (1-500 characters).
+	Title string `protobuf:"bytes,2,opt,name=title,proto3" json:"title,omitempty"`
+	// description replaces the description (at most 4000 characters).
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// official_date replaces the legal date (YYYY-MM-DD); empty clears it.
+	OfficialDate string `protobuf:"bytes,4,opt,name=official_date,json=officialDate,proto3" json:"official_date,omitempty"`
+	// language replaces the content language.
+	Language string `protobuf:"bytes,5,opt,name=language,proto3" json:"language,omitempty"`
+	// metadata replaces the whole extension map.
+	Metadata *structpb.Struct `protobuf:"bytes,6,opt,name=metadata,proto3" json:"metadata,omitempty"`
+	// reason is the justification recorded on the audit event (at most 2000 characters).
+	Reason        string `protobuf:"bytes,8,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -899,10 +993,13 @@ func (x *UpdateDocumentMetadataRequest) GetReason() string {
 	return ""
 }
 
+// UpdateDocumentMetadataResponse returns the updated document.
 type UpdateDocumentMetadataResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Document      *Document              `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
-	UpdateEvent   *AuditEvent            `protobuf:"bytes,2,opt,name=update_event,json=updateEvent,proto3" json:"update_event,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document is the updated document.
+	Document *Document `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	// update_event is the DOCUMENT_METADATA_UPDATED audit event.
+	UpdateEvent   *AuditEvent `protobuf:"bytes,2,opt,name=update_event,json=updateEvent,proto3" json:"update_event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -953,10 +1050,13 @@ func (x *UpdateDocumentMetadataResponse) GetUpdateEvent() *AuditEvent {
 
 // FinalizeDocumentRequest marks a document final and optionally locks its governance record (immutable).
 type FinalizeDocumentRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Id                 string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Reason             string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
-	AlsoLockGovernance bool                   `protobuf:"varint,4,opt,name=also_lock_governance,json=alsoLockGovernance,proto3" json:"also_lock_governance,omitempty"` // also set record_metadata.is_locked
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document UUID; a locked or deleted document is rejected.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// reason is the justification recorded on the audit event (at most 2000 characters).
+	Reason string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	// also_lock_governance also sets record_metadata.is_locked, making the document immutable.
+	AlsoLockGovernance bool `protobuf:"varint,4,opt,name=also_lock_governance,json=alsoLockGovernance,proto3" json:"also_lock_governance,omitempty"`
 	unknownFields      protoimpl.UnknownFields
 	sizeCache          protoimpl.SizeCache
 }
@@ -1012,10 +1112,13 @@ func (x *FinalizeDocumentRequest) GetAlsoLockGovernance() bool {
 	return false
 }
 
+// FinalizeDocumentResponse returns the finalized document.
 type FinalizeDocumentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Document      *Document              `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
-	FinalizeEvent *AuditEvent            `protobuf:"bytes,2,opt,name=finalize_event,json=finalizeEvent,proto3" json:"finalize_event,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document is the finalized document.
+	Document *Document `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
+	// finalize_event is the DOCUMENT_FINALIZED audit event.
+	FinalizeEvent *AuditEvent `protobuf:"bytes,2,opt,name=finalize_event,json=finalizeEvent,proto3" json:"finalize_event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1064,11 +1167,13 @@ func (x *FinalizeDocumentResponse) GetFinalizeEvent() *AuditEvent {
 	return nil
 }
 
-// VerifyDocumentIntegrityRequest verifies / records the integrity hash.
+// VerifyDocumentIntegrityRequest compares a caller's hash with the registered one.
 type VerifyDocumentIntegrityRequest struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	Id             string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	ExpectedSha256 string                 `protobuf:"bytes,2,opt,name=expected_sha256,json=expectedSha256,proto3" json:"expected_sha256,omitempty"` // optional; must match stored when provided
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// expected_sha256 is the caller's hex digest; empty never verifies.
+	ExpectedSha256 string `protobuf:"bytes,2,opt,name=expected_sha256,json=expectedSha256,proto3" json:"expected_sha256,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -1117,12 +1222,19 @@ func (x *VerifyDocumentIntegrityRequest) GetExpectedSha256() string {
 	return ""
 }
 
+// VerifyDocumentIntegrityResponse reports the non-probative hash comparison.
 type VerifyDocumentIntegrityResponse struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	Verified          bool                   `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
-	ActualSha256      string                 `protobuf:"bytes,2,opt,name=actual_sha256,json=actualSha256,proto3" json:"actual_sha256,omitempty"`
-	VerifiedAt        *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
-	StorageRefChecked string                 `protobuf:"bytes,4,opt,name=storage_ref_checked,json=storageRefChecked,proto3" json:"storage_ref_checked,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// verified is true only when expected_sha256 and the registered hash are both
+	// non-empty and equal (case-insensitive).
+	Verified bool `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
+	// actual_sha256 is the registered hash; empty when none was registered.
+	ActualSha256 string `protobuf:"bytes,2,opt,name=actual_sha256,json=actualSha256,proto3" json:"actual_sha256,omitempty"`
+	// verified_at is the last probative verification time; currently never set.
+	VerifiedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
+	// storage_ref_checked is the storage reference whose bytes were hashed;
+	// always empty because no bytes are read yet.
+	StorageRefChecked string `protobuf:"bytes,4,opt,name=storage_ref_checked,json=storageRefChecked,proto3" json:"storage_ref_checked,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -1186,20 +1298,33 @@ func (x *VerifyDocumentIntegrityResponse) GetStorageRefChecked() string {
 }
 
 // SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
+// Results are newest first.
 type SearchDocumentsRequest struct {
-	state              protoimpl.MessageState `protogen:"open.v1"`
-	Query              string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"` // plain text
-	DocumentTypeCode   string                 `protobuf:"bytes,2,opt,name=document_type_code,json=documentTypeCode,proto3" json:"document_type_code,omitempty"`
-	CaseId             string                 `protobuf:"bytes,3,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"` // filter via relationship
-	ThingId            string                 `protobuf:"bytes,4,opt,name=thing_id,json=thingId,proto3" json:"thing_id,omitempty"`
-	ConfidentialityMax int32                  `protobuf:"varint,5,opt,name=confidentiality_max,json=confidentialityMax,proto3" json:"confidentiality_max,omitempty"`
-	OnlyRecords        bool                   `protobuf:"varint,6,opt,name=only_records,json=onlyRecords,proto3" json:"only_records,omitempty"`
-	OnlyFinal          bool                   `protobuf:"varint,7,opt,name=only_final,json=onlyFinal,proto3" json:"only_final,omitempty"`
-	IncludeDeleted     bool                   `protobuf:"varint,8,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
-	PageSize           int32                  `protobuf:"varint,9,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken          string                 `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields      protoimpl.UnknownFields
-	sizeCache          protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// query is plain text matched accent-insensitively against title and
+	// description (at most 500 characters); empty matches every document.
+	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// document_type_code restricts results to one type; empty means any.
+	DocumentTypeCode string `protobuf:"bytes,2,opt,name=document_type_code,json=documentTypeCode,proto3" json:"document_type_code,omitempty"`
+	// case_id restricts results to documents linked from that case by CASE_HAS_DOCUMENT.
+	CaseId string `protobuf:"bytes,3,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"`
+	// thing_id restricts results to documents with an outgoing link to that thing.
+	ThingId string `protobuf:"bytes,4,opt,name=thing_id,json=thingId,proto3" json:"thing_id,omitempty"`
+	// confidentiality_max is the inclusive upper bound on the confidentiality
+	// level; 0 means no cap.
+	ConfidentialityMax int32 `protobuf:"varint,5,opt,name=confidentiality_max,json=confidentialityMax,proto3" json:"confidentiality_max,omitempty"`
+	// only_records restricts results to declared records.
+	OnlyRecords bool `protobuf:"varint,6,opt,name=only_records,json=onlyRecords,proto3" json:"only_records,omitempty"`
+	// only_final restricts results to finalized documents.
+	OnlyFinal bool `protobuf:"varint,7,opt,name=only_final,json=onlyFinal,proto3" json:"only_final,omitempty"`
+	// include_deleted also returns soft-deleted documents.
+	IncludeDeleted bool `protobuf:"varint,8,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	// page_size is the page length; 0 means the default (25), at most 200.
+	PageSize int32 `protobuf:"varint,9,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token is the next_page_token of the previous page; empty for the first page.
+	PageToken     string `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchDocumentsRequest) Reset() {
@@ -1302,11 +1427,15 @@ func (x *SearchDocumentsRequest) GetPageToken() string {
 	return ""
 }
 
+// SearchDocumentsResponse is one page of matching documents.
 type SearchDocumentsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Documents     []*Document            `protobuf:"bytes,1,rep,name=documents,proto3" json:"documents,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalSize     int32                  `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// documents are the documents of this page.
+	Documents []*Document `protobuf:"bytes,1,rep,name=documents,proto3" json:"documents,omitempty"`
+	// next_page_token fetches the next page; empty on the last page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// total_size is the number of matching documents across all pages.
+	TotalSize     int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1365,13 +1494,18 @@ func (x *SearchDocumentsResponse) GetTotalSize() int32 {
 // LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
 // with document-specific validation + audit context).
 type LinkDocumentRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	DocumentId           string                 `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
-	TargetSubjectId      string                 `protobuf:"bytes,2,opt,name=target_subject_id,json=targetSubjectId,proto3" json:"target_subject_id,omitempty"`
-	RelationshipTypeCode string                 `protobuf:"bytes,3,opt,name=relationship_type_code,json=relationshipTypeCode,proto3" json:"relationship_type_code,omitempty"` // e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
-	RoleDetail           string                 `protobuf:"bytes,4,opt,name=role_detail,json=roleDetail,proto3" json:"role_detail,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document_id is the document, used as the source of the edge.
+	DocumentId string `protobuf:"bytes,1,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
+	// target_subject_id is the subject the edge points to.
+	TargetSubjectId string `protobuf:"bytes,2,opt,name=target_subject_id,json=targetSubjectId,proto3" json:"target_subject_id,omitempty"`
+	// relationship_type_code selects a type whose source kind is DOCUMENT, e.g.
+	// DOCUMENT_AUTHORED_BY_ACTOR or DOCUMENT_SENT_TO_ACTOR.
+	RelationshipTypeCode string `protobuf:"bytes,3,opt,name=relationship_type_code,json=relationshipTypeCode,proto3" json:"relationship_type_code,omitempty"`
+	// role_detail optionally qualifies the relation (at most 500 characters).
+	RoleDetail    string `protobuf:"bytes,4,opt,name=role_detail,json=roleDetail,proto3" json:"role_detail,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *LinkDocumentRequest) Reset() {
@@ -1432,10 +1566,13 @@ func (x *LinkDocumentRequest) GetRoleDetail() string {
 	return ""
 }
 
+// LinkDocumentResponse returns the created edge.
 type LinkDocumentResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Relationship  *SubjectRelationship   `protobuf:"bytes,1,opt,name=relationship,proto3" json:"relationship,omitempty"`
-	AuditEvent    *AuditEvent            `protobuf:"bytes,2,opt,name=audit_event,json=auditEvent,proto3" json:"audit_event,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// relationship is the created edge.
+	Relationship *SubjectRelationship `protobuf:"bytes,1,opt,name=relationship,proto3" json:"relationship,omitempty"`
+	// audit_event is the RELATIONSHIP_LINKED audit event.
+	AuditEvent    *AuditEvent `protobuf:"bytes,2,opt,name=audit_event,json=auditEvent,proto3" json:"audit_event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1484,10 +1621,14 @@ func (x *LinkDocumentResponse) GetAuditEvent() *AuditEvent {
 	return nil
 }
 
+// DeleteDocumentRequest soft-deletes a document.
 type DeleteDocumentRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Reason        string                 `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document UUID; an already deleted document is rejected, a
+	// locked one is not.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// reason is the justification recorded on the audit event (at most 2000 characters).
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1536,12 +1677,15 @@ func (x *DeleteDocumentRequest) GetReason() string {
 	return ""
 }
 
+// DeleteDocumentResponse confirms a soft delete.
 type DeleteDocumentResponse struct {
-	state             protoimpl.MessageState `protogen:"open.v1"`
-	DeletedDocumentId string                 `protobuf:"bytes,1,opt,name=deleted_document_id,json=deletedDocumentId,proto3" json:"deleted_document_id,omitempty"`
-	DeleteEvent       *AuditEvent            `protobuf:"bytes,2,opt,name=delete_event,json=deleteEvent,proto3" json:"delete_event,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// deleted_document_id is the soft-deleted document.
+	DeletedDocumentId string `protobuf:"bytes,1,opt,name=deleted_document_id,json=deletedDocumentId,proto3" json:"deleted_document_id,omitempty"`
+	// delete_event is the DOCUMENT_DELETED audit event.
+	DeleteEvent   *AuditEvent `protobuf:"bytes,2,opt,name=delete_event,json=deleteEvent,proto3" json:"delete_event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteDocumentResponse) Reset() {
@@ -1588,9 +1732,11 @@ func (x *DeleteDocumentResponse) GetDeleteEvent() *AuditEvent {
 	return nil
 }
 
+// ListDocumentTypesRequest filters the document type catalogue.
 type ListDocumentTypesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OnlyActive    bool                   `protobuf:"varint,1,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// only_active returns only types offered for new documents.
+	OnlyActive    bool `protobuf:"varint,1,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1632,9 +1778,11 @@ func (x *ListDocumentTypesRequest) GetOnlyActive() bool {
 	return false
 }
 
+// ListDocumentTypesResponse returns the matching catalogue entries.
 type ListDocumentTypesResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	DocumentTypes []*DocumentType        `protobuf:"bytes,1,rep,name=document_types,json=documentTypes,proto3" json:"document_types,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// document_types are the matching types.
+	DocumentTypes []*DocumentType `protobuf:"bytes,1,rep,name=document_types,json=documentTypes,proto3" json:"document_types,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }

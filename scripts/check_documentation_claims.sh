@@ -55,6 +55,7 @@ require_literal Makefile 'docs-check: godoc-check atlas-check docs-assert' 'docu
 require_literal Makefile 'check: front-check fmt-check lint test docs-check' 'quality gate includes documentation'
 require_literal Makefile 'release-check: check version-check changelog-check scripts-check binary' 'release gate includes normal checks'
 require_literal .github/workflows/ci.yml 'run: make release-check' 'CI release-equivalent gate'
+require_literal buf.yaml '    - COMMENTS' 'protobuf COMMENTS lint enabled'
 
 if [[ "${failed}" -ne 0 ]]; then
     exit 1

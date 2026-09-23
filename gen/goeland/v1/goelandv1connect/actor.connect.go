@@ -77,16 +77,23 @@ const (
 // ActorServiceClient is a client for the goeland.v1.ActorService service.
 type ActorServiceClient interface {
 	// Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+	// Requires goeland:write; everything, including the ACTOR_CREATED audit event,
+	// is written in one transaction.
 	CreateActor(context.Context, *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error)
 	// Retrieve an actor with optional relationship + audit context.
+	// Requires goeland:read; NOT_FOUND when the actor does not exist.
 	GetActor(context.Context, *connect.Request[v1.GetActorRequest]) (*connect.Response[v1.GetActorResponse], error)
 	// Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+	// Requires goeland:write; FAILED_PRECONDITION when the actor is locked or deleted.
 	UpdateActor(context.Context, *connect.Request[v1.UpdateActorRequest]) (*connect.Response[v1.UpdateActorResponse], error)
 	// Accent-insensitive name search + kind / category / status filters.
+	// Requires goeland:read.
 	SearchActors(context.Context, *connect.Request[v1.SearchActorsRequest]) (*connect.Response[v1.SearchActorsResponse], error)
 	// Soft-delete an actor (non-destructive) and write an audit event.
+	// Requires goeland:write.
 	DeleteActor(context.Context, *connect.Request[v1.DeleteActorRequest]) (*connect.Response[v1.DeleteActorResponse], error)
 	// List the controlled organization categories (classification catalogue).
+	// Requires goeland:read.
 	ListOrganizationCategories(context.Context, *connect.Request[v1.ListOrganizationCategoriesRequest]) (*connect.Response[v1.ListOrganizationCategoriesResponse], error)
 }
 
@@ -183,16 +190,23 @@ func (c *actorServiceClient) ListOrganizationCategories(ctx context.Context, req
 // ActorServiceHandler is an implementation of the goeland.v1.ActorService service.
 type ActorServiceHandler interface {
 	// Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+	// Requires goeland:write; everything, including the ACTOR_CREATED audit event,
+	// is written in one transaction.
 	CreateActor(context.Context, *connect.Request[v1.CreateActorRequest]) (*connect.Response[v1.CreateActorResponse], error)
 	// Retrieve an actor with optional relationship + audit context.
+	// Requires goeland:read; NOT_FOUND when the actor does not exist.
 	GetActor(context.Context, *connect.Request[v1.GetActorRequest]) (*connect.Response[v1.GetActorResponse], error)
 	// Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+	// Requires goeland:write; FAILED_PRECONDITION when the actor is locked or deleted.
 	UpdateActor(context.Context, *connect.Request[v1.UpdateActorRequest]) (*connect.Response[v1.UpdateActorResponse], error)
 	// Accent-insensitive name search + kind / category / status filters.
+	// Requires goeland:read.
 	SearchActors(context.Context, *connect.Request[v1.SearchActorsRequest]) (*connect.Response[v1.SearchActorsResponse], error)
 	// Soft-delete an actor (non-destructive) and write an audit event.
+	// Requires goeland:write.
 	DeleteActor(context.Context, *connect.Request[v1.DeleteActorRequest]) (*connect.Response[v1.DeleteActorResponse], error)
 	// List the controlled organization categories (classification catalogue).
+	// Requires goeland:read.
 	ListOrganizationCategories(context.Context, *connect.Request[v1.ListOrganizationCategoriesRequest]) (*connect.Response[v1.ListOrganizationCategoriesResponse], error)
 }
 

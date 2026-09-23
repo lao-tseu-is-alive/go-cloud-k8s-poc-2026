@@ -212,7 +212,8 @@ type CreateSubjectInput struct {
 	// OperatorID is the authenticated caller, set server-side from OperatorID;
 	// it becomes created_by and the audit actor.
 	OperatorID string
-	// OwnerUserID is the initial owning user; empty leaves the subject unowned.
+	// OwnerUserID is the initial owning user; empty leaves the subject unowned
+	// (the RPC adapters default it to the operator before calling the service).
 	OwnerUserID string
 	// OwnerOrgID is the initial owning organizational unit.
 	OwnerOrgID string

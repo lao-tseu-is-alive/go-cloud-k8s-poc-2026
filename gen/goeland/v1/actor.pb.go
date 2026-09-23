@@ -51,9 +51,13 @@ const (
 type ActorKind int32
 
 const (
-	ActorKind_ACTOR_KIND_UNSPECIFIED  ActorKind = 0
-	ActorKind_ACTOR_KIND_PERSON       ActorKind = 1 // personne physique (IsPhysique = true)
-	ActorKind_ACTOR_KIND_ORGANIZATION ActorKind = 2 // personne morale (IsPhysique = false)
+	// ACTOR_KIND_UNSPECIFIED is the zero value; rejected on create and means
+	// "any kind" in searches.
+	ActorKind_ACTOR_KIND_UNSPECIFIED ActorKind = 0
+	// ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
+	ActorKind_ACTOR_KIND_PERSON ActorKind = 1
+	// ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
+	ActorKind_ACTOR_KIND_ORGANIZATION ActorKind = 2
 )
 
 // Enum value maps for ActorKind.
@@ -104,22 +108,34 @@ func (ActorKind) EnumDescriptor() ([]byte, []int) {
 type ContactType int32
 
 const (
+	// CONTACT_TYPE_UNSPECIFIED is the zero value; rejected on input.
 	ContactType_CONTACT_TYPE_UNSPECIFIED ContactType = 0
-	// -- channels --
-	ContactType_CONTACT_TYPE_PHONE         ContactType = 1
+	// CONTACT_TYPE_PHONE is a general phone number (channel).
+	ContactType_CONTACT_TYPE_PHONE ContactType = 1
+	// CONTACT_TYPE_PHONE_PRIVATE is a private phone number (channel).
 	ContactType_CONTACT_TYPE_PHONE_PRIVATE ContactType = 2
-	ContactType_CONTACT_TYPE_PHONE_PRO     ContactType = 3
-	ContactType_CONTACT_TYPE_MOBILE        ContactType = 4
-	ContactType_CONTACT_TYPE_FAX           ContactType = 5
-	ContactType_CONTACT_TYPE_EMAIL         ContactType = 6
-	ContactType_CONTACT_TYPE_WEBSITE       ContactType = 7
-	ContactType_CONTACT_TYPE_POSTAL_BOX    ContactType = 8
-	// -- business identifiers --
-	ContactType_CONTACT_TYPE_IDE_FEDERAL         ContactType = 20 // IDE / UID fédéral (CHE-###.###.###)
-	ContactType_CONTACT_TYPE_VAT_NUMBER          ContactType = 21 // numéro de TVA
-	ContactType_CONTACT_TYPE_ABACUS_DEBTOR       ContactType = 22 // n° débiteur ABACUS
-	ContactType_CONTACT_TYPE_COMMERCIAL_REGISTER ContactType = 23 // lien registre du commerce
-	ContactType_CONTACT_TYPE_OTHER               ContactType = 99
+	// CONTACT_TYPE_PHONE_PRO is a professional phone number (channel).
+	ContactType_CONTACT_TYPE_PHONE_PRO ContactType = 3
+	// CONTACT_TYPE_MOBILE is a mobile phone number (channel).
+	ContactType_CONTACT_TYPE_MOBILE ContactType = 4
+	// CONTACT_TYPE_FAX is a fax number (channel).
+	ContactType_CONTACT_TYPE_FAX ContactType = 5
+	// CONTACT_TYPE_EMAIL is an e-mail address (channel).
+	ContactType_CONTACT_TYPE_EMAIL ContactType = 6
+	// CONTACT_TYPE_WEBSITE is a website URL (channel).
+	ContactType_CONTACT_TYPE_WEBSITE ContactType = 7
+	// CONTACT_TYPE_POSTAL_BOX is a postal box / case postale (channel).
+	ContactType_CONTACT_TYPE_POSTAL_BOX ContactType = 8
+	// CONTACT_TYPE_IDE_FEDERAL is the federal IDE / UID business identifier (CHE-###.###.###).
+	ContactType_CONTACT_TYPE_IDE_FEDERAL ContactType = 20
+	// CONTACT_TYPE_VAT_NUMBER is a VAT (TVA) number.
+	ContactType_CONTACT_TYPE_VAT_NUMBER ContactType = 21
+	// CONTACT_TYPE_ABACUS_DEBTOR is the ABACUS accounting debtor number.
+	ContactType_CONTACT_TYPE_ABACUS_DEBTOR ContactType = 22
+	// CONTACT_TYPE_COMMERCIAL_REGISTER is a commercial register (registre du commerce) link.
+	ContactType_CONTACT_TYPE_COMMERCIAL_REGISTER ContactType = 23
+	// CONTACT_TYPE_OTHER is any other channel; label should describe it.
+	ContactType_CONTACT_TYPE_OTHER ContactType = 99
 )
 
 // Enum value maps for ContactType.
@@ -188,11 +204,15 @@ func (ContactType) EnumDescriptor() ([]byte, []int) {
 // OrganizationCategory is the controlled classification of a moral person
 // (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
 type OrganizationCategory struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Code          string                 `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
-	Label         string                 `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
-	IsActive      bool                   `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the catalogue row UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// code is the unique stable key (1-100 characters) used by requests and filters.
+	Code string `protobuf:"bytes,2,opt,name=code,proto3" json:"code,omitempty"`
+	// label is the human label (at most 200 characters).
+	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
+	// is_active reports whether the category is offered for new organizations.
+	IsActive      bool `protobuf:"varint,4,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -258,11 +278,15 @@ func (x *OrganizationCategory) GetIsActive() bool {
 // ActorContact is one typed contact channel or business identifier attached to an
 // actor (production ActeurComplement row: IdTypeComplement + Complement).
 type ActorContact struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	ContactType   ContactType            `protobuf:"varint,1,opt,name=contact_type,json=contactType,proto3,enum=goeland.v1.ContactType" json:"contact_type,omitempty"`
-	Value         string                 `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
-	IsPrimary     bool                   `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"` // preferred channel of its type
-	Label         string                 `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`                           // optional free note
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// contact_type is the required, defined contact type.
+	ContactType ContactType `protobuf:"varint,1,opt,name=contact_type,json=contactType,proto3,enum=goeland.v1.ContactType" json:"contact_type,omitempty"`
+	// value is the channel or identifier (1-400 characters, trimmed).
+	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
+	// is_primary marks the preferred channel of its type; not enforced as unique.
+	IsPrimary bool `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
+	// label is an optional free note (at most 100 characters).
+	Label         string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -327,10 +351,13 @@ func (x *ActorContact) GetLabel() string {
 
 // OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
 type OrganizationDetails struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	LegalName     string                 `protobuf:"bytes,1,opt,name=legal_name,json=legalName,proto3" json:"legal_name,omitempty"`          // RaisonSociale
-	CategoryCode  string                 `protobuf:"bytes,2,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"` // OrganizationCategory.code
-	Complement    string                 `protobuf:"bytes,3,opt,name=complement,proto3" json:"complement,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// legal_name is the required legal name / RaisonSociale (1-200 characters).
+	LegalName string `protobuf:"bytes,1,opt,name=legal_name,json=legalName,proto3" json:"legal_name,omitempty"`
+	// category_code is an OrganizationCategory.code; empty leaves the organization uncategorized.
+	CategoryCode string `protobuf:"bytes,2,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"`
+	// complement is an optional name complement (at most 1000 characters).
+	Complement    string `protobuf:"bytes,3,opt,name=complement,proto3" json:"complement,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -390,9 +417,12 @@ func (x *OrganizationDetails) GetComplement() string {
 // stored: only whether the person is linked to the CH population register and an
 // opaque reference to it, so real identity stays in the source system.
 type PersonDetails struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	IsChRegister  bool                   `protobuf:"varint,1,opt,name=is_ch_register,json=isChRegister,proto3" json:"is_ch_register,omitempty"`   // production Acteur.IsFromCH (person linked to CH register)
-	ChRegisterRef string                 `protobuf:"bytes,2,opt,name=ch_register_ref,json=chRegisterRef,proto3" json:"ch_register_ref,omitempty"` // opaque external key, no PII
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// is_ch_register reports whether the person is linked to the CH population
+	// register (production Acteur.IsFromCH).
+	IsChRegister bool `protobuf:"varint,1,opt,name=is_ch_register,json=isChRegister,proto3" json:"is_ch_register,omitempty"`
+	// ch_register_ref is an opaque external register key (at most 100 characters); never PII.
+	ChRegisterRef string `protobuf:"bytes,2,opt,name=ch_register_ref,json=chRegisterRef,proto3" json:"ch_register_ref,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -443,25 +473,39 @@ func (x *PersonDetails) GetChRegisterRef() string {
 
 // Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
 type Actor struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	SubjectRef      *SubjectRef            `protobuf:"bytes,1,opt,name=subject_ref,json=subjectRef,proto3" json:"subject_ref,omitempty"` // embedded canonical identity (kind = ACTOR)
-	ActorKind       ActorKind              `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
-	DisplayName     string                 `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`              // production Acteur.Name
-	NameForSearch   string                 `protobuf:"bytes,4,opt,name=name_for_search,json=nameForSearch,proto3" json:"name_for_search,omitempty"`      // normalized, accent-insensitive
-	IsActive        bool                   `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`                      // production Acteur.IsActive (soft-deactivation, distinct from soft-delete)
-	PublicationCode int32                  `protobuf:"varint,6,opt,name=publication_code,json=publicationCode,proto3" json:"publication_code,omitempty"` // production Acteur.CodePublication
-	// Kind-specific specialization (mirrors the ActMoral / ActPhys* 1:1 subtypes).
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// subject_ref is the embedded canonical identity (kind = ACTOR); its id is the actor id.
+	SubjectRef *SubjectRef `protobuf:"bytes,1,opt,name=subject_ref,json=subjectRef,proto3" json:"subject_ref,omitempty"`
+	// actor_kind is PERSON or ORGANIZATION, fixed at creation.
+	ActorKind ActorKind `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
+	// display_name is the name (1-200 characters, production Acteur.Name),
+	// mirrored into the subject label.
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// name_for_search is the lower-cased display_name, recomputed on rename.
+	NameForSearch string `protobuf:"bytes,4,opt,name=name_for_search,json=nameForSearch,proto3" json:"name_for_search,omitempty"`
+	// is_active is the business activation flag (production Acteur.IsActive),
+	// distinct from soft deletion.
+	IsActive bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// publication_code is the opaque production Acteur.CodePublication.
+	PublicationCode int32 `protobuf:"varint,6,opt,name=publication_code,json=publicationCode,proto3" json:"publication_code,omitempty"`
+	// specialization holds the kind-specific fields (mirrors the ActMoral /
+	// ActPhys* 1:1 subtypes); it matches actor_kind.
 	//
 	// Types that are valid to be assigned to Specialization:
 	//
 	//	*Actor_Person
 	//	*Actor_Organization
 	Specialization isActor_Specialization `protobuf_oneof:"specialization"`
-	Contacts       []*ActorContact        `protobuf:"bytes,9,rep,name=contacts,proto3" json:"contacts,omitempty"`
-	CreatedAt      *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
-	CreatedBy      string                 `protobuf:"bytes,21,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	UpdatedAt      *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
-	RecordMetadata *RecordMetadata        `protobuf:"bytes,23,opt,name=record_metadata,json=recordMetadata,proto3" json:"record_metadata,omitempty"` // governance (confidentiality, locked, owner...)
+	// contacts are the typed contacts, ordered by type then creation time.
+	Contacts []*ActorContact `protobuf:"bytes,9,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	// created_at is the server creation time.
+	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,20,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	// created_by is the operator who created the actor.
+	CreatedBy string `protobuf:"bytes,21,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// updated_at is the last modification time, maintained by the database.
+	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
+	// record_metadata is the governance record (confidentiality, lock, owner...).
+	RecordMetadata *RecordMetadata `protobuf:"bytes,23,opt,name=record_metadata,json=recordMetadata,proto3" json:"record_metadata,omitempty"`
 	unknownFields  protoimpl.UnknownFields
 	sizeCache      protoimpl.SizeCache
 }
@@ -603,10 +647,12 @@ type isActor_Specialization interface {
 }
 
 type Actor_Person struct {
+	// person is set for ACTOR_KIND_PERSON.
 	Person *PersonDetails `protobuf:"bytes,7,opt,name=person,proto3,oneof"`
 }
 
 type Actor_Organization struct {
+	// organization is set for ACTOR_KIND_ORGANIZATION.
 	Organization *OrganizationDetails `protobuf:"bytes,8,opt,name=organization,proto3,oneof"`
 }
 
@@ -617,19 +663,29 @@ func (*Actor_Organization) isActor_Specialization() {}
 // CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
 // via Core internally. The kind-specific block must match actor_kind.
 type CreateActorRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	ActorKind       ActorKind              `protobuf:"varint,1,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
-	DisplayName     string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	PublicationCode int32                  `protobuf:"varint,3,opt,name=publication_code,json=publicationCode,proto3" json:"publication_code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actor_kind is the required kind; UNSPECIFIED is rejected.
+	ActorKind ActorKind `protobuf:"varint,1,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
+	// display_name is the required name (1-200 characters, trimmed).
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// publication_code is the opaque legacy publication code.
+	PublicationCode int32 `protobuf:"varint,3,opt,name=publication_code,json=publicationCode,proto3" json:"publication_code,omitempty"`
+	// specialization carries the kind-specific fields; organization (with a
+	// legal_name) is required for an ORGANIZATION, and fields of the other kind are ignored.
+	//
 	// Types that are valid to be assigned to Specialization:
 	//
 	//	*CreateActorRequest_Person
 	//	*CreateActorRequest_Organization
 	Specialization isCreateActorRequest_Specialization `protobuf_oneof:"specialization"`
-	Contacts       []*ActorContact                     `protobuf:"bytes,6,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	// contacts are the initial typed contacts.
+	Contacts []*ActorContact `protobuf:"bytes,6,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	// initial_governance optionally sets the owner, confidentiality and records
+	// fields; the owner defaults to the operator.
+	//
 	// NOTE: the acting operator is derived server-side from the authenticated
 	// principal (never trusted from the client).
-	InitialGovernance *RecordMetadata `protobuf:"bytes,7,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"` // confidentiality, owner_org etc.
+	InitialGovernance *RecordMetadata `protobuf:"bytes,7,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
 }
@@ -729,10 +785,12 @@ type isCreateActorRequest_Specialization interface {
 }
 
 type CreateActorRequest_Person struct {
+	// person carries the PERSON fields.
 	Person *PersonDetails `protobuf:"bytes,4,opt,name=person,proto3,oneof"`
 }
 
 type CreateActorRequest_Organization struct {
+	// organization carries the ORGANIZATION fields.
 	Organization *OrganizationDetails `protobuf:"bytes,5,opt,name=organization,proto3,oneof"`
 }
 
@@ -740,10 +798,13 @@ func (*CreateActorRequest_Person) isCreateActorRequest_Specialization() {}
 
 func (*CreateActorRequest_Organization) isCreateActorRequest_Specialization() {}
 
+// CreateActorResponse returns the created actor.
 type CreateActorResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actor         *Actor                 `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
-	CreatedEvent  *AuditEvent            `protobuf:"bytes,2,opt,name=created_event,json=createdEvent,proto3" json:"created_event,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actor is the created actor with its contacts and governance.
+	Actor *Actor `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	// created_event is the ACTOR_CREATED audit event.
+	CreatedEvent  *AuditEvent `protobuf:"bytes,2,opt,name=created_event,json=createdEvent,proto3" json:"created_event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -792,13 +853,18 @@ func (x *CreateActorResponse) GetCreatedEvent() *AuditEvent {
 	return nil
 }
 
+// GetActorRequest reads one actor with optional context.
 type GetActorRequest struct {
-	state                protoimpl.MessageState `protogen:"open.v1"`
-	Id                   string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`                                                                  // subject_ref id
-	IncludeRelationships bool                   `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"` // to cases, documents, things
-	IncludeAudit         bool                   `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
-	unknownFields        protoimpl.UnknownFields
-	sizeCache            protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the actor (subject_ref) UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// include_relationships also returns the INCOMING relationships (actors are
+	// the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
+	IncludeRelationships bool `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"`
+	// include_audit also returns the 20 most recent audit events.
+	IncludeAudit  bool `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *GetActorRequest) Reset() {
@@ -852,11 +918,15 @@ func (x *GetActorRequest) GetIncludeAudit() bool {
 	return false
 }
 
+// GetActorResponse returns an actor and the requested context.
 type GetActorResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actor         *Actor                 `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actor is the actor with its contacts and governance.
+	Actor *Actor `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	// relationships are the incoming edges; empty unless include_relationships was set.
 	Relationships []*SubjectRelationship `protobuf:"bytes,2,rep,name=relationships,proto3" json:"relationships,omitempty"`
-	RecentAudit   []*AuditEvent          `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`
+	// recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+	RecentAudit   []*AuditEvent `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -915,21 +985,34 @@ func (x *GetActorResponse) GetRecentAudit() []*AuditEvent {
 // UpdateActorRequest updates mutable fields. Blocked if the record is locked.
 // contacts, when provided, replace the full set (managed as a whole for simplicity).
 type UpdateActorRequest struct {
-	state           protoimpl.MessageState `protogen:"open.v1"`
-	Id              string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	DisplayName     string                 `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
-	IsActive        *bool                  `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
-	PublicationCode *int32                 `protobuf:"varint,4,opt,name=publication_code,json=publicationCode,proto3,oneof" json:"publication_code,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the actor UUID; a locked or deleted actor is rejected.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// display_name is the new name (1-200 characters). Validation currently
+	// requires it on every update, so it is always applied.
+	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// is_active activates or deactivates the actor when present.
+	IsActive *bool `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// publication_code replaces the publication code when present.
+	PublicationCode *int32 `protobuf:"varint,4,opt,name=publication_code,json=publicationCode,proto3,oneof" json:"publication_code,omitempty"`
+	// specialization, when set, replaces all fields of the matching kind block.
+	// Non-empty fields of the other kind violate a database constraint, which
+	// currently surfaces as INTERNAL.
+	//
 	// Types that are valid to be assigned to Specialization:
 	//
 	//	*UpdateActorRequest_Person
 	//	*UpdateActorRequest_Organization
-	Specialization  isUpdateActorRequest_Specialization `protobuf_oneof:"specialization"`
-	ReplaceContacts bool                                `protobuf:"varint,7,opt,name=replace_contacts,json=replaceContacts,proto3" json:"replace_contacts,omitempty"` // when true, `contacts` becomes the new full set
-	Contacts        []*ActorContact                     `protobuf:"bytes,8,rep,name=contacts,proto3" json:"contacts,omitempty"`
-	Reason          string                              `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"` // for audit
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	Specialization isUpdateActorRequest_Specialization `protobuf_oneof:"specialization"`
+	// replace_contacts, when true, makes contacts the new full set; when false,
+	// contacts is ignored and the existing ones are kept.
+	ReplaceContacts bool `protobuf:"varint,7,opt,name=replace_contacts,json=replaceContacts,proto3" json:"replace_contacts,omitempty"`
+	// contacts is the new contact set, used only with replace_contacts.
+	Contacts []*ActorContact `protobuf:"bytes,8,rep,name=contacts,proto3" json:"contacts,omitempty"`
+	// reason is the justification recorded on the audit event (at most 2000 characters).
+	Reason        string `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateActorRequest) Reset() {
@@ -1041,10 +1124,12 @@ type isUpdateActorRequest_Specialization interface {
 }
 
 type UpdateActorRequest_Person struct {
+	// person replaces the PERSON fields.
 	Person *PersonDetails `protobuf:"bytes,5,opt,name=person,proto3,oneof"`
 }
 
 type UpdateActorRequest_Organization struct {
+	// organization replaces the ORGANIZATION fields.
 	Organization *OrganizationDetails `protobuf:"bytes,6,opt,name=organization,proto3,oneof"`
 }
 
@@ -1052,10 +1137,13 @@ func (*UpdateActorRequest_Person) isUpdateActorRequest_Specialization() {}
 
 func (*UpdateActorRequest_Organization) isUpdateActorRequest_Specialization() {}
 
+// UpdateActorResponse returns the updated actor.
 type UpdateActorResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actor         *Actor                 `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
-	UpdateEvent   *AuditEvent            `protobuf:"bytes,2,opt,name=update_event,json=updateEvent,proto3" json:"update_event,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actor is the updated actor.
+	Actor *Actor `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
+	// update_event is the ACTOR_UPDATED audit event.
+	UpdateEvent   *AuditEvent `protobuf:"bytes,2,opt,name=update_event,json=updateEvent,proto3" json:"update_event,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1105,17 +1193,27 @@ func (x *UpdateActorResponse) GetUpdateEvent() *AuditEvent {
 }
 
 // SearchActorsRequest performs accent-insensitive name search + filters.
+// Results are ordered by display name.
 type SearchActorsRequest struct {
-	state                    protoimpl.MessageState `protogen:"open.v1"`
-	Query                    string                 `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`                                                     // matched against name_for_search
-	ActorKind                ActorKind              `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"` // UNSPECIFIED = any
-	OrganizationCategoryCode string                 `protobuf:"bytes,3,opt,name=organization_category_code,json=organizationCategoryCode,proto3" json:"organization_category_code,omitempty"`
-	OnlyActive               bool                   `protobuf:"varint,4,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
-	IncludeDeleted           bool                   `protobuf:"varint,5,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
-	PageSize                 int32                  `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
-	PageToken                string                 `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
-	unknownFields            protoimpl.UnknownFields
-	sizeCache                protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// query is plain text matched accent-insensitively against the display and
+	// legal names (at most 200 characters); empty matches every actor.
+	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
+	// actor_kind restricts results to one kind; UNSPECIFIED means any.
+	ActorKind ActorKind `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
+	// organization_category_code restricts results to one category; empty means
+	// any, and an unknown code matches nothing.
+	OrganizationCategoryCode string `protobuf:"bytes,3,opt,name=organization_category_code,json=organizationCategoryCode,proto3" json:"organization_category_code,omitempty"`
+	// only_active restricts results to business-active actors.
+	OnlyActive bool `protobuf:"varint,4,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
+	// include_deleted also returns soft-deleted actors.
+	IncludeDeleted bool `protobuf:"varint,5,opt,name=include_deleted,json=includeDeleted,proto3" json:"include_deleted,omitempty"`
+	// page_size is the page length; 0 means the default (25), at most 200.
+	PageSize int32 `protobuf:"varint,6,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token is the next_page_token of the previous page; empty for the first page.
+	PageToken     string `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchActorsRequest) Reset() {
@@ -1197,11 +1295,15 @@ func (x *SearchActorsRequest) GetPageToken() string {
 	return ""
 }
 
+// SearchActorsResponse is one page of matching actors.
 type SearchActorsResponse struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Actors        []*Actor               `protobuf:"bytes,1,rep,name=actors,proto3" json:"actors,omitempty"`
-	NextPageToken string                 `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
-	TotalSize     int32                  `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// actors are the actors of this page.
+	Actors []*Actor `protobuf:"bytes,1,rep,name=actors,proto3" json:"actors,omitempty"`
+	// next_page_token fetches the next page; empty on the last page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// total_size is the number of matching actors across all pages.
+	TotalSize     int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1257,10 +1359,13 @@ func (x *SearchActorsResponse) GetTotalSize() int32 {
 	return 0
 }
 
+// DeleteActorRequest soft-deletes an actor.
 type DeleteActorRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	Id            string                 `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	Reason        string                 `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the actor UUID; an already deleted actor is rejected, a locked one is not.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// reason is the justification recorded on the audit event (at most 2000 characters).
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1309,12 +1414,15 @@ func (x *DeleteActorRequest) GetReason() string {
 	return ""
 }
 
+// DeleteActorResponse confirms a soft delete.
 type DeleteActorResponse struct {
-	state          protoimpl.MessageState `protogen:"open.v1"`
-	DeletedActorId string                 `protobuf:"bytes,1,opt,name=deleted_actor_id,json=deletedActorId,proto3" json:"deleted_actor_id,omitempty"`
-	DeleteEvent    *AuditEvent            `protobuf:"bytes,2,opt,name=delete_event,json=deleteEvent,proto3" json:"delete_event,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// deleted_actor_id is the soft-deleted actor.
+	DeletedActorId string `protobuf:"bytes,1,opt,name=deleted_actor_id,json=deletedActorId,proto3" json:"deleted_actor_id,omitempty"`
+	// delete_event is the ACTOR_DELETED audit event.
+	DeleteEvent   *AuditEvent `protobuf:"bytes,2,opt,name=delete_event,json=deleteEvent,proto3" json:"delete_event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *DeleteActorResponse) Reset() {
@@ -1361,9 +1469,11 @@ func (x *DeleteActorResponse) GetDeleteEvent() *AuditEvent {
 	return nil
 }
 
+// ListOrganizationCategoriesRequest filters the organization category catalogue.
 type ListOrganizationCategoriesRequest struct {
-	state         protoimpl.MessageState `protogen:"open.v1"`
-	OnlyActive    bool                   `protobuf:"varint,1,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// only_active returns only categories offered for new organizations.
+	OnlyActive    bool `protobuf:"varint,1,opt,name=only_active,json=onlyActive,proto3" json:"only_active,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1405,8 +1515,10 @@ func (x *ListOrganizationCategoriesRequest) GetOnlyActive() bool {
 	return false
 }
 
+// ListOrganizationCategoriesResponse returns the matching categories.
 type ListOrganizationCategoriesResponse struct {
-	state         protoimpl.MessageState  `protogen:"open.v1"`
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// categories are the matching categories, ordered by label.
 	Categories    []*OrganizationCategory `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

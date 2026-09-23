@@ -86,24 +86,33 @@ const (
 // DocumentServiceClient is a client for the goeland.v1.DocumentService service.
 type DocumentServiceClient interface {
 	// Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+	// Requires goeland:write; subject, governance, document, optional links and the
+	// DOCUMENT_CREATED audit event are written in one transaction.
 	CreateDocument(context.Context, *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error)
-	// Retrieve a document with context (relationships to cases/things, recent history).
+	// Retrieve a document with context (outgoing relationships, recent history).
+	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
 	// Update mutable metadata only (respects locking).
+	// Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
 	UpdateDocumentMetadata(context.Context, *connect.Request[v1.UpdateDocumentMetadataRequest]) (*connect.Response[v1.UpdateDocumentMetadataResponse], error)
 	// Business finalization + optional governance lock. Critical for probative documents.
+	// Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
 	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
 	// expected sha256 against the registered hash. It does NOT read storage bytes
 	// and writes nothing (hence read-scoped). Real streamed verification is future work.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
+	// Requires goeland:read.
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)
 	// Convenience wrapper around Core.LinkSubjects for document-centric use.
+	// Requires goeland:write; same errors as CoreService.LinkSubjects.
 	LinkDocument(context.Context, *connect.Request[v1.LinkDocumentRequest]) (*connect.Response[v1.LinkDocumentResponse], error)
 	// Soft-delete a document (non-destructive) and write an audit event.
+	// Requires goeland:write.
 	DeleteDocument(context.Context, *connect.Request[v1.DeleteDocumentRequest]) (*connect.Response[v1.DeleteDocumentResponse], error)
 	// List the controlled document types (classification catalogue).
+	// Requires goeland:read.
 	ListDocumentTypes(context.Context, *connect.Request[v1.ListDocumentTypesRequest]) (*connect.Response[v1.ListDocumentTypesResponse], error)
 }
 
@@ -236,24 +245,33 @@ func (c *documentServiceClient) ListDocumentTypes(ctx context.Context, req *conn
 // DocumentServiceHandler is an implementation of the goeland.v1.DocumentService service.
 type DocumentServiceHandler interface {
 	// Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+	// Requires goeland:write; subject, governance, document, optional links and the
+	// DOCUMENT_CREATED audit event are written in one transaction.
 	CreateDocument(context.Context, *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error)
-	// Retrieve a document with context (relationships to cases/things, recent history).
+	// Retrieve a document with context (outgoing relationships, recent history).
+	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
 	// Update mutable metadata only (respects locking).
+	// Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
 	UpdateDocumentMetadata(context.Context, *connect.Request[v1.UpdateDocumentMetadataRequest]) (*connect.Response[v1.UpdateDocumentMetadataResponse], error)
 	// Business finalization + optional governance lock. Critical for probative documents.
+	// Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
 	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
 	// expected sha256 against the registered hash. It does NOT read storage bytes
 	// and writes nothing (hence read-scoped). Real streamed verification is future work.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
+	// Requires goeland:read.
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)
 	// Convenience wrapper around Core.LinkSubjects for document-centric use.
+	// Requires goeland:write; same errors as CoreService.LinkSubjects.
 	LinkDocument(context.Context, *connect.Request[v1.LinkDocumentRequest]) (*connect.Response[v1.LinkDocumentResponse], error)
 	// Soft-delete a document (non-destructive) and write an audit event.
+	// Requires goeland:write.
 	DeleteDocument(context.Context, *connect.Request[v1.DeleteDocumentRequest]) (*connect.Response[v1.DeleteDocumentResponse], error)
 	// List the controlled document types (classification catalogue).
+	// Requires goeland:read.
 	ListDocumentTypes(context.Context, *connect.Request[v1.ListDocumentTypesRequest]) (*connect.Response[v1.ListDocumentTypesResponse], error)
 }
 

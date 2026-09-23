@@ -15,6 +15,18 @@
 //
 // Aligns with the domain model spec sections 4, 5, 7 and governance requirements
 // (traceability, non-destruction, locking, audit).
+//
+// Conventions for every service in this package:
+//   - Read RPCs require the goeland:read scope and mutations goeland:write.
+//   - The operator (authenticated user) is always derived server-side; no
+//     request carries an operator identity.
+//   - Every mutation writes an AuditEvent in the same transaction.
+//   - Errors: INVALID_ARGUMENT for invalid input, NOT_FOUND for unknown IDs or
+//     codes, ALREADY_EXISTS for a duplicate active relationship,
+//     FAILED_PRECONDITION for a locked or deleted record or a kind mismatch,
+//     UNAUTHENTICATED / PERMISSION_DENIED for a missing token or scope.
+//   - Pagination: page_size 0 means the default (25), at most 200; page_token
+//     is the opaque next_page_token of the previous page.
 
 syntax = "proto3";
 
@@ -34,24 +46,40 @@ option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goel
 
 // SubjectKind enumerates the canonical business subjects. Every SubjectRef has exactly one kind.
 enum SubjectKind {
+  // SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+  // and means "any kind" in filters.
   SUBJECT_KIND_UNSPECIFIED = 0;
-  SUBJECT_KIND_CASE = 1; // Affaire / dossier métier
-  SUBJECT_KIND_DOCUMENT = 2; // Pièce documentaire (first implemented component)
-  SUBJECT_KIND_THING = 3; // Objet métier/territorial (parcelle, bâtiment...)
-  SUBJECT_KIND_ACTOR = 4; // Personne ou organisation externe
-  SUBJECT_KIND_USER = 5; // Utilisateur interne (future)
-  SUBJECT_KIND_ORG_UNIT = 6; // Unité organisationnelle (future)
+  // SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+  SUBJECT_KIND_CASE = 1;
+  // SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+  SUBJECT_KIND_DOCUMENT = 2;
+  // SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+  SUBJECT_KIND_THING = 3;
+  // SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+  // never an authenticated operator.
+  SUBJECT_KIND_ACTOR = 4;
+  // SUBJECT_KIND_USER is an internal user as a graph subject (future).
+  SUBJECT_KIND_USER = 5;
+  // SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+  SUBJECT_KIND_ORG_UNIT = 6;
 }
 
 // Permission is the simple, ordered permission model for the POC.
 // Later replaceable by Casbin/OpenFGA or go-cloud-k8s-user-group integration.
+// It is not yet enforced by any RPC.
 enum Permission {
+  // PERMISSION_UNSPECIFIED is the zero value; never granted.
   PERMISSION_UNSPECIFIED = 0;
+  // PERMISSION_NONE grants no access.
   PERMISSION_NONE = 1;
+  // PERMISSION_READ allows reading the subject.
   PERMISSION_READ = 2;
-  PERMISSION_CONTRIBUTE = 3; // add timeline, attach docs
-  PERMISSION_MANAGE = 4; // edit metadata, relations, participants
-  PERMISSION_FULL_CONTROL = 5; // close, logical delete, change owner
+  // PERMISSION_CONTRIBUTE adds timeline entries and attaches documents.
+  PERMISSION_CONTRIBUTE = 3;
+  // PERMISSION_MANAGE edits metadata, relations and participants.
+  PERMISSION_MANAGE = 4;
+  // PERMISSION_FULL_CONTROL closes, logically deletes and changes the owner.
+  PERMISSION_FULL_CONTROL = 5;
 }
 
 // =============================================
@@ -61,19 +89,27 @@ enum Permission {
 // SubjectRef is the canonical identity of any business subject.
 // Every Case, Document, Thing and Actor owns exactly one SubjectRef entry.
 message SubjectRef {
-  string id = 1 [(buf.validate.field).string.uuid = true]; // UUID
+  // id is the server-assigned UUID shared by the domain entity and its governance record.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // kind is the immutable subject kind.
   SubjectKind kind = 2 [(buf.validate.field).enum.defined_only = true];
+  // display_label is the human label (1-500 characters), kept in sync with the
+  // domain entity's own label, e.g. a document title.
   string display_label = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 500
   ];
-  string canonical_url = 4 [(buf.validate.field).string.max_len = 2048]; // stable external permalink / URI
+  // canonical_url is an optional stable external permalink or URI (at most 2048 characters).
+  string canonical_url = 4 [(buf.validate.field).string.max_len = 2048];
+  // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // RecordMetadata is the 1:1 governance record attached to every SubjectRef.
 // It implements non-destructive lifecycle, ownership, confidentiality and locking.
+// As an input (initial governance) only the owner, confidentiality, retention,
+// sort_final and metadata fields are read; the rest is server-managed.
 message RecordMetadata {
   // subject_id is server-assigned. When RecordMetadata is used as an input for
   // initial governance it is left empty, so the uuid rule is skipped when unset.
@@ -81,74 +117,134 @@ message RecordMetadata {
     (buf.validate.field).string.uuid = true,
     (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
   ];
+  // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
-  string created_by = 3; // user id or "system"
+  // created_by is the operator who created the subject, or "system" for imports.
+  string created_by = 3;
+  // updated_at is the last governance mutation time; absent until the first update.
   google.protobuf.Timestamp updated_at = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // updated_by is the operator of the last mutation; empty until then.
   string updated_by = 5;
-  google.protobuf.Timestamp deleted_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY]; // soft delete
+  // deleted_at marks a logical (soft) delete; absent while the subject is live.
+  // Records are never physically deleted.
+  google.protobuf.Timestamp deleted_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // deleted_by is the operator who soft-deleted the subject; empty while live.
   string deleted_by = 7;
+  // owner_user_id is the owning user; on creation it defaults to the operator.
   string owner_user_id = 8;
+  // owner_org_id is the owning organizational unit; empty when unset.
   string owner_org_id = 9;
+  // confidentiality_level ranges from 0 (public) to 5 (secret); recorded but not
+  // yet enforced by a permission engine.
   int32 confidentiality_level = 10 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 5
-  ]; // 0=public ... 5=secret
+  ];
+  // version starts at 1 and is incremented by every governance mutation.
   int32 version = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
-  bool is_locked = 12; // set on formal validation/closure -> immutable
+  // is_locked is set on formal validation or closure; a locked subject is immutable.
+  bool is_locked = 12;
+  // locked_at is the lock time; absent while unlocked.
   google.protobuf.Timestamp locked_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // locked_by is the operator who locked the subject; empty while unlocked.
   string locked_by = 14;
-  string retention_until = 15; // ISO date or policy reference (records management)
-  string sort_final = 16; // CONSERVER | ELIMINER | ARCHIVER | VERSER_SAE
-  map<string, string> metadata = 17; // extra governance attributes
+  // retention_until is an ISO date or a records-management policy reference;
+  // empty when no retention rule applies.
+  string retention_until = 15;
+  // sort_final is the archival disposition: CONSERVER, ELIMINER, ARCHIVER or
+  // VERSER_SAE; empty when undecided.
+  string sort_final = 16;
+  // metadata holds secondary governance attributes; never critical fields.
+  map<string, string> metadata = 17;
 }
 
-// AuditEvent is an append-only probative audit record, written on every mutation.
+// AuditEvent is an append-only probative audit record, written on every mutation
+// in the same transaction as the change it records.
 message AuditEvent {
+  // id is the server-assigned event UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // subject_id is the subject the event is about.
   string subject_id = 2 [(buf.validate.field).string.uuid = true];
+  // event_type is an upper-case code (1-100 characters), e.g. DOCUMENT_CREATED,
+  // RELATIONSHIP_LINKED or DOCUMENT_FINALIZED.
   string event_type = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
-  ]; // e.g. DOCUMENT_CREATED, RELATIONSHIP_LINKED, VALIDATION_PERFORMED
+  ];
+  // actor_user_id is the authenticated operator who caused the event (not a
+  // domain ACTOR subject), derived server-side.
   string actor_user_id = 4;
+  // occurred_at is the server time of the event.
   google.protobuf.Timestamp occurred_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-  google.protobuf.Struct before_state = 6; // snapshot of critical fields before
-  google.protobuf.Struct after_state = 7; // snapshot after
+  // before_state is a snapshot of the changed critical fields before the
+  // mutation; absent for creations.
+  google.protobuf.Struct before_state = 6;
+  // after_state is a snapshot of the changed critical fields after the mutation.
+  google.protobuf.Struct after_state = 7;
+  // reason is the operator-supplied justification (at most 2000 characters).
   string reason = 8 [(buf.validate.field).string.max_len = 2000];
-  string correlation_id = 9; // groups multi-subject actions
+  // correlation_id groups the events of one multi-subject action; empty when
+  // the event stands alone.
+  string correlation_id = 9;
+  // request_id is the HTTP request identifier the event was written under.
   string request_id = 10;
+  // metadata is secondary context for the event.
   google.protobuf.Struct metadata = 11;
 }
 
 // RelationshipType defines an allowed typed relation between two subject kinds.
+// Types are seeded reference data; a link is accepted only when the subjects'
+// kinds equal source_kind and target_kind.
 message RelationshipType {
+  // id is the catalogue row UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key (1-100 characters), e.g. CASE_HAS_DOCUMENT,
+  // DOCUMENT_AUTHORED_BY_ACTOR or DOCUMENT_PREVIOUS_VERSION.
   string code = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
-  ]; // e.g. CASE_HAS_DOCUMENT, DOCUMENT_REPRESENTS_THING, DOCUMENT_PREVIOUS_VERSION
+  ];
+  // label is the human label read from source to target (at most 200 characters).
   string label = 3 [(buf.validate.field).string.max_len = 200];
+  // source_kind is the required kind of the source subject.
   SubjectKind source_kind = 4 [(buf.validate.field).enum.defined_only = true];
+  // target_kind is the required kind of the target subject.
   SubjectKind target_kind = 5 [(buf.validate.field).enum.defined_only = true];
+  // is_directed reports whether the edge reads one way only.
   bool is_directed = 6;
+  // inverse_label is the human label read from target to source; empty when none.
   string inverse_label = 7 [(buf.validate.field).string.max_len = 200];
+  // description documents the business meaning (at most 2000 characters).
   string description = 8 [(buf.validate.field).string.max_len = 2000];
+  // is_active reports whether new links of this type may be created.
   bool is_active = 9;
 }
 
 // SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
+// At most one active edge exists per (source, target, type).
 message SubjectRelationship {
+  // id is the server-assigned edge UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // source is the subject the edge starts from.
   SubjectRef source = 2;
+  // target is the subject the edge points to.
   SubjectRef target = 3;
+  // relationship_type is the validated type of the edge.
   RelationshipType relationship_type = 4;
-  string role_detail = 5 [(buf.validate.field).string.max_len = 500]; // e.g. "mandataire principal", "plan de masse v2"
+  // role_detail qualifies the relation in free text (at most 500 characters),
+  // e.g. "mandataire principal" or "plan de masse v2".
+  string role_detail = 5 [(buf.validate.field).string.max_len = 500];
+  // valid_from is the optional business start of validity.
   google.protobuf.Timestamp valid_from = 6;
+  // valid_to is the optional business end of validity.
   google.protobuf.Timestamp valid_to = 7;
+  // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the edge.
   string created_by = 9;
+  // deleted_at marks an unlinked (soft-deleted) edge; absent while active.
   google.protobuf.Timestamp deleted_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
@@ -156,109 +252,170 @@ message SubjectRelationship {
 // REQUEST / RESPONSE MESSAGES
 // =============================================
 
+// CreateSubjectRefRequest creates a bare subject identity with its governance record.
 message CreateSubjectRefRequest {
+  // kind is the required subject kind; UNSPECIFIED is rejected.
   SubjectKind kind = 1 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
+  // display_label is the required human label (1-500 characters).
   string display_label = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 500
   ];
+  // canonical_url is an optional stable permalink (at most 2048 characters).
   string canonical_url = 3 [(buf.validate.field).string.max_len = 2048];
-  RecordMetadata initial_metadata = 4; // owner, confidentiality etc.
+  // initial_metadata optionally sets the owner, confidentiality, retention,
+  // sort_final and metadata of the new governance record.
+  RecordMetadata initial_metadata = 4;
   // NOTE: the acting operator is derived server-side from the authenticated
   // principal (never trusted from the client) and recorded as audit_event.actor_user_id.
 }
 
+// CreateSubjectRefResponse returns the created identity, governance and audit event.
 message CreateSubjectRefResponse {
+  // subject_ref is the created identity.
   SubjectRef subject_ref = 1;
+  // metadata is the created governance record.
   RecordMetadata metadata = 2;
+  // created_event is the SUBJECT_CREATED audit event.
   AuditEvent created_event = 3;
 }
 
+// GetSubjectRefRequest reads one subject.
 message GetSubjectRefRequest {
+  // id is the subject UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_metadata also returns the governance record.
   bool include_metadata = 2;
-  bool include_audit_summary = 3; // recent audit events
+  // include_audit_summary also returns the most recent audit events (newest first).
+  bool include_audit_summary = 3;
 }
 
+// GetSubjectRefResponse returns a subject and the requested optional parts.
 message GetSubjectRefResponse {
+  // subject_ref is the subject identity.
   SubjectRef subject_ref = 1;
+  // metadata is the governance record; absent unless include_metadata was set.
   RecordMetadata metadata = 2;
+  // recent_audit holds the latest audit events; empty unless include_audit_summary was set.
   repeated AuditEvent recent_audit = 3;
 }
 
+// LinkSubjectsRequest creates a typed edge between two existing subjects.
 message LinkSubjectsRequest {
+  // source_subject_id is the subject the edge starts from.
   string source_subject_id = 1 [(buf.validate.field).string.uuid = true];
+  // target_subject_id is the subject the edge points to.
   string target_subject_id = 2 [(buf.validate.field).string.uuid = true];
+  // relationship_type_code selects an active RelationshipType whose kinds must
+  // match the two subjects (FAILED_PRECONDITION otherwise).
   string relationship_type_code = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
   ];
+  // role_detail optionally qualifies the relation (at most 500 characters).
   string role_detail = 4 [(buf.validate.field).string.max_len = 500];
+  // valid_from is the optional business start of validity.
   google.protobuf.Timestamp valid_from = 6;
 }
 
+// LinkSubjectsResponse returns the created edge and its audit event.
 message LinkSubjectsResponse {
+  // relationship is the created edge, hydrated with both subjects and the type.
   SubjectRelationship relationship = 1;
+  // audit_event is the RELATIONSHIP_LINKED audit event.
   AuditEvent audit_event = 2;
 }
 
+// UnlinkSubjectsRequest soft-deletes an active edge.
 message UnlinkSubjectsRequest {
+  // relationship_id is the active edge to unlink; NOT_FOUND when unknown or already unlinked.
   string relationship_id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 3 [(buf.validate.field).string.max_len = 2000];
 }
 
+// UnlinkSubjectsResponse confirms an unlink.
 message UnlinkSubjectsResponse {
+  // relationship_id is the unlinked edge.
   string relationship_id = 1;
+  // audit_event is the RELATIONSHIP_UNLINKED audit event.
   AuditEvent audit_event = 2;
 }
 
+// ListRelationshipsRequest lists the active edges of one subject in one direction.
 message ListRelationshipsRequest {
+  // subject_id is the subject whose edges are listed.
   string subject_id = 1 [(buf.validate.field).string.uuid = true];
-  bool outgoing = 2; // true = edges from this subject, false = edges into it
-  string relationship_type_code = 3 [(buf.validate.field).string.max_len = 100]; // optional filter
+  // outgoing selects edges from this subject when true, and edges into it when false.
+  bool outgoing = 2;
+  // relationship_type_code restricts the list to one type; empty means any.
+  string relationship_type_code = 3 [(buf.validate.field).string.max_len = 100];
+  // page_size is the page length; 0 means the default (25), at most 200.
   int32 page_size = 4 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 200
   ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 5 [(buf.validate.field).string.max_len = 1024];
 }
 
+// ListRelationshipsResponse is one page of edges.
 message ListRelationshipsResponse {
+  // relationships are the edges of this page, hydrated with subjects and types.
   repeated SubjectRelationship relationships = 1;
+  // next_page_token fetches the next page; empty on the last page.
   string next_page_token = 2;
+  // total_size is the number of matching edges across all pages.
   int32 total_size = 3;
 }
 
+// ListRelationshipTypesRequest filters the relationship type catalogue.
 message ListRelationshipTypesRequest {
+  // only_active returns only types that accept new links.
   bool only_active = 1;
-  SubjectKind source_kind = 2; // optional filter (UNSPECIFIED = any)
-  SubjectKind target_kind = 3; // optional filter (UNSPECIFIED = any)
+  // source_kind restricts the list to one source kind; UNSPECIFIED means any.
+  SubjectKind source_kind = 2;
+  // target_kind restricts the list to one target kind; UNSPECIFIED means any.
+  SubjectKind target_kind = 3;
 }
 
+// ListRelationshipTypesResponse returns the matching catalogue entries.
 message ListRelationshipTypesResponse {
+  // relationship_types are the matching types.
   repeated RelationshipType relationship_types = 1;
 }
 
+// ListAuditEventsRequest reads the history of one subject, newest first.
 message ListAuditEventsRequest {
+  // subject_id is the subject whose history is listed.
   string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  // event_type restricts the list to one event code; empty means any.
   string event_type = 2 [(buf.validate.field).string.max_len = 100];
+  // from is the inclusive lower bound on occurred_at; absent means unbounded.
   google.protobuf.Timestamp from = 3;
+  // to is the inclusive upper bound on occurred_at; absent means unbounded.
   google.protobuf.Timestamp to = 4;
+  // page_size is the page length; 0 means the default (25), at most 200.
   int32 page_size = 5 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 200
   ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 6 [(buf.validate.field).string.max_len = 1024];
 }
 
+// ListAuditEventsResponse is one page of audit events.
 message ListAuditEventsResponse {
+  // events are the audit events of this page, newest first.
   repeated AuditEvent events = 1;
+  // next_page_token fetches the next page; empty on the last page.
   string next_page_token = 2;
+  // total_size is the number of matching events across all pages.
   int32 total_size = 3;
 }
 
@@ -273,6 +430,7 @@ message ListAuditEventsResponse {
 service CoreService {
   // Create a canonical subject identity + its record_metadata in one transaction.
   // Every other create (Document, Case, Thing, Actor) calls this first.
+  // Requires goeland:write; writes a SUBJECT_CREATED audit event.
   rpc CreateSubjectRef(CreateSubjectRefRequest) returns (CreateSubjectRefResponse) {
     option (google.api.http) = {
       post: "/api/subjects"
@@ -281,11 +439,15 @@ service CoreService {
   }
 
   // Retrieve a subject with optional governance + audit info.
+  // Requires goeland:read; NOT_FOUND when the subject does not exist.
   rpc GetSubjectRef(GetSubjectRefRequest) returns (GetSubjectRefResponse) {
     option (google.api.http) = {get: "/api/subjects/{id}"};
   }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
+  // Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+  // NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
+  // soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
   rpc LinkSubjects(LinkSubjectsRequest) returns (LinkSubjectsResponse) {
     option (google.api.http) = {
       post: "/api/relationships"
@@ -294,22 +456,26 @@ service CoreService {
   }
 
   // Soft-delete an existing relationship (non-destructive) and write an audit event.
+  // Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
   rpc UnlinkSubjects(UnlinkSubjectsRequest) returns (UnlinkSubjectsResponse) {
     option (google.api.http) = {delete: "/api/relationships/{relationship_id}"};
   }
 
   // List relationships for a subject (graph traversal primitive). Use the `outgoing`
   // query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
+  // Requires goeland:read.
   rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse) {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/relationships"};
   }
 
   // List the catalogue of allowed relationship types (optionally filtered).
+  // Requires goeland:read.
   rpc ListRelationshipTypes(ListRelationshipTypesRequest) returns (ListRelationshipTypesResponse) {
     option (google.api.http) = {get: "/api/relationship-types"};
   }
 
   // Full probative history for compliance / reconstruction.
+  // Requires goeland:read.
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/audit"};
   }

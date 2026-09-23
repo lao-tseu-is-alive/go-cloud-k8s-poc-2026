@@ -39,9 +39,13 @@ option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goel
 // ActorKind discriminates a physical person from a moral organization
 // (production Acteur.IsPhysique).
 enum ActorKind {
+  // ACTOR_KIND_UNSPECIFIED is the zero value; rejected on create and means
+  // "any kind" in searches.
   ACTOR_KIND_UNSPECIFIED = 0;
-  ACTOR_KIND_PERSON = 1; // personne physique (IsPhysique = true)
-  ACTOR_KIND_ORGANIZATION = 2; // personne morale (IsPhysique = false)
+  // ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
+  ACTOR_KIND_PERSON = 1;
+  // ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
+  ACTOR_KIND_ORGANIZATION = 2;
 }
 
 // ContactType is the controlled vocabulary for the typed contact / identity bag
@@ -49,61 +53,84 @@ enum ActorKind {
 // probative business identifiers; the latter stay first-class so they are
 // queryable (an actor is often located by IDE / VAT / ABACUS debtor number).
 enum ContactType {
+  // CONTACT_TYPE_UNSPECIFIED is the zero value; rejected on input.
   CONTACT_TYPE_UNSPECIFIED = 0;
-  // -- channels --
+  // CONTACT_TYPE_PHONE is a general phone number (channel).
   CONTACT_TYPE_PHONE = 1;
+  // CONTACT_TYPE_PHONE_PRIVATE is a private phone number (channel).
   CONTACT_TYPE_PHONE_PRIVATE = 2;
+  // CONTACT_TYPE_PHONE_PRO is a professional phone number (channel).
   CONTACT_TYPE_PHONE_PRO = 3;
+  // CONTACT_TYPE_MOBILE is a mobile phone number (channel).
   CONTACT_TYPE_MOBILE = 4;
+  // CONTACT_TYPE_FAX is a fax number (channel).
   CONTACT_TYPE_FAX = 5;
+  // CONTACT_TYPE_EMAIL is an e-mail address (channel).
   CONTACT_TYPE_EMAIL = 6;
+  // CONTACT_TYPE_WEBSITE is a website URL (channel).
   CONTACT_TYPE_WEBSITE = 7;
+  // CONTACT_TYPE_POSTAL_BOX is a postal box / case postale (channel).
   CONTACT_TYPE_POSTAL_BOX = 8;
-  // -- business identifiers --
-  CONTACT_TYPE_IDE_FEDERAL = 20; // IDE / UID fédéral (CHE-###.###.###)
-  CONTACT_TYPE_VAT_NUMBER = 21; // numéro de TVA
-  CONTACT_TYPE_ABACUS_DEBTOR = 22; // n° débiteur ABACUS
-  CONTACT_TYPE_COMMERCIAL_REGISTER = 23; // lien registre du commerce
+  // CONTACT_TYPE_IDE_FEDERAL is the federal IDE / UID business identifier (CHE-###.###.###).
+  CONTACT_TYPE_IDE_FEDERAL = 20;
+  // CONTACT_TYPE_VAT_NUMBER is a VAT (TVA) number.
+  CONTACT_TYPE_VAT_NUMBER = 21;
+  // CONTACT_TYPE_ABACUS_DEBTOR is the ABACUS accounting debtor number.
+  CONTACT_TYPE_ABACUS_DEBTOR = 22;
+  // CONTACT_TYPE_COMMERCIAL_REGISTER is a commercial register (registre du commerce) link.
+  CONTACT_TYPE_COMMERCIAL_REGISTER = 23;
+  // CONTACT_TYPE_OTHER is any other channel; label should describe it.
   CONTACT_TYPE_OTHER = 99;
 }
 
 // OrganizationCategory is the controlled classification of a moral person
 // (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
 message OrganizationCategory {
+  // id is the catalogue row UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key (1-100 characters) used by requests and filters.
   string code = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
   ];
+  // label is the human label (at most 200 characters).
   string label = 3 [(buf.validate.field).string.max_len = 200];
+  // is_active reports whether the category is offered for new organizations.
   bool is_active = 4;
 }
 
 // ActorContact is one typed contact channel or business identifier attached to an
 // actor (production ActeurComplement row: IdTypeComplement + Complement).
 message ActorContact {
+  // contact_type is the required, defined contact type.
   ContactType contact_type = 1 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
+  // value is the channel or identifier (1-400 characters, trimmed).
   string value = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 400
   ];
-  bool is_primary = 3; // preferred channel of its type
-  string label = 4 [(buf.validate.field).string.max_len = 100]; // optional free note
+  // is_primary marks the preferred channel of its type; not enforced as unique.
+  bool is_primary = 3;
+  // label is an optional free note (at most 100 characters).
+  string label = 4 [(buf.validate.field).string.max_len = 100];
 }
 
 // OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
 message OrganizationDetails {
+  // legal_name is the required legal name / RaisonSociale (1-200 characters).
   string legal_name = 1 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 200
-  ]; // RaisonSociale
-  string category_code = 2 [(buf.validate.field).string.max_len = 100]; // OrganizationCategory.code
+  ];
+  // category_code is an OrganizationCategory.code; empty leaves the organization uncategorized.
+  string category_code = 2 [(buf.validate.field).string.max_len = 100];
+  // complement is an optional name complement (at most 1000 characters).
   string complement = 3 [(buf.validate.field).string.max_len = 1000];
 }
 
@@ -111,35 +138,54 @@ message OrganizationDetails {
 // stored: only whether the person is linked to the CH population register and an
 // opaque reference to it, so real identity stays in the source system.
 message PersonDetails {
-  bool is_ch_register = 1; // production Acteur.IsFromCH (person linked to CH register)
-  string ch_register_ref = 2 [(buf.validate.field).string.max_len = 100]; // opaque external key, no PII
+  // is_ch_register reports whether the person is linked to the CH population
+  // register (production Acteur.IsFromCH).
+  bool is_ch_register = 1;
+  // ch_register_ref is an opaque external register key (at most 100 characters); never PII.
+  string ch_register_ref = 2 [(buf.validate.field).string.max_len = 100];
 }
 
 // Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
 message Actor {
-  SubjectRef subject_ref = 1; // embedded canonical identity (kind = ACTOR)
+  // subject_ref is the embedded canonical identity (kind = ACTOR); its id is the actor id.
+  SubjectRef subject_ref = 1;
+  // actor_kind is PERSON or ORGANIZATION, fixed at creation.
   ActorKind actor_kind = 2 [(buf.validate.field).enum.defined_only = true];
+  // display_name is the name (1-200 characters, production Acteur.Name),
+  // mirrored into the subject label.
   string display_name = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 200
-  ]; // production Acteur.Name
-  string name_for_search = 4 [(google.api.field_behavior) = OUTPUT_ONLY]; // normalized, accent-insensitive
-  bool is_active = 5; // production Acteur.IsActive (soft-deactivation, distinct from soft-delete)
-  int32 publication_code = 6 [(buf.validate.field).int32.gte = 0]; // production Acteur.CodePublication
+  ];
+  // name_for_search is the lower-cased display_name, recomputed on rename.
+  string name_for_search = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // is_active is the business activation flag (production Acteur.IsActive),
+  // distinct from soft deletion.
+  bool is_active = 5;
+  // publication_code is the opaque production Acteur.CodePublication.
+  int32 publication_code = 6 [(buf.validate.field).int32.gte = 0];
 
-  // Kind-specific specialization (mirrors the ActMoral / ActPhys* 1:1 subtypes).
+  // specialization holds the kind-specific fields (mirrors the ActMoral /
+  // ActPhys* 1:1 subtypes); it matches actor_kind.
   oneof specialization {
+    // person is set for ACTOR_KIND_PERSON.
     PersonDetails person = 7;
+    // organization is set for ACTOR_KIND_ORGANIZATION.
     OrganizationDetails organization = 8;
   }
 
+  // contacts are the typed contacts, ordered by type then creation time.
   repeated ActorContact contacts = 9;
 
+  // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the actor.
   string created_by = 21;
+  // updated_at is the last modification time, maintained by the database.
   google.protobuf.Timestamp updated_at = 22 [(google.api.field_behavior) = OUTPUT_ONLY];
-  RecordMetadata record_metadata = 23; // governance (confidentiality, locked, owner...)
+  // record_metadata is the governance record (confidentiality, lock, owner...).
+  RecordMetadata record_metadata = 23;
 }
 
 // =============================================
@@ -149,102 +195,166 @@ message Actor {
 // CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
 // via Core internally. The kind-specific block must match actor_kind.
 message CreateActorRequest {
+  // actor_kind is the required kind; UNSPECIFIED is rejected.
   ActorKind actor_kind = 1 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
+  // display_name is the required name (1-200 characters, trimmed).
   string display_name = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 200
   ];
+  // publication_code is the opaque legacy publication code.
   int32 publication_code = 3 [(buf.validate.field).int32.gte = 0];
+  // specialization carries the kind-specific fields; organization (with a
+  // legal_name) is required for an ORGANIZATION, and fields of the other kind are ignored.
   oneof specialization {
+    // person carries the PERSON fields.
     PersonDetails person = 4;
+    // organization carries the ORGANIZATION fields.
     OrganizationDetails organization = 5;
   }
+  // contacts are the initial typed contacts.
   repeated ActorContact contacts = 6;
+  // initial_governance optionally sets the owner, confidentiality and records
+  // fields; the owner defaults to the operator.
+  //
   // NOTE: the acting operator is derived server-side from the authenticated
   // principal (never trusted from the client).
-  RecordMetadata initial_governance = 7; // confidentiality, owner_org etc.
+  RecordMetadata initial_governance = 7;
 }
 
+// CreateActorResponse returns the created actor.
 message CreateActorResponse {
+  // actor is the created actor with its contacts and governance.
   Actor actor = 1;
+  // created_event is the ACTOR_CREATED audit event.
   AuditEvent created_event = 2;
 }
 
+// GetActorRequest reads one actor with optional context.
 message GetActorRequest {
-  string id = 1 [(buf.validate.field).string.uuid = true]; // subject_ref id
-  bool include_relationships = 2; // to cases, documents, things
+  // id is the actor (subject_ref) UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_relationships also returns the INCOMING relationships (actors are
+  // the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
+  bool include_relationships = 2;
+  // include_audit also returns the 20 most recent audit events.
   bool include_audit = 3;
 }
 
+// GetActorResponse returns an actor and the requested context.
 message GetActorResponse {
+  // actor is the actor with its contacts and governance.
   Actor actor = 1;
+  // relationships are the incoming edges; empty unless include_relationships was set.
   repeated SubjectRelationship relationships = 2;
+  // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
   repeated AuditEvent recent_audit = 3;
 }
 
 // UpdateActorRequest updates mutable fields. Blocked if the record is locked.
 // contacts, when provided, replace the full set (managed as a whole for simplicity).
 message UpdateActorRequest {
+  // id is the actor UUID; a locked or deleted actor is rejected.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // display_name is the new name (1-200 characters). Validation currently
+  // requires it on every update, so it is always applied.
   string display_name = 2 [
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 200
   ];
+  // is_active activates or deactivates the actor when present.
   optional bool is_active = 3;
+  // publication_code replaces the publication code when present.
   optional int32 publication_code = 4 [(buf.validate.field).int32.gte = 0];
+  // specialization, when set, replaces all fields of the matching kind block.
+  // Non-empty fields of the other kind violate a database constraint, which
+  // currently surfaces as INTERNAL.
   oneof specialization {
+    // person replaces the PERSON fields.
     PersonDetails person = 5;
+    // organization replaces the ORGANIZATION fields.
     OrganizationDetails organization = 6;
   }
-  bool replace_contacts = 7; // when true, `contacts` becomes the new full set
+  // replace_contacts, when true, makes contacts the new full set; when false,
+  // contacts is ignored and the existing ones are kept.
+  bool replace_contacts = 7;
+  // contacts is the new contact set, used only with replace_contacts.
   repeated ActorContact contacts = 8;
-  string reason = 9 [(buf.validate.field).string.max_len = 2000]; // for audit
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 9 [(buf.validate.field).string.max_len = 2000];
 }
 
+// UpdateActorResponse returns the updated actor.
 message UpdateActorResponse {
+  // actor is the updated actor.
   Actor actor = 1;
+  // update_event is the ACTOR_UPDATED audit event.
   AuditEvent update_event = 2;
 }
 
 // SearchActorsRequest performs accent-insensitive name search + filters.
+// Results are ordered by display name.
 message SearchActorsRequest {
-  string query = 1 [(buf.validate.field).string.max_len = 200]; // matched against name_for_search
-  ActorKind actor_kind = 2; // UNSPECIFIED = any
+  // query is plain text matched accent-insensitively against the display and
+  // legal names (at most 200 characters); empty matches every actor.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // actor_kind restricts results to one kind; UNSPECIFIED means any.
+  ActorKind actor_kind = 2;
+  // organization_category_code restricts results to one category; empty means
+  // any, and an unknown code matches nothing.
   string organization_category_code = 3 [(buf.validate.field).string.max_len = 100];
+  // only_active restricts results to business-active actors.
   bool only_active = 4;
+  // include_deleted also returns soft-deleted actors.
   bool include_deleted = 5;
+  // page_size is the page length; 0 means the default (25), at most 200.
   int32 page_size = 6 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 200
   ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 7 [(buf.validate.field).string.max_len = 1024];
 }
 
+// SearchActorsResponse is one page of matching actors.
 message SearchActorsResponse {
+  // actors are the actors of this page.
   repeated Actor actors = 1;
+  // next_page_token fetches the next page; empty on the last page.
   string next_page_token = 2;
+  // total_size is the number of matching actors across all pages.
   int32 total_size = 3;
 }
 
+// DeleteActorRequest soft-deletes an actor.
 message DeleteActorRequest {
+  // id is the actor UUID; an already deleted actor is rejected, a locked one is not.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 2 [(buf.validate.field).string.max_len = 2000];
 }
 
+// DeleteActorResponse confirms a soft delete.
 message DeleteActorResponse {
+  // deleted_actor_id is the soft-deleted actor.
   string deleted_actor_id = 1;
+  // delete_event is the ACTOR_DELETED audit event.
   AuditEvent delete_event = 2;
 }
 
+// ListOrganizationCategoriesRequest filters the organization category catalogue.
 message ListOrganizationCategoriesRequest {
+  // only_active returns only categories offered for new organizations.
   bool only_active = 1;
 }
 
+// ListOrganizationCategoriesResponse returns the matching categories.
 message ListOrganizationCategoriesResponse {
+  // categories are the matching categories, ordered by label.
   repeated OrganizationCategory categories = 1;
 }
 
@@ -257,6 +367,8 @@ message ListOrganizationCategoriesResponse {
 // REST/JSON; the Connect/gRPC path /goeland.v1.ActorService/<Method> stays available.
 service ActorService {
   // Create a person or organization actor. SubjectRef + RecordMetadata via Core.
+  // Requires goeland:write; everything, including the ACTOR_CREATED audit event,
+  // is written in one transaction.
   rpc CreateActor(CreateActorRequest) returns (CreateActorResponse) {
     option (google.api.http) = {
       post: "/api/actors"
@@ -265,11 +377,13 @@ service ActorService {
   }
 
   // Retrieve an actor with optional relationship + audit context.
+  // Requires goeland:read; NOT_FOUND when the actor does not exist.
   rpc GetActor(GetActorRequest) returns (GetActorResponse) {
     option (google.api.http) = {get: "/api/actors/{id}"};
   }
 
   // Update mutable fields (respects locking). Contacts optionally replaced wholesale.
+  // Requires goeland:write; FAILED_PRECONDITION when the actor is locked or deleted.
   rpc UpdateActor(UpdateActorRequest) returns (UpdateActorResponse) {
     option (google.api.http) = {
       patch: "/api/actors/{id}"
@@ -278,16 +392,19 @@ service ActorService {
   }
 
   // Accent-insensitive name search + kind / category / status filters.
+  // Requires goeland:read.
   rpc SearchActors(SearchActorsRequest) returns (SearchActorsResponse) {
     option (google.api.http) = {get: "/api/actors/search"};
   }
 
   // Soft-delete an actor (non-destructive) and write an audit event.
+  // Requires goeland:write.
   rpc DeleteActor(DeleteActorRequest) returns (DeleteActorResponse) {
     option (google.api.http) = {delete: "/api/actors/{id}"};
   }
 
   // List the controlled organization categories (classification catalogue).
+  // Requires goeland:read.
   rpc ListOrganizationCategories(ListOrganizationCategoriesRequest) returns (ListOrganizationCategoriesResponse) {
     option (google.api.http) = {get: "/api/organization-categories"};
   }

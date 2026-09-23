@@ -8,6 +8,7 @@ deps:
 lint:
   use:
     - STANDARD
+    - COMMENTS
 breaking:
   use:
     - FILE

@@ -31,6 +31,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   model fields: nullability, units, bounds, enum values, generated columns, operator-vs-actor
   identity, transaction and audit responsibilities, and the errors each tx helper returns.
 
+- Protobuf contract comments (slice 4 of 5): `buf.yaml` enables the `COMMENTS` lint category;
+  every service, RPC (with its required scope, audit event and error codes), message, field,
+  enum and enum value in `core.proto`, `document.proto` and `actor.proto` is documented. The
+  regenerated Go bindings differ only in comments and the OpenAPI gains field and operation
+  descriptions on unchanged routes; `buf breaking` against the previous commit is clean.
+
 ### Changed
 
 - `pkg/core` list scans embed `SubjectRelationship` / `AuditEvent` in their row structs (the pattern

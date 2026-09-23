@@ -38,218 +38,366 @@ option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goel
 
 // DocumentStatus is the lifecycle state of a document.
 enum DocumentStatus {
+  // DOCUMENT_STATUS_UNSPECIFIED is the zero value; never stored.
   DOCUMENT_STATUS_UNSPECIFIED = 0;
+  // DOCUMENT_STATUS_DRAFT is the initial, editable state.
   DOCUMENT_STATUS_DRAFT = 1;
-  DOCUMENT_STATUS_FINAL = 2; // is_final = true
+  // DOCUMENT_STATUS_FINAL marks a finalized document (is_final = true).
+  DOCUMENT_STATUS_FINAL = 2;
+  // DOCUMENT_STATUS_SUPERSEDED marks a document replaced by a newer version.
   DOCUMENT_STATUS_SUPERSEDED = 3;
+  // DOCUMENT_STATUS_ARCHIVED marks a document handed over to archiving.
   DOCUMENT_STATUS_ARCHIVED = 4;
 }
 
 // DocumentType is a controlled classification (behavior + category).
+// Types are seeded reference data; a document's type is fixed at creation.
 message DocumentType {
+  // id is the catalogue row UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key (1-100 characters), e.g. PLAN,
+  // INCOMING_LETTER or DECISION.
   string code = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
-  ]; // e.g. PLAN, INCOMING_LETTER, DECISION
+  ];
+  // label is the human label (at most 200 characters).
   string label = 3 [(buf.validate.field).string.max_len = 200];
+  // description documents the business meaning (at most 2000 characters).
   string description = 4 [(buf.validate.field).string.max_len = 2000];
-  string category = 5 [(buf.validate.field).string.max_len = 100]; // ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...
+  // category groups types: ENTREE, SORTIE, PLAN, DECISION, JUSTIFICATIF...;
+  // empty when uncategorized.
+  string category = 5 [(buf.validate.field).string.max_len = 100];
+  // is_active reports whether the type is offered for new documents.
   bool is_active = 6;
 }
 
 // Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
 // Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
 message Document {
-  SubjectRef subject_ref = 1; // embedded canonical identity (kind = DOCUMENT)
+  // subject_ref is the embedded canonical identity (kind = DOCUMENT); its id is the document id.
+  SubjectRef subject_ref = 1;
+  // document_type is the classification chosen at creation.
   DocumentType document_type = 2;
+  // title is the document title (1-500 characters), mirrored into the subject label.
   string title = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 500
   ];
+  // description is free text (at most 4000 characters).
   string description = 4 [(buf.validate.field).string.max_len = 4000];
-  string official_date = 5; // ISO date of the document itself (legal probative date)
-  string storage_ref = 6 [(buf.validate.field).string.max_len = 2048]; // URI: minio://..., alfresco://..., internal://...
-  string external_system = 7 [(buf.validate.field).string.max_len = 100]; // "alfresco", "minio", "sharepoint", "goeland-legacy"
-  string external_id = 8 [(buf.validate.field).string.max_len = 200]; // authoritative id in external system (prevents duplication)
-  string external_url = 9 [(buf.validate.field).string.max_len = 2048]; // clickable link if available
+  // official_date is the legal probative date of the document itself, as
+  // YYYY-MM-DD; empty when unknown.
+  string official_date = 5;
+  // storage_ref is the URI of the bytes: internal://... (upload endpoint),
+  // minio://... or alfresco://...; empty for metadata-only documents.
+  string storage_ref = 6 [(buf.validate.field).string.max_len = 2048];
+  // external_system names the system of record: alfresco, minio, sharepoint
+  // or goeland-legacy; empty when internal.
+  string external_system = 7 [(buf.validate.field).string.max_len = 100];
+  // external_id is the authoritative id in external_system (prevents duplication).
+  string external_id = 8 [(buf.validate.field).string.max_len = 200];
+  // external_url is a clickable link to the external document, if available.
+  string external_url = 9 [(buf.validate.field).string.max_len = 2048];
+  // mime_type is the media type of the bytes (at most 255 characters).
   string mime_type = 10 [(buf.validate.field).string.max_len = 255];
+  // file_size_bytes is the size of the bytes in bytes; 0 when unknown.
+  // Serialized as a JSON string (int64).
   int64 file_size_bytes = 11 [(buf.validate.field).int64.gte = 0];
-  string sha256 = 12 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"]; // hex SHA-256 (integrity + dedup key)
+  // sha256 is the registered hex SHA-256 (integrity and deduplication key:
+  // unique across documents); empty when unknown.
+  string sha256 = 12 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
+  // sha256_verified_at is reserved for probative re-verification of the stored
+  // bytes; currently never set.
   google.protobuf.Timestamp sha256_verified_at = 13;
+  // version is the document version, at least 1 once stored.
   int32 version = 14 [(buf.validate.field).int32.gte = 0];
-  string previous_version_id = 15; // explicit chain (also mirrored in a relationship)
-  bool is_final = 16; // business final (signed, approved)
-  bool is_record = 17; // declared record for retention / records management
-  string language = 18 [(buf.validate.field).string.max_len = 10]; // ISO 639, e.g. "fr", "de"
+  // previous_version_id is the document this one supersedes; also mirrored as
+  // a DOCUMENT_PREVIOUS_VERSION relationship. Empty for a first version.
+  string previous_version_id = 15;
+  // is_final reports a business-final document (signed, approved).
+  bool is_final = 16;
+  // is_record declares a record for retention / records management.
+  bool is_record = 17;
+  // language is the ISO 639 content language, e.g. "fr" or "de" (at most 10
+  // characters); unrelated to the UI locale.
+  string language = 18 [(buf.validate.field).string.max_len = 10];
+  // page_count is the number of pages; 0 when unknown.
   int32 page_count = 19 [(buf.validate.field).int32.gte = 0];
+  // status is the lifecycle state.
   DocumentStatus status = 20;
-  google.protobuf.Struct metadata = 21; // classification, keywords, extracted entities...
+  // metadata holds secondary data: classification, keywords, extracted entities...
+  google.protobuf.Struct metadata = 21;
+  // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 22 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the document.
   string created_by = 23;
+  // updated_at is the last modification time, maintained by the database.
   google.protobuf.Timestamp updated_at = 24 [(google.api.field_behavior) = OUTPUT_ONLY];
-  RecordMetadata record_metadata = 25; // governance (confidentiality, locked, owner...)
+  // record_metadata is the governance record (confidentiality, lock, owner...).
+  RecordMetadata record_metadata = 25;
 }
 
 // CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
 message CreateDocumentRequest {
+  // document_type_code is the required code of an existing document type.
   string document_type_code = 1 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
   ];
+  // title is the required title (1-500 characters); surrounding whitespace is trimmed.
   string title = 2 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 500
   ];
+  // description is optional free text (at most 4000 characters).
   string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // official_date is the optional legal date as YYYY-MM-DD.
   string official_date = 4;
+  // storage_ref is the URI of the bytes, typically the internal:// ref returned
+  // by POST /api/documents/upload.
   string storage_ref = 5 [(buf.validate.field).string.max_len = 2048];
+  // external_system names the external system of record, if any.
   string external_system = 6 [(buf.validate.field).string.max_len = 100];
+  // external_id identifies the document inside external_system.
   string external_id = 7 [(buf.validate.field).string.max_len = 200];
+  // external_url links to the external document; it becomes the subject's canonical URL.
   string external_url = 8 [(buf.validate.field).string.max_len = 2048];
+  // mime_type is the media type of the bytes.
   string mime_type = 9 [(buf.validate.field).string.max_len = 255];
+  // file_size_bytes is the size of the bytes in bytes.
   int64 file_size_bytes = 10 [(buf.validate.field).int64.gte = 0];
+  // sha256 is the hex digest of the bytes; empty when unknown. Digests are
+  // unique across documents; a duplicate currently surfaces as INTERNAL.
   string sha256 = 11 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
+  // version is the document version; 0 means 1.
   int32 version = 12 [(buf.validate.field).int32.gte = 0];
-  string previous_version_id = 13; // link to older version if applicable
+  // previous_version_id, when set, links to the older version with DOCUMENT_PREVIOUS_VERSION.
+  string previous_version_id = 13;
+  // is_final creates the document directly in DOCUMENT_STATUS_FINAL.
   bool is_final = 14;
+  // is_record declares the document a record.
   bool is_record = 15;
+  // language is the ISO 639 content language.
   string language = 16 [(buf.validate.field).string.max_len = 10];
+  // page_count is the number of pages.
   int32 page_count = 17 [(buf.validate.field).int32.gte = 0];
+  // metadata holds secondary extension data.
   google.protobuf.Struct metadata = 18;
+  // initial_governance optionally sets the owner, confidentiality and records
+  // fields; the owner defaults to the operator.
+  //
   // NOTE: the acting operator is derived server-side from the authenticated
   // principal (never trusted from the client). A document's AUTHOR is a separate,
   // external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
-  RecordMetadata initial_governance = 20; // confidentiality, owner_org etc.
-  // Optional convenience: auto-link the new document to this case with CASE_HAS_DOCUMENT.
+  RecordMetadata initial_governance = 20;
+  // link_to_case_id is an optional convenience: auto-link the new document to
+  // this case with CASE_HAS_DOCUMENT in the same transaction.
   string link_to_case_id = 21;
 }
 
+// CreateDocumentResponse returns the created document and its side effects.
 message CreateDocumentResponse {
+  // document is the created document with its governance.
   Document document = 1;
+  // created_event is the DOCUMENT_CREATED audit event.
   AuditEvent created_event = 2;
-  optional SubjectRelationship initial_relationship = 3; // set when link_to_case_id was provided
+  // initial_relationship is the CASE_HAS_DOCUMENT edge; set only when
+  // link_to_case_id was provided.
+  optional SubjectRelationship initial_relationship = 3;
 }
 
+// GetDocumentRequest reads one document with optional context.
 message GetDocumentRequest {
-  string id = 1 [(buf.validate.field).string.uuid = true]; // subject_ref id
-  bool include_relationships = 2; // to cases, things, previous versions
+  // id is the document (subject_ref) UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_relationships also returns the document's OUTGOING relationships
+  // (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
+  // the document: list them with CoreService.ListRelationships(outgoing=false).
+  bool include_relationships = 2;
+  // include_audit also returns the 20 most recent audit events.
   bool include_audit = 3;
 }
 
+// GetDocumentResponse returns a document and the requested context.
 message GetDocumentResponse {
+  // document is the document with its governance.
   Document document = 1;
+  // relationships are the outgoing edges; empty unless include_relationships was set.
   repeated SubjectRelationship relationships = 2;
+  // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
   repeated AuditEvent recent_audit = 3;
 }
 
 // UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
+// Every field replaces the stored value (no partial merge).
 message UpdateDocumentMetadataRequest {
+  // id is the document UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // title is the new required title (1-500 characters).
   string title = 2 [
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 500
   ];
+  // description replaces the description (at most 4000 characters).
   string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // official_date replaces the legal date (YYYY-MM-DD); empty clears it.
   string official_date = 4;
+  // language replaces the content language.
   string language = 5 [(buf.validate.field).string.max_len = 10];
+  // metadata replaces the whole extension map.
   google.protobuf.Struct metadata = 6;
-  string reason = 8 [(buf.validate.field).string.max_len = 2000]; // for audit
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 8 [(buf.validate.field).string.max_len = 2000];
 }
 
+// UpdateDocumentMetadataResponse returns the updated document.
 message UpdateDocumentMetadataResponse {
+  // document is the updated document.
   Document document = 1;
+  // update_event is the DOCUMENT_METADATA_UPDATED audit event.
   AuditEvent update_event = 2;
 }
 
 // FinalizeDocumentRequest marks a document final and optionally locks its governance record (immutable).
 message FinalizeDocumentRequest {
+  // id is the document UUID; a locked or deleted document is rejected.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 3 [(buf.validate.field).string.max_len = 2000];
-  bool also_lock_governance = 4; // also set record_metadata.is_locked
+  // also_lock_governance also sets record_metadata.is_locked, making the document immutable.
+  bool also_lock_governance = 4;
 }
 
+// FinalizeDocumentResponse returns the finalized document.
 message FinalizeDocumentResponse {
+  // document is the finalized document.
   Document document = 1;
+  // finalize_event is the DOCUMENT_FINALIZED audit event.
   AuditEvent finalize_event = 2;
 }
 
-// VerifyDocumentIntegrityRequest verifies / records the integrity hash.
+// VerifyDocumentIntegrityRequest compares a caller's hash with the registered one.
 message VerifyDocumentIntegrityRequest {
+  // id is the document UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
-  string expected_sha256 = 2 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"]; // optional; must match stored when provided
+  // expected_sha256 is the caller's hex digest; empty never verifies.
+  string expected_sha256 = 2 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
 }
 
+// VerifyDocumentIntegrityResponse reports the non-probative hash comparison.
 message VerifyDocumentIntegrityResponse {
+  // verified is true only when expected_sha256 and the registered hash are both
+  // non-empty and equal (case-insensitive).
   bool verified = 1;
+  // actual_sha256 is the registered hash; empty when none was registered.
   string actual_sha256 = 2;
+  // verified_at is the last probative verification time; currently never set.
   google.protobuf.Timestamp verified_at = 3;
+  // storage_ref_checked is the storage reference whose bytes were hashed;
+  // always empty because no bytes are read yet.
   string storage_ref_checked = 4;
 }
 
 // SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
+// Results are newest first.
 message SearchDocumentsRequest {
-  string query = 1 [(buf.validate.field).string.max_len = 500]; // plain text
+  // query is plain text matched accent-insensitively against title and
+  // description (at most 500 characters); empty matches every document.
+  string query = 1 [(buf.validate.field).string.max_len = 500];
+  // document_type_code restricts results to one type; empty means any.
   string document_type_code = 2 [(buf.validate.field).string.max_len = 100];
-  string case_id = 3; // filter via relationship
+  // case_id restricts results to documents linked from that case by CASE_HAS_DOCUMENT.
+  string case_id = 3;
+  // thing_id restricts results to documents with an outgoing link to that thing.
   string thing_id = 4;
+  // confidentiality_max is the inclusive upper bound on the confidentiality
+  // level; 0 means no cap.
   int32 confidentiality_max = 5 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 5
   ];
+  // only_records restricts results to declared records.
   bool only_records = 6;
+  // only_final restricts results to finalized documents.
   bool only_final = 7;
+  // include_deleted also returns soft-deleted documents.
   bool include_deleted = 8;
+  // page_size is the page length; 0 means the default (25), at most 200.
   int32 page_size = 9 [
     (buf.validate.field).int32.gte = 0,
     (buf.validate.field).int32.lte = 200
   ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 10 [(buf.validate.field).string.max_len = 1024];
 }
 
+// SearchDocumentsResponse is one page of matching documents.
 message SearchDocumentsResponse {
+  // documents are the documents of this page.
   repeated Document documents = 1;
+  // next_page_token fetches the next page; empty on the last page.
   string next_page_token = 2;
+  // total_size is the number of matching documents across all pages.
   int32 total_size = 3;
 }
 
 // LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
 // with document-specific validation + audit context).
 message LinkDocumentRequest {
+  // document_id is the document, used as the source of the edge.
   string document_id = 1 [(buf.validate.field).string.uuid = true];
+  // target_subject_id is the subject the edge points to.
   string target_subject_id = 2 [(buf.validate.field).string.uuid = true];
+  // relationship_type_code selects a type whose source kind is DOCUMENT, e.g.
+  // DOCUMENT_AUTHORED_BY_ACTOR or DOCUMENT_SENT_TO_ACTOR.
   string relationship_type_code = 3 [
     (google.api.field_behavior) = REQUIRED,
     (buf.validate.field).string.min_len = 1,
     (buf.validate.field).string.max_len = 100
-  ]; // e.g. DOCUMENT_REPRESENTS_THING, CASE_HAS_DOCUMENT
+  ];
+  // role_detail optionally qualifies the relation (at most 500 characters).
   string role_detail = 4 [(buf.validate.field).string.max_len = 500];
 }
 
+// LinkDocumentResponse returns the created edge.
 message LinkDocumentResponse {
+  // relationship is the created edge.
   SubjectRelationship relationship = 1;
+  // audit_event is the RELATIONSHIP_LINKED audit event.
   AuditEvent audit_event = 2;
 }
 
+// DeleteDocumentRequest soft-deletes a document.
 message DeleteDocumentRequest {
+  // id is the document UUID; an already deleted document is rejected, a
+  // locked one is not.
   string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 3 [(buf.validate.field).string.max_len = 2000];
 }
 
+// DeleteDocumentResponse confirms a soft delete.
 message DeleteDocumentResponse {
+  // deleted_document_id is the soft-deleted document.
   string deleted_document_id = 1;
+  // delete_event is the DOCUMENT_DELETED audit event.
   AuditEvent delete_event = 2;
 }
 
+// ListDocumentTypesRequest filters the document type catalogue.
 message ListDocumentTypesRequest {
+  // only_active returns only types offered for new documents.
   bool only_active = 1;
 }
 
+// ListDocumentTypesResponse returns the matching catalogue entries.
 message ListDocumentTypesResponse {
+  // document_types are the matching types.
   repeated DocumentType document_types = 1;
 }
 
@@ -265,6 +413,8 @@ message ListDocumentTypesResponse {
 // The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
 service DocumentService {
   // Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
+  // Requires goeland:write; subject, governance, document, optional links and the
+  // DOCUMENT_CREATED audit event are written in one transaction.
   rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse) {
     option (google.api.http) = {
       post: "/api/documents"
@@ -272,12 +422,14 @@ service DocumentService {
     };
   }
 
-  // Retrieve a document with context (relationships to cases/things, recent history).
+  // Retrieve a document with context (outgoing relationships, recent history).
+  // Requires goeland:read; NOT_FOUND when the document does not exist.
   rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse) {
     option (google.api.http) = {get: "/api/documents/{id}"};
   }
 
   // Update mutable metadata only (respects locking).
+  // Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
   rpc UpdateDocumentMetadata(UpdateDocumentMetadataRequest) returns (UpdateDocumentMetadataResponse) {
     option (google.api.http) = {
       patch: "/api/documents/{id}"
@@ -286,6 +438,7 @@ service DocumentService {
   }
 
   // Business finalization + optional governance lock. Critical for probative documents.
+  // Requires goeland:write; FAILED_PRECONDITION when the document is locked or deleted.
   rpc FinalizeDocument(FinalizeDocumentRequest) returns (FinalizeDocumentResponse) {
     option (google.api.http) = {
       post: "/api/documents/{id}/finalize"
@@ -301,11 +454,13 @@ service DocumentService {
   }
 
   // Full-text + filtered search (leverages the generated tsvector + GIN index).
+  // Requires goeland:read.
   rpc SearchDocuments(SearchDocumentsRequest) returns (SearchDocumentsResponse) {
     option (google.api.http) = {get: "/api/documents/search"};
   }
 
   // Convenience wrapper around Core.LinkSubjects for document-centric use.
+  // Requires goeland:write; same errors as CoreService.LinkSubjects.
   rpc LinkDocument(LinkDocumentRequest) returns (LinkDocumentResponse) {
     option (google.api.http) = {
       post: "/api/documents/{document_id}/links"
@@ -314,11 +469,13 @@ service DocumentService {
   }
 
   // Soft-delete a document (non-destructive) and write an audit event.
+  // Requires goeland:write.
   rpc DeleteDocument(DeleteDocumentRequest) returns (DeleteDocumentResponse) {
     option (google.api.http) = {delete: "/api/documents/{id}"};
   }
 
   // List the controlled document types (classification catalogue).
+  // Requires goeland:read.
   rpc ListDocumentTypes(ListDocumentTypesRequest) returns (ListDocumentTypesResponse) {
     option (google.api.http) = {get: "/api/document-types"};
   }
