@@ -44,12 +44,52 @@ func (s *Service) CreateSubjectRef(ctx context.Context, in CreateSubjectInput) (
 	if in.ConfidentialityLevel < 0 || in.ConfidentialityLevel > 5 {
 		return nil, nil, nil, fmt.Errorf("%w: confidentiality_level must be between 0 and 5", ErrInvalidInput)
 	}
+	if !in.BusinessRef.IsZero() {
+		req, err := in.BusinessRef.normalized()
+		if err != nil {
+			return nil, nil, nil, err
+		}
+		in.BusinessRef = req
+	}
 	ref, md, ev, err := s.repo.CreateSubject(ctx, in)
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("create subject: %w", err)
 	}
 	s.log.Info("created subject", "subject_id", ref.ID, "kind", ref.Kind)
 	return ref, md, ev, nil
+}
+
+// AssignBusinessRef gives an existing subject its business reference (explicit or
+// allocated) and audits it. A subject keeps its first reference: a second
+// assignment fails with ErrConflict, as does a (namespace, reference) pair
+// already in use.
+func (s *Service) AssignBusinessRef(ctx context.Context, subjectID uuid.UUID, req BusinessRefRequest, operatorID, reason string) (*SubjectRef, *AuditEvent, error) {
+	if subjectID == uuid.Nil {
+		return nil, nil, fmt.Errorf("%w: subject id is required", ErrInvalidInput)
+	}
+	req, err := req.normalized()
+	if err != nil {
+		return nil, nil, err
+	}
+	ref, ev, err := s.repo.AssignBusinessRef(ctx, subjectID, req, operatorID, strings.TrimSpace(reason))
+	if err != nil {
+		return nil, nil, fmt.Errorf("assign business_ref: %w", err)
+	}
+	s.log.Info("assigned business reference", "subject_id", subjectID, "namespace", ref.BusinessRefNamespace, "allocated", req.Allocate)
+	return ref, ev, nil
+}
+
+// LookupSubjects finds subjects by exact business reference (at most 50).
+func (s *Service) LookupSubjects(ctx context.Context, filter LookupFilter) ([]*SubjectRef, error) {
+	filter.BusinessRef = strings.TrimSpace(filter.BusinessRef)
+	filter.Namespace = strings.TrimSpace(filter.Namespace)
+	if filter.BusinessRef == "" {
+		return nil, fmt.Errorf("%w: business_ref is required", ErrInvalidInput)
+	}
+	if filter.Kind != SubjectKindUnspecified && !filter.Kind.Valid() {
+		return nil, fmt.Errorf("%w: unknown subject kind %q", ErrInvalidInput, filter.Kind)
+	}
+	return s.repo.LookupSubjects(ctx, filter, maxLookupResults)
 }
 
 // GetSubjectRef loads a subject and optionally its metadata and recent audit events.

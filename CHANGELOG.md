@@ -8,6 +8,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-022** — Business reference on every subject (v2 §8): migration `0007` adds
+  `subject_ref.business_ref` + `business_ref_namespace` (unique per namespace, free and
+  non-unique without one) and a `business_ref_counter` allocator producing `YYYY-NNNNNN` per
+  namespace and Europe/Zurich year, serialized by a row lock and gap-free on rollback.
+  `CoreService.CreateSubjectRef` accepts an optional `business_ref` (explicit value or
+  allocation); new `AssignBusinessRef` (`POST /api/subjects/{subject_id}/business-ref`, audited
+  as `BUSINESS_REF_ASSIGNED`, one reference per subject) and `LookupSubjects`
+  (`GET /api/subjects:lookup`). The SPA identity card shows the reference. Covered by unit tests
+  and PostgreSQL integration tests, including concurrent allocation.
+
 ### Changed
 
 - **Spec v2 adopted** as the active statement of intent:

@@ -124,7 +124,8 @@
       "display_label": "Libellé",
       "canonical_url": "URL canonique",
       "created_at": "Créé le",
-      "id": "Identifiant"
+      "id": "Identifiant",
+      "business_ref": "Référence métier"
     },
     "relationship": {
       "source": "Source",

@@ -2,6 +2,7 @@ package core
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -32,6 +33,59 @@ func InsertSubjectRefTx(ctx context.Context, q Querier, kind SubjectKind, displa
 		return nil, err
 	}
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[SubjectRef])
+}
+
+// AssignBusinessRefTx gives subjectID the business reference described by req
+// (already normalized by the service) using q, allocating it from the
+// namespace counter when req.Allocate is set. It fails with ErrNotFound for an
+// unknown subject, ErrDeleted for a soft-deleted one (a locked subject may still
+// receive a reference: it is identity, not content), and ErrConflict when the
+// subject already has a reference or the (namespace, reference) pair is taken.
+// It writes no audit event: the caller records it in the same transaction.
+func AssignBusinessRefTx(ctx context.Context, q Querier, subjectID uuid.UUID, req BusinessRefRequest) (*SubjectRef, error) {
+	if _, err := EnsureMutableTx(ctx, q, subjectID, true); err != nil {
+		return nil, err
+	}
+	value := req.Value
+	if req.Allocate {
+		var period string
+		var sequence int64
+		err := q.QueryRow(ctx, allocateBusinessRefSQL, pgx.NamedArgs{
+			"namespace": req.Namespace,
+			"time_zone": BusinessRefPeriodTimeZone,
+		}).Scan(&period, &sequence)
+		if err != nil {
+			return nil, fmt.Errorf("allocate business_ref: %w", err)
+		}
+		value = FormatAllocatedBusinessRef(period, sequence)
+	}
+	rows, err := q.Query(ctx, assignBusinessRefSQL, pgx.NamedArgs{
+		"id":                     subjectID,
+		"business_ref":           value,
+		"business_ref_namespace": req.Namespace,
+	})
+	if err != nil {
+		return nil, mapBusinessRefConflict(err)
+	}
+	ref, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[SubjectRef])
+	if errors.Is(err, pgx.ErrNoRows) {
+		// EnsureMutableTx proved the subject exists, so it already has a reference.
+		return nil, fmt.Errorf("%w: subject already has a business reference", ErrConflict)
+	}
+	if err != nil {
+		return nil, mapBusinessRefConflict(err)
+	}
+	return ref, nil
+}
+
+// mapBusinessRefConflict translates the unique (namespace, business_ref) index
+// violation into ErrConflict.
+func mapBusinessRefConflict(err error) error {
+	var pgErr *pgconn.PgError
+	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+		return fmt.Errorf("%w: business reference already in use in this namespace", ErrConflict)
+	}
+	return err
 }
 
 // InsertRecordMetadataTx inserts the 1:1 governance record for a subject using q.

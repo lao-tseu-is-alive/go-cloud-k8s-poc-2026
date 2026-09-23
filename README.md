@@ -105,7 +105,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0006 (dbmate format)
+      └── db/migrations/  0001..0007 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   ├── module/            bundleable module (schema owned by core)
   └── filestore/         local blob store for uploaded document bytes
@@ -218,7 +218,8 @@ ActorService: `GET /api/organization-categories` · `POST /api/actors` ·
 
 CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/relationships` ·
 `DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
-`GET /api/relationship-types` · `GET /api/subjects/{subjectId}/audit`.
+`GET /api/relationship-types` · `GET /api/subjects/{subjectId}/audit` ·
+`POST /api/subjects/{subjectId}/business-ref` · `GET /api/subjects:lookup?businessRef=…&namespace=…`.
 
 ```bash
 BASE=http://127.0.0.1:8088
@@ -265,6 +266,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0004_seed_reference_data.sql seed subject kinds, relationship types, document types
 0005_document_unaccent_search.sql  accent-insensitive full-text search (immutable_unaccent)
 0006_actor.sql               actor + actor_contact + organization_category (+ 33 seeded categories)
+0007_business_ref.sql        subject_ref.business_ref + namespace (unique per namespace) + business_ref_counter
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

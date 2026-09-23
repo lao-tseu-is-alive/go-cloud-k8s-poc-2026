@@ -25,8 +25,9 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-GLD-022 (`business_ref`), then GLD-023 (Document / DocumentVersion /
-ContentBlob split): the v2 Phase 0 alignment comes before the Case slice.
+GLD-023 (Document / DocumentVersion / ContentBlob split); GLD-022
+(`business_ref`) is implemented and ships with the next release. The v2 Phase 0
+alignment comes before the Case slice.
 
 ## Cross-cutting quality
 
@@ -64,7 +65,7 @@ ContentBlob split): the v2 Phase 0 alignment comes before the Case slice.
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
-- [ ] **GLD-022 — Business reference**: `subject_ref.business_ref` +
+- [~] **GLD-022 — Business reference**: `subject_ref.business_ref` +
   `business_ref_namespace`, a partial unique index on `(namespace,
   business_ref)`, a transactional per-namespace allocator (e.g. `2026-001245`),
   exposed on `SubjectRef` and filterable. The display label stays non-unique.

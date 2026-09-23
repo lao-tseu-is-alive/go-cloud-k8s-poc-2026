@@ -55,7 +55,8 @@ whenever a task starts, completes, changes scope or order.
 
 ### Implemented so far
 
-- **core** (`pkg/core`) — transversal: `subject_ref`, `record_metadata`,
+- **core** (`pkg/core`) — transversal: `subject_ref` (+ optional `business_ref` in a
+  namespace, allocated `YYYY-NNNNNN` by `business_ref_counter`), `record_metadata`,
   `audit_event`, `relationship_type`, `subject_relationship` → `CoreService`.
 - **document** (`pkg/document`) — modern GED entity → `DocumentService`.
 - **actor** (`pkg/actor`) — external persons & organizations → `ActorService`.
@@ -88,7 +89,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0006 (dbmate format)
+  │   └── db/migrations/     0001..0007 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
   └── filestore/             local blob store for uploaded document bytes
@@ -215,7 +216,8 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 
 `CoreService`, `DocumentService` and `ActorService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
-`/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`; ActorService:
+`/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
+`/api/subjects:lookup`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`).
 
 ## Frontend (embedded SPA)

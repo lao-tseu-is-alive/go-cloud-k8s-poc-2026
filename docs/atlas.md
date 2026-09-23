@@ -99,6 +99,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Core domain (`pkg/core`)
 
+- `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
+- `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
 - `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
@@ -124,6 +126,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0004_seed_reference_data.sql` — Seed migration: reference document and relationship types.
 - `pkg/core/module/db/migrations/0005_document_unaccent_search.sql` — Migration: `immutable_unaccent()` and accent-insensitive document search.
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
+- `pkg/core/module/db/migrations/0007_business_ref.sql` — Schema migration: `subject_ref.business_ref` + namespace (unique per namespace) and the `business_ref_counter` allocator.
 
 ## Document domain (`pkg/document`)
 
@@ -156,6 +159,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Integration tests (`pkg/integration`)
 
+- `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, PII-free person specialization.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
 - `pkg/integration/document_lifecycle_test.go` — DB test: idempotent seeded migrations and the full document lifecycle.
@@ -195,7 +199,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with optional unlink action.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
-- `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card.
+- `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and blob download panel.

@@ -11,7 +11,7 @@ package core
 
 // --- subject_ref -------------------------------------------------------------
 
-const subjectRefColumns = `id, kind, display_label, canonical_url, created_at`
+const subjectRefColumns = `id, kind, display_label, canonical_url, business_ref, business_ref_namespace, created_at`
 
 const insertSubjectRefSQL = `
 INSERT INTO subject_ref (kind, display_label, canonical_url)
@@ -33,6 +33,34 @@ WHERE id = ANY(@ids::uuid[]);`
 // never show a stale label.
 const updateSubjectRefLabelSQL = `
 UPDATE subject_ref SET display_label = @display_label WHERE id = @id;`
+
+// assignBusinessRefSQL sets the business reference of a subject that has none
+// yet; zero rows means the subject is unknown or already has a reference.
+const assignBusinessRefSQL = `
+UPDATE subject_ref
+SET business_ref = @business_ref, business_ref_namespace = @business_ref_namespace
+WHERE id = @id AND business_ref = ''
+RETURNING ` + subjectRefColumns + `;`
+
+// allocateBusinessRefSQL increments the (namespace, current year) counter and
+// returns the new value; the upsert row-locks the counter until the transaction
+// ends, serializing concurrent allocations. The year is computed in
+// BusinessRefPeriodTimeZone by PostgreSQL (the scratch image has no tzdata).
+const allocateBusinessRefSQL = `
+INSERT INTO business_ref_counter AS c (namespace, period, last_value)
+VALUES (@namespace, to_char(now() AT TIME ZONE @time_zone, 'YYYY'), 1)
+ON CONFLICT (namespace, period) DO UPDATE SET last_value = c.last_value + 1
+RETURNING period, last_value;`
+
+// lookupSubjectsByBusinessRefSQL finds subjects by exact business reference.
+const lookupSubjectsByBusinessRefSQL = `
+SELECT ` + subjectRefColumns + `
+FROM subject_ref
+WHERE business_ref = @business_ref
+  AND (@business_ref_namespace = '' OR business_ref_namespace = @business_ref_namespace)
+  AND (@kind = '' OR kind = @kind)
+ORDER BY created_at
+LIMIT @limit;`
 
 // --- record_metadata ---------------------------------------------------------
 

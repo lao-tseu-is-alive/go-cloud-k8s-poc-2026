@@ -22,7 +22,7 @@
 //     request carries an operator identity.
 //   - Every mutation writes an AuditEvent in the same transaction.
 //   - Errors: INVALID_ARGUMENT for invalid input, NOT_FOUND for unknown IDs or
-//     codes, ALREADY_EXISTS for a duplicate active relationship,
+//     codes, ALREADY_EXISTS for a duplicate active relationship or business reference,
 //     FAILED_PRECONDITION for a locked or deleted record or a kind mismatch,
 //     UNAUTHENTICATED / PERMISSION_DENIED for a missing token or scope.
 //   - Pagination: page_size 0 means the default (25), at most 200; page_token
@@ -69,6 +69,12 @@ const (
 	// CoreServiceGetSubjectRefProcedure is the fully-qualified name of the CoreService's GetSubjectRef
 	// RPC.
 	CoreServiceGetSubjectRefProcedure = "/goeland.v1.CoreService/GetSubjectRef"
+	// CoreServiceAssignBusinessRefProcedure is the fully-qualified name of the CoreService's
+	// AssignBusinessRef RPC.
+	CoreServiceAssignBusinessRefProcedure = "/goeland.v1.CoreService/AssignBusinessRef"
+	// CoreServiceLookupSubjectsProcedure is the fully-qualified name of the CoreService's
+	// LookupSubjects RPC.
+	CoreServiceLookupSubjectsProcedure = "/goeland.v1.CoreService/LookupSubjects"
 	// CoreServiceLinkSubjectsProcedure is the fully-qualified name of the CoreService's LinkSubjects
 	// RPC.
 	CoreServiceLinkSubjectsProcedure = "/goeland.v1.CoreService/LinkSubjects"
@@ -95,6 +101,14 @@ type CoreServiceClient interface {
 	// Retrieve a subject with optional governance + audit info.
 	// Requires goeland:read; NOT_FOUND when the subject does not exist.
 	GetSubjectRef(context.Context, *connect.Request[v1.GetSubjectRefRequest]) (*connect.Response[v1.GetSubjectRefResponse], error)
+	// Give an existing subject its business reference (explicit or allocated).
+	// Requires goeland:write; writes a BUSINESS_REF_ASSIGNED audit event. Fails
+	// with ALREADY_EXISTS when the subject already has a reference or the
+	// (namespace, value) pair is taken, FAILED_PRECONDITION for a deleted subject.
+	AssignBusinessRef(context.Context, *connect.Request[v1.AssignBusinessRefRequest]) (*connect.Response[v1.AssignBusinessRefResponse], error)
+	// Find subjects by exact business reference, optionally by namespace and kind.
+	// Requires goeland:read.
+	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -138,6 +152,18 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("GetSubjectRef")),
 			connect.WithClientOptions(opts...),
 		),
+		assignBusinessRef: connect.NewClient[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse](
+			httpClient,
+			baseURL+CoreServiceAssignBusinessRefProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("AssignBusinessRef")),
+			connect.WithClientOptions(opts...),
+		),
+		lookupSubjects: connect.NewClient[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse](
+			httpClient,
+			baseURL+CoreServiceLookupSubjectsProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
+			connect.WithClientOptions(opts...),
+		),
 		linkSubjects: connect.NewClient[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse](
 			httpClient,
 			baseURL+CoreServiceLinkSubjectsProcedure,
@@ -175,6 +201,8 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 type coreServiceClient struct {
 	createSubjectRef      *connect.Client[v1.CreateSubjectRefRequest, v1.CreateSubjectRefResponse]
 	getSubjectRef         *connect.Client[v1.GetSubjectRefRequest, v1.GetSubjectRefResponse]
+	assignBusinessRef     *connect.Client[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse]
+	lookupSubjects        *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
 	linkSubjects          *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
 	unlinkSubjects        *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
 	listRelationships     *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
@@ -190,6 +218,16 @@ func (c *coreServiceClient) CreateSubjectRef(ctx context.Context, req *connect.R
 // GetSubjectRef calls goeland.v1.CoreService.GetSubjectRef.
 func (c *coreServiceClient) GetSubjectRef(ctx context.Context, req *connect.Request[v1.GetSubjectRefRequest]) (*connect.Response[v1.GetSubjectRefResponse], error) {
 	return c.getSubjectRef.CallUnary(ctx, req)
+}
+
+// AssignBusinessRef calls goeland.v1.CoreService.AssignBusinessRef.
+func (c *coreServiceClient) AssignBusinessRef(ctx context.Context, req *connect.Request[v1.AssignBusinessRefRequest]) (*connect.Response[v1.AssignBusinessRefResponse], error) {
+	return c.assignBusinessRef.CallUnary(ctx, req)
+}
+
+// LookupSubjects calls goeland.v1.CoreService.LookupSubjects.
+func (c *coreServiceClient) LookupSubjects(ctx context.Context, req *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
+	return c.lookupSubjects.CallUnary(ctx, req)
 }
 
 // LinkSubjects calls goeland.v1.CoreService.LinkSubjects.
@@ -226,6 +264,14 @@ type CoreServiceHandler interface {
 	// Retrieve a subject with optional governance + audit info.
 	// Requires goeland:read; NOT_FOUND when the subject does not exist.
 	GetSubjectRef(context.Context, *connect.Request[v1.GetSubjectRefRequest]) (*connect.Response[v1.GetSubjectRefResponse], error)
+	// Give an existing subject its business reference (explicit or allocated).
+	// Requires goeland:write; writes a BUSINESS_REF_ASSIGNED audit event. Fails
+	// with ALREADY_EXISTS when the subject already has a reference or the
+	// (namespace, value) pair is taken, FAILED_PRECONDITION for a deleted subject.
+	AssignBusinessRef(context.Context, *connect.Request[v1.AssignBusinessRefRequest]) (*connect.Response[v1.AssignBusinessRefResponse], error)
+	// Find subjects by exact business reference, optionally by namespace and kind.
+	// Requires goeland:read.
+	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -265,6 +311,18 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("GetSubjectRef")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceAssignBusinessRefHandler := connect.NewUnaryHandler(
+		CoreServiceAssignBusinessRefProcedure,
+		svc.AssignBusinessRef,
+		connect.WithSchema(coreServiceMethods.ByName("AssignBusinessRef")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceLookupSubjectsHandler := connect.NewUnaryHandler(
+		CoreServiceLookupSubjectsProcedure,
+		svc.LookupSubjects,
+		connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceLinkSubjectsHandler := connect.NewUnaryHandler(
 		CoreServiceLinkSubjectsProcedure,
 		svc.LinkSubjects,
@@ -301,6 +359,10 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceCreateSubjectRefHandler.ServeHTTP(w, r)
 		case CoreServiceGetSubjectRefProcedure:
 			coreServiceGetSubjectRefHandler.ServeHTTP(w, r)
+		case CoreServiceAssignBusinessRefProcedure:
+			coreServiceAssignBusinessRefHandler.ServeHTTP(w, r)
+		case CoreServiceLookupSubjectsProcedure:
+			coreServiceLookupSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceLinkSubjectsProcedure:
 			coreServiceLinkSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceUnlinkSubjectsProcedure:
@@ -326,6 +388,14 @@ func (UnimplementedCoreServiceHandler) CreateSubjectRef(context.Context, *connec
 
 func (UnimplementedCoreServiceHandler) GetSubjectRef(context.Context, *connect.Request[v1.GetSubjectRefRequest]) (*connect.Response[v1.GetSubjectRefResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.GetSubjectRef is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) AssignBusinessRef(context.Context, *connect.Request[v1.AssignBusinessRefRequest]) (*connect.Response[v1.AssignBusinessRefResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.AssignBusinessRef is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.LookupSubjects is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error) {

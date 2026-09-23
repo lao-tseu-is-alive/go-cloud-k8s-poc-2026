@@ -41,6 +41,10 @@ export interface SubjectRef {
   displayLabel: string
   canonicalUrl?: string
   createdAt?: string
+  /** Human business reference, e.g. "2026-001245"; absent/empty when none. */
+  businessRef?: string
+  /** Namespace scoping businessRef (e.g. "OPC"); empty for a free reference. */
+  businessRefNamespace?: string
 }
 
 export interface RecordMetadata {

@@ -11,6 +11,8 @@ import (
 type Repository interface {
 	CreateSubject(ctx context.Context, in CreateSubjectInput) (*SubjectRef, *RecordMetadata, *AuditEvent, error)
 	GetSubject(ctx context.Context, id uuid.UUID) (*SubjectRef, error)
+	AssignBusinessRef(ctx context.Context, subjectID uuid.UUID, req BusinessRefRequest, operatorID, reason string) (*SubjectRef, *AuditEvent, error)
+	LookupSubjects(ctx context.Context, filter LookupFilter, limit int) ([]*SubjectRef, error)
 	GetRecordMetadata(ctx context.Context, subjectID uuid.UUID) (*RecordMetadata, error)
 	LinkSubjects(ctx context.Context, in LinkInput) (*SubjectRelationship, *AuditEvent, error)
 	UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, operatorID, reason string) (*SubjectRelationship, *AuditEvent, error)

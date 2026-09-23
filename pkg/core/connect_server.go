@@ -41,6 +41,7 @@ func (s *ConnectServer) CreateSubjectRef(ctx context.Context, req *connect.Reque
 		DisplayLabel: msg.DisplayLabel,
 		CanonicalURL: msg.CanonicalUrl,
 		OperatorID:   OperatorID(user),
+		BusinessRef:  BusinessRefRequestFromProto(msg.BusinessRef),
 	}
 	if gov := msg.InitialMetadata; gov != nil {
 		in.OwnerUserID = gov.OwnerUserId
@@ -113,6 +114,46 @@ func (s *ConnectServer) LinkSubjects(ctx context.Context, req *connect.Request[g
 		Relationship: DomainRelationshipToProto(rel),
 		AuditEvent:   DomainAuditEventToProto(ev),
 	}), nil
+}
+
+// AssignBusinessRef gives an existing subject its business reference.
+func (s *ConnectServer) AssignBusinessRef(ctx context.Context, req *connect.Request[goelandv1.AssignBusinessRefRequest]) (*connect.Response[goelandv1.AssignBusinessRefResponse], error) {
+	user, err := RequireCaller(ctx, ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(req.Msg.SubjectId)
+	if err != nil {
+		return nil, err
+	}
+	ref, ev, err := s.service.AssignBusinessRef(ctx, id, BusinessRefRequestFromProto(req.Msg.BusinessRef), OperatorID(user), req.Msg.Reason)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.AssignBusinessRefResponse{
+		SubjectRef: DomainSubjectRefToProto(ref),
+		AuditEvent: DomainAuditEventToProto(ev),
+	}), nil
+}
+
+// LookupSubjects finds subjects by exact business reference.
+func (s *ConnectServer) LookupSubjects(ctx context.Context, req *connect.Request[goelandv1.LookupSubjectsRequest]) (*connect.Response[goelandv1.LookupSubjectsResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
+	}
+	refs, err := s.service.LookupSubjects(ctx, LookupFilter{
+		BusinessRef: req.Msg.BusinessRef,
+		Namespace:   req.Msg.Namespace,
+		Kind:        SubjectKindFromProto(req.Msg.Kind),
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.SubjectRef, len(refs))
+	for i, ref := range refs {
+		out[i] = DomainSubjectRefToProto(ref)
+	}
+	return connect.NewResponse(&goelandv1.LookupSubjectsResponse{SubjectRefs: out}), nil
 }
 
 // UnlinkSubjects soft-deletes an existing relationship.

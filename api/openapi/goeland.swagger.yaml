@@ -770,6 +770,36 @@ paths:
           type: string
       tags:
         - CoreService
+  /api/subjects/{subjectId}/business-ref:
+    post:
+      summary: |-
+        Give an existing subject its business reference (explicit or allocated).
+        Requires goeland:write; writes a BUSINESS_REF_ASSIGNED audit event. Fails
+        with ALREADY_EXISTS when the subject already has a reference or the
+        (namespace, value) pair is taken, FAILED_PRECONDITION for a deleted subject.
+      operationId: AssignBusinessRef
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1AssignBusinessRefResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: subject_id is the subject; a soft-deleted subject is rejected, a locked one is not.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CoreServiceAssignBusinessRefBody'
+      tags:
+        - CoreService
   /api/subjects/{subjectId}/relationships:
     get:
       summary: |-
@@ -815,6 +845,59 @@ paths:
           type: string
       tags:
         - CoreService
+  /api/subjects:lookup:
+    get:
+      summary: |-
+        Find subjects by exact business reference, optionally by namespace and kind.
+        Requires goeland:read.
+      operationId: LookupSubjects
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1LookupSubjectsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: businessRef
+          description: business_ref is the exact reference to find (1-100 characters).
+          in: query
+          required: false
+          type: string
+        - name: namespace
+          description: namespace restricts the match to one namespace; empty matches any, including none.
+          in: query
+          required: false
+          type: string
+        - name: kind
+          description: |-
+            kind restricts the match to one subject kind; UNSPECIFIED means any.
+
+             - SUBJECT_KIND_UNSPECIFIED: SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+            and means "any kind" in filters.
+             - SUBJECT_KIND_CASE: SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+             - SUBJECT_KIND_DOCUMENT: SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+             - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+             - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+            never an authenticated operator.
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+          in: query
+          required: false
+          type: string
+          enum:
+            - SUBJECT_KIND_UNSPECIFIED
+            - SUBJECT_KIND_CASE
+            - SUBJECT_KIND_DOCUMENT
+            - SUBJECT_KIND_THING
+            - SUBJECT_KIND_ACTOR
+            - SUBJECT_KIND_USER
+            - SUBJECT_KIND_ORG_UNIT
+          default: SUBJECT_KIND_UNSPECIFIED
+      tags:
+        - CoreService
 definitions:
   ActorServiceUpdateActorBody:
     type: object
@@ -854,6 +937,16 @@ definitions:
     description: |-
       UpdateActorRequest updates mutable fields. Blocked if the record is locked.
       contacts, when provided, replace the full set (managed as a whole for simplicity).
+  CoreServiceAssignBusinessRefBody:
+    type: object
+    properties:
+      businessRef:
+        $ref: '#/definitions/v1BusinessRefRequest'
+        description: business_ref is the explicit or allocated reference to assign.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: AssignBusinessRefRequest gives an existing subject its business reference.
   DocumentServiceFinalizeDocumentBody:
     type: object
     properties:
@@ -1031,6 +1124,16 @@ definitions:
       "any kind" in searches.
        - ACTOR_KIND_PERSON: ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
        - ACTOR_KIND_ORGANIZATION: ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
+  v1AssignBusinessRefResponse:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the subject with business_ref set.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the BUSINESS_REF_ASSIGNED audit event.
+    description: AssignBusinessRefResponse returns the subject with its reference.
   v1AuditEvent:
     type: object
     properties:
@@ -1082,6 +1185,26 @@ definitions:
       in the same transaction as the change it records.
     required:
       - eventType
+  v1BusinessRefRequest:
+    type: object
+    properties:
+      namespace:
+        type: string
+        description: |-
+          namespace scopes uniqueness, e.g. OPC: an upper-case letter followed by up
+          to 31 upper-case letters, digits or underscores. Required with allocate;
+          empty allows a free, non-unique explicit value (e.g. a legacy number).
+      value:
+        type: string
+        description: value is an explicit reference (1-100 characters, no surrounding whitespace).
+      allocate:
+        type: boolean
+        description: |-
+          allocate, when true, asks for the next "<YYYY>-<NNNNNN>" reference of the
+          namespace for the current calendar year in Europe/Zurich (e.g. 2026-000042).
+    description: |-
+      BusinessRefRequest asks for a business reference on a subject: an explicit
+      value or a server-allocated one. A subject keeps its first reference.
   v1ContactType:
     type: string
     enum:
@@ -1282,6 +1405,11 @@ definitions:
         description: |-
           initial_metadata optionally sets the owner, confidentiality, retention,
           sort_final and metadata of the new governance record.
+      businessRef:
+        $ref: '#/definitions/v1BusinessRefRequest'
+        description: |-
+          business_ref optionally assigns a business reference in the same
+          transaction; ALREADY_EXISTS when the (namespace, value) pair is taken.
 
           NOTE: the acting operator is derived server-side from the authenticated
            principal (never trusted from the client) and recorded as audit_event.actor_user_id.
@@ -1647,6 +1775,18 @@ definitions:
         format: int32
         description: total_size is the number of matching edges across all pages.
     description: ListRelationshipsResponse is one page of edges.
+  v1LookupSubjectsResponse:
+    type: object
+    properties:
+      subjectRefs:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRef'
+        description: |-
+          subject_refs are the matches, oldest first, at most 50 (a namespaced
+          reference matches at most one subject).
+    description: LookupSubjectsResponse returns the matching subjects.
   v1OrganizationCategory:
     type: object
     properties:
@@ -1895,6 +2035,20 @@ definitions:
         type: string
         format: date-time
         description: created_at is the server creation time.
+        readOnly: true
+      businessRef:
+        type: string
+        description: |-
+          business_ref is the optional human business reference, e.g. 2026-001245;
+          empty when none. It is not the identity (id is). Set through
+          CreateSubjectRefRequest.business_ref or AssignBusinessRef.
+        readOnly: true
+      businessRefNamespace:
+        type: string
+        description: |-
+          business_ref_namespace scopes business_ref, e.g. OPC; (namespace,
+          business_ref) is unique when the namespace is set. Empty for a free
+          (non-unique) reference or no reference.
         readOnly: true
     description: |-
       SubjectRef is the canonical identity of any business subject.

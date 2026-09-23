@@ -53,6 +53,12 @@ type SubjectRef struct {
 	DisplayLabel string `db:"display_label"`
 	// CanonicalURL is an optional stable link to the subject; empty when unset.
 	CanonicalURL string `db:"canonical_url"`
+	// BusinessRef is the optional human business reference (e.g. 2026-001245);
+	// empty when none. It is not the identity: ID is.
+	BusinessRef string `db:"business_ref"`
+	// BusinessRefNamespace scopes BusinessRef (e.g. OPC); the pair is unique when
+	// the namespace is set. Empty for a free reference or no reference.
+	BusinessRefNamespace string `db:"business_ref_namespace"`
 	// CreatedAt is the database insertion time.
 	CreatedAt time.Time `db:"created_at"`
 }
@@ -225,6 +231,9 @@ type CreateSubjectInput struct {
 	SortFinal string
 	// Metadata is initial secondary extension data.
 	Metadata map[string]string
+	// BusinessRef optionally assigns a business reference in the same
+	// transaction; the zero value assigns none.
+	BusinessRef BusinessRefRequest
 }
 
 // LinkInput holds the fields required to create a typed relationship.

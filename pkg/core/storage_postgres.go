@@ -50,11 +50,19 @@ func (r *PostgresRepository) CreateSubject(ctx context.Context, in CreateSubject
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("insert record_metadata: %w", err)
 	}
+	after := map[string]any{"kind": string(ref.Kind), "display_label": ref.DisplayLabel}
+	if !in.BusinessRef.IsZero() {
+		if ref, err = AssignBusinessRefTx(ctx, tx, ref.ID, in.BusinessRef); err != nil {
+			return nil, nil, nil, err
+		}
+		after["business_ref"] = ref.BusinessRef
+		after["business_ref_namespace"] = ref.BusinessRefNamespace
+	}
 	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
 		SubjectID:   ref.ID,
 		EventType:   "SUBJECT_CREATED",
 		ActorUserID: in.OperatorID,
-		AfterState:  map[string]any{"kind": string(ref.Kind), "display_label": ref.DisplayLabel},
+		AfterState:  after,
 	})
 	if err != nil {
 		return nil, nil, nil, fmt.Errorf("insert audit_event: %w", err)
@@ -81,6 +89,54 @@ func (r *PostgresRepository) GetRecordMetadata(ctx context.Context, subjectID uu
 		return nil, mapNotFound(err)
 	}
 	return md, nil
+}
+
+// AssignBusinessRef gives an existing subject its business reference and writes
+// a BUSINESS_REF_ASSIGNED audit event in the same transaction.
+func (r *PostgresRepository) AssignBusinessRef(ctx context.Context, subjectID uuid.UUID, req BusinessRefRequest, operatorID, reason string) (*SubjectRef, *AuditEvent, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin assign business_ref: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	ref, err := AssignBusinessRefTx(ctx, tx, subjectID, req)
+	if err != nil {
+		return nil, nil, err
+	}
+	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
+		SubjectID:   subjectID,
+		EventType:   "BUSINESS_REF_ASSIGNED",
+		ActorUserID: operatorID,
+		Reason:      reason,
+		AfterState: map[string]any{
+			"business_ref":           ref.BusinessRef,
+			"business_ref_namespace": ref.BusinessRefNamespace,
+			"allocated":              req.Allocate,
+		},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit assign business_ref: %w", err)
+	}
+	return ref, ev, nil
+}
+
+// LookupSubjects returns at most limit subjects whose business reference
+// matches filter exactly, oldest first.
+func (r *PostgresRepository) LookupSubjects(ctx context.Context, filter LookupFilter, limit int) ([]*SubjectRef, error) {
+	rows, err := r.pool.Query(ctx, lookupSubjectsByBusinessRefSQL, pgx.NamedArgs{
+		"business_ref":           filter.BusinessRef,
+		"business_ref_namespace": filter.Namespace,
+		"kind":                   string(filter.Kind),
+		"limit":                  limit,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("lookup subjects: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[SubjectRef])
 }
 
 // LinkSubjects validates and creates a typed relationship and writes a RELATIONSHIP_LINKED audit event.

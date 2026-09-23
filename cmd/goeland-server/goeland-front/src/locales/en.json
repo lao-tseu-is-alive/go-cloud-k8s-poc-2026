@@ -124,7 +124,8 @@
       "display_label": "Label",
       "canonical_url": "Canonical URL",
       "created_at": "Created at",
-      "id": "Identifier"
+      "id": "Identifier",
+      "business_ref": "Business reference"
     },
     "relationship": {
       "source": "Source",

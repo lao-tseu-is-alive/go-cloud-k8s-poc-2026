@@ -86,6 +86,22 @@ func DomainSubjectRefToProto(ref *SubjectRef) *goelandv1.SubjectRef {
 		DisplayLabel: ref.DisplayLabel,
 		CanonicalUrl: ref.CanonicalURL,
 		CreatedAt:    TimestampOrNil(ref.CreatedAt),
+
+		BusinessRef:          ref.BusinessRef,
+		BusinessRefNamespace: ref.BusinessRefNamespace,
+	}
+}
+
+// BusinessRefRequestFromProto converts an optional proto BusinessRefRequest; nil
+// yields the zero value (no reference requested).
+func BusinessRefRequestFromProto(req *goelandv1.BusinessRefRequest) BusinessRefRequest {
+	if req == nil {
+		return BusinessRefRequest{}
+	}
+	return BusinessRefRequest{
+		Namespace: req.GetNamespace(),
+		Value:     req.GetValue(),
+		Allocate:  req.GetAllocate(),
 	}
 }
 

@@ -58,6 +58,12 @@ func (stubCoreRepo) CreateSubject(context.Context, core.CreateSubjectInput) (*co
 	return nil, nil, nil, nil
 }
 func (stubCoreRepo) GetSubject(context.Context, uuid.UUID) (*core.SubjectRef, error) { return nil, nil }
+func (stubCoreRepo) AssignBusinessRef(context.Context, uuid.UUID, core.BusinessRefRequest, string, string) (*core.SubjectRef, *core.AuditEvent, error) {
+	return nil, nil, nil
+}
+func (stubCoreRepo) LookupSubjects(context.Context, core.LookupFilter, int) ([]*core.SubjectRef, error) {
+	return nil, nil
+}
 func (stubCoreRepo) GetRecordMetadata(context.Context, uuid.UUID) (*core.RecordMetadata, error) {
 	return nil, nil
 }

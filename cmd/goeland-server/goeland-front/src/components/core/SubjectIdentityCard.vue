@@ -21,6 +21,18 @@
 
       <v-card-subtitle>
         <v-chip class="mr-2" label size="small">{{ enumLabel('SubjectKind', subject.kind) }}</v-chip>
+
+        <v-chip
+          v-if="subject.businessRef"
+          class="mr-2"
+          color="primary"
+          label
+          size="small"
+          :title="t('fields.subject.business_ref')"
+        >
+          {{ subject.businessRefNamespace ? `${subject.businessRefNamespace} ${subject.businessRef}` : subject.businessRef }}
+        </v-chip>
+
         <span class="text-caption">{{ subject.id }}</span>
       </v-card-subtitle>
     </v-card-item>

@@ -22,7 +22,7 @@
 //     request carries an operator identity.
 //   - Every mutation writes an AuditEvent in the same transaction.
 //   - Errors: INVALID_ARGUMENT for invalid input, NOT_FOUND for unknown IDs or
-//     codes, ALREADY_EXISTS for a duplicate active relationship,
+//     codes, ALREADY_EXISTS for a duplicate active relationship or business reference,
 //     FAILED_PRECONDITION for a locked or deleted record or a kind mismatch,
 //     UNAUTHENTICATED / PERMISSION_DENIED for a missing token or scope.
 //   - Pagination: page_size 0 means the default (25), at most 200; page_token
@@ -104,6 +104,41 @@ message SubjectRef {
   string canonical_url = 4 [(buf.validate.field).string.max_len = 2048];
   // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // business_ref is the optional human business reference, e.g. 2026-001245;
+  // empty when none. It is not the identity (id is). Set through
+  // CreateSubjectRefRequest.business_ref or AssignBusinessRef.
+  string business_ref = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // business_ref_namespace scopes business_ref, e.g. OPC; (namespace,
+  // business_ref) is unique when the namespace is set. Empty for a free
+  // (non-unique) reference or no reference.
+  string business_ref_namespace = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// BusinessRefRequest asks for a business reference on a subject: an explicit
+// value or a server-allocated one. A subject keeps its first reference.
+message BusinessRefRequest {
+  option (buf.validate.message).cel = {
+    id: "business_ref.allocate_needs_namespace"
+    message: "allocate requires a namespace"
+    expression: "!has(this.allocate) || this.namespace != ''"
+  };
+  // namespace scopes uniqueness, e.g. OPC: an upper-case letter followed by up
+  // to 31 upper-case letters, digits or underscores. Required with allocate;
+  // empty allows a free, non-unique explicit value (e.g. a legacy number).
+  string namespace = 1 [(buf.validate.field).string.pattern = "^$|^[A-Z][A-Z0-9_]{0,31}$"];
+  // source selects an explicit value or a server allocation; one is required.
+  oneof source {
+    option (buf.validate.oneof).required = true;
+    // value is an explicit reference (1-100 characters, no surrounding whitespace).
+    string value = 2 [(buf.validate.field).string = {
+      min_len: 1
+      max_len: 100
+      pattern: "^\\S(.*\\S)?$"
+    }];
+    // allocate, when true, asks for the next "<YYYY>-<NNNNNN>" reference of the
+    // namespace for the current calendar year in Europe/Zurich (e.g. 2026-000042).
+    bool allocate = 3 [(buf.validate.field).bool.const = true];
+  }
 }
 
 // RecordMetadata is the 1:1 governance record attached to every SubjectRef.
@@ -270,6 +305,9 @@ message CreateSubjectRefRequest {
   // initial_metadata optionally sets the owner, confidentiality, retention,
   // sort_final and metadata of the new governance record.
   RecordMetadata initial_metadata = 4;
+  // business_ref optionally assigns a business reference in the same
+  // transaction; ALREADY_EXISTS when the (namespace, value) pair is taken.
+  BusinessRefRequest business_ref = 5;
   // NOTE: the acting operator is derived server-side from the authenticated
   // principal (never trusted from the client) and recorded as audit_event.actor_user_id.
 }
@@ -302,6 +340,44 @@ message GetSubjectRefResponse {
   RecordMetadata metadata = 2;
   // recent_audit holds the latest audit events; empty unless include_audit_summary was set.
   repeated AuditEvent recent_audit = 3;
+}
+
+// AssignBusinessRefRequest gives an existing subject its business reference.
+message AssignBusinessRefRequest {
+  // subject_id is the subject; a soft-deleted subject is rejected, a locked one is not.
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  // business_ref is the explicit or allocated reference to assign.
+  BusinessRefRequest business_ref = 2 [(buf.validate.field).required = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// AssignBusinessRefResponse returns the subject with its reference.
+message AssignBusinessRefResponse {
+  // subject_ref is the subject with business_ref set.
+  SubjectRef subject_ref = 1;
+  // audit_event is the BUSINESS_REF_ASSIGNED audit event.
+  AuditEvent audit_event = 2;
+}
+
+// LookupSubjectsRequest finds subjects by exact business reference.
+message LookupSubjectsRequest {
+  // business_ref is the exact reference to find (1-100 characters).
+  string business_ref = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  // namespace restricts the match to one namespace; empty matches any, including none.
+  string namespace = 2 [(buf.validate.field).string.pattern = "^$|^[A-Z][A-Z0-9_]{0,31}$"];
+  // kind restricts the match to one subject kind; UNSPECIFIED means any.
+  SubjectKind kind = 3 [(buf.validate.field).enum.defined_only = true];
+}
+
+// LookupSubjectsResponse returns the matching subjects.
+message LookupSubjectsResponse {
+  // subject_refs are the matches, oldest first, at most 50 (a namespaced
+  // reference matches at most one subject).
+  repeated SubjectRef subject_refs = 1;
 }
 
 // LinkSubjectsRequest creates a typed edge between two existing subjects.
@@ -442,6 +518,23 @@ service CoreService {
   // Requires goeland:read; NOT_FOUND when the subject does not exist.
   rpc GetSubjectRef(GetSubjectRefRequest) returns (GetSubjectRefResponse) {
     option (google.api.http) = {get: "/api/subjects/{id}"};
+  }
+
+  // Give an existing subject its business reference (explicit or allocated).
+  // Requires goeland:write; writes a BUSINESS_REF_ASSIGNED audit event. Fails
+  // with ALREADY_EXISTS when the subject already has a reference or the
+  // (namespace, value) pair is taken, FAILED_PRECONDITION for a deleted subject.
+  rpc AssignBusinessRef(AssignBusinessRefRequest) returns (AssignBusinessRefResponse) {
+    option (google.api.http) = {
+      post: "/api/subjects/{subject_id}/business-ref"
+      body: "*"
+    };
+  }
+
+  // Find subjects by exact business reference, optionally by namespace and kind.
+  // Requires goeland:read.
+  rpc LookupSubjects(LookupSubjectsRequest) returns (LookupSubjectsResponse) {
+    option (google.api.http) = {get: "/api/subjects:lookup"};
   }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).

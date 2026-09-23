@@ -18,7 +18,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 |-------------|-------|-------|
 | V2 is the active spec | ✅ | adopted 2026-09-23; v1 kept as history |
 | IMPLEMENTATION_STATUS reflects V2 | 🟡 | this table + §3g; §1–§2 still map v1 sections |
-| `business_ref` exists | ⬜ | GLD-022 |
+| `business_ref` exists | ✅ | GLD-022: migration `0007`, `CoreService.AssignBusinessRef` / `LookupSubjects`, allocation at creation, SPA identity card (ships with the next release) |
 | `content_blob` exists, SHA-256 UNIQUE on it | ⬜ | GLD-023 (today the unique index is on `document.sha256`) |
 | `document_version` exists, current Document migrated without loss | ⬜ | GLD-023 (additive migration + backfill) |
 | existing filestore still works | ✅ | `internal://` refs; BlobStore interface in GLD-024 |
@@ -47,6 +47,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
 | §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
+| v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
 | §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed contacts (IDE/TVA/ABACUS/RC); 33 seeded categories; roles kept as relationships; persons carry no PII (register link only) |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
