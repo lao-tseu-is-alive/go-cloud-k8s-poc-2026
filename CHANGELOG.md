@@ -72,6 +72,9 @@ locally, in CI and before any publication. No API, wire or schema change.
 
 ### Fixed
 
+- `Makefile`: the no-`.env` branch was tab-indented before the first target, so every `make`
+  invocation on a checkout without `.env` (CI, release runners) stopped with "recipe commences
+  before first target". Found by the first CI run of the new gate; nothing had been published.
 - Frontend `bun.lock` regenerated: it predated the `overrides` block of `package.json`, so
   `bun install --frozen-lockfile` failed with current bun (no package version changed).
 - Pre-existing ESLint (`unicorn/numeric-separators-style`) and `gofmt` (`pkg/actor/model.go`)

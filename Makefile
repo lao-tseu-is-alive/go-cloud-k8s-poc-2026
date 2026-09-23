@@ -7,18 +7,18 @@ APP_REPOSITORY := $(shell grep -E 'Repository\s+=' $(VER_SOURCE_CODE)| awk '{ pr
 $(info  Found APP_NAME:'$(APP_NAME)', APP_VERSION:'$(APP_VERSION)', APP_REPOSITORY:'$(APP_REPOSITORY)',  in file: $(VER_SOURCE_CODE) )
 
 ifneq ("$(wildcard .env)","")
-	ENV_EXISTS := "TRUE"
-	include .env
-	export $(shell sed 's/=.*//' .env)
+  ENV_EXISTS := "TRUE"
+  include .env
+  export $(shell sed 's/=.*//' .env)
 else
-	$(info .env file was not found, using default values for undefined variables)
-	ENV_EXISTS := "FALSE"
-	DB_DRIVER ?= postgres
-	DB_HOST ?= 127.0.0.1
-	DB_PORT ?= 5432
-	DB_NAME ?= goeland_poc_db
-	DB_USER ?= goeland_poc_db
-	DB_SSL_MODE ?= prefer
+  $(info .env file was not found, using default values for undefined variables)
+  ENV_EXISTS := "FALSE"
+  DB_DRIVER ?= postgres
+  DB_HOST ?= 127.0.0.1
+  DB_PORT ?= 5432
+  DB_NAME ?= goeland_poc_db
+  DB_USER ?= goeland_poc_db
+  DB_SSL_MODE ?= prefer
 endif
 
 APP_EXECUTABLE := goeland-server
