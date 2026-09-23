@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { GoDocument } from '@/api/types'
-  import { ref } from 'vue'
+  import { computed, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { downloadDocumentBlob, verifyDocumentIntegrity } from '@/api/documentClient'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -17,11 +17,13 @@
   const expected = ref('')
 
   const documentId = () => props.document.subjectRef?.id ?? ''
+  // Integrity is a property of the current version's content.
+  const content = computed(() => props.document.currentVersion?.content)
 
   const downloading = ref(false)
 
   async function download () {
-    const ref = props.document.storageRef
+    const ref = content.value?.storageRef
     if (!ref) return
     downloading.value = true
     try {
@@ -54,15 +56,15 @@
       <tbody>
         <tr>
           <td class="text-medium-emphasis" style="width: 40%">{{ t('fields.document.sha256') }}</td>
-          <td class="text-mono">{{ document.sha256 || '—' }}</td>
+          <td class="text-mono">{{ content?.sha256 || '—' }}</td>
         </tr>
 
         <tr>
           <td class="text-medium-emphasis">{{ t('fields.document.sha256_verified_at') }}</td>
 
           <td>
-            <v-chip v-if="document.sha256VerifiedAt" color="success" size="small">
-              {{ t('integrity.verified') }} — {{ formatDateTime(document.sha256VerifiedAt) }}
+            <v-chip v-if="content?.verifiedAt" color="success" size="small">
+              {{ t('integrity.verified') }} — {{ formatDateTime(content.verifiedAt) }}
             </v-chip>
 
             <v-chip v-else color="default" size="small">{{ t('integrity.notVerified') }}</v-chip>
@@ -71,7 +73,7 @@
 
         <tr>
           <td class="text-medium-emphasis">{{ t('fields.document.storage_ref') }}</td>
-          <td class="text-mono">{{ document.storageRef || '—' }}</td>
+          <td class="text-mono">{{ content?.storageRef || '—' }}</td>
         </tr>
       </tbody>
     </v-table>
@@ -96,7 +98,7 @@
       </v-btn>
 
       <v-btn
-        v-if="document.storageRef && document.storageRef.startsWith('internal://')"
+        v-if="content?.storageRef?.startsWith('internal://')"
         :loading="downloading"
         prepend-icon="mdi-download"
         variant="text"

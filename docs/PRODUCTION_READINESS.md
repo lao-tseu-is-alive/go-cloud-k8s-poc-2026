@@ -60,8 +60,9 @@ adds migrations.
 
 ## 3. Blob storage
 
-Uploaded document bytes are written to a **local filesystem** directory, referenced by
-documents through an `internal://…` `storage_ref`:
+Uploaded document bytes are written to a **local filesystem** directory and registered as
+a `content_blob` (unique SHA-256, so identical content is stored once) referenced through an
+`internal://…` storage ref:
 
 - `GOELAND_DOCUMENT_PATH` — blob directory (default `./go_documents`).
 - `GOELAND_MAX_UPLOAD_BYTES` — per-upload cap (default 100 MiB).

@@ -19,14 +19,14 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | V2 is the active spec | ✅ | adopted 2026-09-23; v1 kept as history |
 | IMPLEMENTATION_STATUS reflects V2 | 🟡 | this table + §3g; §1–§2 still map v1 sections |
 | `business_ref` exists | ✅ | GLD-022: migration `0007`, `CoreService.AssignBusinessRef` / `LookupSubjects`, allocation at creation, SPA identity card (ships with the next release) |
-| `content_blob` exists, SHA-256 UNIQUE on it | ⬜ | GLD-023 (today the unique index is on `document.sha256`) |
-| `document_version` exists, current Document migrated without loss | ⬜ | GLD-023 (additive migration + backfill) |
-| existing filestore still works | ✅ | `internal://` refs; BlobStore interface in GLD-024 |
-| APIs compatible or cleanly versioned | ⬜ | decision: stay in `goeland.v1` (§3g) |
-| Document UI works | ✅ | on the current model; to migrate with GLD-023 |
+| `content_blob` exists, SHA-256 UNIQUE on it | ✅ | GLD-023, migration `0008` |
+| `document_version` exists, current Document migrated without loss | ✅ | GLD-023: `0008` backfill (verified on representative rows, reversible), `0009` drops the superseded columns |
+| existing filestore still works | ✅ | `internal://` refs behind `document.ContentStore`; BlobStore interface in GLD-024 |
+| APIs compatible or cleanly versioned | ✅ | `goeland.v1` evolved in place (§3g): `AddDocumentVersion`, `ListDocumentVersions`, `Document.current_version`; removed fields reserved |
+| Document UI works | ✅ | migrated: versions panel, reuse notice, integrity on the current version |
 | Actor / Document tests green | ✅ | unit + `pkg/integration` |
-| global deduplication tested | ⬜ | GLD-023 |
-| same Document linkable to several cases | 🟡 | edges allowed; not surfaced by `GetDocument` (GLD-006) |
+| global deduplication tested | ✅ | `pkg/integration/document_versions_test.go` (incl. concurrent uploads) |
+| same Document linkable to several cases | ✅ | automatic reuse links the same document to each case; `GetDocument` still lists outgoing edges only (GLD-006) |
 | no regression audit / auth / security / CI | ✅ | enforced by `make release-check` |
 
 ---
@@ -39,7 +39,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §5.4 `record_metadata` (governance) | ✅ `0001` | ✅ via Core (create/lock/soft-delete helpers) | ✅ | ownership/confidentiality/locking/versioning; non-destructive |
 | §5.5 `audit_event` (append-only) | ✅ `0001` | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx |
 | §7 `relationship_type` + `subject_relationship` | ✅ `0002` | ✅ `CoreService.LinkSubjects/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; active-edge partial unique index; soft-delete |
-| §6.2 `document_type` + `document` | ✅ `0003` (+ `0005` unaccent) | ✅ `DocumentService.*` (9 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
+| §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10), document types (7) | ✅ `0004` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document module full slice in the browser; core panels read-only; Case/Thing/Actor UI pending their services |
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/document/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
@@ -94,7 +94,8 @@ These are deliberate betterments beyond the spec — keep them:
   a single server — a real capability the spec's flat layout didn't offer.
 - 🚀 **Richer, modern-GED Document** than spec §6.2: `external_system/id/url` (no
   duplication / interop), `sha256` + `sha256_verified_at` (probative integrity),
-  `is_record`, `status`, `language`, `page_count`, `previous_version_id` (versioning),
+  `is_record`, `status`, `language`, `page_count`, versioning (since v2: real
+  `document_version` rows replace `previous_version_id`),
   governance locking. These serve real GED UX and must not be trimmed back.
 - 🚀 **Accent-insensitive full-text search** (migration `0005`, `immutable_unaccent`):
   "chateau" finds "château". Pulled forward from the "future search" idea (spec §19.3)
@@ -108,9 +109,9 @@ These are deliberate betterments beyond the spec — keep them:
   governance & audit), bilingual fr-CH/en, dynamic `dev`/`jwt` auth via `GET /config`.
   The spec (§13) offered "REST now, UI later"; a real embedded SPA over the typed
   REST surface is a betterment — keep it.
-- 🚀 **Metadata-first file upload** kept **out of the proto contract**: `CreateDocument`
-  stays `storage_ref`-only, while binary bytes flow through `POST /api/documents/upload`
-  → `internal://<uuid>` → `CreateDocument` (server computes sha256/size/mime;
+- 🚀 **Metadata-first file upload** kept **out of the proto contract**: binary bytes flow
+  through `POST /api/documents/upload` → deduplicated `content_blob` → `contentBlobId` →
+  `CreateDocument` / `AddDocumentVersion` (server computes sha256/size/mime;
   `pkg/document/filestore`, path-traversal guarded). Preserves proto validation /
   governance / audit while still supporting real file upload; swap the local blob store
   for MinIO later without touching the contract.
@@ -237,6 +238,14 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
 - **Thing geometry** — explicit SRID (EPSG:2056, Swiss LV95), geometry type and GIST index.
 - **End vs undo a relationship** — "ended" sets `valid_to`; "unlinked" (soft delete) means the
   edge was a mistake. Two operations, two audit events.
+- **Document split details (GLD-023)** — a version may have no content (metadata-only
+  document or external reference) and a blob may be digest-only (empty storage ref: bytes
+  held elsewhere) so the backfill is lossless; declaring a record makes the version final;
+  `external_*` stay document-level (decided enhancement §3); content identity is the
+  server-registered `content_blob_id`, never a client-supplied digest (otherwise reuse would
+  let a client attach any document by quoting its hash); the upload endpoint now requires
+  `goeland:write` (download `goeland:read`); unregistered duplicate bytes are removed at once,
+  orphan blobs of abandoned uploads are left for a later GC.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 

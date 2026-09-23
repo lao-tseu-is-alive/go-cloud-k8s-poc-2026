@@ -124,7 +124,7 @@ func TestAssignBusinessRef(t *testing.T) {
 		t.Fatalf("second assignment: want ErrConflict, got %v", err)
 	}
 
-	doc, _, _, err := env.docSvc.Create(ctx, document.CreateInput{
+	res, err := env.docSvc.Create(ctx, document.CreateInput{
 		DocumentTypeCode: "PLAN",
 		Title:            "Deleted " + uniqueToken(),
 		OperatorID:       testOperator,
@@ -132,6 +132,7 @@ func TestAssignBusinessRef(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create document: %v", err)
 	}
+	doc := res.Document
 	if _, err := env.docSvc.SoftDelete(ctx, doc.ID, testOperator, "test"); err != nil {
 		t.Fatalf("soft delete document: %v", err)
 	}

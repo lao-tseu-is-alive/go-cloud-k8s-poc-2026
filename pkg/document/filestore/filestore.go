@@ -100,20 +100,9 @@ func (s *Store) Save(r io.Reader, originalName string) (Blob, error) {
 // Open resolves an internal:// storage_ref to a readable file, rejecting any
 // reference that escapes the store root or is not owned by this backend.
 func (s *Store) Open(storageRef string) (*os.File, error) {
-	name, ok := strings.CutPrefix(storageRef, Scheme)
-	if !ok {
-		return nil, ErrInvalidRef
-	}
-	// The name must be a single, plain path element: no directories, no
-	// traversal, no absolute paths.
-	if name == "" || name == "." || name == ".." ||
-		strings.ContainsAny(name, `/\`) || filepath.IsAbs(name) {
-		return nil, ErrInvalidRef
-	}
-	full := filepath.Join(s.root, name)
-	// Defence in depth: the resolved path must still live directly under root.
-	if filepath.Dir(full) != s.root {
-		return nil, ErrInvalidRef
+	full, err := s.resolve(storageRef)
+	if err != nil {
+		return nil, err
 	}
 	f, err := os.Open(full)
 	if err != nil {
@@ -123,6 +112,43 @@ func (s *Store) Open(storageRef string) (*os.File, error) {
 		return nil, fmt.Errorf("filestore: open blob: %w", err)
 	}
 	return f, nil
+}
+
+// Remove deletes the bytes behind an internal:// storage_ref, with the same
+// reference validation as Open. It exists to discard freshly saved bytes that
+// were never registered (e.g. a duplicate of known content); registered
+// content is never removed through the domain services. A missing file is not
+// an error.
+func (s *Store) Remove(storageRef string) error {
+	full, err := s.resolve(storageRef)
+	if err != nil {
+		return err
+	}
+	if err := os.Remove(full); err != nil && !errors.Is(err, os.ErrNotExist) {
+		return fmt.Errorf("filestore: remove blob: %w", err)
+	}
+	return nil
+}
+
+// resolve maps an internal:// storage_ref to its absolute path, returning
+// ErrInvalidRef for any reference not owned by this backend or escaping root.
+func (s *Store) resolve(storageRef string) (string, error) {
+	name, ok := strings.CutPrefix(storageRef, Scheme)
+	if !ok {
+		return "", ErrInvalidRef
+	}
+	// The name must be a single, plain path element: no directories, no
+	// traversal, no absolute paths.
+	if name == "" || name == "." || name == ".." ||
+		strings.ContainsAny(name, `/\`) || filepath.IsAbs(name) {
+		return "", ErrInvalidRef
+	}
+	full := filepath.Join(s.root, name)
+	// Defence in depth: the resolved path must still live directly under root.
+	if filepath.Dir(full) != s.root {
+		return "", ErrInvalidRef
+	}
+	return full, nil
 }
 
 // safeExt returns the (lowercased) extension of name if it is short and free

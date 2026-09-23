@@ -42,7 +42,8 @@
       "integrity": "Integrity",
       "relationships": "Relationships",
       "governance": "Governance",
-      "audit": "Audit"
+      "audit": "Audit",
+      "versions": "Versions"
     },
     "actor": {
       "identity": "Identity",
@@ -187,7 +188,17 @@
     "uploading": "Uploading…",
     "uploaded": "File uploaded",
     "replace": "Replace file",
-    "computed": "Fingerprint and size computed by the server"
+    "computed": "Fingerprint and size computed by the server",
+    "reused": "This content was already known: it is not stored twice."
+  },
+  "versions": {
+    "number": "No.",
+    "content": "Content",
+    "noContent": "No content (metadata only)",
+    "current": "Current",
+    "add": "Add a version",
+    "addHint": "Upload the new file (or none for a metadata-only version), then confirm.",
+    "empty": "No versions."
   },
   "finalize": {
     "title": "Finalize document",
@@ -294,7 +305,9 @@
       "integrityFailed": "The document integrity could not be verified.",
       "deleteConfirm": "The document will be soft-deleted. It stays preserved in history.",
       "deleted": "The document was soft-deleted.",
-      "linked": "Relationship created."
+      "linked": "Relationship created.",
+      "reused": "This content already belongs to an existing document, which was reused.",
+      "versionAdded": "New version added."
     },
     "actor": {
       "createSuccess": "Actor created.",

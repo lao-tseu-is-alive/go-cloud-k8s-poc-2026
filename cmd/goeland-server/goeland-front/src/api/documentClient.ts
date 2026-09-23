@@ -1,6 +1,9 @@
 import type {
+  AddDocumentVersionRequest,
   CreateDocumentRequest,
+  CreateDocumentResult,
   DocumentType,
+  DocumentVersion,
   GetDocumentResponse,
   GoDocument,
   SearchDocumentsParams,
@@ -33,9 +36,22 @@ export function getDocument (
   })
 }
 
-export async function createDocument (req: CreateDocumentRequest): Promise<GoDocument> {
-  const res = await apiFetch<{ document?: GoDocument }>('/api/documents', { method: 'POST', body: req })
+export async function createDocument (req: CreateDocumentRequest): Promise<CreateDocumentResult> {
+  const res = await apiFetch<{ document?: GoDocument, reused?: boolean }>('/api/documents', { method: 'POST', body: req })
+  return { document: res.document as GoDocument, reused: !!res.reused }
+}
+
+export async function addDocumentVersion (documentId: string, req: AddDocumentVersionRequest): Promise<GoDocument> {
+  const res = await apiFetch<{ document?: GoDocument }>(`/api/documents/${encodeURIComponent(documentId)}/versions`, {
+    method: 'POST',
+    body: req,
+  })
   return res.document as GoDocument
+}
+
+export async function listDocumentVersions (documentId: string, signal?: AbortSignal): Promise<DocumentVersion[]> {
+  const res = await apiFetch<{ versions?: DocumentVersion[] }>(`/api/documents/${encodeURIComponent(documentId)}/versions`, { signal })
+  return res.versions ?? []
 }
 
 export async function updateDocumentMetadata (id: string, req: UpdateDocumentMetadataRequest): Promise<GoDocument> {
@@ -92,8 +108,9 @@ export async function listDocumentTypes (onlyActive = true): Promise<DocumentTyp
 }
 
 /**
- * Uploads a file to the internal blob store and returns the storage_ref plus
- * server-computed integrity metadata to feed into createDocument().
+ * Uploads a file; the server stores it, computes its SHA-256 and registers it as
+ * a (globally deduplicated) content blob whose id feeds createDocument() or
+ * addDocumentVersion().
  * This hits the out-of-proto multipart endpoint added in the Go server.
  */
 export function uploadDocumentFile (file: File, signal?: AbortSignal): Promise<UploadResult> {

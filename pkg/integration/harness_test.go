@@ -16,6 +16,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 )
 
 // testDatabaseURLEnv names the DSN env var that enables the DB integration tests.
@@ -28,6 +29,8 @@ type testEnv struct {
 	coreSvc  *core.Service
 	docSvc   *document.Service
 	actorSvc *actor.Service
+	// blobDir is the per-test directory holding uploaded bytes.
+	blobDir string
 }
 
 // newTestEnv connects to the test database named by GOELAND_TEST_DATABASE_URL,
@@ -82,7 +85,11 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("build document repository: %v", err)
 	}
-	docSvc, err := document.NewService(docRepo, coreSvc, log)
+	store, err := filestore.New(t.TempDir())
+	if err != nil {
+		t.Fatalf("build blob store: %v", err)
+	}
+	docSvc, err := document.NewService(docRepo, coreSvc, store, log)
 	if err != nil {
 		t.Fatalf("build document service: %v", err)
 	}
@@ -95,7 +102,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build actor service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc}
+	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

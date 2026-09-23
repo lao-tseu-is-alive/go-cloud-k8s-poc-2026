@@ -16,7 +16,7 @@ const (
 	StatusUnspecified Status = 0
 	// StatusDraft is the initial, still editable state.
 	StatusDraft Status = 1
-	// StatusFinal marks a finalized document (IsFinal is true).
+	// StatusFinal marks a document whose current version is final.
 	StatusFinal Status = 2
 	// StatusSuperseded marks a document replaced by a newer version.
 	StatusSuperseded Status = 3
@@ -42,7 +42,67 @@ type DocumentType struct {
 	IsActive bool `db:"is_active"`
 }
 
-// Document is the document-specific projection (1:1 with a DOCUMENT subject_ref).
+// ContentBlob is binary content identified by its SHA-256 (spec v2 §17). The
+// digest is unique, so identical bytes are stored once and may back several
+// versions; the digest identifies content, never a business document.
+type ContentBlob struct {
+	// ID is the blob identity, returned by the upload endpoint and passed to
+	// CreateDocument / AddVersion as the trusted reference to the content.
+	ID uuid.UUID `db:"id"`
+	// SHA256 is the lower-case hex digest computed by the server while storing.
+	SHA256 string `db:"sha256"`
+	// StorageRef is the URI of the bytes (internal://...); empty when Goéland
+	// knows the content only by digest (bytes held by an external system).
+	StorageRef string `db:"storage_ref"`
+	// MimeType is the media type of the bytes; empty when unknown.
+	MimeType string `db:"mime_type"`
+	// FileSizeBytes is the size of the bytes, never negative.
+	FileSizeBytes int64 `db:"file_size_bytes"`
+	// CreatedAt is the database insertion time.
+	CreatedAt time.Time `db:"created_at"`
+	// CreatedBy is the operator whose upload first stored the content.
+	CreatedBy string `db:"created_by"`
+	// VerifiedAt is reserved for probative re-verification of the stored bytes
+	// (roadmap GLD-021); nil until then.
+	VerifiedAt *time.Time `db:"verified_at"`
+}
+
+// Version is a dated, append-only state of a document (spec v2 §18). A final
+// (validated) or record version is immutable, enforced by a database trigger;
+// versions are never deleted.
+type Version struct {
+	// ID is the version identity.
+	ID uuid.UUID `db:"id"`
+	// DocumentID is the owning document.
+	DocumentID uuid.UUID `db:"document_id"`
+	// VersionNo numbers the versions of one document from 1, without gaps.
+	VersionNo int32 `db:"version_no"`
+	// ContentBlobID references the content; nil for a metadata-only document or
+	// an external reference.
+	ContentBlobID *uuid.UUID `db:"content_blob_id"`
+	// PageCount is the number of pages; 0 when unknown.
+	PageCount int32 `db:"page_count"`
+	// IsFinal reports a validated, business-final version (then immutable).
+	IsFinal bool `db:"is_final"`
+	// IsRecord declares a probative record; a record is always final.
+	IsRecord bool `db:"is_record"`
+	// ValidatedAt is when the version became final; nil while mutable.
+	ValidatedAt *time.Time `db:"validated_at"`
+	// ValidatedBy is the operator who made the version final; empty while mutable.
+	ValidatedBy string `db:"validated_by"`
+	// Metadata is secondary JSONB data about this version.
+	Metadata map[string]any `db:"metadata"`
+	// CreatedAt is the database insertion time.
+	CreatedAt time.Time `db:"created_at"`
+	// CreatedBy is the operator who added the version.
+	CreatedBy string `db:"created_by"`
+
+	// Content is the hydrated blob on read paths; nil without content.
+	Content *ContentBlob `db:"-"`
+}
+
+// Document is the logical business document (1:1 with a DOCUMENT subject_ref);
+// its content lives in versions (spec v2 §15-16).
 // Nullable columns use pointers so pgx can scan SQL NULLs.
 //
 // The table's search_vector column is GENERATED ALWAYS by Postgres and is
@@ -60,9 +120,6 @@ type Document struct {
 	// OfficialDate is the document's legal or business date (a DATE column,
 	// time part zero); nil when unknown.
 	OfficialDate *time.Time `db:"official_date"`
-	// StorageRef is the URI of the bytes (internal://, minio://, alfresco://);
-	// empty for metadata-only documents.
-	StorageRef string `db:"storage_ref"`
 	// ExternalSystem names the system of record for external documents
 	// (alfresco, minio, sharepoint, goeland-legacy); empty when internal.
 	ExternalSystem string `db:"external_system"`
@@ -71,34 +128,16 @@ type Document struct {
 	// ExternalURL is a link to the document in its external system; it is
 	// also the subject's canonical URL.
 	ExternalURL string `db:"external_url"`
-	// MimeType is the media type of the bytes; empty when unknown.
-	MimeType string `db:"mime_type"`
-	// FileSizeBytes is the size of the bytes, never negative; 0 when unknown.
-	FileSizeBytes int64 `db:"file_size_bytes"`
-	// SHA256 is the registered hex digest of the bytes; nil when unknown.
-	// Non-nil digests are unique across documents (deduplication key).
-	SHA256 *string `db:"sha256"`
-	// SHA256VerifiedAt is reserved for probative re-verification of the stored
-	// bytes; the current Verify only compares hashes and never sets it.
-	SHA256VerifiedAt *time.Time `db:"sha256_verified_at"`
-	// Version is the document version, at least 1.
-	Version int32 `db:"version"`
-	// PreviousVersionID is the document this one supersedes; nil for a first
-	// version. It is also recorded as a DOCUMENT_PREVIOUS_VERSION link.
-	PreviousVersionID *uuid.UUID `db:"previous_version_id"`
-	// IsFinal reports whether the document was finalized (Status FINAL).
-	IsFinal bool `db:"is_final"`
-	// IsRecord flags a probative record subject to records management.
-	IsRecord bool `db:"is_record"`
 	// Language is the language of the content (e.g. fr), unrelated to the UI
 	// locale; empty when unknown.
 	Language string `db:"language"`
-	// PageCount is the number of pages; 0 when unknown.
-	PageCount int32 `db:"page_count"`
-	// Status is the lifecycle state.
+	// Status is the lifecycle state; FINAL mirrors a final current version.
 	Status Status `db:"status"`
 	// Metadata is secondary JSONB extension data; never holds critical fields.
 	Metadata map[string]any `db:"metadata"`
+	// CurrentVersionID is the explicit current version, set in the same
+	// transaction as every new version; nil only transiently during creation.
+	CurrentVersionID *uuid.UUID `db:"current_version_id"`
 	// CreatedAt is the database insertion time.
 	CreatedAt time.Time `db:"created_at"`
 	// CreatedBy is the operator who created the document.
@@ -112,12 +151,17 @@ type Document struct {
 	RecordMetadata *core.RecordMetadata `db:"-"`
 	// Type is the hydrated document type on read paths; nil on writes.
 	Type *DocumentType `db:"-"`
+	// CurrentVersion is the hydrated current version (with its content).
+	CurrentVersion *Version `db:"-"`
 }
 
 // CreateInput holds the client-controlled fields for a new document.
 //
-// Service.Create persists the subject, governance record, document, optional
-// links and audit event in one transaction. Fields mirror Document unless noted.
+// Service.Create persists the subject, governance record, document, version 1,
+// optional links and audit event in one transaction. When ContentBlobID names
+// content already used by a live document, that document is reused instead
+// (spec v2 §20, decision in IMPLEMENTATION_STATUS §3g): no new document is
+// created and the new context is expressed by the optional case link.
 type CreateInput struct {
 	// DocumentTypeCode is the required code of the document type.
 	DocumentTypeCode string
@@ -127,31 +171,22 @@ type CreateInput struct {
 	Description string
 	// OfficialDate is the optional legal or business date.
 	OfficialDate *time.Time
-	// StorageRef is the bytes URI, e.g. the internal:// ref returned by upload.
-	StorageRef string
 	// ExternalSystem names the external system of record, if any.
 	ExternalSystem string
 	// ExternalID identifies the document inside ExternalSystem.
 	ExternalID string
 	// ExternalURL links to the external document and becomes the canonical URL.
 	ExternalURL string
-	// MimeType is the media type of the bytes.
-	MimeType string
-	// FileSizeBytes is the size of the bytes.
-	FileSizeBytes int64
-	// SHA256 is the hex digest; empty stores NULL.
-	SHA256 string
-	// Version is the document version; 0 or less becomes 1.
-	Version int32
-	// PreviousVersionID, when set, also creates a DOCUMENT_PREVIOUS_VERSION link.
-	PreviousVersionID *uuid.UUID
-	// IsFinal creates the document directly in Status FINAL instead of DRAFT.
+	// ContentBlobID is the content registered by the upload endpoint; nil for a
+	// metadata-only document or an external reference.
+	ContentBlobID *uuid.UUID
+	// IsFinal creates version 1 already final (and the document FINAL).
 	IsFinal bool
-	// IsRecord flags the document as a probative record.
+	// IsRecord declares version 1 a record, which also makes it final.
 	IsRecord bool
 	// Language is the language of the content.
 	Language string
-	// PageCount is the number of pages.
+	// PageCount is the number of pages of version 1.
 	PageCount int32
 	// Metadata is secondary extension data.
 	Metadata map[string]any
@@ -161,8 +196,52 @@ type CreateInput struct {
 	// Governance carries the requested owner, confidentiality and records
 	// fields; the service overwrites its identity fields from the document.
 	Governance core.CreateSubjectInput
-	// LinkToCaseID, when set, also creates a CASE_HAS_DOCUMENT link from that case.
+	// LinkToCaseID, when set, also creates a CASE_HAS_DOCUMENT link from that
+	// case (to the new or the reused document).
 	LinkToCaseID *uuid.UUID
+}
+
+// CreateResult reports what Service.Create did.
+type CreateResult struct {
+	// Document is the created or reused document, hydrated.
+	Document *Document
+	// Event is DOCUMENT_CREATED, or DOCUMENT_REUSED on the existing document.
+	Event *core.AuditEvent
+	// Relationship is the CASE_HAS_DOCUMENT edge; nil without LinkToCaseID or
+	// when the reused document was already linked to that case.
+	Relationship *core.SubjectRelationship
+	// Reused is true when an existing document with the same content was reused.
+	Reused bool
+}
+
+// VersionInput holds the fields of a new document version.
+type VersionInput struct {
+	// ContentBlobID is the content of the version; nil for a metadata-only
+	// version. It may repeat the content of an earlier version (v2 §19).
+	ContentBlobID *uuid.UUID
+	// IsFinal creates the version already final.
+	IsFinal bool
+	// IsRecord declares the version a record, which also makes it final.
+	IsRecord bool
+	// PageCount is the number of pages.
+	PageCount int32
+	// Metadata is secondary data about the version.
+	Metadata map[string]any
+	// OperatorID is the authenticated caller, set server-side.
+	OperatorID string
+	// Reason is the justification recorded on the audit event.
+	Reason string
+}
+
+// IngestResult reports what Service.IngestContent stored.
+type IngestResult struct {
+	// Blob is the content registered for the uploaded bytes.
+	Blob *ContentBlob
+	// Reused is true when identical content was already known: the new bytes
+	// were discarded and the existing blob returned (global deduplication).
+	Reused bool
+	// Filename is the original client filename, informational only.
+	Filename string
 }
 
 // UpdateInput holds the mutable metadata of a document.
@@ -202,9 +281,9 @@ type SearchFilter struct {
 	// ConfidentialityMax is the inclusive upper bound on the confidentiality
 	// level; 0 or less means no cap (5).
 	ConfidentialityMax int32
-	// OnlyRecords restricts results to probative records.
+	// OnlyRecords restricts results to documents whose current version is a record.
 	OnlyRecords bool
-	// OnlyFinal restricts results to finalized documents.
+	// OnlyFinal restricts results to documents whose current version is final.
 	OnlyFinal bool
 	// IncludeDeleted also returns soft-deleted documents.
 	IncludeDeleted bool

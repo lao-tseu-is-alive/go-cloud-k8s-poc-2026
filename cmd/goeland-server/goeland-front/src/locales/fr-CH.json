@@ -42,7 +42,8 @@
       "integrity": "Intégrité",
       "relationships": "Relations",
       "governance": "Gouvernance",
-      "audit": "Audit"
+      "audit": "Audit",
+      "versions": "Versions"
     },
     "actor": {
       "identity": "Identité",
@@ -187,7 +188,17 @@
     "uploading": "Téléversement…",
     "uploaded": "Fichier téléversé",
     "replace": "Remplacer le fichier",
-    "computed": "Empreinte et taille calculées par le serveur"
+    "computed": "Empreinte et taille calculées par le serveur",
+    "reused": "Ce contenu était déjà connu : il n’est pas stocké une seconde fois."
+  },
+  "versions": {
+    "number": "N°",
+    "content": "Contenu",
+    "noContent": "Sans contenu (métadonnées seules)",
+    "current": "Courante",
+    "add": "Ajouter une version",
+    "addHint": "Téléversez le nouveau fichier (ou aucun pour une version sans contenu), puis confirmez.",
+    "empty": "Aucune version."
   },
   "finalize": {
     "title": "Finaliser le document",
@@ -294,7 +305,9 @@
       "integrityFailed": "L'intégrité du document n'a pas pu être vérifiée.",
       "deleteConfirm": "Le document sera supprimé logiquement. Il restera conservé dans l'historique.",
       "deleted": "Le document a été supprimé logiquement.",
-      "linked": "Relation créée."
+      "linked": "Relation créée.",
+      "reused": "Ce contenu appartient déjà à un document existant, qui a été réutilisé.",
+      "versionAdded": "Nouvelle version ajoutée."
     },
     "actor": {
       "createSuccess": "Acteur créé.",

@@ -21,6 +21,7 @@
   import DocumentMetadataForm from '@/components/document/DocumentMetadataForm.vue'
   import DocumentRelationshipsPanel from '@/components/document/DocumentRelationshipsPanel.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
+  import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
   import { formatBytes } from '@/utils/formatters'
@@ -53,7 +54,8 @@
   // ---- derived state rules -------------------------------------------------
   const isLocked = computed(() => !!doc.value?.recordMetadata?.isLocked)
   const isDeleted = computed(() => !!doc.value?.recordMetadata?.deletedAt)
-  const isFinal = computed(() => !!doc.value?.isFinal)
+  const isFinal = computed(() => !!doc.value?.currentVersion?.isFinal)
+  const isRecord = computed(() => !!doc.value?.currentVersion?.isRecord)
   const editable = computed(() => !isLocked.value && !isDeleted.value)
   const canFinalize = computed(() => !isFinal.value && editable.value)
   const canDelete = computed(() => !isDeleted.value && !isLocked.value)
@@ -80,7 +82,7 @@
       description: doc.value.description ?? '',
       officialDate: doc.value.officialDate ?? '',
       language: doc.value.language ?? '',
-      isRecord: !!doc.value.isRecord,
+      isRecord: isRecord.value,
     }
     editReason.value = ''
     editing.value = true
@@ -174,7 +176,7 @@
       <div class="d-flex flex-wrap ga-2 mb-3 align-center">
         <DocumentStatusChip :status="doc.status" />
         <v-chip v-if="isFinal" color="success" prepend-icon="mdi-check-decagram" size="small">{{ t('states.final') }}</v-chip>
-        <v-chip v-if="doc.isRecord" color="primary" size="small">{{ t('states.record') }}</v-chip>
+        <v-chip v-if="isRecord" color="primary" size="small">{{ t('states.record') }}</v-chip>
         <v-chip v-if="isConfidential" color="orange" prepend-icon="mdi-eye-off" size="small">{{ t('states.confidential') }}</v-chip>
         <v-chip v-if="isLocked" color="grey" prepend-icon="mdi-lock" size="small">{{ t('states.locked') }}</v-chip>
         <v-chip v-if="isDeleted" color="error" prepend-icon="mdi-delete" size="small">{{ t('states.deleted') }}</v-chip>
@@ -256,7 +258,7 @@
                   <tr><td class="text-medium-emphasis">{{ t('fields.document.document_type') }}</td><td>{{ doc.documentType?.label ?? doc.documentType?.code }}</td></tr>
                   <tr><td class="text-medium-emphasis">{{ t('fields.document.official_date') }}</td><td>{{ doc.officialDate || '—' }}</td></tr>
                   <tr><td class="text-medium-emphasis">{{ t('fields.document.language') }}</td><td>{{ doc.language || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.version') }}</td><td>{{ doc.version ?? '—' }}</td></tr>
+                  <tr><td class="text-medium-emphasis">{{ t('fields.document.version') }}</td><td>{{ doc.currentVersion?.versionNo ?? '—' }}</td></tr>
                 </tbody>
               </v-table>
             </v-card-text>
@@ -268,8 +270,8 @@
             <v-card-text>
               <v-table density="compact">
                 <tbody>
-                  <tr><td class="text-medium-emphasis" style="width:40%">{{ t('fields.document.mime_type') }}</td><td>{{ doc.mimeType || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.file_size_bytes') }}</td><td>{{ formatBytes(doc.fileSizeBytes) }}</td></tr>
+                  <tr><td class="text-medium-emphasis" style="width:40%">{{ t('fields.document.mime_type') }}</td><td>{{ doc.currentVersion?.content?.mimeType || '—' }}</td></tr>
+                  <tr><td class="text-medium-emphasis">{{ t('fields.document.file_size_bytes') }}</td><td>{{ formatBytes(doc.currentVersion?.content?.fileSizeBytes) }}</td></tr>
                   <tr><td class="text-medium-emphasis">{{ t('fields.document.external_system') }}</td><td>{{ doc.externalSystem || '—' }}</td></tr>
 
                   <tr><td class="text-medium-emphasis">{{ t('fields.document.external_url') }}</td>
@@ -280,6 +282,19 @@
                     </td></tr>
                 </tbody>
               </v-table>
+            </v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('sections.document.versions') }}</v-card-title>
+
+            <v-card-text>
+              <DocumentVersionsPanel
+                :can-add="editable"
+                :current-version-id="doc.currentVersion?.id"
+                :document-id="id"
+                @changed="reload"
+              />
             </v-card-text>
           </v-card>
 

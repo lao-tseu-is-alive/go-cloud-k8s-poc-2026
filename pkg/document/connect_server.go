@@ -42,7 +42,7 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("official_date must be an ISO date (YYYY-MM-DD)"))
 	}
-	previous, err := optionalUUID(msg.PreviousVersionId)
+	blobID, err := optionalUUID(msg.ContentBlobId)
 	if err != nil {
 		return nil, err
 	}
@@ -51,26 +51,21 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		return nil, err
 	}
 	in := CreateInput{
-		DocumentTypeCode:  msg.DocumentTypeCode,
-		Title:             msg.Title,
-		Description:       msg.Description,
-		OfficialDate:      officialDate,
-		StorageRef:        msg.StorageRef,
-		ExternalSystem:    msg.ExternalSystem,
-		ExternalID:        msg.ExternalId,
-		ExternalURL:       msg.ExternalUrl,
-		MimeType:          msg.MimeType,
-		FileSizeBytes:     msg.FileSizeBytes,
-		SHA256:            msg.Sha256,
-		Version:           msg.Version,
-		PreviousVersionID: previous,
-		IsFinal:           msg.IsFinal,
-		IsRecord:          msg.IsRecord,
-		Language:          msg.Language,
-		PageCount:         msg.PageCount,
-		Metadata:          structToMap(msg.Metadata),
-		OperatorID:        core.OperatorID(user),
-		LinkToCaseID:      linkCase,
+		DocumentTypeCode: msg.DocumentTypeCode,
+		Title:            msg.Title,
+		Description:      msg.Description,
+		OfficialDate:     officialDate,
+		ExternalSystem:   msg.ExternalSystem,
+		ExternalID:       msg.ExternalId,
+		ExternalURL:      msg.ExternalUrl,
+		ContentBlobID:    blobID,
+		IsFinal:          msg.IsFinal,
+		IsRecord:         msg.IsRecord,
+		Language:         msg.Language,
+		PageCount:        msg.PageCount,
+		Metadata:         structToMap(msg.Metadata),
+		OperatorID:       core.OperatorID(user),
+		LinkToCaseID:     linkCase,
 	}
 	if gov := msg.InitialGovernance; gov != nil {
 		in.Governance.OwnerUserID = gov.OwnerUserId
@@ -80,18 +75,72 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		in.Governance.SortFinal = gov.SortFinal
 		in.Governance.Metadata = gov.Metadata
 	}
-	doc, ev, rel, err := s.service.Create(ctx, in)
+	res, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
 	resp := &goelandv1.CreateDocumentResponse{
-		Document:     DomainToProto(doc),
-		CreatedEvent: core.DomainAuditEventToProto(ev),
+		Document:     DomainToProto(res.Document),
+		CreatedEvent: core.DomainAuditEventToProto(res.Event),
+		Reused:       res.Reused,
 	}
-	if rel != nil {
-		resp.InitialRelationship = core.DomainRelationshipToProto(rel)
+	if res.Relationship != nil {
+		resp.InitialRelationship = core.DomainRelationshipToProto(res.Relationship)
 	}
 	return connect.NewResponse(resp), nil
+}
+
+// AddDocumentVersion appends a new current version to a document.
+func (s *ConnectServer) AddDocumentVersion(ctx context.Context, req *connect.Request[goelandv1.AddDocumentVersionRequest]) (*connect.Response[goelandv1.AddDocumentVersionResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(req.Msg.DocumentId)
+	if err != nil {
+		return nil, err
+	}
+	blobID, err := optionalUUID(req.Msg.ContentBlobId)
+	if err != nil {
+		return nil, err
+	}
+	doc, version, ev, err := s.service.AddVersion(ctx, id, VersionInput{
+		ContentBlobID: blobID,
+		IsFinal:       req.Msg.IsFinal,
+		IsRecord:      req.Msg.IsRecord,
+		PageCount:     req.Msg.PageCount,
+		Metadata:      structToMap(req.Msg.Metadata),
+		OperatorID:    core.OperatorID(user),
+		Reason:        req.Msg.Reason,
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.AddDocumentVersionResponse{
+		Document:   DomainToProto(doc),
+		Version:    VersionToProto(version),
+		AuditEvent: core.DomainAuditEventToProto(ev),
+	}), nil
+}
+
+// ListDocumentVersions lists the versions of a document, newest first.
+func (s *ConnectServer) ListDocumentVersions(ctx context.Context, req *connect.Request[goelandv1.ListDocumentVersionsRequest]) (*connect.Response[goelandv1.ListDocumentVersionsResponse], error) {
+	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+		return nil, err
+	}
+	id, err := parseUUID(req.Msg.DocumentId)
+	if err != nil {
+		return nil, err
+	}
+	versions, err := s.service.ListVersions(ctx, id)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.DocumentVersion, 0, len(versions))
+	for _, v := range versions {
+		out = append(out, VersionToProto(v))
+	}
+	return connect.NewResponse(&goelandv1.ListDocumentVersionsResponse{Versions: out}), nil
 }
 
 // GetDocument retrieves a document with optional relationships + audit.
@@ -192,17 +241,13 @@ func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connec
 	if err != nil {
 		return nil, s.mapError(err)
 	}
-	actual := ""
-	if doc.SHA256 != nil {
-		actual = *doc.SHA256
+	resp := &goelandv1.VerifyDocumentIntegrityResponse{Verified: verified}
+	if doc.CurrentVersion != nil && doc.CurrentVersion.Content != nil {
+		resp.ActualSha256 = doc.CurrentVersion.Content.SHA256
+		resp.VerifiedAt = core.TimestampPtrOrNil(doc.CurrentVersion.Content.VerifiedAt)
 	}
 	// storage_ref_checked is left empty on purpose: no storage bytes were read.
-	return connect.NewResponse(&goelandv1.VerifyDocumentIntegrityResponse{
-		Verified:          verified,
-		ActualSha256:      actual,
-		VerifiedAt:        core.TimestampPtrOrNil(doc.SHA256VerifiedAt),
-		StorageRefChecked: "",
-	}), nil
+	return connect.NewResponse(resp), nil
 }
 
 // SearchDocuments runs a full-text + filtered search.

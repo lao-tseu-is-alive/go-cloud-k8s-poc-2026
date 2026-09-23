@@ -5,16 +5,23 @@
 // that can live standalone or be embedded in affaires (via CoreService relationships).
 //
 // Modern GED features added beyond the basic model:
-//   - Cryptographic integrity metadata (sha256 registered at creation). NOTE:
+//   - Document / DocumentVersion / ContentBlob (spec v2 §15-22): the document is the
+//     logical business object, a version a dated state of it, the blob the binary
+//     content identified by its SHA-256. Identical content is stored once; creating a
+//     document for content already held by a live document reuses that document.
+//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
 //     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is a roadmap item.
-//   - External reference without duplication (external_system + external_id + storage_ref as URI)
+//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
-//   - Explicit + graph versioning (previous_version_id + DOCUMENT_PREVIOUS_VERSION relationships).
-//   - Records management preparation (is_record, is_final, locked via record_metadata).
+//   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
 //   - Full-text search ready (dedicated SearchDocuments RPC over a generated tsvector).
 //   - Classification (document_type + metadata).
 //   - Non-destructive, auditable, confidential by default via Core + record_metadata.
+//
+// Binary bytes never travel through this contract: POST /api/documents/upload stores
+// them, computes the digest server-side and returns a content_blob_id that
+// CreateDocument / AddDocumentVersion reference.
 //
 // Minimal scenario: create DOCUMENT, link to CASE (CASE_HAS_DOCUMENT),
 // link to THING (DOCUMENT_REPRESENTS_THING), then finalize/lock.
@@ -73,9 +80,65 @@ message DocumentType {
   bool is_active = 6;
 }
 
-// Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
-// Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
+// ContentBlob is binary content identified by its SHA-256; identical bytes are
+// stored once and may back several versions (spec v2 §17, §19).
+message ContentBlob {
+  // id is the blob UUID returned by the upload endpoint.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // sha256 is the lower-case hex digest computed by the server; unique.
+  string sha256 = 2;
+  // storage_ref is the URI of the bytes (internal://...); empty when the bytes
+  // are held by an external system and only the digest is known.
+  string storage_ref = 3;
+  // mime_type is the media type of the bytes; empty when unknown.
+  string mime_type = 4;
+  // file_size_bytes is the size of the bytes. Serialized as a JSON string (int64).
+  int64 file_size_bytes = 5;
+  // created_at is when the content was first stored.
+  google.protobuf.Timestamp created_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator whose upload first stored the content.
+  string created_by = 7;
+  // verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+  google.protobuf.Timestamp verified_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// DocumentVersion is a dated, append-only state of a document (spec v2 §18). A
+// final or record version is immutable; versions are never deleted.
+message DocumentVersion {
+  // id is the version UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // document_id is the owning document.
+  string document_id = 2 [(buf.validate.field).string.uuid = true];
+  // version_no numbers the versions of one document from 1, without gaps.
+  int32 version_no = 3;
+  // content is the binary content; absent for a metadata-only version or an
+  // external reference.
+  ContentBlob content = 4;
+  // page_count is the number of pages; 0 when unknown.
+  int32 page_count = 5;
+  // is_final reports a validated, business-final version (then immutable).
+  bool is_final = 6;
+  // is_record declares a record for retention / records management; a record is always final.
+  bool is_record = 7;
+  // validated_at is when the version became final; absent while mutable.
+  google.protobuf.Timestamp validated_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // validated_by is the operator who made the version final.
+  string validated_by = 9;
+  // metadata holds secondary data about this version.
+  google.protobuf.Struct metadata = 10;
+  // created_at is the server creation time.
+  google.protobuf.Timestamp created_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who added the version.
+  string created_by = 12;
+}
+
+// Document is the logical business document, 1:1 with SubjectRef (id == subject
+// id); its content lives in versions. External references (Alfresco node, legacy,
+// SharePoint) stay document-level.
 message Document {
+  reserved 6, 10, 11, 12, 13, 14, 15, 16, 17, 19;
+  reserved "storage_ref", "mime_type", "file_size_bytes", "sha256", "sha256_verified_at", "version", "previous_version_id", "is_final", "is_record", "page_count";
+
   // subject_ref is the embedded canonical identity (kind = DOCUMENT); its id is the document id.
   SubjectRef subject_ref = 1;
   // document_type is the classification chosen at creation.
@@ -91,9 +154,6 @@ message Document {
   // official_date is the legal probative date of the document itself, as
   // YYYY-MM-DD; empty when unknown.
   string official_date = 5;
-  // storage_ref is the URI of the bytes: internal://... (upload endpoint),
-  // minio://... or alfresco://...; empty for metadata-only documents.
-  string storage_ref = 6 [(buf.validate.field).string.max_len = 2048];
   // external_system names the system of record: alfresco, minio, sharepoint
   // or goeland-legacy; empty when internal.
   string external_system = 7 [(buf.validate.field).string.max_len = 100];
@@ -101,32 +161,10 @@ message Document {
   string external_id = 8 [(buf.validate.field).string.max_len = 200];
   // external_url is a clickable link to the external document, if available.
   string external_url = 9 [(buf.validate.field).string.max_len = 2048];
-  // mime_type is the media type of the bytes (at most 255 characters).
-  string mime_type = 10 [(buf.validate.field).string.max_len = 255];
-  // file_size_bytes is the size of the bytes in bytes; 0 when unknown.
-  // Serialized as a JSON string (int64).
-  int64 file_size_bytes = 11 [(buf.validate.field).int64.gte = 0];
-  // sha256 is the registered hex SHA-256 (integrity and deduplication key:
-  // unique across documents); empty when unknown.
-  string sha256 = 12 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
-  // sha256_verified_at is reserved for probative re-verification of the stored
-  // bytes; currently never set.
-  google.protobuf.Timestamp sha256_verified_at = 13;
-  // version is the document version, at least 1 once stored.
-  int32 version = 14 [(buf.validate.field).int32.gte = 0];
-  // previous_version_id is the document this one supersedes; also mirrored as
-  // a DOCUMENT_PREVIOUS_VERSION relationship. Empty for a first version.
-  string previous_version_id = 15;
-  // is_final reports a business-final document (signed, approved).
-  bool is_final = 16;
-  // is_record declares a record for retention / records management.
-  bool is_record = 17;
   // language is the ISO 639 content language, e.g. "fr" or "de" (at most 10
   // characters); unrelated to the UI locale.
   string language = 18 [(buf.validate.field).string.max_len = 10];
-  // page_count is the number of pages; 0 when unknown.
-  int32 page_count = 19 [(buf.validate.field).int32.gte = 0];
-  // status is the lifecycle state.
+  // status is the lifecycle state; FINAL when the current version is final.
   DocumentStatus status = 20;
   // metadata holds secondary data: classification, keywords, extracted entities...
   google.protobuf.Struct metadata = 21;
@@ -138,10 +176,18 @@ message Document {
   google.protobuf.Timestamp updated_at = 24 [(google.api.field_behavior) = OUTPUT_ONLY];
   // record_metadata is the governance record (confidentiality, lock, owner...).
   RecordMetadata record_metadata = 25;
+  // current_version is the explicit current version, with its content.
+  DocumentVersion current_version = 26 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+// CreateDocumentRequest registers a document (metadata first; the bytes are
+// uploaded beforehand and referenced by content_blob_id). When the content is
+// already held by a live document, that document is reused instead (see
+// CreateDocumentResponse.reused).
 message CreateDocumentRequest {
+  reserved 5, 9, 10, 11, 12, 13;
+  reserved "storage_ref", "mime_type", "file_size_bytes", "sha256", "version", "previous_version_id";
+
   // document_type_code is the required code of an existing document type.
   string document_type_code = 1 [
     (google.api.field_behavior) = REQUIRED,
@@ -158,33 +204,19 @@ message CreateDocumentRequest {
   string description = 3 [(buf.validate.field).string.max_len = 4000];
   // official_date is the optional legal date as YYYY-MM-DD.
   string official_date = 4;
-  // storage_ref is the URI of the bytes, typically the internal:// ref returned
-  // by POST /api/documents/upload.
-  string storage_ref = 5 [(buf.validate.field).string.max_len = 2048];
   // external_system names the external system of record, if any.
   string external_system = 6 [(buf.validate.field).string.max_len = 100];
   // external_id identifies the document inside external_system.
   string external_id = 7 [(buf.validate.field).string.max_len = 200];
   // external_url links to the external document; it becomes the subject's canonical URL.
   string external_url = 8 [(buf.validate.field).string.max_len = 2048];
-  // mime_type is the media type of the bytes.
-  string mime_type = 9 [(buf.validate.field).string.max_len = 255];
-  // file_size_bytes is the size of the bytes in bytes.
-  int64 file_size_bytes = 10 [(buf.validate.field).int64.gte = 0];
-  // sha256 is the hex digest of the bytes; empty when unknown. Digests are
-  // unique across documents; a duplicate currently surfaces as INTERNAL.
-  string sha256 = 11 [(buf.validate.field).string.pattern = "^$|^[a-fA-F0-9]{64}$"];
-  // version is the document version; 0 means 1.
-  int32 version = 12 [(buf.validate.field).int32.gte = 0];
-  // previous_version_id, when set, links to the older version with DOCUMENT_PREVIOUS_VERSION.
-  string previous_version_id = 13;
-  // is_final creates the document directly in DOCUMENT_STATUS_FINAL.
+  // is_final creates version 1 already final (document status FINAL).
   bool is_final = 14;
-  // is_record declares the document a record.
+  // is_record declares version 1 a record, which also makes it final.
   bool is_record = 15;
   // language is the ISO 639 content language.
   string language = 16 [(buf.validate.field).string.max_len = 10];
-  // page_count is the number of pages.
+  // page_count is the number of pages of version 1.
   int32 page_count = 17 [(buf.validate.field).int32.gte = 0];
   // metadata holds secondary extension data.
   google.protobuf.Struct metadata = 18;
@@ -195,20 +227,74 @@ message CreateDocumentRequest {
   // principal (never trusted from the client). A document's AUTHOR is a separate,
   // external ACTOR subject linked via DOCUMENT_AUTHORED_BY_ACTOR — not this operator.
   RecordMetadata initial_governance = 20;
-  // link_to_case_id is an optional convenience: auto-link the new document to
-  // this case with CASE_HAS_DOCUMENT in the same transaction.
+  // link_to_case_id is an optional convenience: link the new (or reused)
+  // document to this case with CASE_HAS_DOCUMENT in the same transaction.
   string link_to_case_id = 21;
+  // content_blob_id is the content returned by POST /api/documents/upload;
+  // empty for a metadata-only document or an external reference. NOT_FOUND
+  // when unknown.
+  string content_blob_id = 22 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
 }
 
-// CreateDocumentResponse returns the created document and its side effects.
+// CreateDocumentResponse returns the created (or reused) document and its side effects.
 message CreateDocumentResponse {
-  // document is the created document with its governance.
+  // document is the created document, or the reused one when reused is true.
   Document document = 1;
-  // created_event is the DOCUMENT_CREATED audit event.
+  // created_event is DOCUMENT_CREATED, or DOCUMENT_REUSED on the existing document.
   AuditEvent created_event = 2;
   // initial_relationship is the CASE_HAS_DOCUMENT edge; set only when
-  // link_to_case_id was provided.
+  // link_to_case_id was provided and the link did not already exist.
   optional SubjectRelationship initial_relationship = 3;
+  // reused is true when the content was already held by a live document, which
+  // was reused (no new document; the request's title and metadata are ignored).
+  bool reused = 4;
+}
+
+// AddDocumentVersionRequest appends a new current version to a document.
+message AddDocumentVersionRequest {
+  // document_id is the document; a locked or deleted document is rejected.
+  string document_id = 1 [(buf.validate.field).string.uuid = true];
+  // content_blob_id is the content from POST /api/documents/upload; empty for a
+  // metadata-only version. It may repeat an earlier version's content.
+  string content_blob_id = 2 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // is_final creates the version already final.
+  bool is_final = 3;
+  // is_record declares the version a record, which also makes it final.
+  bool is_record = 4;
+  // page_count is the number of pages.
+  int32 page_count = 5 [(buf.validate.field).int32.gte = 0];
+  // metadata holds secondary data about the version.
+  google.protobuf.Struct metadata = 6;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 7 [(buf.validate.field).string.max_len = 2000];
+}
+
+// AddDocumentVersionResponse returns the document with its new current version.
+message AddDocumentVersionResponse {
+  // document is the document; its current_version is the new version.
+  Document document = 1;
+  // version is the new version.
+  DocumentVersion version = 2;
+  // audit_event is the DOCUMENT_VERSION_ADDED audit event.
+  AuditEvent audit_event = 3;
+}
+
+// ListDocumentVersionsRequest lists the versions of a document.
+message ListDocumentVersionsRequest {
+  // document_id is the document; NOT_FOUND when unknown.
+  string document_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// ListDocumentVersionsResponse returns every version, newest first.
+message ListDocumentVersionsResponse {
+  // versions are the versions with their content, newest first.
+  repeated DocumentVersion versions = 1;
 }
 
 // GetDocumentRequest reads one document with optional context.
@@ -294,9 +380,9 @@ message VerifyDocumentIntegrityResponse {
   // verified is true only when expected_sha256 and the registered hash are both
   // non-empty and equal (case-insensitive).
   bool verified = 1;
-  // actual_sha256 is the registered hash; empty when none was registered.
+  // actual_sha256 is the hash of the current version's content; empty without content.
   string actual_sha256 = 2;
-  // verified_at is the last probative verification time; currently never set.
+  // verified_at is the content's last probative verification time; currently never set.
   google.protobuf.Timestamp verified_at = 3;
   // storage_ref_checked is the storage reference whose bytes were hashed;
   // always empty because no bytes are read yet.
@@ -413,13 +499,29 @@ message ListDocumentTypesResponse {
 // The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
 service DocumentService {
   // Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
-  // Requires goeland:write; subject, governance, document, optional links and the
-  // DOCUMENT_CREATED audit event are written in one transaction.
+  // Requires goeland:write; subject, governance, document, version 1, optional
+  // links and the DOCUMENT_CREATED audit event are written in one transaction.
+  // Content already held by a live document reuses it (DOCUMENT_REUSED, reused = true).
   rpc CreateDocument(CreateDocumentRequest) returns (CreateDocumentResponse) {
     option (google.api.http) = {
       post: "/api/documents"
       body: "*"
     };
+  }
+
+  // Append a new current version to a document (optionally with new content).
+  // Requires goeland:write; writes a DOCUMENT_VERSION_ADDED audit event;
+  // FAILED_PRECONDITION when the document is locked or deleted.
+  rpc AddDocumentVersion(AddDocumentVersionRequest) returns (AddDocumentVersionResponse) {
+    option (google.api.http) = {
+      post: "/api/documents/{document_id}/versions"
+      body: "*"
+    };
+  }
+
+  // List the versions of a document, newest first. Requires goeland:read.
+  rpc ListDocumentVersions(ListDocumentVersionsRequest) returns (ListDocumentVersionsResponse) {
+    option (google.api.http) = {get: "/api/documents/{document_id}/versions"};
   }
 
   // Retrieve a document with context (outgoing relationships, recent history).

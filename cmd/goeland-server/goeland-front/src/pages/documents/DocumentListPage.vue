@@ -101,8 +101,8 @@
 
             <td>
               <v-icon
-                :color="doc.isFinal ? 'success' : undefined"
-                :icon="doc.isFinal ? 'mdi-check-circle' : 'mdi-circle-outline'"
+                :color="doc.currentVersion?.isFinal ? 'success' : undefined"
+                :icon="doc.currentVersion?.isFinal ? 'mdi-check-circle' : 'mdi-circle-outline'"
                 size="small"
               />
             </td>

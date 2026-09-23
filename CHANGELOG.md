@@ -10,6 +10,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- **GLD-023** — Document / DocumentVersion / ContentBlob split (spec v2 §15-22). Migration `0008`
+  adds `content_blob` (SHA-256 unique: identical content stored once) and `document_version`
+  (append-only, explicit `document.current_version_id`; final and record versions immutable and
+  versions never deleted, enforced by a trigger) with a lossless backfill; `0009` drops the
+  superseded document columns. The upload endpoint ingests content through
+  `document.Service.IngestContent` (server-side digest, global deduplication, duplicate bytes
+  removed) and returns a `contentBlobId`; `CreateDocument` takes it and **automatically reuses**
+  the live document already holding that content (`reused`, `DOCUMENT_REUSED`, case link). New
+  `AddDocumentVersion` / `ListDocumentVersions` RPCs; finalize validates the current version. SPA:
+  versions panel, reuse notice, integrity on the current version. Integration tests cover
+  deduplication (incl. concurrent uploads), reuse across cases, shared blobs, immutability.
 - **GLD-022** — Business reference on every subject (v2 §8): migration `0007` adds
   `subject_ref.business_ref` + `business_ref_namespace` (unique per namespace, free and
   non-unique without one) and a `business_ref_counter` allocator producing `YYYY-NNNNNN` per
@@ -22,6 +33,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Changed
 
+- **Breaking (goeland.v1, no production client yet):** `Document` loses `storage_ref`,
+  `mime_type`, `file_size_bytes`, `sha256`, `sha256_verified_at`, `version`,
+  `previous_version_id`, `is_final`, `is_record`, `page_count` (now on `current_version` /
+  its `content`); `CreateDocumentRequest` loses the file fields and `previous_version_id` in
+  favour of `content_blob_id`. Removed field numbers and names are reserved.
+- `POST /api/documents/upload` now requires `goeland:write` and `GET /api/documents/download`
+  `goeland:read` (previously any valid token).
 - Helper scripts (`buf_generate.sh`, `create_k8s_configmap_from_env.sh`, `execWithEnv.sh`,
   `get_jwt_token.sh`) use bash `[[ … ]]` tests instead of `[ … ]` (SonarQube shell rule).
 - **Spec v2 adopted** as the active statement of intent:
@@ -36,6 +54,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   business_ref, the Document/Version/Blob split, the BlobStore interface, USER/ORG_UNIT, Task,
   provenance, outbox, export, retention, sensitive read audit, AI proposals, workflow and
   relationship ending; `[-]` marks a superseded task.
+
+### Fixed
+
+- `core.LinkSubjectsTx` mapped the active-edge unique violation only on `Query`, but pgx reports
+  it when rows are read: a duplicate link surfaced as `INTERNAL` instead of `ALREADY_EXISTS`.
 
 ## [0.4.3] - 2026-09-23
 

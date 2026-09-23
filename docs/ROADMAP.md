@@ -25,9 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-GLD-023 (Document / DocumentVersion / ContentBlob split); GLD-022
-(`business_ref`) is implemented and ships with the next release. The v2 Phase 0
-alignment comes before the Case slice.
+GLD-024 (BlobStore interface), the last v2 Phase 0 task; GLD-022 and GLD-023
+are implemented and ship with the next release. Then the Case slice (GLD-011).
 
 ## Cross-cutting quality
 
@@ -69,7 +68,7 @@ alignment comes before the Case slice.
   `business_ref_namespace`, a partial unique index on `(namespace,
   business_ref)`, a transactional per-namespace allocator (e.g. `2026-001245`),
   exposed on `SubjectRef` and filterable. The display label stays non-unique.
-- [ ] **GLD-023 — Document / DocumentVersion / ContentBlob**: additive
+- [~] **GLD-023 — Document / DocumentVersion / ContentBlob**: additive
   migration creating `content_blob` (SHA-256 UNIQUE, storage ref, size, mime,
   `verified_at`) and `document_version` (`version_no`, blob, `is_final`,
   `is_record`, validation stamps, immutable once validated or record), plus

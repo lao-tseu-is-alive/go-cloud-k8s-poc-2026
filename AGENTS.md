@@ -89,7 +89,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0007 (dbmate format)
+  │   └── db/migrations/     0001..0009 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
   └── filestore/             local blob store for uploaded document bytes
@@ -238,14 +238,19 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   `${authBaseUrl}/auth/token` (SSO cookie) and re-mints at ~80% of token lifetime.
   The token is held **in memory only** and mirrored into the fetch client.
 - **Upload is metadata-first (out-of-proto).** The `DocumentService` proto contract
-  deliberately has **no upload RPC**: `CreateDocument` takes a `storage_ref` URI +
-  metadata. Binary bytes go through two plain-HTTP endpoints that **bypass the
-  Connect interceptor** and carry their own bearer check (`httpAuthMiddleware`):
-  `POST /api/documents/upload` (multipart, field `file`) stores bytes via
-  `pkg/document/filestore`, computes sha256/size/mime server-side, and returns an
-  `internal://<uuid>` ref; the SPA then calls `CreateDocument` with that ref (so
-  validation/governance/audit still flow through the proto path).
-  `GET /api/documents/download?ref=…` streams a blob back.
+  deliberately has **no upload RPC**. Binary bytes go through two plain-HTTP endpoints
+  that **bypass the Connect interceptor** and carry their own bearer + scope check
+  (`httpAuthMiddleware`): `POST /api/documents/upload` (multipart, field `file`,
+  `goeland:write`) calls `document.Service.IngestContent`, which stores the bytes via
+  `pkg/document/filestore`, computes SHA-256/size server-side and registers a globally
+  deduplicated `content_blob` (identical content → existing blob, new bytes removed); it
+  returns a `contentBlobId` that the SPA passes to `CreateDocument` / `AddDocumentVersion`
+  (so validation/governance/audit still flow through the proto path). Never accept a
+  client-supplied digest as content identity: automatic document reuse keys on the
+  server-registered blob. `GET /api/documents/download?ref=…` (`goeland:read`) streams a blob back.
+- **Document model (spec v2):** `document` (logical object) → `document_version`
+  (append-only; `document.current_version_id` is explicit; final/record versions are
+  immutable and versions are never deleted — DB trigger) → `content_blob` (unique SHA-256).
 - Config: `GOELAND_DOCUMENT_PATH` (blob dir, default `./go_documents`, gitignored)
   and `GOELAND_MAX_UPLOAD_BYTES` (default 100 MiB).
 

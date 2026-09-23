@@ -43,6 +43,9 @@ type Deps struct {
 	// CoreService is the core domain service used to read relationships and
 	// audit; required.
 	CoreService *core.Service
+	// ContentStore holds uploaded document bytes; optional (nil disables
+	// Service.IngestContent, e.g. for a read-only bundle).
+	ContentStore document.ContentStore
 	// Logger receives module logs; nil falls back to slog.Default.
 	Logger *slog.Logger
 }
@@ -74,7 +77,7 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("document module: storage init: %w", err)
 	}
-	svc, err := document.NewService(repo, deps.CoreService, deps.Logger)
+	svc, err := document.NewService(repo, deps.CoreService, deps.ContentStore, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("document module: service init: %w", err)
 	}
@@ -85,6 +88,9 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 
 	return &Module{cfg: cfg, deps: deps, service: svc, connect: cs}, nil
 }
+
+// Service exposes the document service, e.g. to the out-of-proto upload endpoint.
+func (m *Module) Service() *document.Service { return m.service }
 
 // Start is a placeholder for future background workers.
 func (m *Module) Start(_ context.Context) error { return nil }

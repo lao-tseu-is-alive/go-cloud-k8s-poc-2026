@@ -7,8 +7,8 @@
   import { formatBytes, shortHash } from '@/utils/formatters'
 
   // Drives the out-of-proto multipart upload endpoint. On success it emits the
-  // server-computed storage_ref + integrity metadata for the create form to send
-  // to CreateDocument.
+  // registered content (contentBlobId + server-computed integrity metadata) for
+  // CreateDocument or AddDocumentVersion.
   const emit = defineEmits<{ uploaded: [result: UploadResult] }>()
 
   const { t } = useI18n()
@@ -64,6 +64,7 @@
       </div>
 
       <div class="text-caption text-medium-emphasis">{{ t('upload.computed') }}</div>
+      <div v-if="result.reused" class="text-caption">{{ t('upload.reused') }}</div>
     </v-alert>
   </div>
 </template>

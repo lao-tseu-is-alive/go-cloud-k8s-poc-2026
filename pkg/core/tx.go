@@ -310,9 +310,11 @@ func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelat
 	if err != nil {
 		return nil, mapConflict(err)
 	}
+	// pgx reports statement errors (e.g. the unique violation) when rows are
+	// read, not by Query, so the conflict mapping must apply here too.
 	rel, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[SubjectRelationship])
 	if err != nil {
-		return nil, err
+		return nil, mapConflict(err)
 	}
 	rel.Source = source
 	rel.Target = target

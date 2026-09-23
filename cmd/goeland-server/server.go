@@ -89,10 +89,11 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("core module: %w", err)
 	}
 	docMod, err := documentmodule.New(ctx, documentmodule.Config{RequestTimeout: config.RequestTimeout}, documentmodule.Deps{
-		Pool:        pool,
-		Verifier:    verifier,
-		CoreService: coreMod.Service(),
-		Logger:      log,
+		Pool:         pool,
+		Verifier:     verifier,
+		CoreService:  coreMod.Service(),
+		ContentStore: blobStore,
+		Logger:       log,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)
@@ -125,15 +126,16 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	mux.HandleFunc("GET /config", frontendConfigHandler(config))
 
 	// Binary upload/download live OUTSIDE the proto contract (metadata-first):
-	// the client uploads bytes here, then calls CreateDocument with the returned
-	// storage_ref. These literal paths are more specific than the "/api/"
-	// transcoder subtree, so http.ServeMux routes them here first. They carry
-	// their own bearer-token check since they bypass the Connect interceptor,
-	// and their own (larger) body cap for file payloads.
+	// the client uploads bytes here, then calls CreateDocument (or
+	// AddDocumentVersion) with the returned content_blob_id. These literal paths
+	// are more specific than the "/api/" transcoder subtree, so http.ServeMux
+	// routes them here first. They carry their own bearer-token and scope check
+	// since they bypass the Connect interceptor, and their own (larger) body cap
+	// for file payloads.
 	mux.Handle("POST /api/documents/upload",
-		httpAuthMiddleware(verifier, log, http.MaxBytesHandler(uploadHandler(blobStore, log), config.MaxUploadBytes)))
+		httpAuthMiddleware(verifier, log, core.ScopeWrite, http.MaxBytesHandler(uploadHandler(docMod.Service(), log), config.MaxUploadBytes)))
 	mux.Handle("GET /api/documents/download",
-		httpAuthMiddleware(verifier, log, downloadHandler(blobStore, log)))
+		httpAuthMiddleware(verifier, log, core.ScopeRead, downloadHandler(blobStore, log)))
 
 	// The Vanguard transcoder serves BOTH the Connect/gRPC RPC paths
 	// (/goeland.v1.<Service>/<Method>) and the REST bindings declared via

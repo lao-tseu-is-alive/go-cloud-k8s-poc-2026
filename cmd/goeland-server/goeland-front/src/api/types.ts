@@ -74,32 +74,54 @@ export interface DocumentType {
   isActive?: boolean
 }
 
+/** Binary content identified by its SHA-256 (stored once, shared by versions). */
+export interface ContentBlob {
+  id: string
+  sha256?: string
+  /** internal://… ref; empty when only the digest is known (bytes held elsewhere). */
+  storageRef?: string
+  mimeType?: string
+  fileSizeBytes?: string // int64 as string
+  createdAt?: string
+  createdBy?: string
+  verifiedAt?: string
+}
+
+/** A dated, append-only state of a document; final/record versions are immutable. */
+export interface DocumentVersion {
+  id: string
+  documentId?: string
+  versionNo?: number
+  /** Absent for a metadata-only version or an external reference. */
+  content?: ContentBlob
+  pageCount?: number
+  isFinal?: boolean
+  isRecord?: boolean
+  validatedAt?: string
+  validatedBy?: string
+  metadata?: Record<string, unknown>
+  createdAt?: string
+  createdBy?: string
+}
+
 export interface GoDocument {
   subjectRef?: SubjectRef
   documentType?: DocumentType
   title: string
   description?: string
   officialDate?: string
-  storageRef?: string
   externalSystem?: string
   externalId?: string
   externalUrl?: string
-  mimeType?: string
-  fileSizeBytes?: string // int64 as string
-  sha256?: string
-  sha256VerifiedAt?: string
-  version?: number
-  previousVersionId?: string
-  isFinal?: boolean
-  isRecord?: boolean
   language?: string
-  pageCount?: number
   status?: DocumentStatus
   metadata?: Record<string, unknown>
   createdAt?: string
   createdBy?: string
   updatedAt?: string
   recordMetadata?: RecordMetadata
+  /** The explicit current version, with its content. */
+  currentVersion?: DocumentVersion
 }
 
 // ---- actor ----------------------------------------------------------------
@@ -277,20 +299,32 @@ export interface CreateDocumentRequest {
   title: string
   description?: string
   officialDate?: string
-  storageRef?: string
   externalSystem?: string
   externalId?: string
   externalUrl?: string
-  mimeType?: string
-  fileSizeBytes?: string
-  sha256?: string
-  version?: number
+  /** Content registered by the upload endpoint (UploadResult.contentBlobId). */
+  contentBlobId?: string
   isFinal?: boolean
   isRecord?: boolean
   language?: string
   pageCount?: number
   metadata?: Record<string, unknown>
   linkToCaseId?: string
+}
+
+/** CreateDocument response: `reused` when the content already had a live document. */
+export interface CreateDocumentResult {
+  document: GoDocument
+  reused: boolean
+}
+
+export interface AddDocumentVersionRequest {
+  contentBlobId?: string
+  isFinal?: boolean
+  isRecord?: boolean
+  pageCount?: number
+  metadata?: Record<string, unknown>
+  reason?: string
 }
 
 export interface UpdateDocumentMetadataRequest {
@@ -303,6 +337,10 @@ export interface UpdateDocumentMetadataRequest {
 }
 
 export interface UploadResult {
+  /** The registered content, passed to createDocument / addDocumentVersion. */
+  contentBlobId: string
+  /** True when identical content was already known (deduplicated). */
+  reused: boolean
   storageRef: string
   sha256: string
   fileSizeBytes: string

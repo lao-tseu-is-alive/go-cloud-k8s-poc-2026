@@ -5,16 +5,23 @@
 // that can live standalone or be embedded in affaires (via CoreService relationships).
 //
 // Modern GED features added beyond the basic model:
-//   - Cryptographic integrity metadata (sha256 registered at creation). NOTE:
+//   - Document / DocumentVersion / ContentBlob (spec v2 §15-22): the document is the
+//     logical business object, a version a dated state of it, the blob the binary
+//     content identified by its SHA-256. Identical content is stored once; creating a
+//     document for content already held by a live document reuses that document.
+//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
 //     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is a roadmap item.
-//   - External reference without duplication (external_system + external_id + storage_ref as URI)
+//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
-//   - Explicit + graph versioning (previous_version_id + DOCUMENT_PREVIOUS_VERSION relationships).
-//   - Records management preparation (is_record, is_final, locked via record_metadata).
+//   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
 //   - Full-text search ready (dedicated SearchDocuments RPC over a generated tsvector).
 //   - Classification (document_type + metadata).
 //   - Non-destructive, auditable, confidential by default via Core + record_metadata.
+//
+// Binary bytes never travel through this contract: POST /api/documents/upload stores
+// them, computes the digest server-side and returns a content_blob_id that
+// CreateDocument / AddDocumentVersion reference.
 //
 // Minimal scenario: create DOCUMENT, link to CASE (CASE_HAS_DOCUMENT),
 // link to THING (DOCUMENT_REPRESENTS_THING), then finalize/lock.
@@ -57,6 +64,12 @@ const (
 	// DocumentServiceCreateDocumentProcedure is the fully-qualified name of the DocumentService's
 	// CreateDocument RPC.
 	DocumentServiceCreateDocumentProcedure = "/goeland.v1.DocumentService/CreateDocument"
+	// DocumentServiceAddDocumentVersionProcedure is the fully-qualified name of the DocumentService's
+	// AddDocumentVersion RPC.
+	DocumentServiceAddDocumentVersionProcedure = "/goeland.v1.DocumentService/AddDocumentVersion"
+	// DocumentServiceListDocumentVersionsProcedure is the fully-qualified name of the DocumentService's
+	// ListDocumentVersions RPC.
+	DocumentServiceListDocumentVersionsProcedure = "/goeland.v1.DocumentService/ListDocumentVersions"
 	// DocumentServiceGetDocumentProcedure is the fully-qualified name of the DocumentService's
 	// GetDocument RPC.
 	DocumentServiceGetDocumentProcedure = "/goeland.v1.DocumentService/GetDocument"
@@ -86,9 +99,16 @@ const (
 // DocumentServiceClient is a client for the goeland.v1.DocumentService service.
 type DocumentServiceClient interface {
 	// Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
-	// Requires goeland:write; subject, governance, document, optional links and the
-	// DOCUMENT_CREATED audit event are written in one transaction.
+	// Requires goeland:write; subject, governance, document, version 1, optional
+	// links and the DOCUMENT_CREATED audit event are written in one transaction.
+	// Content already held by a live document reuses it (DOCUMENT_REUSED, reused = true).
 	CreateDocument(context.Context, *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error)
+	// Append a new current version to a document (optionally with new content).
+	// Requires goeland:write; writes a DOCUMENT_VERSION_ADDED audit event;
+	// FAILED_PRECONDITION when the document is locked or deleted.
+	AddDocumentVersion(context.Context, *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error)
+	// List the versions of a document, newest first. Requires goeland:read.
+	ListDocumentVersions(context.Context, *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error)
 	// Retrieve a document with context (outgoing relationships, recent history).
 	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
@@ -131,6 +151,18 @@ func NewDocumentServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			httpClient,
 			baseURL+DocumentServiceCreateDocumentProcedure,
 			connect.WithSchema(documentServiceMethods.ByName("CreateDocument")),
+			connect.WithClientOptions(opts...),
+		),
+		addDocumentVersion: connect.NewClient[v1.AddDocumentVersionRequest, v1.AddDocumentVersionResponse](
+			httpClient,
+			baseURL+DocumentServiceAddDocumentVersionProcedure,
+			connect.WithSchema(documentServiceMethods.ByName("AddDocumentVersion")),
+			connect.WithClientOptions(opts...),
+		),
+		listDocumentVersions: connect.NewClient[v1.ListDocumentVersionsRequest, v1.ListDocumentVersionsResponse](
+			httpClient,
+			baseURL+DocumentServiceListDocumentVersionsProcedure,
+			connect.WithSchema(documentServiceMethods.ByName("ListDocumentVersions")),
 			connect.WithClientOptions(opts...),
 		),
 		getDocument: connect.NewClient[v1.GetDocumentRequest, v1.GetDocumentResponse](
@@ -187,6 +219,8 @@ func NewDocumentServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 // documentServiceClient implements DocumentServiceClient.
 type documentServiceClient struct {
 	createDocument          *connect.Client[v1.CreateDocumentRequest, v1.CreateDocumentResponse]
+	addDocumentVersion      *connect.Client[v1.AddDocumentVersionRequest, v1.AddDocumentVersionResponse]
+	listDocumentVersions    *connect.Client[v1.ListDocumentVersionsRequest, v1.ListDocumentVersionsResponse]
 	getDocument             *connect.Client[v1.GetDocumentRequest, v1.GetDocumentResponse]
 	updateDocumentMetadata  *connect.Client[v1.UpdateDocumentMetadataRequest, v1.UpdateDocumentMetadataResponse]
 	finalizeDocument        *connect.Client[v1.FinalizeDocumentRequest, v1.FinalizeDocumentResponse]
@@ -200,6 +234,16 @@ type documentServiceClient struct {
 // CreateDocument calls goeland.v1.DocumentService.CreateDocument.
 func (c *documentServiceClient) CreateDocument(ctx context.Context, req *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error) {
 	return c.createDocument.CallUnary(ctx, req)
+}
+
+// AddDocumentVersion calls goeland.v1.DocumentService.AddDocumentVersion.
+func (c *documentServiceClient) AddDocumentVersion(ctx context.Context, req *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error) {
+	return c.addDocumentVersion.CallUnary(ctx, req)
+}
+
+// ListDocumentVersions calls goeland.v1.DocumentService.ListDocumentVersions.
+func (c *documentServiceClient) ListDocumentVersions(ctx context.Context, req *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error) {
+	return c.listDocumentVersions.CallUnary(ctx, req)
 }
 
 // GetDocument calls goeland.v1.DocumentService.GetDocument.
@@ -245,9 +289,16 @@ func (c *documentServiceClient) ListDocumentTypes(ctx context.Context, req *conn
 // DocumentServiceHandler is an implementation of the goeland.v1.DocumentService service.
 type DocumentServiceHandler interface {
 	// Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
-	// Requires goeland:write; subject, governance, document, optional links and the
-	// DOCUMENT_CREATED audit event are written in one transaction.
+	// Requires goeland:write; subject, governance, document, version 1, optional
+	// links and the DOCUMENT_CREATED audit event are written in one transaction.
+	// Content already held by a live document reuses it (DOCUMENT_REUSED, reused = true).
 	CreateDocument(context.Context, *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error)
+	// Append a new current version to a document (optionally with new content).
+	// Requires goeland:write; writes a DOCUMENT_VERSION_ADDED audit event;
+	// FAILED_PRECONDITION when the document is locked or deleted.
+	AddDocumentVersion(context.Context, *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error)
+	// List the versions of a document, newest first. Requires goeland:read.
+	ListDocumentVersions(context.Context, *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error)
 	// Retrieve a document with context (outgoing relationships, recent history).
 	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
@@ -286,6 +337,18 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 		DocumentServiceCreateDocumentProcedure,
 		svc.CreateDocument,
 		connect.WithSchema(documentServiceMethods.ByName("CreateDocument")),
+		connect.WithHandlerOptions(opts...),
+	)
+	documentServiceAddDocumentVersionHandler := connect.NewUnaryHandler(
+		DocumentServiceAddDocumentVersionProcedure,
+		svc.AddDocumentVersion,
+		connect.WithSchema(documentServiceMethods.ByName("AddDocumentVersion")),
+		connect.WithHandlerOptions(opts...),
+	)
+	documentServiceListDocumentVersionsHandler := connect.NewUnaryHandler(
+		DocumentServiceListDocumentVersionsProcedure,
+		svc.ListDocumentVersions,
+		connect.WithSchema(documentServiceMethods.ByName("ListDocumentVersions")),
 		connect.WithHandlerOptions(opts...),
 	)
 	documentServiceGetDocumentHandler := connect.NewUnaryHandler(
@@ -340,6 +403,10 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 		switch r.URL.Path {
 		case DocumentServiceCreateDocumentProcedure:
 			documentServiceCreateDocumentHandler.ServeHTTP(w, r)
+		case DocumentServiceAddDocumentVersionProcedure:
+			documentServiceAddDocumentVersionHandler.ServeHTTP(w, r)
+		case DocumentServiceListDocumentVersionsProcedure:
+			documentServiceListDocumentVersionsHandler.ServeHTTP(w, r)
 		case DocumentServiceGetDocumentProcedure:
 			documentServiceGetDocumentHandler.ServeHTTP(w, r)
 		case DocumentServiceUpdateDocumentMetadataProcedure:
@@ -367,6 +434,14 @@ type UnimplementedDocumentServiceHandler struct{}
 
 func (UnimplementedDocumentServiceHandler) CreateDocument(context.Context, *connect.Request[v1.CreateDocumentRequest]) (*connect.Response[v1.CreateDocumentResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.CreateDocument is not implemented"))
+}
+
+func (UnimplementedDocumentServiceHandler) AddDocumentVersion(context.Context, *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.AddDocumentVersion is not implemented"))
+}
+
+func (UnimplementedDocumentServiceHandler) ListDocumentVersions(context.Context, *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.ListDocumentVersions is not implemented"))
 }
 
 func (UnimplementedDocumentServiceHandler) GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error) {

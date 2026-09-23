@@ -42,7 +42,7 @@ func TestDocumentLifecycle(t *testing.T) {
 	ctx := env.ctx
 
 	token := uniqueToken()
-	created, createEvent, _, err := env.docSvc.Create(ctx, document.CreateInput{
+	res, err := env.docSvc.Create(ctx, document.CreateInput{
 		DocumentTypeCode: "INCOMING_LETTER",
 		Title:            "Integration lifecycle " + token,
 		Description:      "created by TestDocumentLifecycle",
@@ -51,6 +51,10 @@ func TestDocumentLifecycle(t *testing.T) {
 	})
 	if err != nil {
 		t.Fatalf("create document: %v", err)
+	}
+	created, createEvent := res.Document, res.Event
+	if created.CurrentVersion == nil || created.CurrentVersion.VersionNo != 1 || created.CurrentVersion.Content != nil {
+		t.Fatalf("a metadata-only document starts with an empty version 1, got %+v", created.CurrentVersion)
 	}
 	if created.Status != document.StatusDraft {
 		t.Fatalf("new document should be DRAFT, got status %d", created.Status)
@@ -109,6 +113,15 @@ func TestDocumentLifecycle(t *testing.T) {
 		if rel == nil {
 			t.Fatal("expected a relationship to be returned")
 		}
+		// A duplicate active edge is a conflict (ALREADY_EXISTS on the wire).
+		if _, _, err := env.docSvc.Link(ctx, core.LinkInput{
+			SourceSubjectID:      docID,
+			TargetSubjectID:      actor.ID,
+			RelationshipTypeCode: "DOCUMENT_AUTHORED_BY_ACTOR",
+			OperatorID:           testOperator,
+		}); !errors.Is(err, core.ErrConflict) {
+			t.Fatalf("duplicate link: want ErrConflict, got %v", err)
+		}
 		rels, err := env.docSvc.Relationships(ctx, docID)
 		if err != nil {
 			t.Fatalf("list relationships: %v", err)
@@ -123,8 +136,8 @@ func TestDocumentLifecycle(t *testing.T) {
 		if err != nil {
 			t.Fatalf("finalize: %v", err)
 		}
-		if !final.IsFinal {
-			t.Fatal("finalized document should report is_final=true")
+		if final.Status != document.StatusFinal || final.CurrentVersion == nil || !final.CurrentVersion.IsFinal || final.CurrentVersion.ValidatedAt == nil {
+			t.Fatalf("finalized document should be FINAL with a validated current version, got %d / %+v", final.Status, final.CurrentVersion)
 		}
 		if final.RecordMetadata == nil || !final.RecordMetadata.IsLocked {
 			t.Fatalf("finalize with lock should leave the governance record locked: %+v", final.RecordMetadata)

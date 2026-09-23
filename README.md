@@ -66,11 +66,15 @@ Transversal core (`pkg/core`):
 Document component (`pkg/document`), a first-class subject (`document.id` **is** a
 `subject_ref.id` of kind DOCUMENT, pinned by a composite FK):
 
-- cryptographic integrity metadata (`sha256` registered at creation; `VerifyDocumentIntegrity`
-  is a non-mutating, non-probative stored-hash comparison — real streamed hashing is future work);
-- no-duplication external references (`external_system` / `external_id` / `external_url` / `storage_ref`);
-- versioning (`version` + `previous_version_id`);
-- records-management prep (`is_final`, `is_record`, `status`, governance locking);
+- **Document / DocumentVersion / ContentBlob** (spec v2 §15-22): the document is the logical
+  business object, `document_version` its dated, append-only states (final/record versions are
+  immutable, enforced by a trigger), `content_blob` the bytes identified by a **unique SHA-256** —
+  identical content is stored once, and creating a document for content already held by a live
+  document **reuses that document** (the new context is a relationship);
+- cryptographic integrity metadata (server-computed SHA-256; `VerifyDocumentIntegrity` is a
+  non-mutating, non-probative stored-hash comparison — real streamed hashing is GLD-021);
+- no-duplication external references (`external_system` / `external_id` / `external_url`);
+- records-management prep (per-version `is_final` / `is_record`, `status`, governance locking);
 - accent-insensitive full-text search via a generated `search_vector` (`tsvector`,
   accent-folded with `unaccent`) + GIN index — "chateau" matches "château";
 - controlled classification (`document_type`).
@@ -105,7 +109,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0007 (dbmate format)
+      └── db/migrations/  0001..0009 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   ├── module/            bundleable module (schema owned by core)
   └── filestore/         local blob store for uploaded document bytes
@@ -170,12 +174,13 @@ read-only governance and audit panels. Bilingual (fr-CH default, en).
   session) auth.
 - It talks to the server over the **REST/JSON** `/api/...` bindings (plain `fetch`,
   no generated client).
-- **File upload is metadata-first.** The proto `CreateDocument` takes a `storage_ref`
-  URI, so binary bytes go through two out-of-proto HTTP endpoints (they carry their
-  own bearer check): `POST /api/documents/upload` (multipart, field `file`) stores
-  the bytes, computes sha256/size/mime server-side, and returns an `internal://<uuid>`
-  ref that the UI passes to `CreateDocument`; `GET /api/documents/download?ref=…`
-  streams a blob back. Blobs live under `GOELAND_DOCUMENT_PATH` (default
+- **File upload is metadata-first.** Binary bytes never travel through the proto
+  contract: two out-of-proto HTTP endpoints carry their own bearer **and scope** check.
+  `POST /api/documents/upload` (multipart, field `file`, `goeland:write`) stores the bytes,
+  computes SHA-256/size/mime server-side and registers a **deduplicated** `content_blob`
+  (identical content returns the existing blob, `reused: true`, and the new bytes are
+  discarded); the UI passes the returned `contentBlobId` to `CreateDocument` or
+  `AddDocumentVersion`. `GET /api/documents/download?ref=…` (`goeland:read`) streams a blob back. Blobs live under `GOELAND_DOCUMENT_PATH` (default
   `./go_documents`, gitignored); a single upload is capped by `GOELAND_MAX_UPLOAD_BYTES`
   (default 100 MiB).
 
@@ -208,7 +213,8 @@ All three services are annotated (see `api/openapi/goeland.swagger.yaml` for the
 DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
 `PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
 `GET /api/documents/{id}/integrity` · `GET /api/documents/search` ·
-`POST /api/documents/{id}/links` · `DELETE /api/documents/{id}`. Plus two
+`POST /api/documents/{id}/links` · `DELETE /api/documents/{id}` ·
+`POST /api/documents/{documentId}/versions` · `GET /api/documents/{documentId}/versions`. Plus two
 **out-of-proto** binary endpoints (see [Web UI](#web-ui)):
 `POST /api/documents/upload` and `GET /api/documents/download`.
 
@@ -228,11 +234,12 @@ AUTH='Authorization: Bearer devtoken'
 # List seeded document types
 curl -s -H "$AUTH" "$BASE/api/document-types?onlyActive=true"
 
-# Create a document (creates subject_ref + record_metadata + audit atomically)
+# Upload the bytes (server computes SHA-256, deduplicates, returns contentBlobId)
+BLOB=$(curl -s -H "$AUTH" -F file=@plan-1234.pdf "$BASE/api/documents/upload" | jq -r .contentBlobId)
+
+# Create a document with version 1 (subject_ref + record_metadata + version + audit atomically)
 curl -s -H "$AUTH" -H 'Content-Type: application/json' -d '{
-  "documentTypeCode":"PLAN","title":"Plan de masse v1",
-  "storageRef":"minio://plans/plan-1234.pdf","mimeType":"application/pdf",
-  "sha256":"e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+  "documentTypeCode":"PLAN","title":"Plan de masse v1","contentBlobId":"'"$BLOB"'",
   "initialGovernance":{"confidentialityLevel":1,"ownerOrgId":"OPC"}
 }' "$BASE/api/documents"
 
@@ -267,6 +274,8 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0005_document_unaccent_search.sql  accent-insensitive full-text search (immutable_unaccent)
 0006_actor.sql               actor + actor_contact + organization_category (+ 33 seeded categories)
 0007_business_ref.sql        subject_ref.business_ref + namespace (unique per namespace) + business_ref_counter
+0008_document_versions.sql   content_blob (unique SHA-256) + document_version (immutable when final/record) + lossless backfill
+0009_drop_document_file_columns.sql  drop the file/version columns superseded by 0008
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

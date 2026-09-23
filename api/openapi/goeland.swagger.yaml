@@ -239,8 +239,9 @@ paths:
     post:
       summary: |-
         Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
-        Requires goeland:write; subject, governance, document, optional links and the
-        DOCUMENT_CREATED audit event are written in one transaction.
+        Requires goeland:write; subject, governance, document, version 1, optional
+        links and the DOCUMENT_CREATED audit event are written in one transaction.
+        Content already held by a live document reuses it (DOCUMENT_REUSED, reused = true).
       operationId: CreateDocument
       responses:
         "200":
@@ -253,7 +254,11 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: body
-          description: CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+          description: |-
+            CreateDocumentRequest registers a document (metadata first; the bytes are
+            uploaded beforehand and referenced by content_blob_id). When the content is
+            already held by a live document, that document is reused instead (see
+            CreateDocumentResponse.reused).
           in: body
           required: true
           schema:
@@ -360,6 +365,55 @@ paths:
           required: true
           schema:
             $ref: '#/definitions/DocumentServiceLinkDocumentBody'
+      tags:
+        - DocumentService
+  /api/documents/{documentId}/versions:
+    get:
+      summary: List the versions of a document, newest first. Requires goeland:read.
+      operationId: ListDocumentVersions
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListDocumentVersionsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: documentId
+          description: document_id is the document; NOT_FOUND when unknown.
+          in: path
+          required: true
+          type: string
+      tags:
+        - DocumentService
+    post:
+      summary: |-
+        Append a new current version to a document (optionally with new content).
+        Requires goeland:write; writes a DOCUMENT_VERSION_ADDED audit event;
+        FAILED_PRECONDITION when the document is locked or deleted.
+      operationId: AddDocumentVersion
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1AddDocumentVersionResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: documentId
+          description: document_id is the document; a locked or deleted document is rejected.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceAddDocumentVersionBody'
       tags:
         - DocumentService
   /api/documents/{id}:
@@ -947,6 +1001,31 @@ definitions:
         type: string
         description: reason is the justification recorded on the audit event (at most 2000 characters).
     description: AssignBusinessRefRequest gives an existing subject its business reference.
+  DocumentServiceAddDocumentVersionBody:
+    type: object
+    properties:
+      contentBlobId:
+        type: string
+        description: |-
+          content_blob_id is the content from POST /api/documents/upload; empty for a
+          metadata-only version. It may repeat an earlier version's content.
+      isFinal:
+        type: boolean
+        description: is_final creates the version already final.
+      isRecord:
+        type: boolean
+        description: is_record declares the version a record, which also makes it final.
+      pageCount:
+        type: integer
+        format: int32
+        description: page_count is the number of pages.
+      metadata:
+        type: object
+        description: metadata holds secondary data about the version.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: AddDocumentVersionRequest appends a new current version to a document.
   DocumentServiceFinalizeDocumentBody:
     type: object
     properties:
@@ -1124,6 +1203,19 @@ definitions:
       "any kind" in searches.
        - ACTOR_KIND_PERSON: ACTOR_KIND_PERSON is a personne physique (IsPhysique = true).
        - ACTOR_KIND_ORGANIZATION: ACTOR_KIND_ORGANIZATION is a personne morale (IsPhysique = false).
+  v1AddDocumentVersionResponse:
+    type: object
+    properties:
+      document:
+        $ref: '#/definitions/v1Document'
+        description: document is the document; its current_version is the new version.
+      version:
+        $ref: '#/definitions/v1DocumentVersion'
+        description: version is the new version.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the DOCUMENT_VERSION_ADDED audit event.
+    description: AddDocumentVersionResponse returns the document with its new current version.
   v1AssignBusinessRefResponse:
     type: object
     properties:
@@ -1243,6 +1335,43 @@ definitions:
        - CONTACT_TYPE_ABACUS_DEBTOR: CONTACT_TYPE_ABACUS_DEBTOR is the ABACUS accounting debtor number.
        - CONTACT_TYPE_COMMERCIAL_REGISTER: CONTACT_TYPE_COMMERCIAL_REGISTER is a commercial register (registre du commerce) link.
        - CONTACT_TYPE_OTHER: CONTACT_TYPE_OTHER is any other channel; label should describe it.
+  v1ContentBlob:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the blob UUID returned by the upload endpoint.
+      sha256:
+        type: string
+        description: sha256 is the lower-case hex digest computed by the server; unique.
+      storageRef:
+        type: string
+        description: |-
+          storage_ref is the URI of the bytes (internal://...); empty when the bytes
+          are held by an external system and only the digest is known.
+      mimeType:
+        type: string
+        description: mime_type is the media type of the bytes; empty when unknown.
+      fileSizeBytes:
+        type: string
+        format: int64
+        description: file_size_bytes is the size of the bytes. Serialized as a JSON string (int64).
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is when the content was first stored.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator whose upload first stored the content.
+      verifiedAt:
+        type: string
+        format: date-time
+        description: verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+        readOnly: true
+    description: |-
+      ContentBlob is binary content identified by its SHA-256; identical bytes are
+      stored once and may back several versions (spec v2 §17, §19).
   v1CreateActorRequest:
     type: object
     properties:
@@ -1306,11 +1435,6 @@ definitions:
       officialDate:
         type: string
         description: official_date is the optional legal date as YYYY-MM-DD.
-      storageRef:
-        type: string
-        description: |-
-          storage_ref is the URI of the bytes, typically the internal:// ref returned
-          by POST /api/documents/upload.
       externalSystem:
         type: string
         description: external_system names the external system of record, if any.
@@ -1320,38 +1444,19 @@ definitions:
       externalUrl:
         type: string
         description: external_url links to the external document; it becomes the subject's canonical URL.
-      mimeType:
-        type: string
-        description: mime_type is the media type of the bytes.
-      fileSizeBytes:
-        type: string
-        format: int64
-        description: file_size_bytes is the size of the bytes in bytes.
-      sha256:
-        type: string
-        description: |-
-          sha256 is the hex digest of the bytes; empty when unknown. Digests are
-          unique across documents; a duplicate currently surfaces as INTERNAL.
-      version:
-        type: integer
-        format: int32
-        description: version is the document version; 0 means 1.
-      previousVersionId:
-        type: string
-        description: previous_version_id, when set, links to the older version with DOCUMENT_PREVIOUS_VERSION.
       isFinal:
         type: boolean
-        description: is_final creates the document directly in DOCUMENT_STATUS_FINAL.
+        description: is_final creates version 1 already final (document status FINAL).
       isRecord:
         type: boolean
-        description: is_record declares the document a record.
+        description: is_record declares version 1 a record, which also makes it final.
       language:
         type: string
         description: language is the ISO 639 content language.
       pageCount:
         type: integer
         format: int32
-        description: page_count is the number of pages.
+        description: page_count is the number of pages of version 1.
       metadata:
         type: object
         description: metadata holds secondary extension data.
@@ -1367,9 +1472,19 @@ definitions:
       linkToCaseId:
         type: string
         description: |-
-          link_to_case_id is an optional convenience: auto-link the new document to
-          this case with CASE_HAS_DOCUMENT in the same transaction.
-    description: CreateDocumentRequest registers a document (metadata first; the file itself is referenced via storage_ref).
+          link_to_case_id is an optional convenience: link the new (or reused)
+          document to this case with CASE_HAS_DOCUMENT in the same transaction.
+      contentBlobId:
+        type: string
+        description: |-
+          content_blob_id is the content returned by POST /api/documents/upload;
+          empty for a metadata-only document or an external reference. NOT_FOUND
+          when unknown.
+    description: |-
+      CreateDocumentRequest registers a document (metadata first; the bytes are
+      uploaded beforehand and referenced by content_blob_id). When the content is
+      already held by a live document, that document is reused instead (see
+      CreateDocumentResponse.reused).
     required:
       - documentTypeCode
       - title
@@ -1378,16 +1493,21 @@ definitions:
     properties:
       document:
         $ref: '#/definitions/v1Document'
-        description: document is the created document with its governance.
+        description: document is the created document, or the reused one when reused is true.
       createdEvent:
         $ref: '#/definitions/v1AuditEvent'
-        description: created_event is the DOCUMENT_CREATED audit event.
+        description: created_event is DOCUMENT_CREATED, or DOCUMENT_REUSED on the existing document.
       initialRelationship:
         $ref: '#/definitions/v1SubjectRelationship'
         description: |-
           initial_relationship is the CASE_HAS_DOCUMENT edge; set only when
-          link_to_case_id was provided.
-    description: CreateDocumentResponse returns the created document and its side effects.
+          link_to_case_id was provided and the link did not already exist.
+      reused:
+        type: boolean
+        description: |-
+          reused is true when the content was already held by a live document, which
+          was reused (no new document; the request's title and metadata are ignored).
+    description: CreateDocumentResponse returns the created (or reused) document and its side effects.
   v1CreateSubjectRefRequest:
     type: object
     properties:
@@ -1469,11 +1589,6 @@ definitions:
         description: |-
           official_date is the legal probative date of the document itself, as
           YYYY-MM-DD; empty when unknown.
-      storageRef:
-        type: string
-        description: |-
-          storage_ref is the URI of the bytes: internal://... (upload endpoint),
-          minio://... or alfresco://...; empty for metadata-only documents.
       externalSystem:
         type: string
         description: |-
@@ -1485,53 +1600,14 @@ definitions:
       externalUrl:
         type: string
         description: external_url is a clickable link to the external document, if available.
-      mimeType:
-        type: string
-        description: mime_type is the media type of the bytes (at most 255 characters).
-      fileSizeBytes:
-        type: string
-        format: int64
-        description: |-
-          file_size_bytes is the size of the bytes in bytes; 0 when unknown.
-          Serialized as a JSON string (int64).
-      sha256:
-        type: string
-        description: |-
-          sha256 is the registered hex SHA-256 (integrity and deduplication key:
-          unique across documents); empty when unknown.
-      sha256VerifiedAt:
-        type: string
-        format: date-time
-        description: |-
-          sha256_verified_at is reserved for probative re-verification of the stored
-          bytes; currently never set.
-      version:
-        type: integer
-        format: int32
-        description: version is the document version, at least 1 once stored.
-      previousVersionId:
-        type: string
-        description: |-
-          previous_version_id is the document this one supersedes; also mirrored as
-          a DOCUMENT_PREVIOUS_VERSION relationship. Empty for a first version.
-      isFinal:
-        type: boolean
-        description: is_final reports a business-final document (signed, approved).
-      isRecord:
-        type: boolean
-        description: is_record declares a record for retention / records management.
       language:
         type: string
         description: |-
           language is the ISO 639 content language, e.g. "fr" or "de" (at most 10
           characters); unrelated to the UI locale.
-      pageCount:
-        type: integer
-        format: int32
-        description: page_count is the number of pages; 0 when unknown.
       status:
         $ref: '#/definitions/v1DocumentStatus'
-        description: status is the lifecycle state.
+        description: status is the lifecycle state; FINAL when the current version is final.
       metadata:
         type: object
         description: 'metadata holds secondary data: classification, keywords, extracted entities...'
@@ -1551,9 +1627,14 @@ definitions:
       recordMetadata:
         $ref: '#/definitions/v1RecordMetadata'
         description: record_metadata is the governance record (confidentiality, lock, owner...).
+      currentVersion:
+        $ref: '#/definitions/v1DocumentVersion'
+        description: current_version is the explicit current version, with its content.
+        readOnly: true
     description: |-
-      Document is the rich document entity, 1:1 with SubjectRef (id == subject id).
-      Storage can be internal (MinIO later) or an external reference (Alfresco node, legacy, SharePoint).
+      Document is the logical business document, 1:1 with SubjectRef (id == subject
+      id); its content lives in versions. External references (Alfresco node, legacy,
+      SharePoint) stay document-level.
     required:
       - title
   v1DocumentStatus:
@@ -1603,6 +1684,56 @@ definitions:
       Types are seeded reference data; a document's type is fixed at creation.
     required:
       - code
+  v1DocumentVersion:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the version UUID.
+      documentId:
+        type: string
+        description: document_id is the owning document.
+      versionNo:
+        type: integer
+        format: int32
+        description: version_no numbers the versions of one document from 1, without gaps.
+      content:
+        $ref: '#/definitions/v1ContentBlob'
+        description: |-
+          content is the binary content; absent for a metadata-only version or an
+          external reference.
+      pageCount:
+        type: integer
+        format: int32
+        description: page_count is the number of pages; 0 when unknown.
+      isFinal:
+        type: boolean
+        description: is_final reports a validated, business-final version (then immutable).
+      isRecord:
+        type: boolean
+        description: is_record declares a record for retention / records management; a record is always final.
+      validatedAt:
+        type: string
+        format: date-time
+        description: validated_at is when the version became final; absent while mutable.
+        readOnly: true
+      validatedBy:
+        type: string
+        description: validated_by is the operator who made the version final.
+      metadata:
+        type: object
+        description: metadata holds secondary data about this version.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the server creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who added the version.
+    description: |-
+      DocumentVersion is a dated, append-only state of a document (spec v2 §18). A
+      final or record version is immutable; versions are never deleted.
   v1FinalizeDocumentResponse:
     type: object
     properties:
@@ -1738,6 +1869,16 @@ definitions:
           $ref: '#/definitions/v1DocumentType'
         description: document_types are the matching types.
     description: ListDocumentTypesResponse returns the matching catalogue entries.
+  v1ListDocumentVersionsResponse:
+    type: object
+    properties:
+      versions:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DocumentVersion'
+        description: versions are the versions with their content, newest first.
+    description: ListDocumentVersionsResponse returns every version, newest first.
   v1ListOrganizationCategoriesResponse:
     type: object
     properties:
@@ -2139,11 +2280,11 @@ definitions:
           non-empty and equal (case-insensitive).
       actualSha256:
         type: string
-        description: actual_sha256 is the registered hash; empty when none was registered.
+        description: actual_sha256 is the hash of the current version's content; empty without content.
       verifiedAt:
         type: string
         format: date-time
-        description: verified_at is the last probative verification time; currently never set.
+        description: verified_at is the content's last probative verification time; currently never set.
       storageRefChecked:
         type: string
         description: |-

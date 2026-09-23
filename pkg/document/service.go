@@ -2,7 +2,9 @@ package document
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"io"
 	"log/slog"
 	"strings"
 	"unicode/utf8"
@@ -22,12 +24,20 @@ const (
 type Service struct {
 	repo    Repository
 	coreSvc *core.Service
+	store   ContentStore
 	log     *slog.Logger
 }
 
-// NewService constructs a Service backed by the document repository and the core
-// service (used to read relationships and audit for a document). A nil logger falls back to slog.Default.
-func NewService(repo Repository, coreSvc *core.Service, log *slog.Logger) (*Service, error) {
+// ErrNoContentStore is returned by IngestContent when the service was built
+// without a ContentStore.
+var ErrNoContentStore = errors.New("document service has no content store")
+
+// NewService constructs a Service backed by the document repository, the core
+// service (used to read relationships and audit for a document) and the store
+// holding content bytes. store may be nil when the caller never ingests bytes
+// (IngestContent then fails with ErrNoContentStore). A nil logger falls back to
+// slog.Default.
+func NewService(repo Repository, coreSvc *core.Service, store ContentStore, log *slog.Logger) (*Service, error) {
 	if repo == nil {
 		return nil, fmt.Errorf("%w: repository is required", core.ErrInvalidInput)
 	}
@@ -37,24 +47,57 @@ func NewService(repo Repository, coreSvc *core.Service, log *slog.Logger) (*Serv
 	if log == nil {
 		log = slog.Default()
 	}
-	return &Service{repo: repo, coreSvc: coreSvc, log: log}, nil
+	return &Service{repo: repo, coreSvc: coreSvc, store: store, log: log}, nil
 }
 
-// Create validates and persists a new document.
-func (s *Service) Create(ctx context.Context, in CreateInput) (*Document, *core.AuditEvent, *core.SubjectRelationship, error) {
+// IngestContent stores uploaded bytes and registers them as a content blob,
+// with global deduplication (spec v2 §17, §20): when identical content is
+// already known, the new bytes are removed and the existing blob is returned
+// with Reused set. The digest and size are always computed by the server.
+func (s *Service) IngestContent(ctx context.Context, r io.Reader, filename, mimeType, operatorID string) (IngestResult, error) {
+	if s.store == nil {
+		return IngestResult{}, ErrNoContentStore
+	}
+	saved, err := s.store.Save(r, filename)
+	if err != nil {
+		return IngestResult{}, fmt.Errorf("store content: %w", err)
+	}
+	blob, reused, err := s.repo.RegisterBlob(ctx, ContentBlob{
+		SHA256:        saved.SHA256,
+		StorageRef:    saved.StorageRef,
+		MimeType:      mimeType,
+		FileSizeBytes: saved.FileSizeBytes,
+		CreatedBy:     operatorID,
+	})
+	if err != nil || reused {
+		// Unregistered bytes (failure or duplicate) must not linger in storage.
+		if rmErr := s.store.Remove(saved.StorageRef); rmErr != nil {
+			s.log.Error("remove unregistered content", "storage_ref", saved.StorageRef, "error", rmErr)
+		}
+	}
+	if err != nil {
+		return IngestResult{}, fmt.Errorf("register content: %w", err)
+	}
+	s.log.Info("ingested content", "content_blob_id", blob.ID, "size", blob.FileSizeBytes, "reused", reused)
+	return IngestResult{Blob: blob, Reused: reused, Filename: saved.Filename}, nil
+}
+
+// Create validates and persists a new document, or reuses the live document
+// that already holds the same content (see CreateInput).
+func (s *Service) Create(ctx context.Context, in CreateInput) (CreateResult, error) {
 	in.Title = strings.TrimSpace(in.Title)
 	in.DocumentTypeCode = strings.TrimSpace(in.DocumentTypeCode)
 	if in.Title == "" {
-		return nil, nil, nil, fmt.Errorf("%w: title is required", core.ErrInvalidInput)
+		return CreateResult{}, fmt.Errorf("%w: title is required", core.ErrInvalidInput)
 	}
 	if utf8.RuneCountInString(in.Title) > MaxTitleLength {
-		return nil, nil, nil, fmt.Errorf("%w: title exceeds %d characters", core.ErrInvalidInput, MaxTitleLength)
+		return CreateResult{}, fmt.Errorf("%w: title exceeds %d characters", core.ErrInvalidInput, MaxTitleLength)
 	}
 	if utf8.RuneCountInString(in.Description) > MaxDescriptionLength {
-		return nil, nil, nil, fmt.Errorf("%w: description exceeds %d characters", core.ErrInvalidInput, MaxDescriptionLength)
+		return CreateResult{}, fmt.Errorf("%w: description exceeds %d characters", core.ErrInvalidInput, MaxDescriptionLength)
 	}
 	if in.DocumentTypeCode == "" {
-		return nil, nil, nil, fmt.Errorf("%w: document_type_code is required", core.ErrInvalidInput)
+		return CreateResult{}, fmt.Errorf("%w: document_type_code is required", core.ErrInvalidInput)
 	}
 	// Complete the governance/identity input consistently with the document.
 	in.Governance.Kind = core.SubjectKindDocument
@@ -64,12 +107,15 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Document, *core.
 	if in.Governance.OwnerUserID == "" {
 		in.Governance.OwnerUserID = in.OperatorID
 	}
-	doc, ev, rel, err := s.repo.Create(ctx, in)
-	if err != nil {
-		return nil, nil, nil, fmt.Errorf("create document: %w", err)
+	if in.PageCount < 0 {
+		return CreateResult{}, fmt.Errorf("%w: page_count must not be negative", core.ErrInvalidInput)
 	}
-	s.log.Info("created document", "document_id", doc.ID, "type", in.DocumentTypeCode)
-	return doc, ev, rel, nil
+	res, err := s.repo.Create(ctx, in)
+	if err != nil {
+		return CreateResult{}, fmt.Errorf("create document: %w", err)
+	}
+	s.log.Info("created document", "document_id", res.Document.ID, "type", in.DocumentTypeCode, "reused", res.Reused)
+	return res, nil
 }
 
 // Get loads a document by id.
@@ -98,6 +144,32 @@ func (s *Service) RecentAudit(ctx context.Context, id uuid.UUID) ([]*core.AuditE
 		return nil, err
 	}
 	return res.Events, nil
+}
+
+// AddVersion appends a new current version to a mutable document (rejected when
+// the document is locked or deleted). The content may repeat an earlier version's.
+func (s *Service) AddVersion(ctx context.Context, documentID uuid.UUID, in VersionInput) (*Document, *Version, *core.AuditEvent, error) {
+	if documentID == uuid.Nil {
+		return nil, nil, nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
+	}
+	if in.PageCount < 0 {
+		return nil, nil, nil, fmt.Errorf("%w: page_count must not be negative", core.ErrInvalidInput)
+	}
+	in.Reason = strings.TrimSpace(in.Reason)
+	doc, version, ev, err := s.repo.AddVersion(ctx, documentID, in)
+	if err != nil {
+		return nil, nil, nil, fmt.Errorf("add document version: %w", err)
+	}
+	s.log.Info("added document version", "document_id", documentID, "version_no", version.VersionNo)
+	return doc, version, ev, nil
+}
+
+// ListVersions returns the versions of a document, newest first.
+func (s *Service) ListVersions(ctx context.Context, documentID uuid.UUID) ([]*Version, error) {
+	if documentID == uuid.Nil {
+		return nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
+	}
+	return s.repo.ListVersions(ctx, documentID)
 }
 
 // UpdateMetadata updates mutable metadata (rejected when the record is locked).

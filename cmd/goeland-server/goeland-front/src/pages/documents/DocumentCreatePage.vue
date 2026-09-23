@@ -45,16 +45,14 @@
       isRecord: model.value.isRecord,
     }
     if (upload.value) {
-      req.storageRef = upload.value.storageRef
-      req.mimeType = upload.value.mimeType
-      req.fileSizeBytes = upload.value.fileSizeBytes
-      req.sha256 = upload.value.sha256
+      req.contentBlobId = upload.value.contentBlobId
     }
 
     saving.value = true
     try {
-      const doc = await createDocument(req)
-      ui.notify(t('messages.document.createSuccess'), 'success')
+      const { document: doc, reused } = await createDocument(req)
+      // Identical content already had a live document: it was reused (spec v2 §20).
+      ui.notify(t(reused ? 'messages.document.reused' : 'messages.document.createSuccess'), reused ? 'info' : 'success')
       const id = doc.subjectRef?.id
       router.push(id ? `/documents/${id}` : '/documents')
     } catch (error) {

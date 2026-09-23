@@ -31,44 +31,65 @@ func DomainToProto(doc *Document) *goelandv1.Document {
 	if doc == nil {
 		return nil
 	}
-	sha := ""
-	if doc.SHA256 != nil {
-		sha = *doc.SHA256
-	}
-	previous := ""
-	if doc.PreviousVersionID != nil {
-		previous = doc.PreviousVersionID.String()
-	}
 	officialDate := ""
 	if doc.OfficialDate != nil {
 		officialDate = doc.OfficialDate.Format(isoDate)
 	}
 	return &goelandv1.Document{
-		SubjectRef:        core.DomainSubjectRefToProto(doc.Subject),
-		DocumentType:      DomainTypeToProto(doc.Type),
-		Title:             doc.Title,
-		Description:       doc.Description,
-		OfficialDate:      officialDate,
-		StorageRef:        doc.StorageRef,
-		ExternalSystem:    doc.ExternalSystem,
-		ExternalId:        doc.ExternalID,
-		ExternalUrl:       doc.ExternalURL,
-		MimeType:          doc.MimeType,
-		FileSizeBytes:     doc.FileSizeBytes,
-		Sha256:            sha,
-		Sha256VerifiedAt:  core.TimestampPtrOrNil(doc.SHA256VerifiedAt),
-		Version:           doc.Version,
-		PreviousVersionId: previous,
-		IsFinal:           doc.IsFinal,
-		IsRecord:          doc.IsRecord,
-		Language:          doc.Language,
-		PageCount:         doc.PageCount,
-		Status:            goelandv1.DocumentStatus(doc.Status),
-		Metadata:          structFromMap(doc.Metadata),
-		CreatedAt:         core.TimestampOrNil(doc.CreatedAt),
-		CreatedBy:         doc.CreatedBy,
-		UpdatedAt:         core.TimestampOrNil(doc.UpdatedAt),
-		RecordMetadata:    core.DomainRecordMetadataToProto(doc.RecordMetadata),
+		SubjectRef:     core.DomainSubjectRefToProto(doc.Subject),
+		DocumentType:   DomainTypeToProto(doc.Type),
+		Title:          doc.Title,
+		Description:    doc.Description,
+		OfficialDate:   officialDate,
+		ExternalSystem: doc.ExternalSystem,
+		ExternalId:     doc.ExternalID,
+		ExternalUrl:    doc.ExternalURL,
+		Language:       doc.Language,
+		Status:         goelandv1.DocumentStatus(doc.Status),
+		Metadata:       structFromMap(doc.Metadata),
+		CreatedAt:      core.TimestampOrNil(doc.CreatedAt),
+		CreatedBy:      doc.CreatedBy,
+		UpdatedAt:      core.TimestampOrNil(doc.UpdatedAt),
+		RecordMetadata: core.DomainRecordMetadataToProto(doc.RecordMetadata),
+		CurrentVersion: VersionToProto(doc.CurrentVersion),
+	}
+}
+
+// VersionToProto converts a document version (with hydrated content) to proto; nil stays nil.
+func VersionToProto(v *Version) *goelandv1.DocumentVersion {
+	if v == nil {
+		return nil
+	}
+	return &goelandv1.DocumentVersion{
+		Id:          v.ID.String(),
+		DocumentId:  v.DocumentID.String(),
+		VersionNo:   v.VersionNo,
+		Content:     BlobToProto(v.Content),
+		PageCount:   v.PageCount,
+		IsFinal:     v.IsFinal,
+		IsRecord:    v.IsRecord,
+		ValidatedAt: core.TimestampPtrOrNil(v.ValidatedAt),
+		ValidatedBy: v.ValidatedBy,
+		Metadata:    structFromMap(v.Metadata),
+		CreatedAt:   core.TimestampOrNil(v.CreatedAt),
+		CreatedBy:   v.CreatedBy,
+	}
+}
+
+// BlobToProto converts a content blob to proto; nil stays nil.
+func BlobToProto(b *ContentBlob) *goelandv1.ContentBlob {
+	if b == nil {
+		return nil
+	}
+	return &goelandv1.ContentBlob{
+		Id:            b.ID.String(),
+		Sha256:        b.SHA256,
+		StorageRef:    b.StorageRef,
+		MimeType:      b.MimeType,
+		FileSizeBytes: b.FileSizeBytes,
+		CreatedAt:     core.TimestampOrNil(b.CreatedAt),
+		CreatedBy:     b.CreatedBy,
+		VerifiedAt:    core.TimestampPtrOrNil(b.VerifiedAt),
 	}
 }
 

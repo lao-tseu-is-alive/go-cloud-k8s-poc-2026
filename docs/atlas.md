@@ -81,7 +81,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
-- `cmd/goeland-server/upload.go` — Out-of-proto blob upload/download endpoints with their own bearer check, and the frontend config handler.
+- `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and download endpoints with their own bearer and scope check, and the frontend config handler.
 
 ## Shared Go packages
 
@@ -126,6 +126,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0004_seed_reference_data.sql` — Seed migration: reference document and relationship types.
 - `pkg/core/module/db/migrations/0005_document_unaccent_search.sql` — Migration: `immutable_unaccent()` and accent-insensitive document search.
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
+- `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
+- `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
 - `pkg/core/module/db/migrations/0007_business_ref.sql` — Schema migration: `subject_ref.business_ref` + namespace (unique per namespace) and the `business_ref_counter` allocator.
 
 ## Document domain (`pkg/document`)
@@ -133,13 +135,13 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/document/connect_server.go` — `DocumentService` ConnectRPC adapter over the document service.
 - `pkg/document/doc.go` — Package documentation for the GED document domain.
 - `pkg/document/mappers.go` — Document domain ↔ proto mappers.
-- `pkg/document/model.go` — Document domain model with `db` tags, inputs and search filter.
-- `pkg/document/repository.go` — Document persistence interface.
-- `pkg/document/service.go` — Document business rules: validation, governance defaults, finalize, verify, link, soft delete.
-- `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation and hash matching.
+- `pkg/document/model.go` — Document, Version and ContentBlob models with `db` tags, create/version/ingest inputs and results, search filter.
+- `pkg/document/repository.go` — Document persistence interface and the `ContentStore` contract for content bytes.
+- `pkg/document/service.go` — Document business rules: content ingestion with deduplication, creation or reuse, versions, finalize, verify, link, soft delete.
+- `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation, hash matching, ingestion cleanup and version validation.
 - `pkg/document/sql.go` — Raw SQL and alias-prefixed column projections for document tables.
-- `pkg/document/storage_postgres.go` — pgx implementation composing core transaction helpers for atomic document mutations.
-- `pkg/document/filestore/filestore.go` — Local blob store for uploaded document bytes with `internal://` references.
+- `pkg/document/storage_postgres.go` — pgx implementation: atomic create-or-reuse, versions, blob registration and hydration over core transaction helpers.
+- `pkg/document/filestore/filestore.go` — Local store for content bytes with `internal://` references (save, open, remove of unregistered duplicates).
 - `pkg/document/filestore/filestore_test.go` — Tests hashing, round trips and rejection of unsafe references.
 - `pkg/document/module/module.go` — Bundleable document module: dependency validation and lifecycle.
 - `pkg/document/module/routes.go` — Document interceptor chain, Vanguard services and standalone routes.
@@ -162,6 +164,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, PII-free person specialization.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
+- `pkg/integration/document_versions_test.go` — DB test: deduplication (incl. concurrent), automatic reuse across cases, versions sharing a blob, immutability trigger, lock guard.
 - `pkg/integration/document_lifecycle_test.go` — DB test: idempotent seeded migrations and the full document lifecycle.
 - `pkg/integration/harness_test.go` — Test harness gated on `GOELAND_TEST_DATABASE_URL`: migrate and connect.
 
@@ -202,13 +205,14 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and blob download panel.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and download panel for the current version's content.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentMetadataForm.vue` — Mutable document metadata form shared by create and edit.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentRelationshipsPanel.vue` — Presentational document relationships panel.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchFilters.vue` — Document search filter bar.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentTypeSelect.vue` — Document type selector bound to the type code.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the stored blob reference and digest.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the registered content (blob id, digest, reuse flag).
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentVersionsPanel.vue` — Version list of a document and adding a new version from an upload.
 - `cmd/goeland-server/goeland-front/src/components/document/documentForm.ts` — Document metadata form model.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
