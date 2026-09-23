@@ -22,6 +22,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - Make gates `godoc-check`, `atlas-check`, `docs-assert`, `docs-check`, `fmt-check`,
   `front-check`, `check`, `version-check`, `changelog-check`, `scripts-check`, `binary` and
   `release-check`; new `.github/workflows/ci.yml` runs `make release-check` on every push/PR.
+- `docs/atlas.md` (slice 2 of 5): one responsibility line for each of the ~190 non-ignored files,
+  grouped by area, checked in both directions by `make atlas-check`.
+- `requirements/goeland_poc_domain_model_agent_v2_from_ChatGPT_20260923.md`: proposed v2 revision
+  of the spec, versioned for review (not yet normative).
 
 ### Changed
 

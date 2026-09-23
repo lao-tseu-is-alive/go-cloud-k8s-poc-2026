@@ -1,0 +1,231 @@
+# Repository atlas — go-cloud-k8s-poc-2026
+
+Tracked version: **v0.4.0**.
+
+This index gives every non-ignored repository file one explicit responsibility
+and authority note. Paths are checked in both directions by `make atlas-check`
+(see [DOCUMENTATION.md](DOCUMENTATION.md#repository-atlas-contract)): add,
+remove or rename an entry in the same change as the file. Git-ignored outputs
+(`dist/`, `node_modules/`, `bin/`, `go_documents/`, `.env`) are not listed.
+
+## Governance, documentation and automation
+
+- `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
+- `.env_sample` — Secret-free example of the supported `GOELAND_*`, `DB_*` and JWT environment variables.
+- `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
+- `.trivyignore` — Documented Trivy suppressions for advisories proven not to apply to the binary.
+- `AGENTS.md` — Durable instructions for coding agents: conventions, layers to keep in sync, gotchas.
+- `CHANGELOG.md` — Versioned history of delivered changes (Keep a Changelog); authoritative for what a release shipped.
+- `Dockerfile` — Self-contained multi-stage image: bun frontend stage, Go build with provenance ldflags, `scratch` runtime.
+- `LICENSE` — MIT license of the project.
+- `Makefile` — Reproducible entry point for generation, run, build, quality gates (`check`, `release-check`) and dbmate.
+- `README.md` — Project overview, operator walkthrough and current-version banner.
+- `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
+- `docs/PRODUCTION_READINESS.md` — Deployment contract: extensions, migrations, storage, auth, probes, secrets, limits.
+- `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.
+- `requirements/IMPLEMENTATION_STATUS.md` — Living state against the spec: built areas, decided enhancements, deviations, gaps.
+- `requirements/goeland_frontend_proto_to_vuetify_i18n_agent_brief.md` — Input brief (French) for generating the Vue/Vuetify UI from the protos via UI schemas and i18n.
+- `requirements/goeland_poc_domain_model_agent.md` — Immutable starting spec (French) of the OOA domain model; cited, never rewritten.
+- `requirements/goeland_poc_domain_model_agent_v2_from_ChatGPT_20260923.md` — Proposed v2 revision of the spec from a new analysis document; under review, not yet normative.
+
+## CI and release workflows
+
+- `.github/workflows/ci.yml` — Runs `make release-check` on every push and pull request to `main`.
+- `.github/workflows/cve-trivy-scan.yml` — Builds the image and fails on fixable HIGH/CRITICAL CVEs on push, PR and a weekly schedule.
+- `.github/workflows/docker-publish.yml` — On version tags: frontend build, unit tests, Trivy-gated image build and GHCR publish.
+- `.github/workflows/release.yml` — On version tags: cross-compiles linux amd64/arm64 binaries and publishes a GitHub release.
+
+## Scripts
+
+- `scripts/01_build_image_locally.sh` — Builds the container image tagged from `pkg/version/version.go`, with optional Trivy scan.
+- `scripts/02_tag_new_release_github.sh` — Tags and pushes `v<Version>` after refusing a dirty tree or an existing tag.
+- `scripts/GoRunWithEnv.sh` — Runs the server with `go run`, version ldflags and a dotenv file loaded.
+- `scripts/GoTestWithEnv.sh` — Runs `go test -race` with coverage and a dotenv file loaded.
+- `scripts/buf_generate.sh` — `buf lint`, `buf dep update` and `buf generate`; the body of `make generate`.
+- `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
+- `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
+- `scripts/create_k8s_configmap_from_env.sh` — Renders a Kubernetes ConfigMap from `.env` as a dry run.
+- `scripts/execWithEnv.sh` — Runs a compiled binary with a dotenv file loaded.
+- `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
+- `scripts/get_jwt_token.sh` — Fetches a JWT from the auth server for `jwt`-mode testing and prints it on stdout.
+- `scripts/install_go_protobuf_tools.sh` — Installs `buf`, `protoc-gen-go` and `protoc-gen-connect-go`.
+
+## API contracts and generated bindings
+
+- `buf.gen.yaml` — Buf generation plan: Go, ConnectRPC and OpenAPI outputs.
+- `buf.lock` — Pinned Buf dependencies (protovalidate, googleapis); updated by `make generate`.
+- `buf.yaml` — Buf module rooted at `proto/`, its dependencies and lint/breaking rules.
+- `proto/.gitignore` — Ignores the locally exported third-party proto tree.
+- `proto/goeland/v1/actor.proto` — Authoritative `ActorService` contract: persons, organizations, typed contacts, categories.
+- `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
+- `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
+- `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
+- `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
+- `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
+- `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
+
+## Go module and commands
+
+- `go.mod` — Go module declaration, toolchain version and direct dependencies.
+- `go.sum` — Cryptographic checksums of the resolved Go dependencies.
+- `cmd/doccheck/main.go` — Documentation checker: GoDoc coverage and exact atlas inventory, parameterized by flags.
+- `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
+- `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
+- `cmd/goeland-server/main.go` — Server entry point: config, logger, startup, listener and graceful shutdown.
+- `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
+- `cmd/goeland-server/upload.go` — Out-of-proto blob upload/download endpoints with their own bearer check, and the frontend config handler.
+
+## Shared Go packages
+
+- `pkg/version/version.go` — Release version constant (source of truth) and build provenance variables injected by ldflags.
+- `pkg/authadapter/composite_verifier.go` — Routes `pat_` tokens to introspection and other bearer tokens to the JWT verifier.
+- `pkg/authadapter/context.go` — Authenticated user model, context storage and scope checks.
+- `pkg/authadapter/context_test.go` — Tests the authenticated-user context round trip.
+- `pkg/authadapter/doc.go` — Package documentation for the shared token verification adapter.
+- `pkg/authadapter/interceptor.go` — `TokenVerifier` interface and the Connect authentication interceptor.
+- `pkg/authadapter/interceptor_test.go` — Tests the interceptor, admin scope wildcard and composite nil handling.
+- `pkg/authadapter/pat_verifier.go` — Personal access token verification by cached introspection against the auth server.
+- `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure and prefix routing.
+- `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
+- `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
+
+## Core domain (`pkg/core`)
+
+- `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
+- `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
+- `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
+- `pkg/core/doc.go` — Package documentation for the transversal core domain.
+- `pkg/core/errors.go` — Domain sentinel errors shared by every domain package.
+- `pkg/core/mappers.go` — Core domain ↔ proto mappers and timestamp helpers.
+- `pkg/core/model.go` — Core domain model with `db` tags: subjects, record metadata, audit events, relationships.
+- `pkg/core/pagination.go` — Page token encoding and page size normalization.
+- `pkg/core/pagination_test.go` — Tests pagination helpers and subject kind validation.
+- `pkg/core/repository.go` — Core persistence interface.
+- `pkg/core/requestctx.go` — Request ID propagation through the context.
+- `pkg/core/service.go` — Core business rules: subject creation, typed linking, audit listing.
+- `pkg/core/sql.go` — Raw SQL and alias-prefixed column projections for core tables.
+- `pkg/core/storage_postgres.go` — pgx implementation of the core repository.
+- `pkg/core/tx.go` — Exported transaction-scoped helpers reused by sibling domains for atomic identity, governance and audit.
+- `pkg/core/module/migrate.go` — Embedded dbmate-format migrator serialized by a PostgreSQL advisory lock.
+- `pkg/core/module/migrate_test.go` — Tests migration parsing, PL/pgSQL block handling and version keys.
+- `pkg/core/module/module.go` — Bundleable core module: dependency validation, service construction, lifecycle.
+- `pkg/core/module/routes.go` — Core interceptor chain, Vanguard services and standalone route registration.
+- `pkg/core/module/db/migrations/0001_subject_core.sql` — Schema migration: extensions, `subject_kind`, `subject_ref`, `record_metadata`, `audit_event`.
+- `pkg/core/module/db/migrations/0002_relationships.sql` — Schema migration: `relationship_type` and `subject_relationship` with active-edge uniqueness.
+- `pkg/core/module/db/migrations/0003_document.sql` — Schema migration: `document_type` and `document` with generated search vector.
+- `pkg/core/module/db/migrations/0004_seed_reference_data.sql` — Seed migration: reference document and relationship types.
+- `pkg/core/module/db/migrations/0005_document_unaccent_search.sql` — Migration: `immutable_unaccent()` and accent-insensitive document search.
+- `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
+
+## Document domain (`pkg/document`)
+
+- `pkg/document/connect_server.go` — `DocumentService` ConnectRPC adapter over the document service.
+- `pkg/document/doc.go` — Package documentation for the GED document domain.
+- `pkg/document/mappers.go` — Document domain ↔ proto mappers.
+- `pkg/document/model.go` — Document domain model with `db` tags, inputs and search filter.
+- `pkg/document/repository.go` — Document persistence interface.
+- `pkg/document/service.go` — Document business rules: validation, governance defaults, finalize, verify, link, soft delete.
+- `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation and hash matching.
+- `pkg/document/sql.go` — Raw SQL and alias-prefixed column projections for document tables.
+- `pkg/document/storage_postgres.go` — pgx implementation composing core transaction helpers for atomic document mutations.
+- `pkg/document/filestore/filestore.go` — Local blob store for uploaded document bytes with `internal://` references.
+- `pkg/document/filestore/filestore_test.go` — Tests hashing, round trips and rejection of unsafe references.
+- `pkg/document/module/module.go` — Bundleable document module: dependency validation and lifecycle.
+- `pkg/document/module/routes.go` — Document interceptor chain, Vanguard services and standalone routes.
+
+## Actor domain (`pkg/actor`)
+
+- `pkg/actor/connect_server.go` — `ActorService` ConnectRPC adapter over the actor service.
+- `pkg/actor/doc.go` — Package documentation for the external persons and organizations domain.
+- `pkg/actor/mappers.go` — Actor domain ↔ proto mappers.
+- `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contacts, categories, inputs, filter.
+- `pkg/actor/repository.go` — Actor persistence interface.
+- `pkg/actor/service.go` — Actor business rules: validation, contact normalization, search, soft delete.
+- `pkg/actor/sql.go` — Raw SQL and alias-prefixed column projections for actor tables.
+- `pkg/actor/storage_postgres.go` — pgx implementation composing core transaction helpers for atomic actor mutations.
+- `pkg/actor/module/module.go` — Bundleable actor module: dependency validation and lifecycle.
+- `pkg/actor/module/routes.go` — Actor interceptor chain, Vanguard services and standalone routes.
+
+## Integration tests (`pkg/integration`)
+
+- `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, PII-free person specialization.
+- `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
+- `pkg/integration/document_lifecycle_test.go` — DB test: idempotent seeded migrations and the full document lifecycle.
+- `pkg/integration/harness_test.go` — Test harness gated on `GOELAND_TEST_DATABASE_URL`: migrate and connect.
+
+## Embedded frontend (`cmd/goeland-server/goeland-front`)
+
+- `cmd/goeland-server/goeland-front/.ruler/AGENTS.md` — Ruler source rules applied to agent configuration files by `bun run mcp`.
+- `cmd/goeland-server/goeland-front/.ruler/ruler.toml` — Ruler configuration distributing agent rules and the Vuetify MCP server.
+- `cmd/goeland-server/goeland-front/AGENTS.md` — Frontend agent rules: bun, TypeScript, stack and enabled features.
+- `cmd/goeland-server/goeland-front/README.md` — Vuetify scaffold readme for the SPA.
+- `cmd/goeland-server/goeland-front/bun.lock` — Pinned frontend dependency graph used by frozen installs.
+- `cmd/goeland-server/goeland-front/env.d.ts` — Vite client type references.
+- `cmd/goeland-server/goeland-front/eslint.config.js` — ESLint configuration (Vuetify preset, TypeScript).
+- `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point.
+- `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint).
+- `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
+- `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
+- `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
+- `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
+- `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
+- `cmd/goeland-server/goeland-front/src/api/types.ts` — Hand-maintained proto3-JSON projections of the goeland.v1 messages; keep in sync with the protos.
+- `cmd/goeland-server/goeland-front/src/assets/logo.png` — Raster logo asset.
+- `cmd/goeland-server/goeland-front/src/assets/logo.svg` — Vector logo asset.
+- `cmd/goeland-server/goeland-front/src/components/AppAuthControls.vue` — Login/logout controls for dev-token and JWT modes.
+- `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed actor contacts.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's contacts.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorKindSelect.vue` — Person/organization kind selector.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorMainForm.vue` — Actor create/edit form with kind-specific sections.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchFilters.vue` — Actor search filter bar.
+- `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
+- `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
+- `cmd/goeland-server/goeland-front/src/components/core/AuditTimeline.vue` — Read-only audit event timeline.
+- `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link; the parent performs the call.
+- `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
+- `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with optional unlink action.
+- `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
+- `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and blob download panel.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentMetadataForm.vue` — Mutable document metadata form shared by create and edit.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentRelationshipsPanel.vue` — Presentational document relationships panel.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchFilters.vue` — Document search filter bar.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentTypeSelect.vue` — Document type selector bound to the type code.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the stored blob reference and digest.
+- `cmd/goeland-server/goeland-front/src/components/document/documentForm.ts` — Document metadata form model.
+- `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
+- `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
+- `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
+- `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
+- `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
+- `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
+- `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail, edit, activation, soft delete, governance and audit page.
+- `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
+- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
+- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document search and list page.
+- `cmd/goeland-server/goeland-front/src/plugins/README.md` — Scaffold note on the plugins folder.
+- `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
+- `cmd/goeland-server/goeland-front/src/plugins/index.ts` — Registers Vuetify, Pinia, router and i18n on the app.
+- `cmd/goeland-server/goeland-front/src/plugins/vuetify.ts` — Vuetify instance and theme configuration.
+- `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes for the document and actor pages.
+- `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
+- `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
+- `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token or silent JWT minting and re-mint, in-memory token.
+- `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
+- `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
+- `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
+- `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
+- `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.
+- `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.
+- `cmd/goeland-server/goeland-front/tsconfig.json` — TypeScript project references root.
+- `cmd/goeland-server/goeland-front/tsconfig.node.json` — TypeScript configuration for Node-side tooling config files.
+- `cmd/goeland-server/goeland-front/vite.config.mts` — Vite build configuration (Vue, Vuetify, fonts, aliases).

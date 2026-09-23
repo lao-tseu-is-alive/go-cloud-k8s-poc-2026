@@ -310,7 +310,7 @@ the last one lands.
 | Slice | Scope | State |
 | --- | --- | --- |
 | 1 | This contract, `cmd/doccheck`, constant `Version`, Make gates, `ci.yml`, claims script | Done |
-| 2 | `docs/atlas.md` for the complete inventory | Pending — `make atlas-check` fails until then |
+| 2 | `docs/atlas.md` for the complete inventory | Done |
 | 3 | GoDoc for every package and exported API | Pending — `make godoc-check` fails until then |
 | 4 | Protobuf `COMMENTS` lint and regenerated bindings/OpenAPI | Pending |
 | 5 | `docs/ROADMAP.md` with `GLD-NNN`, traceability, guarded release script and gated publication workflows | Pending |
