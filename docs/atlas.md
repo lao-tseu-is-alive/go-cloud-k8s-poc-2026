@@ -21,6 +21,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `Makefile` — Reproducible entry point for generation, run, build, quality gates (`check`, `release-check`) and dbmate.
 - `README.md` — Project overview, operator walkthrough and current-version banner.
 - `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
+- `docs/ROADMAP.md` — Authoritative implementation order and `GLD-NNN` task state; version-bannered, traced against the changelog.
 - `docs/PRODUCTION_READINESS.md` — Deployment contract: extensions, migrations, storage, auth, probes, secrets, limits.
 - `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.
 - `requirements/IMPLEMENTATION_STATUS.md` — Living state against the spec: built areas, decided enhancements, deviations, gaps.
@@ -32,16 +33,20 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `.github/workflows/ci.yml` — Runs `make release-check` on every push and pull request to `main`.
 - `.github/workflows/cve-trivy-scan.yml` — Builds the image and fails on fixable HIGH/CRITICAL CVEs on push, PR and a weekly schedule.
-- `.github/workflows/docker-publish.yml` — On version tags: frontend build, unit tests, Trivy-gated image build and GHCR publish.
-- `.github/workflows/release.yml` — On version tags: cross-compiles linux amd64/arm64 binaries and publishes a GitHub release.
+- `.github/workflows/docker-publish.yml` — On version tags: tag = version check, `make release-check`, Trivy-gated image build and GHCR publish.
+- `.github/workflows/release.yml` — On version tags: tag = version check, `make release-check`, linux amd64/arm64 binaries, release notes from the changelog.
 
 ## Scripts
 
 - `scripts/01_build_image_locally.sh` — Builds the container image tagged from `pkg/version/version.go`, with optional Trivy scan.
-- `scripts/02_tag_new_release_github.sh` — Tags and pushes `v<Version>` after refusing a dirty tree or an existing tag.
+- `scripts/02_tag_new_release_github.sh` — Guarded release behind `make release`: confirmation, clean `main`, `make release-check`, annotated tag, atomic push.
 - `scripts/GoRunWithEnv.sh` — Runs the server with `go run`, version ldflags and a dotenv file loaded.
 - `scripts/GoTestWithEnv.sh` — Runs `go test -race` with coverage and a dotenv file loaded.
 - `scripts/buf_generate.sh` — `buf lint`, `buf dep update` and `buf generate`; the body of `make generate`.
+- `scripts/changelog_section.sh` — Prints one version's CHANGELOG section, used as GitHub release notes.
+- `scripts/check_release_tag.sh` — Fails unless a release tag equals `v` + the `Version` constant; used by the publication workflows.
+- `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
+- `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
 - `scripts/create_k8s_configmap_from_env.sh` — Renders a Kubernetes ConfigMap from `.env` as a dry run.
@@ -74,7 +79,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/doccheck/main.go` — Documentation checker: GoDoc coverage and exact atlas inventory, parameterized by flags.
 - `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
-- `cmd/goeland-server/main.go` — Server entry point: config, logger, startup, listener and graceful shutdown.
+- `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
 - `cmd/goeland-server/upload.go` — Out-of-proto blob upload/download endpoints with their own bearer check, and the frontend config handler.
 

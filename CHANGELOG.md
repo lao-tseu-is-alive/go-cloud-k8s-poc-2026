@@ -37,8 +37,27 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   regenerated Go bindings differ only in comments and the OpenAPI gains field and operation
   descriptions on unchanged routes; `buf breaking` against the previous commit is clean.
 
+- Roadmap and guarded release (slice 5 of 5): `docs/ROADMAP.md` owns implementation order with
+  stable `GLD-NNN` task IDs (backlog migrated from the local scratch notes, plus five API-honesty
+  fixes found while documenting the contracts: GLD-003 to GLD-007).
+  `scripts/check_release_traceability.sh` (with self-tests) enforces done tasks ↔ dated changelog
+  sections in both directions; `make roadmap-check` and `make release-traceability-check` join
+  `make release-check`, which also requires `goeland-server --version` to report `Version`.
+- `goeland-server --version` prints `<app> v<Version> (revision …, built …)` and exits.
+- `scripts/check_release_tag.sh` and `scripts/changelog_section.sh`: tag = `v` + `Version`
+  guard and changelog-backed release notes for the publication workflows.
+
 ### Changed
 
+- `make release` / `scripts/02_tag_new_release_github.sh` is now a guarded release:
+  `CONFIRM_RELEASE=vX.Y.Z`, clean `main`, tag absent locally and on origin, `make release-check`,
+  annotated tag, atomic push of `main` and the tag (previously a lightweight tag and
+  `git push --tags`).
+- `release.yml` and `docker-publish.yml` verify the tag against `Version` and run
+  `make release-check` before building or publishing anything (the release workflow previously
+  ran no check; docker-publish ran only the unit tests). Release notes come from the changelog.
+- `requirements/IMPLEMENTATION_STATUS.md` §5 now points to the roadmap instead of duplicating
+  the slice order.
 - `pkg/core` list scans embed `SubjectRelationship` / `AuditEvent` in their row structs (the pattern
   the document and actor domains already use) instead of duplicating every column field.
 - `pkg/version`: identity values and `Version` are now constants; only `Revision` and

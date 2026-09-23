@@ -237,10 +237,20 @@ make check
 
 make release-check
   ├─ make check
-  ├─ version, changelog and scripts consistency
-  └─ binary build
+  ├─ make version-check               (README banner = Version)
+  ├─ make changelog-check             (one dated section for Version)
+  ├─ make scripts-check               (bash -n + checker self-tests)
+  ├─ make roadmap-check               (banner, unique GLD-NNN, next action)
+  ├─ make release-traceability-check  (done tasks <-> dated changelog, both ways)
+  └─ binary build + `goeland-server --version` reports Version
 
-GitHub CI (ci.yml)   -> make release-check on every push to main and every PR
+make release  -> scripts/02_tag_new_release_github.sh: CONFIRM_RELEASE=vX.Y.Z,
+                 clean main, tag absent locally and on origin, make release-check,
+                 annotated tag, atomic push of main + tag
+
+GitHub CI (ci.yml)                 -> make release-check on every push to main and every PR
+GitHub release / docker-publish    -> check_release_tag.sh (tag = v + Version), then
+                                      make release-check, then build and publish
 ```
 
 A contributor or agent MUST NOT bypass a failing documentation gate. Fix the
@@ -260,7 +270,7 @@ Before considering a change complete, apply every relevant row:
 | Change a stable default or security/operational promise | Update all owning surfaces and the executable claim when appropriate. |
 | Finish a slice | Update `requirements/IMPLEMENTATION_STATUS.md` (a few lines). |
 | Start, complete, reorder or rescope a roadmap task | Update `docs/ROADMAP.md` in the same change. |
-| Prepare a release | Synchronize version banners and changelog, then run `make release-check`. |
+| Prepare a release | Bump `Version`, the README/roadmap/atlas banners and the dated changelog section, mark released tasks `[x]`, run `make release-check`, commit, then `CONFIRM_RELEASE=vX.Y.Z make release`. |
 
 For any documentation-sensitive change, the minimum local command is:
 
@@ -269,7 +279,8 @@ make docs-check
 ```
 
 Before normal handoff, run `make check`. Before a release commit, run
-`make release-check`.
+`make release-check`; `make release` reruns it on the clean `main` before
+tagging and pushing.
 
 ## Definition of done
 
@@ -301,18 +312,3 @@ repository uses its defaults:
 Changing a convention MUST change the checker, its tests and this document
 together. If a third repository adopts the checker, extract it into a shared
 module used via a `go.mod` `tool` directive instead of copying it again.
-
-## Adoption status
-
-This contract is being adopted in five slices; this section is removed when
-the last one lands.
-
-| Slice | Scope | State |
-| --- | --- | --- |
-| 1 | This contract, `cmd/doccheck`, constant `Version`, Make gates, `ci.yml`, claims script | Done |
-| 2 | `docs/atlas.md` for the complete inventory | Done |
-| 3 | GoDoc for every package and exported API | Done |
-| 4 | Protobuf `COMMENTS` lint and regenerated bindings/OpenAPI | Done |
-| 5 | `docs/ROADMAP.md` with `GLD-NNN`, traceability, guarded release script and gated publication workflows | Pending |
-
-Slice 5 adds the roadmap and release traceability guards to `make release-check`.

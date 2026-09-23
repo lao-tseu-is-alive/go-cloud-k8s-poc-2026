@@ -23,6 +23,11 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # The tag must equal "v" + pkg/version/version.go Version, otherwise the
+      # image would report a version different from its tag.
+      - name: Verify tag matches source version
+        run: bash scripts/check_release_tag.sh "${GITHUB_REF_NAME}"
+
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
@@ -36,16 +41,14 @@ jobs:
         with:
           bun-version: '1'
 
-      # The server embeds goeland-front/dist via //go:embed, but dist/ is
-      # git-ignored. Build the frontend first so `go test ./...` (which compiles
-      # cmd/goeland-server) can resolve the embed pattern. `build` also runs the
-      # vue-tsc type-check, the code-quality gate the Dockerfile defers to CI.
-      - name: Build embedded frontend
-        working-directory: cmd/goeland-server/goeland-front
-        run: bun install --frozen-lockfile && bun run build
+      - name: Install Buf
+        run: go install github.com/bufbuild/buf/cmd/buf@v1.70.0
 
-      - name: Run Unit Tests
-        run: go test -v ./...
+      # Same gate as local runs and ci.yml (docs/DOCUMENTATION.md, "Control chain"):
+      # frontend type-check/lint/build, format, lint, race tests, documentation,
+      # version/changelog/roadmap traceability. Nothing is pushed unless it passes.
+      - name: Release gate
+        run: make release-check
 
       - name: Setup Docker buildx
         # v3 - pinned to commit SHA to prevent supply chain attacks,

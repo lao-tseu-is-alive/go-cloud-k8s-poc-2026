@@ -290,7 +290,8 @@ make lint         go vet + buf lint
 make fmt          gofmt -w .
 make docs-check   GoDoc coverage + atlas inventory + executable doc claims
 make check        front-check + fmt-check + lint + test + docs-check (run before handoff)
-make release-check  check + version/changelog/scripts consistency + binary (what CI runs)
+make release-check  check + version/changelog/roadmap traceability + binary --version (what CI runs)
+make release      CONFIRM_RELEASE=vX.Y.Z: guarded annotated tag + atomic push of main and tag
 make db-up        apply migrations (dbmate)
 ```
 
@@ -331,7 +332,11 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `execWithEnv.sh <bin> [env]`     | Run a compiled binary with a dotenv loaded                                                            |
 | `get_jwt_token.sh [env]`         | Fetch a JWT from go-cloud-k8s-auth (jwt mode testing)                                                 |
 | `01_build_image_locally.sh`      | Build the container image, tagged from `version.go` (optional trivy scan)                             |
-| `02_tag_new_release_github.sh`   | Tag + push `v<version>` (refuses a dirty tree)                                                        |
+| `02_tag_new_release_github.sh`   | Guarded release (`make release`): `CONFIRM_RELEASE`, clean `main`, `make release-check`, annotated tag, atomic push |
+| `check_release_tag.sh <tag>`     | Fail unless the tag equals `v` + `Version` (used by the release and docker-publish workflows)          |
+| `check_release_traceability.sh`  | Done `GLD-*` roadmap tasks ↔ dated changelog sections, both ways (`make release-traceability-check`)    |
+| `check_release_traceability_test.sh` | Accepted/rejected cases for the traceability checker (`make scripts-check`)                       |
+| `changelog_section.sh <version>` | Print one CHANGELOG section (GitHub release notes)                                                     |
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
 
@@ -346,7 +351,8 @@ event; every relationship is typed and validated; boring, explicit, testable API
 The original spec is [`requirements/goeland_poc_domain_model_agent.md`](requirements/goeland_poc_domain_model_agent.md)
 (intent, not updated as work proceeds). The living "what's done / what's left"
 tracker — with intentional deviations from the spec — is
-[`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md). For
+[`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md), and the
+implementation order with `GLD-NNN` tasks is [`docs/ROADMAP.md`](docs/ROADMAP.md). For
 deployment (required extensions, migrations, storage, auth, probes, secrets, and the known
 POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
 

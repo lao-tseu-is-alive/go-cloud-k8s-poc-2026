@@ -208,17 +208,12 @@ The Actor component (spec §6.4) was designed against the **real production Goé
 
 ---
 
-## 5. Suggested next slices (in order)
+## 5. Next slices
 
-0. ✅ **Actor** (§6.4) — *done* (2026-07-10, identity + typed contacts). Later actor slices:
-   addresses (`lien_acteur_adresse`) and seeding the production role vocabulary into `relationship_type`.
-1. **Case** (§6.1) — `case_type` + `case_file` + `CaseService`; the spine of the scenario. Brings
-   the first `CASE`-source relationship types (including expanded `CASE_HAS_ACTOR_*` roles).
-2. **Timeline** (§8) — `case_timeline_entry` + document links + validation/immutability (spec §17.8).
-3. **Thing** (§6.3) — PostGIS geometry, parcel/building specializations; enables `CASE_CONCERNS_THING`.
-4. **Circulation** (§9) — depends on Case + Timeline.
-5. **Security** (§10) — `access_grant` + confidentiality deny-by-default (or integrate Casbin/OpenFGA).
-6. **Integration tests** for the full §3.1 scenario, added with each slice above.
+Implementation order and task state now live in [`docs/ROADMAP.md`](../docs/ROADMAP.md)
+(`GLD-NNN` task IDs, 2026-09-23): Case spine (Case, Timeline, Circulation), Actor
+follow-ups, Thing, real authorization, real-data import, plus the contract-honesty
+fixes surfaced while documenting the API. This section no longer duplicates that order.
 
 Keep honouring the design rules (spec §17): explicit model, no EAV, JSONB only for
 secondary data, non-destructive deletes, every mutation audited, every relationship

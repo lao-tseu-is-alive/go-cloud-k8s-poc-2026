@@ -33,6 +33,8 @@ BUILD := $(shell date -u '+%Y-%m-%d_%I:%M:%S%p')
 # or front-build produced dist/, so a clean checkout still lists cmd/goeland-server.
 PACKAGES = $(shell go list ./... | grep -vE '/vendor/|/node_modules/')
 COVER_PACKAGES = $(shell go list ./... | grep -vE '/vendor/|/node_modules/' | paste -sd,)
+# Expected start of `goeland-server --version` for this build (see cmd/goeland-server/main.go).
+version_prefix = go-cloud-k8s-poc-2026 v$(APP_VERSION) (revision $(APP_REVISION), built
 LDFLAGS := -ldflags "-X ${APP_REPOSITORY}/pkg/version.Revision=${APP_REVISION} -X ${APP_REPOSITORY}/pkg/version.BuildStamp=${BUILD}"
 
 MAKEFLAGS += --silent
@@ -142,13 +144,31 @@ changelog-check:
 	@echo "changelog-check: v$(APP_VERSION) documented"
 
 .PHONY: scripts-check
-## scripts-check:	bash syntax check of every helper script
+## scripts-check:	bash syntax check of every helper script + checker self-tests
 scripts-check:
-	bash -n scripts/*.sh
+	for script in scripts/*.sh; do bash -n "$$script" || exit 1; done
+	bash scripts/check_release_traceability_test.sh
+
+.PHONY: roadmap-check
+## roadmap-check:	docs/ROADMAP.md tracks the current version, has unique GLD-NNN IDs and a next action
+roadmap-check:
+	@grep -qF 'Tracked version: **v$(APP_VERSION)**.' docs/ROADMAP.md || { echo "roadmap-check: tracked version does not match v$(APP_VERSION)"; exit 1; }
+	@ids="$$(grep -oE '^- \[[ x~]\] \*\*GLD-[0-9]{3}' docs/ROADMAP.md | grep -oE 'GLD-[0-9]{3}')"; \
+		test -n "$$ids" || { echo "roadmap-check: no task IDs found"; exit 1; }; \
+		duplicates="$$(printf '%s\n' "$$ids" | sort | uniq -d)"; \
+		test -z "$$duplicates" || { echo "roadmap-check: duplicate task IDs: $$duplicates"; exit 1; }
+	@grep -q '^## Next action$$' docs/ROADMAP.md || { echo "roadmap-check: missing next-action section"; exit 1; }
+	@echo "roadmap-check: OK"
+
+.PHONY: release-traceability-check
+## release-traceability-check:	done roadmap tasks <-> dated changelog sections, both ways
+release-traceability-check:
+	bash scripts/check_release_traceability.sh
 
 .PHONY: release-check
-## release-check:	check + version/changelog/scripts consistency + binary build (CI runs this)
-release-check: check version-check changelog-check scripts-check binary
+## release-check:	check + version/changelog/roadmap/traceability + binary reporting the version (CI runs this)
+release-check: check version-check changelog-check scripts-check roadmap-check release-traceability-check binary
+	@./bin/$(APP_EXECUTABLE) --version | grep -qF '$(version_prefix)' || { echo "release-check: binary does not report $(version_prefix)"; exit 1; }
 	@echo "release-check: v$(APP_VERSION) OK"
 
 .PHONY: clean
@@ -178,17 +198,9 @@ db-new:
 	dbmate --migrations-dir $(MIGRATIONS_DIR) new $(name)
 
 .PHONY: release
-## release:	build a clean repo and tag a version release
-release: build
-	@echo "  >  Preparing release $(APP_EXECUTABLE) v$(APP_VERSION) rev: $(APP_REVISION) ..."
-ifeq ($(shell git status -s),)
-	echo "OK : your repo is clean"
-	@git fetch  ||  (echo "ERROR : git fetch failed" && exit 1)
-	@git tag -l  "v${APP_VERSION}"  ||  (echo "ERROR : this git tag v${APP_VERSION} already exist" && exit 1)
-	git tag "v${APP_VERSION}" -m "v${APP_VERSION} bump"
-else
-	(echo "ERROR : your local git repo is dirty" && ( git status -s) && exit 1)
-endif
+## release:	guarded tag + atomic push of v<Version> (CONFIRM_RELEASE=vX.Y.Z make release)
+release:
+	./scripts/02_tag_new_release_github.sh
 
 .PHONY: help
 help: Makefile

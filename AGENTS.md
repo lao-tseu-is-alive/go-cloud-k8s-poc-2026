@@ -43,9 +43,11 @@ PostGIS-ready from migration 0001 · an embedded **Vue 3 + Vuetify 4 SPA**
 
 **Progress tracking:** the spec (`requirements/goeland_poc_domain_model_agent.md`)
 is the immutable statement of intent — do not rewrite it to match reality; cite it.
-The living state (done / in progress / deviations) is
+The living state against the spec (built areas / decided enhancements / deviations) is
 `requirements/IMPLEMENTATION_STATUS.md` — **update it (a few lines) at the end of
-each slice**, and add automated tests as you land each new domain.
+each slice**, and add automated tests as you land each new domain. Implementation
+**order and task state** live only in `docs/ROADMAP.md` (`GLD-NNN` task IDs): update it
+whenever a task starts, completes, changes scope or order.
 
 ### Implemented so far
 
@@ -96,7 +98,7 @@ cmd/goeland-server/          server: pool → migrate → wire the modules → o
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas inventory)
 .github/workflows/           CI: ci (make release-check), cve-trivy-scan, docker-publish, release
-docs/                        DOCUMENTATION.md (normative doc contract), PRODUCTION_READINESS.md (deployment contract)
+docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.md (GLD-NNN tasks), atlas.md, PRODUCTION_READINESS.md
 ```
 
 ## Commands
@@ -110,8 +112,15 @@ docs/                        DOCUMENTATION.md (normative doc contract), PRODUCTI
   (`scripts/check_documentation_claims.sh`). See `docs/DOCUMENTATION.md`.
 - `make check` — the full local gate: `front-check` (frozen bun install, type-check,
   ESLint, build) + `fmt-check` + `lint` + `test` + `docs-check` + `git diff --check`.
-- `make release-check` — `check` + version/changelog/scripts consistency + binary build.
-  This is exactly what CI (`.github/workflows/ci.yml`) runs on every push and PR.
+- `make release-check` — `check` + version/changelog/scripts consistency + roadmap and
+  bidirectional roadmap↔changelog traceability + binary build whose `--version` must report
+  `Version`. This is exactly what CI (`ci.yml`) runs on every push and PR, and what the
+  `release` / `docker-publish` workflows run (after checking tag = `v` + `Version`) before
+  publishing.
+- **Release:** bump `Version` in `pkg/version/version.go`, the README / roadmap / atlas
+  banners and a dated `CHANGELOG.md` section, mark released `GLD-*` tasks `[x]`, run
+  `make release-check`, commit on `main`, then `CONFIRM_RELEASE=vX.Y.Z make release`
+  (guarded annotated tag + atomic push of `main` and the tag). Never push a tag by hand.
 - **DB integration tests** (`pkg/integration`) are gated on `GOELAND_TEST_DATABASE_URL`
   and skip when unset. Run them against a disposable PostGIS database (needs PostGIS/
   pgcrypto/pg_trgm/unaccent):
