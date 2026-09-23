@@ -34,7 +34,7 @@ change as the behavior, file inventory or release state it describes.
 | `proto/goeland/v1/*.proto` | Defines the authoritative network contracts (Go, ConnectRPC and OpenAPI are generated from it). | `buf lint`, including the `COMMENTS` category configured in `buf.yaml`. |
 | `docs/atlas.md` | Gives every repository file one discoverable responsibility and authority note. | `cmd/doccheck --scope atlas`, exposed as `make atlas-check`. |
 | `scripts/check_documentation_claims.sh` | Connects selected stable prose claims to source and automation. | `make docs-assert`. |
-| `requirements/goeland_poc_domain_model_agent.md` | Immutable statement of intent (the spec); cited, never rewritten to match reality. | Review. |
+| `requirements/goeland_poc_domain_model_agent_v2.md` | Active, immutable statement of intent (spec v2); cited, never rewritten to match reality. The v1 file stays as history. | Review; reconciliations recorded in `IMPLEMENTATION_STATUS.md` §3g. |
 | `requirements/IMPLEMENTATION_STATUS.md` | Living state against the spec: what is built, decided enhancements (🚀), deviations and known gaps. | Review; updated at the end of each slice. |
 | `docs/ROADMAP.md` | Owns implementation order, scope and `GLD-NNN` task completion state. | Roadmap and release-traceability guards. |
 | `CHANGELOG.md` | Records what a released version actually delivered. | Version, changelog and bidirectional task traceability guards. |

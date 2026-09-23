@@ -29,7 +29,8 @@ handoff; never bypass a failing documentation gate.
 ## What this project is
 
 A proto-first POC rebuilding the conceptual core of **Goéland** (territorial
-administrative case management) from `../goeland_poc_domain_model_agent.md`.
+administrative case management) from the active spec
+`requirements/goeland_poc_domain_model_agent_v2.md` (v2; v1 kept as history).
 It is **not** a re-code of legacy Goéland — it is a clean, durable core:
 
 > a graph of durable business **subjects**, linked by **typed relationships**,
@@ -41,8 +42,11 @@ tags · bundleable `pkg/<domain>/module` pattern · embedded dbmate migrations �
 PostGIS-ready from migration 0001 · an embedded **Vue 3 + Vuetify 4 SPA**
 (`cmd/goeland-server/goeland-front`, `//go:embed`) served at `/`.
 
-**Progress tracking:** the spec (`requirements/goeland_poc_domain_model_agent.md`)
-is the immutable statement of intent — do not rewrite it to match reality; cite it.
+**Progress tracking:** the **active spec is v2**
+(`requirements/goeland_poc_domain_model_agent_v2.md`, cite as "v2 §N"); the original
+`requirements/goeland_poc_domain_model_agent.md` is kept as **historical v1** (older
+"spec §N" citations refer to it). Both are immutable statements of intent — do not rewrite
+them to match reality; record reconciliations in `IMPLEMENTATION_STATUS.md` §3g.
 The living state against the spec (built areas / decided enhancements / deviations) is
 `requirements/IMPLEMENTATION_STATUS.md` — **update it (a few lines) at the end of
 each slice**, and add automated tests as you land each new domain. Implementation
@@ -374,7 +378,7 @@ domain names over technical abstractions.
 
 ## Guiding principle — the spec is a floor, not a ceiling
 
-The starting spec (`requirements/goeland_poc_domain_model_agent.md`) is a starting
+The spec (active v2, `requirements/goeland_poc_domain_model_agent_v2.md`) is a starting
 point, not a maximum. Several features intentionally go **beyond** it (typed proto
 API, richer GED document, accent-insensitive search — see
 `requirements/IMPLEMENTATION_STATUS.md` §3 "Decided enhancements 🚀").

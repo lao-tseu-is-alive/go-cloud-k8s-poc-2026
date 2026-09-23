@@ -26,8 +26,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.
 - `requirements/IMPLEMENTATION_STATUS.md` — Living state against the spec: built areas, decided enhancements, deviations, gaps.
 - `requirements/goeland_frontend_proto_to_vuetify_i18n_agent_brief.md` — Input brief (French) for generating the Vue/Vuetify UI from the protos via UI schemas and i18n.
-- `requirements/goeland_poc_domain_model_agent.md` — Immutable starting spec (French) of the OOA domain model; cited, never rewritten.
-- `requirements/goeland_poc_domain_model_agent_v2_from_ChatGPT_20260923.md` — Proposed v2 revision of the spec from a new analysis document; under review, not yet normative.
+- `requirements/goeland_poc_domain_model_agent.md` — Historical v1 spec (French) of the OOA domain model; immutable, superseded by v2.
+- `requirements/goeland_poc_domain_model_agent_v2.md` — Active spec v2 (French): baseline-preserving target model and phase order; immutable, reconciled in `IMPLEMENTATION_STATUS.md` §3g.
 
 ## CI and release workflows
 

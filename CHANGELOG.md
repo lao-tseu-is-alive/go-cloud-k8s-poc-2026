@@ -8,6 +8,21 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Changed
+
+- **Spec v2 adopted** as the active statement of intent:
+  `requirements/goeland_poc_domain_model_agent_v2.md` (renamed from its review draft); the v1
+  spec stays as immutable history. `IMPLEMENTATION_STATUS.md` gains the v2 alignment table
+  (§0, v2 §57) and the reconciliation decisions (§3g): automatic document reuse on identical
+  content (confidentiality risk accepted until real authorization), API evolved in place in
+  `goeland.v1`, Document alignment before Case, explicit current version, lifecycle mapping,
+  outbox from Phase 7, minimal USER/ORG_UNIT before Task, business_ref allocation, EPSG:2056.
+- `docs/ROADMAP.md` re-ordered on the v2 phases (Phase 0 alignment, Case, Thing, Timeline,
+  Task, Circulation, Security, Provenance/Outbox/Export, AI, Workflow) with new tasks for
+  business_ref, the Document/Version/Blob split, the BlobStore interface, USER/ORG_UNIT, Task,
+  provenance, outbox, export, retention, sensitive read audit, AI proposals, workflow and
+  relationship ending; `[-]` marks a superseded task.
+
 ## [0.4.3] - 2026-09-23
 
 Maintenance patch clearing the remaining fixable MEDIUM findings of the v0.4.2 image scan.

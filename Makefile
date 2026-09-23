@@ -153,7 +153,7 @@ scripts-check:
 ## roadmap-check:	docs/ROADMAP.md tracks the current version, has unique GLD-NNN IDs and a next action
 roadmap-check:
 	@grep -qF 'Tracked version: **v$(APP_VERSION)**.' docs/ROADMAP.md || { echo "roadmap-check: tracked version does not match v$(APP_VERSION)"; exit 1; }
-	@ids="$$(grep -oE '^- \[[ x~]\] \*\*GLD-[0-9]{3}' docs/ROADMAP.md | grep -oE 'GLD-[0-9]{3}')"; \
+	@ids="$$(grep -oE '^- \[[ x~-]\] \*\*GLD-[0-9]{3}' docs/ROADMAP.md | grep -oE 'GLD-[0-9]{3}')"; \
 		test -n "$$ids" || { echo "roadmap-check: no task IDs found"; exit 1; }; \
 		duplicates="$$(printf '%s\n' "$$ids" | sort | uniq -d)"; \
 		test -z "$$duplicates" || { echo "roadmap-check: duplicate task IDs: $$duplicates"; exit 1; }

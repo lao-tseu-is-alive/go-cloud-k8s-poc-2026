@@ -3,11 +3,31 @@
 Living tracker of what is built vs. what the spec asks for. Update it at the end
 of each slice (a few lines), and keep it honest.
 
-- **Intent / spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — the original statement of intent. Do not rewrite it to match reality; cite it (e.g. "spec §7.2").
-- **This document (living):** maps each spec area to its current state + records intentional deviations.
+- **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
+- **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
+- **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
 - **Snapshot:** as of **2026-09-23**, app version **0.4.3** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0006` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor** components live, each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
+
+---
+
+## 0. V2 alignment (v2 §48 Phase 0, Definition of Done v2 §57)
+
+| v2 DoD item | State | Notes |
+|-------------|-------|-------|
+| V2 is the active spec | ✅ | adopted 2026-09-23; v1 kept as history |
+| IMPLEMENTATION_STATUS reflects V2 | 🟡 | this table + §3g; §1–§2 still map v1 sections |
+| `business_ref` exists | ⬜ | GLD-022 |
+| `content_blob` exists, SHA-256 UNIQUE on it | ⬜ | GLD-023 (today the unique index is on `document.sha256`) |
+| `document_version` exists, current Document migrated without loss | ⬜ | GLD-023 (additive migration + backfill) |
+| existing filestore still works | ✅ | `internal://` refs; BlobStore interface in GLD-024 |
+| APIs compatible or cleanly versioned | ⬜ | decision: stay in `goeland.v1` (§3g) |
+| Document UI works | ✅ | on the current model; to migrate with GLD-023 |
+| Actor / Document tests green | ✅ | unit + `pkg/integration` |
+| global deduplication tested | ⬜ | GLD-023 |
+| same Document linkable to several cases | 🟡 | edges allowed; not surfaced by `GetDocument` (GLD-006) |
+| no regression audit / auth / security / CI | ✅ | enforced by `make release-check` |
 
 ---
 
@@ -185,6 +205,39 @@ The Actor component (spec §6.4) was designed against the **real production Goé
   (bilingual) + `pkg/integration` lifecycle/specialization tests, all green against real PostGIS.
 - ⬜ Deferred to later actor slices: addresses (`lien_acteur_adresse`), the CH-register person
   detail beyond the link flag, and seeding the full production role vocabulary.
+
+### 3g. V2 reconciliation decisions (2026-09-23)
+
+Decisions taken when adopting v2; they complete or adjust the spec without rewriting it.
+
+- **Automatic document reuse on identical content (v2 §5.4, §20)** — kept as specified: an
+  upload whose SHA-256 matches an existing `content_blob` reuses the blob *and* the existing
+  document, and the new context is expressed by relationships. ⚠️ Accepted risk: until real
+  authorization exists (GLD-017), this can link or reveal a document of a confidential case
+  from another case, and an upload response can act as an existence oracle. GLD-017 must
+  revisit reuse against confidentiality and read rights.
+- **API stays in `goeland.v1` (v2 §21)** — no `goeland.v2` package: nothing runs in
+  production, so the Document/Version/Blob split evolves `goeland.v1` directly and obsolete
+  `Document` fields may be removed once the SPA is migrated, without a deprecation period.
+- **Order: Document alignment before Case (v2 §48)** — business_ref + content_blob +
+  document_version first, while no Case/Timeline code depends on the old document model.
+- **Current version is explicit** — `document.current_version_id` (set in the same
+  transaction as a new version) rather than `max(version_no)`; `is_final` / `is_record` move to
+  `document_version`, `record_metadata.is_locked` stays subject-level.
+- **Lifecycle mapping (v2 §35)** — CLOSED in `case_file.status`, LOGICALLY_DELETED in
+  `record_metadata.deleted_at`, ARCHIVED / DISPOSED in the future retention tables. DISPOSED
+  needs a governed destruction path with proof, distinct from domain services.
+- **Outbox only from v2 Phase 7** — the v2 §54 criterion "mutation + audit + outbox" applies
+  once the outbox exists; until then "mutation + audit".
+- **Minimal USER / ORG_UNIT reference before Task (v2 §28, §50)** — task assignees need real
+  targets; full security stays in Phase 6.
+- **business_ref allocation** — a transactional per-namespace (and per-year when relevant)
+  counter plus a partial unique index on `(namespace, business_ref)`.
+- **Thing geometry** — explicit SRID (EPSG:2056, Swiss LV95), geometry type and GIST index.
+- **End vs undo a relationship** — "ended" sets `valid_to`; "unlinked" (soft delete) means the
+  edge was a mistake. Two operations, two audit events.
+- **v2 SQL snippets are illustrative** — implementations follow repo conventions
+  (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
 ---
 

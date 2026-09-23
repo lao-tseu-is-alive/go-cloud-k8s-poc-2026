@@ -348,8 +348,9 @@ event; every relationship is typed and validated; boring, explicit, testable API
 
 ## Status & roadmap
 
-The original spec is [`requirements/goeland_poc_domain_model_agent.md`](requirements/goeland_poc_domain_model_agent.md)
-(intent, not updated as work proceeds). The living "what's done / what's left"
+The active spec is v2, [`requirements/goeland_poc_domain_model_agent_v2.md`](requirements/goeland_poc_domain_model_agent_v2.md);
+the original [`requirements/goeland_poc_domain_model_agent.md`](requirements/goeland_poc_domain_model_agent.md)
+is kept as history (both are intent, not updated as work proceeds). The living "what's done / what's left"
 tracker — with intentional deviations from the spec — is
 [`requirements/IMPLEMENTATION_STATUS.md`](requirements/IMPLEMENTATION_STATUS.md), and the
 implementation order with `GLD-NNN` tasks is [`docs/ROADMAP.md`](docs/ROADMAP.md). For
