@@ -8,6 +8,20 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.4.2] - 2026-09-23
+
+Security patch: the v0.4.1 image was blocked by the Trivy publication gate, so no v0.4.1
+image exists; use v0.4.2.
+
+### Security
+
+- `github.com/labstack/echo/v4` v4.14.0 → v4.15.3 (CVE-2026-55677, HIGH: information disclosure
+  via URL path decoding discrepancy).
+- `golang.org/x/crypto` v0.54.0 → v0.55.0 (CVE-2026-56854, HIGH: `x/crypto/ssh` authentication
+  bypass). Both are indirect dependencies (via go-cloud-k8s-common-libs); `go mod tidy` also
+  raised `labstack/gommon`, `mattn/go-isatty`, `x/text` and `x/time`. The rebuilt binary scans
+  clean for fixable HIGH/CRITICAL findings.
+
 ## [0.4.1] - 2026-09-23
 
 This release makes documentation part of the build: **GLD-001** adopts the go-pdf-forge

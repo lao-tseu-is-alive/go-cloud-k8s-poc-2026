@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.4.1** — pre-1.0 POC.
+Current version: **v0.4.2** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
