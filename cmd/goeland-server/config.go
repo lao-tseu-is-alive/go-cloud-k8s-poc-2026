@@ -24,17 +24,37 @@ const (
 
 // serverConfig holds all runtime configuration, loaded from environment variables.
 type serverConfig struct {
-	ListenAddress  string
-	DatabaseURL    string
-	AuthMode       string
-	AuthServerURL  string
-	DevToken       string
-	DevUserID      int64
-	DevUserEmail   string
+	// ListenAddress is the host:port to bind (GOELAND_LISTEN_ADDRESS).
+	ListenAddress string
+	// DatabaseURL is DATABASE_URL, or a DSN assembled from the DB_* variables.
+	// It carries the database password and must never be logged.
+	DatabaseURL string
+	// AuthMode is "jwt" (default) or "dev" (GOELAND_AUTH_MODE).
+	AuthMode string
+	// AuthServerURL is the base URL of the auth server used for PAT
+	// introspection and advertised to the SPA (AUTH_SERVER_URL), without a
+	// trailing slash.
+	AuthServerURL string
+	// DevToken is the static bearer token accepted in dev mode
+	// (GOELAND_DEV_TOKEN, required then); a secret that must never be logged.
+	DevToken string
+	// DevUserID is the application user ID of the dev-mode user
+	// (GOELAND_DEV_USER_ID, default 1).
+	DevUserID int64
+	// DevUserEmail is the e-mail of the dev-mode user (GOELAND_DEV_USER_EMAIL).
+	DevUserEmail string
+	// DevDisplayName is the display name of the dev-mode user
+	// (GOELAND_DEV_USER_NAME).
 	DevDisplayName string
-	LogLevel       slog.Level
+	// LogLevel is the slog level parsed from LOG_LEVEL (default info).
+	LogLevel slog.Level
+	// MaxConnections caps the pgx pool size (GOELAND_DB_MAX_CONNECTIONS).
 	MaxConnections int32
+	// ShutdownPeriod bounds the graceful shutdown
+	// (GOELAND_SHUTDOWN_TIMEOUT_SECONDS, default 10s).
 	ShutdownPeriod time.Duration
+	// RequestTimeout bounds each RPC through the timeout interceptor
+	// (GOELAND_REQUEST_TIMEOUT_SECONDS, default 10s).
 	RequestTimeout time.Duration
 	// DocumentPath is the local directory where uploaded document blobs are
 	// stored (referenced by documents via an internal:// storage_ref).

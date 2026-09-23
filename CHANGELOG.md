@@ -27,8 +27,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - `requirements/goeland_poc_domain_model_agent_v2_from_ChatGPT_20260923.md`: proposed v2 revision
   of the spec, versioned for review (not yet normative).
 
+- GoDoc contracts (slice 3 of 5) for every package and exported API, including all `db`-tagged
+  model fields: nullability, units, bounds, enum values, generated columns, operator-vs-actor
+  identity, transaction and audit responsibilities, and the errors each tx helper returns.
+
 ### Changed
 
+- `pkg/core` list scans embed `SubjectRelationship` / `AuditEvent` in their row structs (the pattern
+  the document and actor domains already use) instead of duplicating every column field.
 - `pkg/version`: identity values and `Version` are now constants; only `Revision` and
   `BuildStamp` stay variables injected with `-ldflags -X`.
 - README announces `Current version: **v0.4.0**` (checked by `make version-check`).

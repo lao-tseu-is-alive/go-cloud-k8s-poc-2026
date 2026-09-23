@@ -204,6 +204,7 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 // actorListRow adds the window total to the actor columns for search scanning.
 type actorListRow struct {
 	Actor
+	// TotalSize is the COUNT(*) OVER () window total, repeated on every row.
 	TotalSize int32 `db:"total_count"`
 }
 

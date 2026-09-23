@@ -46,11 +46,17 @@ func httpAuthMiddleware(verifier authadapter.TokenVerifier, log *slog.Logger, ne
 // CreateDocument. Field names are camelCase to match the JSON shape produced by
 // the Vanguard REST transcoder for the rest of the document API.
 type uploadResponse struct {
-	StorageRef    string `json:"storageRef"`
-	SHA256        string `json:"sha256"`
-	FileSizeBytes int64  `json:"fileSizeBytes"`
-	MimeType      string `json:"mimeType"`
-	Filename      string `json:"filename"`
+	// StorageRef is the internal://<name> reference of the stored blob.
+	StorageRef string `json:"storageRef"`
+	// SHA256 is the server-computed lower-case hex digest of the bytes.
+	SHA256 string `json:"sha256"`
+	// FileSizeBytes is the server-measured size of the bytes.
+	FileSizeBytes int64 `json:"fileSizeBytes"`
+	// MimeType is the client-declared type unless absent or generic, else the
+	// type implied by the file extension, else one sniffed from the first bytes.
+	MimeType string `json:"mimeType"`
+	// Filename is the original client filename, informational only.
+	Filename string `json:"filename"`
 }
 
 // uploadHandler stores an uploaded blob on the local filestore and returns the

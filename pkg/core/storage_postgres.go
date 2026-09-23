@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
-	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -157,17 +156,9 @@ func (r *PostgresRepository) AppendAuditEvent(ctx context.Context, ev AuditEvent
 
 // relationshipListRow adds the window total to the base relationship columns for search scanning.
 type relationshipListRow struct {
-	ID                 uuid.UUID  `db:"id"`
-	SourceSubjectID    uuid.UUID  `db:"source_subject_id"`
-	TargetSubjectID    uuid.UUID  `db:"target_subject_id"`
-	RelationshipTypeID uuid.UUID  `db:"relationship_type_id"`
-	RoleDetail         string     `db:"role_detail"`
-	ValidFrom          *time.Time `db:"valid_from"`
-	ValidTo            *time.Time `db:"valid_to"`
-	CreatedAt          time.Time  `db:"created_at"`
-	CreatedBy          string     `db:"created_by"`
-	DeletedAt          *time.Time `db:"deleted_at"`
-	TotalSize          int32      `db:"total_count"`
+	SubjectRelationship
+	// TotalSize is the COUNT(*) OVER () window total, repeated on every row.
+	TotalSize int32 `db:"total_count"`
 }
 
 // ListRelationships returns a page of active relationships for a subject, hydrated with subject refs and types.
@@ -188,14 +179,9 @@ func (r *PostgresRepository) ListRelationships(ctx context.Context, filter Relat
 	}
 	result := RelationshipResult{Relationships: make([]*SubjectRelationship, len(listRows))}
 	for i := range listRows {
-		lr := listRows[i]
-		result.Relationships[i] = &SubjectRelationship{
-			ID: lr.ID, SourceSubjectID: lr.SourceSubjectID, TargetSubjectID: lr.TargetSubjectID,
-			RelationshipTypeID: lr.RelationshipTypeID, RoleDetail: lr.RoleDetail,
-			ValidFrom: lr.ValidFrom, ValidTo: lr.ValidTo, CreatedAt: lr.CreatedAt,
-			CreatedBy: lr.CreatedBy, DeletedAt: lr.DeletedAt,
-		}
-		result.TotalSize = lr.TotalSize
+		rel := listRows[i].SubjectRelationship
+		result.Relationships[i] = &rel
+		result.TotalSize = listRows[i].TotalSize
 	}
 	if err := r.hydrateRelationships(ctx, result.Relationships); err != nil {
 		return RelationshipResult{}, err
@@ -268,18 +254,9 @@ func (r *PostgresRepository) ListRelationshipTypes(ctx context.Context, onlyActi
 
 // auditListRow adds the window total to the base audit columns for search scanning.
 type auditListRow struct {
-	ID            uuid.UUID      `db:"id"`
-	SubjectID     uuid.UUID      `db:"subject_id"`
-	EventType     string         `db:"event_type"`
-	ActorUserID   string         `db:"actor_user_id"`
-	OccurredAt    time.Time      `db:"occurred_at"`
-	BeforeState   map[string]any `db:"before_state"`
-	AfterState    map[string]any `db:"after_state"`
-	Reason        string         `db:"reason"`
-	CorrelationID *uuid.UUID     `db:"correlation_id"`
-	RequestID     string         `db:"request_id"`
-	Metadata      map[string]any `db:"metadata"`
-	TotalSize     int32          `db:"total_count"`
+	AuditEvent
+	// TotalSize is the COUNT(*) OVER () window total, repeated on every row.
+	TotalSize int32 `db:"total_count"`
 }
 
 // ListAuditEvents returns a page of audit events for a subject, newest first.
@@ -301,13 +278,9 @@ func (r *PostgresRepository) ListAuditEvents(ctx context.Context, filter AuditFi
 	}
 	result := AuditResult{Events: make([]*AuditEvent, len(listRows))}
 	for i := range listRows {
-		lr := listRows[i]
-		result.Events[i] = &AuditEvent{
-			ID: lr.ID, SubjectID: lr.SubjectID, EventType: lr.EventType, ActorUserID: lr.ActorUserID,
-			OccurredAt: lr.OccurredAt, BeforeState: lr.BeforeState, AfterState: lr.AfterState,
-			Reason: lr.Reason, CorrelationID: lr.CorrelationID, RequestID: lr.RequestID, Metadata: lr.Metadata,
-		}
-		result.TotalSize = lr.TotalSize
+		ev := listRows[i].AuditEvent
+		result.Events[i] = &ev
+		result.TotalSize = listRows[i].TotalSize
 	}
 	return result, nil
 }

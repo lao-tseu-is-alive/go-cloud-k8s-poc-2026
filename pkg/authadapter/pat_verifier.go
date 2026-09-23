@@ -28,14 +28,20 @@ const (
 // AuthService.IntrospectToken RPC exposed by go-cloud-k8s-auth via Vanguard.
 // Calling the plain JSON route avoids a Go module dependency on the auth repo.
 type introspectRequest struct {
+	// Token is the raw pat_ token being introspected; a secret, never logged.
 	Token string `json:"token"`
 }
 
 type introspectResponse struct {
-	Active bool     `json:"active"`
-	UserID int64    `json:"userId,string"`
-	Email  string   `json:"email"`
-	Name   string   `json:"name"`
+	// Active reports whether the token is valid, unexpired and not revoked.
+	Active bool `json:"active"`
+	// UserID is the owning application user ID, sent as a JSON string (int64).
+	UserID int64 `json:"userId,string"`
+	// Email is the owning user's e-mail address.
+	Email string `json:"email"`
+	// Name is the owning user's display name.
+	Name string `json:"name"`
+	// Scopes are the scopes granted to the token.
 	Scopes []string `json:"scopes"`
 }
 

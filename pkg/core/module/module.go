@@ -28,9 +28,12 @@ func (c Config) requestTimeout() time.Duration {
 
 // Deps holds cross-cutting dependencies injected by the main binary or a bundle.
 type Deps struct {
-	Pool     *pgxpool.Pool
+	// Pool is the shared PostgreSQL pool; required.
+	Pool *pgxpool.Pool
+	// Verifier authenticates bearer tokens for the auth interceptor; required.
 	Verifier authadapter.TokenVerifier
-	Logger   *slog.Logger
+	// Logger receives module logs; nil falls back to slog.Default.
+	Logger *slog.Logger
 }
 
 // Module encapsulates the transversal core domain: repository, service and Connect handler.

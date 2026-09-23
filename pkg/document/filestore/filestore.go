@@ -38,10 +38,14 @@ type Store struct {
 // Blob describes a persisted upload. The values map directly onto the
 // document metadata fields the client later sends to CreateDocument.
 type Blob struct {
-	StorageRef    string // internal://<name>
-	SHA256        string // lowercase hex, 64 chars
+	// StorageRef is the internal://<name> reference accepted by Open.
+	StorageRef string
+	// SHA256 is the lower-case, 64-character hex digest computed while writing.
+	SHA256 string
+	// FileSizeBytes is the number of bytes written.
 	FileSizeBytes int64
-	Filename      string // original client filename (informational)
+	// Filename is the original client filename, informational only.
+	Filename string
 }
 
 // New resolves root to an absolute path and creates it if missing.

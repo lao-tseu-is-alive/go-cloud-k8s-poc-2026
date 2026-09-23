@@ -12,12 +12,19 @@ type SubjectKind string
 const (
 	// SubjectKindUnspecified is the zero value; never persisted.
 	SubjectKindUnspecified SubjectKind = ""
-	SubjectKindCase        SubjectKind = "CASE"
-	SubjectKindDocument    SubjectKind = "DOCUMENT"
-	SubjectKindThing       SubjectKind = "THING"
-	SubjectKindActor       SubjectKind = "ACTOR"
-	SubjectKindUser        SubjectKind = "USER"
-	SubjectKindOrgUnit     SubjectKind = "ORG_UNIT"
+	// SubjectKindCase identifies an administrative case file (affaire).
+	SubjectKindCase SubjectKind = "CASE"
+	// SubjectKindDocument identifies a GED document (pkg/document).
+	SubjectKindDocument SubjectKind = "DOCUMENT"
+	// SubjectKindThing identifies a physical object such as a parcel or building.
+	SubjectKindThing SubjectKind = "THING"
+	// SubjectKindActor identifies an external person or organization (pkg/actor);
+	// never an authenticated operator.
+	SubjectKindActor SubjectKind = "ACTOR"
+	// SubjectKindUser identifies an internal system user as a graph subject.
+	SubjectKindUser SubjectKind = "USER"
+	// SubjectKindOrgUnit identifies an internal organizational unit.
+	SubjectKindOrgUnit SubjectKind = "ORG_UNIT"
 )
 
 // Valid reports whether k is one of the known subject kinds.
@@ -36,134 +43,253 @@ func (k SubjectKind) Valid() bool {
 // The `db` struct tags drive pgx named scanning (RowToStructByNameLax). Keep them
 // in sync with the column projections in sql.go.
 type SubjectRef struct {
-	ID           uuid.UUID   `db:"id"`
-	Kind         SubjectKind `db:"kind"`
-	DisplayLabel string      `db:"display_label"`
-	CanonicalURL string      `db:"canonical_url"`
-	CreatedAt    time.Time   `db:"created_at"`
+	// ID is the server-generated subject identity, shared 1:1 by the domain
+	// row (document, actor, ...) and its record_metadata.
+	ID uuid.UUID `db:"id"`
+	// Kind is immutable; (ID, Kind) is unique so domain tables can pin it.
+	Kind SubjectKind `db:"kind"`
+	// DisplayLabel is the non-blank human label, kept in sync with the domain
+	// entity's own label (e.g. a document title) for graph projections.
+	DisplayLabel string `db:"display_label"`
+	// CanonicalURL is an optional stable link to the subject; empty when unset.
+	CanonicalURL string `db:"canonical_url"`
+	// CreatedAt is the database insertion time.
+	CreatedAt time.Time `db:"created_at"`
 }
 
 // RecordMetadata is the 1:1 governance record attached to every subject.
 // Nullable timestamp columns use pointers so pgx can scan SQL NULLs.
+//
+// Operator identifiers (*By fields, OwnerUserID) always come from the
+// authenticated caller via OperatorID, never from request payloads; an empty
+// string means "not set" because those columns are NOT NULL DEFAULT ”.
 type RecordMetadata struct {
-	SubjectID            uuid.UUID         `db:"subject_id"`
-	CreatedAt            time.Time         `db:"created_at"`
-	CreatedBy            string            `db:"created_by"`
-	UpdatedAt            *time.Time        `db:"updated_at"`
-	UpdatedBy            string            `db:"updated_by"`
-	DeletedAt            *time.Time        `db:"deleted_at"`
-	DeletedBy            string            `db:"deleted_by"`
-	OwnerUserID          string            `db:"owner_user_id"`
-	OwnerOrgID           string            `db:"owner_org_id"`
-	ConfidentialityLevel int32             `db:"confidentiality_level"`
-	Version              int32             `db:"version"`
-	IsLocked             bool              `db:"is_locked"`
-	LockedAt             *time.Time        `db:"locked_at"`
-	LockedBy             string            `db:"locked_by"`
-	RetentionUntil       string            `db:"retention_until"`
-	SortFinal            string            `db:"sort_final"`
-	Metadata             map[string]string `db:"metadata"`
+	// SubjectID is the governed subject; also this row's primary key.
+	SubjectID uuid.UUID `db:"subject_id"`
+	// CreatedAt is the database insertion time.
+	CreatedAt time.Time `db:"created_at"`
+	// CreatedBy is the operator who created the subject.
+	CreatedBy string `db:"created_by"`
+	// UpdatedAt is the last mutation time; nil until the first update.
+	UpdatedAt *time.Time `db:"updated_at"`
+	// UpdatedBy is the operator of the last mutation; empty until then.
+	UpdatedBy string `db:"updated_by"`
+	// DeletedAt marks a logical (soft) delete; nil while the subject is live.
+	// Rows are never physically deleted.
+	DeletedAt *time.Time `db:"deleted_at"`
+	// DeletedBy is the operator who soft-deleted the subject; empty while live.
+	DeletedBy string `db:"deleted_by"`
+	// OwnerUserID is the owning user; empty when unowned.
+	OwnerUserID string `db:"owner_user_id"`
+	// OwnerOrgID is the owning organizational unit; empty when unset.
+	OwnerOrgID string `db:"owner_org_id"`
+	// ConfidentialityLevel ranges from 0 (public) to 5 (most restricted),
+	// enforced by a CHECK constraint. It is recorded but not yet enforced by a
+	// permission engine.
+	ConfidentialityLevel int32 `db:"confidentiality_level"`
+	// Version starts at 1 and is incremented by every governance mutation.
+	Version int32 `db:"version"`
+	// IsLocked makes the subject immutable; mutations then fail with ErrLocked.
+	IsLocked bool `db:"is_locked"`
+	// LockedAt is the lock time; nil while unlocked.
+	LockedAt *time.Time `db:"locked_at"`
+	// LockedBy is the operator who locked the subject; empty while unlocked.
+	LockedBy string `db:"locked_by"`
+	// RetentionUntil is the retention deadline as an ISO date or a records
+	// policy reference; empty when no retention rule applies.
+	RetentionUntil string `db:"retention_until"`
+	// SortFinal is the archival disposition: CONSERVER, ELIMINER, ARCHIVER or
+	// VERSER_SAE; empty when undecided.
+	SortFinal string `db:"sort_final"`
+	// Metadata is secondary JSONB extension data; never holds critical fields.
+	Metadata map[string]string `db:"metadata"`
 }
 
 // AuditEvent is an append-only probative audit record.
+//
+// Every mutation writes one in the same transaction as the change it records;
+// rows are never updated or deleted.
 type AuditEvent struct {
-	ID            uuid.UUID      `db:"id"`
-	SubjectID     uuid.UUID      `db:"subject_id"`
-	EventType     string         `db:"event_type"`
-	ActorUserID   string         `db:"actor_user_id"`
-	OccurredAt    time.Time      `db:"occurred_at"`
-	BeforeState   map[string]any `db:"before_state"`
-	AfterState    map[string]any `db:"after_state"`
-	Reason        string         `db:"reason"`
-	CorrelationID *uuid.UUID     `db:"correlation_id"`
-	RequestID     string         `db:"request_id"`
-	Metadata      map[string]any `db:"metadata"`
+	// ID is the server-generated event identity.
+	ID uuid.UUID `db:"id"`
+	// SubjectID is the subject the event is about.
+	SubjectID uuid.UUID `db:"subject_id"`
+	// EventType is a non-blank upper-case code such as SUBJECT_CREATED or
+	// DOCUMENT_FINALIZED.
+	EventType string `db:"event_type"`
+	// ActorUserID is the authenticated operator who caused the event (not a
+	// domain ACTOR subject), derived server-side via OperatorID.
+	ActorUserID string `db:"actor_user_id"`
+	// OccurredAt is the database time of the event.
+	OccurredAt time.Time `db:"occurred_at"`
+	// BeforeState is a JSONB snapshot of the changed fields before the
+	// mutation; nil for creations.
+	BeforeState map[string]any `db:"before_state"`
+	// AfterState is a JSONB snapshot of the changed fields after the mutation;
+	// nil when not applicable.
+	AfterState map[string]any `db:"after_state"`
+	// Reason is the operator-supplied justification; empty when none was given.
+	Reason string `db:"reason"`
+	// CorrelationID groups events emitted by one business operation; nil when
+	// the event stands alone.
+	CorrelationID *uuid.UUID `db:"correlation_id"`
+	// RequestID is the HTTP request identifier the event was written under;
+	// empty outside a request.
+	RequestID string `db:"request_id"`
+	// Metadata is secondary JSONB context for the event.
+	Metadata map[string]any `db:"metadata"`
 }
 
 // RelationshipType is an allowed typed relation between two subject kinds.
+// Types are seeded reference data; a link is accepted only when the source and
+// target subjects have exactly SourceKind and TargetKind.
 type RelationshipType struct {
-	ID           uuid.UUID   `db:"id"`
-	Code         string      `db:"code"`
-	Label        string      `db:"label"`
-	SourceKind   SubjectKind `db:"source_kind"`
-	TargetKind   SubjectKind `db:"target_kind"`
-	IsDirected   bool        `db:"is_directed"`
-	InverseLabel string      `db:"inverse_label"`
-	Description  string      `db:"description"`
-	IsActive     bool        `db:"is_active"`
+	// ID is the catalogue row identity.
+	ID uuid.UUID `db:"id"`
+	// Code is the unique, non-blank stable key used by APIs, e.g.
+	// CASE_HAS_DOCUMENT.
+	Code string `db:"code"`
+	// Label is the human label read from source to target.
+	Label string `db:"label"`
+	// SourceKind is the required kind of the source subject.
+	SourceKind SubjectKind `db:"source_kind"`
+	// TargetKind is the required kind of the target subject.
+	TargetKind SubjectKind `db:"target_kind"`
+	// IsDirected reports whether the edge reads one way only.
+	IsDirected bool `db:"is_directed"`
+	// InverseLabel is the human label read from target to source; empty when
+	// the type has none.
+	InverseLabel string `db:"inverse_label"`
+	// Description documents the business meaning of the type.
+	Description string `db:"description"`
+	// IsActive reports whether new links of this type may be created.
+	IsActive bool `db:"is_active"`
 }
 
 // SubjectRelationship is an actual typed edge between two subjects. The related
 // SubjectRef and RelationshipType are hydrated by the repository for read paths.
+//
+// At most one active (non-deleted) edge exists per (source, target, type);
+// unlinking soft-deletes the edge so it can be recreated later.
 type SubjectRelationship struct {
-	ID                 uuid.UUID  `db:"id"`
-	SourceSubjectID    uuid.UUID  `db:"source_subject_id"`
-	TargetSubjectID    uuid.UUID  `db:"target_subject_id"`
-	RelationshipTypeID uuid.UUID  `db:"relationship_type_id"`
-	RoleDetail         string     `db:"role_detail"`
-	ValidFrom          *time.Time `db:"valid_from"`
-	ValidTo            *time.Time `db:"valid_to"`
-	CreatedAt          time.Time  `db:"created_at"`
-	CreatedBy          string     `db:"created_by"`
-	DeletedAt          *time.Time `db:"deleted_at"`
+	// ID is the server-generated edge identity.
+	ID uuid.UUID `db:"id"`
+	// SourceSubjectID is the subject the edge starts from.
+	SourceSubjectID uuid.UUID `db:"source_subject_id"`
+	// TargetSubjectID is the subject the edge points to.
+	TargetSubjectID uuid.UUID `db:"target_subject_id"`
+	// RelationshipTypeID references the validated RelationshipType.
+	RelationshipTypeID uuid.UUID `db:"relationship_type_id"`
+	// RoleDetail qualifies the relation in free text; empty when not needed.
+	RoleDetail string `db:"role_detail"`
+	// ValidFrom is the optional business start of validity; nil when open.
+	ValidFrom *time.Time `db:"valid_from"`
+	// ValidTo is the optional business end of validity; nil when open.
+	ValidTo *time.Time `db:"valid_to"`
+	// CreatedAt is the database insertion time.
+	CreatedAt time.Time `db:"created_at"`
+	// CreatedBy is the operator who created the edge.
+	CreatedBy string `db:"created_by"`
+	// DeletedAt marks an unlinked (soft-deleted) edge; nil while active.
+	DeletedAt *time.Time `db:"deleted_at"`
 
-	// Hydrated associations (nil on write paths).
-	Source           *SubjectRef       `db:"-"`
-	Target           *SubjectRef       `db:"-"`
+	// Source is the hydrated source subject on read paths; nil on writes.
+	Source *SubjectRef `db:"-"`
+	// Target is the hydrated target subject on read paths; nil on writes.
+	Target *SubjectRef `db:"-"`
+	// RelationshipType is the hydrated type on read paths; nil on writes.
 	RelationshipType *RelationshipType `db:"-"`
 }
 
 // CreateSubjectInput holds the client-controlled fields for a new subject + its governance record.
 type CreateSubjectInput struct {
-	Kind                 SubjectKind
-	DisplayLabel         string
-	CanonicalURL         string
-	OperatorID           string
-	OwnerUserID          string
-	OwnerOrgID           string
+	// Kind is the required subject kind; it must be Valid.
+	Kind SubjectKind
+	// DisplayLabel is the required non-blank human label.
+	DisplayLabel string
+	// CanonicalURL is an optional stable link to the subject.
+	CanonicalURL string
+	// OperatorID is the authenticated caller, set server-side from OperatorID;
+	// it becomes created_by and the audit actor.
+	OperatorID string
+	// OwnerUserID is the initial owning user; empty leaves the subject unowned.
+	OwnerUserID string
+	// OwnerOrgID is the initial owning organizational unit.
+	OwnerOrgID string
+	// ConfidentialityLevel is the initial level, 0 to 5.
 	ConfidentialityLevel int32
-	RetentionUntil       string
-	SortFinal            string
-	Metadata             map[string]string
+	// RetentionUntil is the initial retention deadline (see RecordMetadata).
+	RetentionUntil string
+	// SortFinal is the initial archival disposition (see RecordMetadata).
+	SortFinal string
+	// Metadata is initial secondary extension data.
+	Metadata map[string]string
 }
 
 // LinkInput holds the fields required to create a typed relationship.
 type LinkInput struct {
-	SourceSubjectID      uuid.UUID
-	TargetSubjectID      uuid.UUID
+	// SourceSubjectID is the existing source subject.
+	SourceSubjectID uuid.UUID
+	// TargetSubjectID is the existing target subject.
+	TargetSubjectID uuid.UUID
+	// RelationshipTypeCode selects an active RelationshipType whose kinds must
+	// match the source and target kinds, otherwise ErrKindMismatch.
 	RelationshipTypeCode string
-	RoleDetail           string
-	OperatorID           string
-	ValidFrom            *time.Time
+	// RoleDetail optionally qualifies the relation.
+	RoleDetail string
+	// OperatorID is the authenticated caller, set server-side; it becomes
+	// created_by and the audit actor.
+	OperatorID string
+	// ValidFrom is the optional business start of validity.
+	ValidFrom *time.Time
 }
 
 // RelationshipFilter controls relationship listing for one subject.
+// Only active (non-deleted) edges are returned.
 type RelationshipFilter struct {
-	SubjectID            uuid.UUID
-	Outgoing             bool
+	// SubjectID is the subject whose edges are listed.
+	SubjectID uuid.UUID
+	// Outgoing selects edges whose source is SubjectID when true, and edges
+	// whose target is SubjectID when false.
+	Outgoing bool
+	// RelationshipTypeCode restricts the list to one type; empty means any.
 	RelationshipTypeCode string
-	Limit                int
-	Offset               int
+	// Limit is the page size, normalized to [1, MaxPageSize] with
+	// DefaultPageSize when zero.
+	Limit int
+	// Offset is the zero-based number of rows to skip; negative becomes 0.
+	Offset int
 }
 
 // RelationshipResult holds a page of relationships and the total count before pagination.
 type RelationshipResult struct {
+	// Relationships is the requested page, hydrated with subjects and type.
 	Relationships []*SubjectRelationship
-	TotalSize     int32
+	// TotalSize is the number of matching edges across all pages.
+	TotalSize int32
 }
 
 // AuditFilter controls audit-event listing.
+// Events are returned newest first.
 type AuditFilter struct {
+	// SubjectID is the subject whose history is listed.
 	SubjectID uuid.UUID
+	// EventType restricts the list to one event code; empty means any.
 	EventType string
-	From      *time.Time
-	To        *time.Time
-	Limit     int
-	Offset    int
+	// From is the inclusive lower bound on OccurredAt; nil means unbounded.
+	From *time.Time
+	// To is the inclusive upper bound on OccurredAt; nil means unbounded.
+	To *time.Time
+	// Limit is the page size, normalized like RelationshipFilter.Limit.
+	Limit int
+	// Offset is the zero-based number of rows to skip; negative becomes 0.
+	Offset int
 }
 
 // AuditResult holds a page of audit events and the total count before pagination.
 type AuditResult struct {
-	Events    []*AuditEvent
+	// Events is the requested page, newest first.
+	Events []*AuditEvent
+	// TotalSize is the number of matching events across all pages.
 	TotalSize int32
 }

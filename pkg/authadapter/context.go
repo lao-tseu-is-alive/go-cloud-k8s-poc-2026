@@ -9,11 +9,20 @@ import (
 var ErrUnauthenticated = errors.New("authenticated user is required")
 
 // AuthenticatedUser holds the identity and granted scopes extracted from a verified bearer token.
+//
+// It is the operator identity: an internal user of the application, never a
+// domain ACTOR subject.
 type AuthenticatedUser struct {
-	AppUserID   int64
-	Email       string
+	// AppUserID is the numeric application user ID; values <= 0 are treated
+	// as unauthenticated by UserFromContext.
+	AppUserID int64
+	// Email is the user's e-mail address; empty when the token carries none.
+	Email string
+	// DisplayName is the user's human-readable name.
 	DisplayName string
-	Scopes      []string
+	// Scopes are the granted OAuth scopes (e.g. goeland:read, goeland:write);
+	// HasScope also honours an admin wildcard.
+	Scopes []string
 }
 
 type userContextKey struct{}

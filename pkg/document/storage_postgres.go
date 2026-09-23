@@ -325,6 +325,7 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, opera
 // documentListRow adds the window total to the document columns for search scanning.
 type documentListRow struct {
 	Document
+	// TotalSize is the COUNT(*) OVER () window total, repeated on every row.
 	TotalSize int32 `db:"total_count"`
 }
 

@@ -36,10 +36,15 @@ func (c Config) requestTimeout() time.Duration {
 // Deps holds cross-cutting dependencies. CoreService is required because the
 // actor domain reuses core primitives (subjects, relationships, audit).
 type Deps struct {
-	Pool        *pgxpool.Pool
-	Verifier    authadapter.TokenVerifier
+	// Pool is the shared PostgreSQL pool; required.
+	Pool *pgxpool.Pool
+	// Verifier authenticates bearer tokens for the auth interceptor; required.
+	Verifier authadapter.TokenVerifier
+	// CoreService is the core domain service used to read relationships and
+	// audit; required.
 	CoreService *core.Service
-	Logger      *slog.Logger
+	// Logger receives module logs; nil falls back to slog.Default.
+	Logger *slog.Logger
 }
 
 // Module encapsulates the actor domain: repository, service and Connect handler.

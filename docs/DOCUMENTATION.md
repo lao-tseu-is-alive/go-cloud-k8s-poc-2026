@@ -311,9 +311,9 @@ the last one lands.
 | --- | --- | --- |
 | 1 | This contract, `cmd/doccheck`, constant `Version`, Make gates, `ci.yml`, claims script | Done |
 | 2 | `docs/atlas.md` for the complete inventory | Done |
-| 3 | GoDoc for every package and exported API | Pending — `make godoc-check` fails until then |
+| 3 | GoDoc for every package and exported API | Done |
 | 4 | Protobuf `COMMENTS` lint and regenerated bindings/OpenAPI | Pending |
 | 5 | `docs/ROADMAP.md` with `GLD-NNN`, traceability, guarded release script and gated publication workflows | Pending |
 
-Until slice 3 lands, `make check`, `make release-check` and CI fail on the
-documentation gate by design; the failure lists the remaining work.
+Slice 4 turns on the Protobuf `COMMENTS` lint inside `make lint`; slice 5 adds
+the roadmap and release traceability guards to `make release-check`.

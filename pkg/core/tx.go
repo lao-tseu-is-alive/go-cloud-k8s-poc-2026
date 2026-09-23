@@ -20,6 +20,8 @@ type Querier interface {
 }
 
 // InsertSubjectRefTx inserts a canonical subject_ref row using q (pool or tx).
+// Callers must insert the matching record_metadata, domain row and audit event
+// in the same transaction; this helper writes no audit event itself.
 func InsertSubjectRefTx(ctx context.Context, q Querier, kind SubjectKind, displayLabel, canonicalURL string) (*SubjectRef, error) {
 	rows, err := q.Query(ctx, insertSubjectRefSQL, pgx.NamedArgs{
 		"kind":          string(kind),
@@ -172,7 +174,9 @@ func EnsureMutableTx(ctx context.Context, q Querier, subjectID uuid.UUID, allowL
 	return md, nil
 }
 
-// LockRecordMetadataTx sets the immutable flag on a subject's governance record using q.
+// LockRecordMetadataTx sets the immutable flag on a subject's governance record using q,
+// stamping locked_at/locked_by and incrementing version. It writes no audit
+// event: the caller records the business event in the same transaction.
 func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
 	rows, err := q.Query(ctx, lockRecordMetadataSQL, pgx.NamedArgs{
 		"subject_id":  subjectID,
@@ -188,7 +192,9 @@ func LockRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, o
 	return md, nil
 }
 
-// SoftDeleteRecordMetadataTx logically deletes a subject's governance record using q.
+// SoftDeleteRecordMetadataTx logically deletes a subject's governance record using q,
+// stamping deleted_at/deleted_by and incrementing version; no row is removed.
+// It writes no audit event: the caller records it in the same transaction.
 func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.UUID, operatorID string) (*RecordMetadata, error) {
 	rows, err := q.Query(ctx, softDeleteRecordMetadataSQL, pgx.NamedArgs{
 		"subject_id":  subjectID,
@@ -206,6 +212,12 @@ func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.U
 
 // LinkSubjectsTx validates kind compatibility and inserts a typed relationship using q.
 // It enforces (via the DB partial unique index) that no identical active edge exists.
+//
+// It fails with ErrNotFound for an unknown subject or type code, ErrInvalidInput
+// for an inactive type, ErrKindMismatch when the subject kinds differ from the
+// type's, ErrDeleted when either end is soft-deleted (locked subjects may still
+// be linked) and ErrConflict for a duplicate active edge. It writes no audit
+// event: the caller records RELATIONSHIP_LINKED in the same transaction.
 func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelationship, error) {
 	source, err := GetSubjectRefTx(ctx, q, in.SourceSubjectID)
 	if err != nil {
