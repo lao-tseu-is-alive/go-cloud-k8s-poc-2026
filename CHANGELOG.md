@@ -8,6 +8,20 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.4.3] - 2026-09-23
+
+Maintenance patch clearing the remaining fixable MEDIUM findings of the v0.4.2 image scan.
+
+### Security
+
+- `golang.org/x/crypto` v0.55.0 → v0.57.0 (CVE-2026-56855, CVE-2026-78662: `x/crypto/ssh`
+  denial of service).
+- CEL engine `github.com/google/cel-go` v0.26.1 (GHSA-gcjh-h69q-9w9g) replaced by
+  `cel.dev/cel-go` v0.32.0, through `connectrpc.com/validate` v0.6.0 → v0.7.0 and
+  `buf.build/go/protovalidate` v1.0.0 → v1.4.0 (request validation behavior re-checked).
+  Transitive `x/net`, `x/sync`, `x/sys`, `x/text`, `x/exp`, `genproto` and `protobuf`
+  v1.36.12 follow. The rebuilt binary scans clean for every fixable finding.
+
 ## [0.4.2] - 2026-09-23
 
 Security patch: the v0.4.1 image was blocked by the Trivy publication gate, so no v0.4.1
