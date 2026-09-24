@@ -14,6 +14,7 @@ import (
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
@@ -29,6 +30,7 @@ type testEnv struct {
 	coreSvc  *core.Service
 	docSvc   *document.Service
 	actorSvc *actor.Service
+	caseSvc  *casefile.Service
 	// blobDir is the per-test directory holding uploaded bytes.
 	blobDir string
 }
@@ -102,7 +104,16 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build actor service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc, blobDir: store.Root()}
+	caseRepo, err := casefile.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build case repository: %v", err)
+	}
+	caseSvc, err := casefile.NewService(caseRepo, coreSvc, log)
+	if err != nil {
+		t.Fatalf("build case service: %v", err)
+	}
+
+	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

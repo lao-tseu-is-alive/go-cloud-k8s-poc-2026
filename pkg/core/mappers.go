@@ -4,7 +4,6 @@ import (
 	"time"
 
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
-	"google.golang.org/protobuf/types/known/structpb"
 	"google.golang.org/protobuf/types/known/timestamppb"
 )
 
@@ -61,18 +60,6 @@ func TimePtrFromProto(ts *timestamppb.Timestamp) *time.Time {
 	}
 	t := ts.AsTime()
 	return &t
-}
-
-// structFromMap converts a map to a proto Struct, returning nil on empty/invalid input.
-func structFromMap(m map[string]any) *structpb.Struct {
-	if len(m) == 0 {
-		return nil
-	}
-	s, err := structpb.NewStruct(m)
-	if err != nil {
-		return nil
-	}
-	return s
 }
 
 // DomainSubjectRefToProto converts a domain SubjectRef to its proto representation.
@@ -146,12 +133,12 @@ func DomainAuditEventToProto(ev *AuditEvent) *goelandv1.AuditEvent {
 		EventType:     ev.EventType,
 		ActorUserId:   ev.ActorUserID,
 		OccurredAt:    TimestampOrNil(ev.OccurredAt),
-		BeforeState:   structFromMap(ev.BeforeState),
-		AfterState:    structFromMap(ev.AfterState),
+		BeforeState:   StructFromMap(ev.BeforeState),
+		AfterState:    StructFromMap(ev.AfterState),
 		Reason:        ev.Reason,
 		CorrelationId: correlation,
 		RequestId:     ev.RequestID,
-		Metadata:      structFromMap(ev.Metadata),
+		Metadata:      StructFromMap(ev.Metadata),
 	}
 }
 

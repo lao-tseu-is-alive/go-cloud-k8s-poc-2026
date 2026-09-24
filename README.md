@@ -102,19 +102,21 @@ and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 ## Project structure
 
 ```
-proto/goeland/v1/        core.proto, document.proto, actor.proto  (API contract)
+proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto  (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
 api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0009 (dbmate format)
+      └── db/migrations/  0001..0010 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
                          blobstoretest/ = conformance suite for any implementation (S3 later)
 pkg/actor/               actor domain: persons & organizations (reuses core primitives)
+  └── module/            bundleable module (schema owned by core)
+pkg/casefile/            case (affaire) domain: case types, status lifecycle, search
   └── module/            bundleable module (schema owned by core)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
@@ -277,6 +279,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0007_business_ref.sql        subject_ref.business_ref + namespace (unique per namespace) + business_ref_counter
 0008_document_versions.sql   content_blob (unique SHA-256) + document_version (immutable when final/record) + lossless backfill
 0009_drop_document_file_columns.sql  drop the file/version columns superseded by 0008
+0010_case.sql                case_type (reference namespace) + case_file (status lifecycle) + expanded case roles
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -372,7 +375,7 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Out of scope for this slice
 
-Case (`case_file` + timeline + circulation), Thing (parcelle/bâtiment with PostGIS
+Case timeline + circulation, Thing (parcelle/bâtiment with PostGIS
 geometry), a real permission/confidentiality engine, MinIO storage, Meilisearch, and
 workflow integration — all designed to sit on top of the same subject/relationship/
 audit foundation. (The **Actor** domain and its addresses/role-relationship wiring beyond

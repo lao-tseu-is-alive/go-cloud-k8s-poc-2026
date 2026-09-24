@@ -367,3 +367,76 @@ export interface TokenResponse {
   user: TokenUser
   expires_in_seconds: number
 }
+
+// ---- case -------------------------------------------------------------------
+
+export type CaseStatus
+  = | 'CASE_STATUS_UNSPECIFIED'
+    | 'CASE_STATUS_OPEN'
+    | 'CASE_STATUS_IN_PROGRESS'
+    | 'CASE_STATUS_SUSPENDED'
+    | 'CASE_STATUS_CLOSED'
+
+export interface CaseType {
+  id: string
+  code: string
+  label: string
+  description?: string
+  /** When set, CreateCase allocates the business reference in this namespace. */
+  businessRefNamespace?: string
+  isActive?: boolean
+}
+
+export interface GoCase {
+  /** Canonical identity, including businessRef / businessRefNamespace. */
+  subjectRef?: SubjectRef
+  caseType?: CaseType
+  title: string
+  description?: string
+  status?: CaseStatus
+  openedAt?: string
+  closedAt?: string
+  closedBy?: string
+  closureReason?: string
+  metadata?: Record<string, unknown>
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  recordMetadata?: RecordMetadata
+}
+
+export interface CreateCaseRequest {
+  caseTypeCode: string
+  title: string
+  description?: string
+  metadata?: Record<string, unknown>
+}
+
+export interface UpdateCaseRequest {
+  title: string
+  description?: string
+  metadata?: Record<string, unknown>
+  reason?: string
+}
+
+export interface GetCaseResponse {
+  case?: GoCase
+  /** Outgoing then incoming relationships. */
+  relationships?: SubjectRelationship[]
+  recentAudit?: AuditEvent[]
+}
+
+export interface SearchCasesParams {
+  query?: string
+  caseTypeCode?: string
+  status?: CaseStatus
+  includeDeleted?: boolean
+  pageSize?: number
+  pageToken?: string
+}
+
+export interface SearchCasesResponse {
+  cases?: GoCase[]
+  nextPageToken?: string
+  totalSize?: number
+}

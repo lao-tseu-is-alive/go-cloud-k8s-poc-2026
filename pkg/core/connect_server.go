@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 )
@@ -70,7 +69,7 @@ func (s *ConnectServer) GetSubjectRef(ctx context.Context, req *connect.Request[
 	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -91,11 +90,11 @@ func (s *ConnectServer) LinkSubjects(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, err
 	}
-	sourceID, err := parseUUID(req.Msg.SourceSubjectId)
+	sourceID, err := ParseUUID(req.Msg.SourceSubjectId)
 	if err != nil {
 		return nil, err
 	}
-	targetID, err := parseUUID(req.Msg.TargetSubjectId)
+	targetID, err := ParseUUID(req.Msg.TargetSubjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -122,7 +121,7 @@ func (s *ConnectServer) AssignBusinessRef(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.SubjectId)
+	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -162,7 +161,7 @@ func (s *ConnectServer) UnlinkSubjects(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.RelationshipId)
+	id, err := ParseUUID(req.Msg.RelationshipId)
 	if err != nil {
 		return nil, err
 	}
@@ -181,7 +180,7 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.SubjectId)
+	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -228,7 +227,7 @@ func (s *ConnectServer) ListAuditEvents(ctx context.Context, req *connect.Reques
 	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.SubjectId)
+	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -256,18 +255,5 @@ func (s *ConnectServer) ListAuditEvents(ctx context.Context, req *connect.Reques
 
 // mapError converts domain errors to Connect status codes, logging unexpected ones.
 func (s *ConnectServer) mapError(err error) *connect.Error {
-	if mapped := MapError(err); mapped != nil {
-		return mapped
-	}
-	s.log.Error("core request failed", "error", err)
-	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
-}
-
-// parseUUID parses a UUID request field, returning a Connect InvalidArgument error on failure.
-func parseUUID(raw string) (uuid.UUID, error) {
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
-	}
-	return id, nil
+	return ToConnectError(s.log, "core", err)
 }

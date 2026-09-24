@@ -33,6 +33,7 @@ func TestMapError(t *testing.T) {
 		{"kind mismatch", ErrKindMismatch, connect.CodeFailedPrecondition},
 		{"locked", ErrLocked, connect.CodeFailedPrecondition},
 		{"deleted", ErrDeleted, connect.CodeFailedPrecondition},
+		{"invalid state", ErrInvalidState, connect.CodeFailedPrecondition},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {

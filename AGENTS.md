@@ -64,15 +64,22 @@ whenever a task starts, completes, changes scope or order.
   typed `actor_contact`, seeded `organization_category`). Roles are NOT columns —
   actors attach via typed `CoreService` relationships (`CASE_HAS_ACTOR_*`,
   `DOCUMENT_*_ACTOR`); persons carry no PII (register link only).
+- **case** (`pkg/casefile`) — the affaire: `case_type` (with a business-reference
+  namespace) + `case_file` → `CaseService`. Status lifecycle OPEN / IN_PROGRESS /
+  SUSPENDED / CLOSED (`casefile.transitions`; closing and reopening need a reason, a
+  closed case is frozen → `core.ErrInvalidState` = FAILED_PRECONDITION), independent of
+  any workflow. The reference is allocated in the type namespace by default
+  (`2026-000123` in namespace `OPC`). Participants, documents and related cases are typed relationships.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
-  delete) and the Actor module (list/create/detail/edit/activate/delete), plus read-only
+  delete), the Actor module (list/create/detail/edit/activate/delete) and the Case module
+  (list/create/detail/edit/transition/link/delete), plus read-only
   governance/audit and core panels. Embedded via `//go:embed` and served at `/`.
   See "Frontend" below.
 
 ### Not yet built (same foundation)
 
-Case (`case_file` + timeline + circulation), Thing (parcelle/bâtiment with
+Case timeline + circulation, Thing (parcelle/bâtiment with
 PostGIS geometry), a real permission/confidentiality engine, storage (MinIO),
 search (Meilisearch), workflow. The Actor domain continues too (addresses, and the
 full production role vocabulary mapped onto `relationship_type` with Case/Thing).
@@ -81,7 +88,7 @@ Design new domains as first-class subjects that reuse the core primitives.
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto, actor.proto  (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -89,13 +96,15 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0009 (dbmate format)
+  │   └── db/migrations/     0001..0010 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
   ├── filestore/             local-filesystem implementation (internal:// refs)
   └── blobstoretest/         conformance suite every implementation must pass
 pkg/actor/                   actor domain: persons & organizations (reuses core primitives)
+  └── module/                bundleable module (NO migrations; core owns schema)
+pkg/casefile/                case (affaire) domain: types, status lifecycle (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
 cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
@@ -217,11 +226,13 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
   http://127.0.0.1:8088/goeland.v1.DocumentService/ListDocumentTypes
 ```
 
-`CoreService`, `DocumentService` and `ActorService` are all annotated, so each has REST
+`CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
 `/api/subjects:lookup`; ActorService:
-`/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`).
+`/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
+CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
+`/api/cases/search`, `/api/case-types`).
 
 ## Frontend (embedded SPA)
 

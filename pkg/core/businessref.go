@@ -40,9 +40,9 @@ func (r BusinessRefRequest) IsZero() bool {
 	return r.Namespace == "" && r.Value == "" && !r.Allocate
 }
 
-// normalized trims r and validates it, returning core.ErrInvalidInput on any
+// Normalized trims r and validates it, returning core.ErrInvalidInput on any
 // violation. It is applied by the service before any persistence.
-func (r BusinessRefRequest) normalized() (BusinessRefRequest, error) {
+func (r BusinessRefRequest) Normalized() (BusinessRefRequest, error) {
 	r.Namespace = strings.TrimSpace(r.Namespace)
 	r.Value = strings.TrimSpace(r.Value)
 	switch {

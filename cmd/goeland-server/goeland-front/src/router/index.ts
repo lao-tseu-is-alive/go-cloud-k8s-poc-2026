@@ -1,5 +1,5 @@
 /**
- * router/index.ts — document module routes for the Goéland POC.
+ * router/index.ts — case, document and actor routes for the Goéland POC.
  */
 import { createRouter, createWebHistory } from 'vue-router'
 
@@ -21,6 +21,21 @@ const router = createRouter({
       path: '/documents/:id',
       name: 'document-detail',
       component: () => import('@/pages/documents/DocumentDetailPage.vue'),
+    },
+    {
+      path: '/cases',
+      name: 'cases',
+      component: () => import('@/pages/cases/CaseListPage.vue'),
+    },
+    {
+      path: '/cases/new',
+      name: 'case-create',
+      component: () => import('@/pages/cases/CaseCreatePage.vue'),
+    },
+    {
+      path: '/cases/:id',
+      name: 'case-detail',
+      component: () => import('@/pages/cases/CaseDetailPage.vue'),
     },
     {
       path: '/actors',

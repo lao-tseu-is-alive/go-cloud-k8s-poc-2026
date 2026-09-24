@@ -5,6 +5,8 @@
     "language": "Language"
   },
   "nav": {
+    "cases": "Cases",
+    "createCase": "New case",
     "documents": "Documents",
     "createDocument": "New document",
     "actors": "Actors",
@@ -24,6 +26,11 @@
     "document": { "label": "Document", "plural": "Documents" }
   },
   "pages": {
+    "cases": {
+      "list": { "title": "Cases", "queryHint": "Title, description or business reference (e.g. 2026-000042)" },
+      "detail": { "title": "Case details" },
+      "create": { "title": "Open a case", "businessRefHint": "The business reference is allocated automatically from the case type." }
+    },
     "documents": {
       "list": { "title": "Documents" },
       "detail": { "title": "Document details" },
@@ -36,6 +43,10 @@
     }
   },
   "sections": {
+    "case": {
+      "summary": "Summary",
+      "relationships": "Participants, documents and related subjects"
+    },
     "document": {
       "summary": "Summary",
       "storage": "Storage",
@@ -60,6 +71,15 @@
     }
   },
   "fields": {
+    "case": {
+      "case_type": "Case type",
+      "title": "Title",
+      "description": "Description",
+      "status": "Status",
+      "opened_at": "Opened at",
+      "closed_at": "Closed at",
+      "closure_reason": "Closure reason"
+    },
     "document": {
       "title": "Title",
       "description": "Description",
@@ -154,6 +174,12 @@
     "common": { "created_at": "Created at", "actions": "Actions" }
   },
   "actions": {
+    "case": {
+      "create": "Open case",
+      "edit": "Edit case",
+      "delete": "Delete case",
+      "moveTo": "Move to {status}"
+    },
     "document": {
       "create": "Create document",
       "updateMetadata": "Update metadata",
@@ -231,6 +257,13 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "CaseStatus": {
+      "CASE_STATUS_UNSPECIFIED": "Unspecified status",
+      "CASE_STATUS_OPEN": "Open",
+      "CASE_STATUS_IN_PROGRESS": "In progress",
+      "CASE_STATUS_SUSPENDED": "Suspended",
+      "CASE_STATUS_CLOSED": "Closed"
+    },
     "ActorKind": {
       "ACTOR_KIND_UNSPECIFIED": "Unspecified kind",
       "ACTOR_KIND_PERSON": "Physical person",
@@ -294,6 +327,17 @@
     "invalid_argument": "Invalid data."
   },
   "messages": {
+    "case": {
+      "createSuccess": "Case opened {ref}.",
+      "updateSuccess": "Case updated.",
+      "statusChanged": "Case status changed.",
+      "deleted": "The case was soft-deleted.",
+      "deleteConfirm": "The case will be soft-deleted. It stays preserved in history.",
+      "closedReadOnly": "This case is closed: reopen it to edit its metadata.",
+      "deletedReadOnly": "This case is soft-deleted (read only).",
+      "relationshipsHint": "Actors (requester, mandatee), documents, things and related cases linked to this case, in both directions.",
+      "reasonRequired": "A reason is required to close or reopen a case."
+    },
     "document": {
       "lockedCannotEdit": "This document is locked and can no longer be modified.",
       "deletedReadOnly": "This document is soft-deleted (read only).",

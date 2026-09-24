@@ -6,7 +6,6 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -76,7 +75,7 @@ func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goela
 	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +108,7 @@ func (s *ConnectServer) UpdateActor(ctx context.Context, req *connect.Request[go
 		return nil, err
 	}
 	msg := req.Msg
-	id, err := parseUUID(msg.Id)
+	id, err := core.ParseUUID(msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +177,7 @@ func (s *ConnectServer) DeleteActor(ctx context.Context, req *connect.Request[go
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -210,18 +209,5 @@ func (s *ConnectServer) ListOrganizationCategories(ctx context.Context, req *con
 
 // mapError converts domain errors to Connect status codes, logging unexpected ones.
 func (s *ConnectServer) mapError(err error) *connect.Error {
-	if mapped := core.MapError(err); mapped != nil {
-		return mapped
-	}
-	s.log.Error("actor request failed", "error", err)
-	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
-}
-
-// parseUUID parses a required UUID field, returning a Connect InvalidArgument error on failure.
-func parseUUID(raw string) (uuid.UUID, error) {
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
-	}
-	return id, nil
+	return core.ToConnectError(s.log, "actor", err)
 }

@@ -25,7 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-The v2 Phase 0 alignment shipped in v0.5.0; next is the Case slice (GLD-011).
+The Case slice (GLD-011) is implemented and awaits its release; next is ending a
+relationship (GLD-034), then the Thing slice (GLD-016).
 
 ## Cross-cutting quality
 
@@ -86,7 +87,7 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
 
 ## Phase 1 — Case (v2 §24)
 
-- [ ] **GLD-011 — Case slice**: `case_type` + `case_file` + `CaseService`
+- [~] **GLD-011 — Case slice**: `case_type` + `case_file` + `CaseService`
   (proto-first, mirroring Document/Actor) with `business_ref`, open/close
   lifecycle independent of any workflow, the first `CASE`-source relationship
   types including expanded `CASE_HAS_ACTOR_*` roles, a Vue panel and a

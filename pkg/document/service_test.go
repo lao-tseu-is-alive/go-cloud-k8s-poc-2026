@@ -10,6 +10,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
 )
 
 // fakeRepo is a minimal document.Repository capturing inputs for assertions.
@@ -92,54 +93,9 @@ func (f *fakeRepo) SoftDelete(context.Context, uuid.UUID, string, string) (*core
 }
 func (f *fakeRepo) ListTypes(context.Context, bool) ([]*DocumentType, error) { return nil, nil }
 
-// stubCoreRepo satisfies core.Repository so a core.Service can be constructed; the
-// document tests below never exercise the core paths.
-type stubCoreRepo struct{}
-
-func (stubCoreRepo) CreateSubject(context.Context, core.CreateSubjectInput) (*core.SubjectRef, *core.RecordMetadata, *core.AuditEvent, error) {
-	return nil, nil, nil, nil
-}
-func (stubCoreRepo) GetSubject(context.Context, uuid.UUID) (*core.SubjectRef, error) { return nil, nil }
-func (stubCoreRepo) AssignBusinessRef(context.Context, uuid.UUID, core.BusinessRefRequest, string, string) (*core.SubjectRef, *core.AuditEvent, error) {
-	return nil, nil, nil
-}
-func (stubCoreRepo) LookupSubjects(context.Context, core.LookupFilter, int) ([]*core.SubjectRef, error) {
-	return nil, nil
-}
-func (stubCoreRepo) GetRecordMetadata(context.Context, uuid.UUID) (*core.RecordMetadata, error) {
-	return nil, nil
-}
-func (stubCoreRepo) LinkSubjects(context.Context, core.LinkInput) (*core.SubjectRelationship, *core.AuditEvent, error) {
-	return nil, nil, nil
-}
-func (stubCoreRepo) UnlinkSubjects(context.Context, uuid.UUID, string, string) (*core.SubjectRelationship, *core.AuditEvent, error) {
-	return nil, nil, nil
-}
-func (stubCoreRepo) ListRelationships(context.Context, core.RelationshipFilter) (core.RelationshipResult, error) {
-	return core.RelationshipResult{}, nil
-}
-func (stubCoreRepo) ListRelationshipTypes(context.Context, bool, core.SubjectKind, core.SubjectKind) ([]*core.RelationshipType, error) {
-	return nil, nil
-}
-func (stubCoreRepo) AppendAuditEvent(context.Context, core.AuditEvent) (*core.AuditEvent, error) {
-	return nil, nil
-}
-func (stubCoreRepo) ListAuditEvents(context.Context, core.AuditFilter) (core.AuditResult, error) {
-	return core.AuditResult{}, nil
-}
-
-func newTestCoreService(t *testing.T) *core.Service {
-	t.Helper()
-	coreSvc, err := core.NewService(stubCoreRepo{}, nil)
-	if err != nil {
-		t.Fatalf("core service: %v", err)
-	}
-	return coreSvc
-}
-
 func newTestService(t *testing.T, repo Repository) *Service {
 	t.Helper()
-	svc, err := NewService(repo, newTestCoreService(t), nil, nil)
+	svc, err := NewService(repo, coretest.NewService(t), nil, nil)
 	if err != nil {
 		t.Fatalf("document service: %v", err)
 	}
@@ -250,7 +206,7 @@ func TestHashMatches(t *testing.T) {
 }
 
 func TestIngestContent(t *testing.T) {
-	coreSvc := newTestCoreService(t)
+	coreSvc := coretest.NewService(t)
 	tests := []struct {
 		name        string
 		repo        *fakeRepo

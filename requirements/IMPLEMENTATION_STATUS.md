@@ -40,10 +40,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §5.5 `audit_event` (append-only) | ✅ `0001` | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx |
 | §7 `relationship_type` + `subject_relationship` | ✅ `0002` | ✅ `CoreService.LinkSubjects/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; active-edge partial unique index; soft-delete |
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
-| §14 seed: subject kinds, relationship types (10), document types (7) | ✅ `0004` | — | ✅ | |
-| §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document module full slice in the browser; core panels read-only; Case/Thing/Actor UI pending their services |
+| §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
+| §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document, Actor and Case modules as full slices in the browser; core panels read-only; Thing UI pending its service |
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
-| §6.1 `case_type` + `case_file` | ⬜ | ⬜ `CaseService` | ⬜ | next natural slice |
+| §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
 | §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
@@ -51,14 +51,14 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed contacts (IDE/TVA/ABACUS/RC); 33 seeded categories; roles kept as relationships; persons carry no PII (register link only) |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
-| §14.5/§14.6 seed: test users, org units, case types, thing types | ⬜ | — | ⬜ | |
+| §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010` (case types) | — | 🟡 | `OPC_DEMANDE_PC` (namespace OPC), `GENERIC_REQUEST` (GEN); users, org units, thing types pending |
 
 ---
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo still needs Case + Thing + Timeline + Circulation, so it is
-partly pending — but **Actor is now done** (persons/organizations creatable and
+The 16-step demo still needs Thing + Timeline + Circulation, so it is
+partly pending — but **Actor and Case are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
 lifecycle → edit blocked when locked → audit):
@@ -67,8 +67,9 @@ lifecycle → edit blocked when locked → audit):
 - ✅ (8) link the document to a case — `link_to_case_id` on create / `LinkDocument` (works once a CASE subject exists)
 - ✅ (9) link document to a thing (`DOCUMENT_REPRESENTS_THING`) — via `LinkDocument` (relationship type seeded; needs a THING subject)
 - ✅ (16) consult the audit — `GetDocument{includeAudit}` / `GetActor{includeAudit}` / `CoreService.ListAuditEvents`
-- 🟡 actor parties — `ActorService.CreateActor` creates PERSON/ORGANIZATION actors; linking them into a case (`CASE_HAS_ACTOR_*`) works once a CASE subject exists
-- ⬜ (1–6, 10–15) case creation, thing, timeline add + validate + immutability, circulation + response — pending their services
+- ✅ (1) create an `OPC_DEMANDE_PC` case — `CreateCase` (reference `YYYY-NNNNNN` allocated in namespace `OPC`)
+- ✅ (4–5) create an actor and link it as requester/mandatee — `CreateActor` + `LinkSubjects(CASE_HAS_ACTOR_*)`
+- ⬜ (2–3, 6, 9 target, 10–15) thing, timeline add + validate + immutability, circulation + response — pending their services
 
 ---
 
@@ -246,6 +247,13 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   let a client attach any document by quoting its hash); the upload endpoint now requires
   `goeland:write` (download `goeland:read`); unregistered duplicate bytes are removed at once,
   orphan blobs of abandoned uploads are left for a later GC.
+- **Case lifecycle (GLD-011, v2 §24, §35)** — `case_file.status` is OPEN / IN_PROGRESS /
+  SUSPENDED / CLOSED with an explicit transition table (no self transitions; a closed case can
+  only be reopened); closing and reopening require a reason, recorded in the
+  `CASE_STATUS_CHANGED` audit event and, on close, in the closure stamps; a closed case
+  rejects edits (FAILED_PRECONDITION) until reopened. Soft deletion stays in
+  `record_metadata`. The type's `business_ref_namespace` drives default reference allocation;
+  an explicit reference request overrides it.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
@@ -259,7 +267,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   locked-update rejected → soft delete → deleted-mutation rejected → audit trail), and the
   **actor lifecycle** (org create with contacts+category → search → update/label-sync →
   case→actor link → soft-delete+rejection → audit; person PII-free specialization;
-  organization `legal_name` required; 33 categories seeded). Env-gated on
+  organization `legal_name` required; 33 categories seeded), and the **case lifecycle**
+  (seeded types → create with allocated reference → actor roles + document links →
+  transitions with reasons → closed-case freeze → reopen → explicit reference → soft delete).
+  Env-gated on
   `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
   `go test ./...` stays green without a database.
 - ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /

@@ -5,7 +5,6 @@ import (
 
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // isoDate is the layout used for the probative official_date field on the wire.
@@ -46,7 +45,7 @@ func DomainToProto(doc *Document) *goelandv1.Document {
 		ExternalUrl:    doc.ExternalURL,
 		Language:       doc.Language,
 		Status:         goelandv1.DocumentStatus(doc.Status),
-		Metadata:       structFromMap(doc.Metadata),
+		Metadata:       core.StructFromMap(doc.Metadata),
 		CreatedAt:      core.TimestampOrNil(doc.CreatedAt),
 		CreatedBy:      doc.CreatedBy,
 		UpdatedAt:      core.TimestampOrNil(doc.UpdatedAt),
@@ -70,7 +69,7 @@ func VersionToProto(v *Version) *goelandv1.DocumentVersion {
 		IsRecord:    v.IsRecord,
 		ValidatedAt: core.TimestampPtrOrNil(v.ValidatedAt),
 		ValidatedBy: v.ValidatedBy,
-		Metadata:    structFromMap(v.Metadata),
+		Metadata:    core.StructFromMap(v.Metadata),
 		CreatedAt:   core.TimestampOrNil(v.CreatedAt),
 		CreatedBy:   v.CreatedBy,
 	}
@@ -112,16 +111,4 @@ func parseOfficialDate(s string) (*time.Time, error) {
 		return nil, err
 	}
 	return &t, nil
-}
-
-// structFromMap converts a map to a proto Struct, returning nil for empty/invalid input.
-func structFromMap(m map[string]any) *structpb.Struct {
-	if len(m) == 0 {
-		return nil
-	}
-	s, err := structpb.NewStruct(m)
-	if err != nil {
-		return nil
-	}
-	return s
 }

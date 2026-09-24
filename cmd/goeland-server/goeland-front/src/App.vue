@@ -24,6 +24,10 @@
         <span class="text-caption ml-2 d-none d-sm-inline">{{ t('app.subtitle') }}</span>
       </v-app-bar-title>
 
+      <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-briefcase-outline" to="/cases" variant="text">
+        {{ t('nav.cases') }}
+      </v-btn>
+
       <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-file-document-multiple" to="/documents" variant="text">
         {{ t('nav.documents') }}
       </v-btn>

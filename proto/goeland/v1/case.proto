@@ -1,0 +1,337 @@
+// Goéland POC - Case component (affaires, spec v1 §6.1, spec v2 §24).
+//
+// Proto-first definition for CaseService + supporting messages. A case is the
+// administrative business file at the heart of Goéland: a first-class subject
+// (kind = CASE) with a type, an optional business reference (business_ref), an
+// operational lifecycle, and typed relationships to actors, documents, things
+// and other cases (CASE_HAS_ACTOR_*, CASE_HAS_DOCUMENT, CASE_CONCERNS_THING,
+// CASE_PARENT_OF_CASE) created through CoreService.LinkSubjects.
+//
+// A case exists independently of any workflow (CASE != WORKFLOW_INSTANCE):
+// timeline, tasks, circulations and workflows attach to it in later slices.
+// Every mutation is audited in the same transaction; deletion is logical.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// CASE ENUMS / MESSAGES
+// =============================================
+
+// CaseStatus is the operational state of a case. ARCHIVED and DISPOSED are
+// records-management states handled by the future retention component, not here.
+enum CaseStatus {
+  // CASE_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in searches.
+  CASE_STATUS_UNSPECIFIED = 0;
+  // CASE_STATUS_OPEN is a newly opened (or reopened) case.
+  CASE_STATUS_OPEN = 1;
+  // CASE_STATUS_IN_PROGRESS is a case being actively processed.
+  CASE_STATUS_IN_PROGRESS = 2;
+  // CASE_STATUS_SUSPENDED is a case put on hold (e.g. waiting for the requester).
+  CASE_STATUS_SUSPENDED = 3;
+  // CASE_STATUS_CLOSED is an operationally finished case; its metadata can no
+  // longer be edited until it is reopened.
+  CASE_STATUS_CLOSED = 4;
+}
+
+// CaseType is a controlled classification of cases (e.g. OPC_DEMANDE_PC).
+// Types are seeded reference data; a case's type is fixed at creation.
+message CaseType {
+  // id is the catalogue row UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key (1-100 characters), e.g. OPC_DEMANDE_PC.
+  string code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label is the human label (at most 200 characters).
+  string label = 3 [(buf.validate.field).string.max_len = 200];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 2000];
+  // business_ref_namespace, when set, makes CreateCase allocate the case's
+  // business reference in this namespace (e.g. OPC → 2026-000042).
+  string business_ref_namespace = 5;
+  // is_active reports whether the type is offered for new cases.
+  bool is_active = 6;
+}
+
+// Case is an administrative business file, 1:1 with SubjectRef (id == subject id).
+message Case {
+  // subject_ref is the embedded canonical identity (kind = CASE), including the
+  // business reference; its id is the case id.
+  SubjectRef subject_ref = 1;
+  // case_type is the classification chosen at creation.
+  CaseType case_type = 2;
+  // title is the case title (1-500 characters), mirrored into the subject label.
+  string title = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // description is free text (at most 4000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 4000];
+  // status is the operational state.
+  CaseStatus status = 5;
+  // opened_at is when the case was opened.
+  google.protobuf.Timestamp opened_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // closed_at is when the case was closed; absent unless status is CLOSED.
+  google.protobuf.Timestamp closed_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // closed_by is the operator who closed the case; empty unless CLOSED.
+  string closed_by = 8;
+  // closure_reason is the justification given when closing; empty unless CLOSED.
+  string closure_reason = 9;
+  // metadata holds secondary data about the case.
+  google.protobuf.Struct metadata = 10;
+  // created_at is the server creation time.
+  google.protobuf.Timestamp created_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the case.
+  string created_by = 12;
+  // updated_at is the last modification time, maintained by the database.
+  google.protobuf.Timestamp updated_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // record_metadata is the governance record (confidentiality, lock, owner...).
+  RecordMetadata record_metadata = 14;
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// CreateCaseRequest opens a new case. SubjectRef + RecordMetadata are created
+// via Core internally, in the same transaction.
+message CreateCaseRequest {
+  // case_type_code is the required code of an active case type.
+  string case_type_code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // title is the required title (1-500 characters); surrounding whitespace is trimmed.
+  string title = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // description is optional free text (at most 4000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // metadata holds secondary data about the case.
+  google.protobuf.Struct metadata = 4;
+  // business_ref overrides the reference: absent means "allocate in the case
+  // type's namespace when it has one, otherwise none".
+  BusinessRefRequest business_ref = 5;
+  // initial_governance optionally sets the owner, confidentiality and records
+  // fields; the owner defaults to the operator.
+  //
+  // NOTE: the acting operator is derived server-side from the authenticated
+  // principal (never trusted from the client).
+  RecordMetadata initial_governance = 6;
+}
+
+// CreateCaseResponse returns the opened case.
+message CreateCaseResponse {
+  // case is the opened case (status OPEN) with its governance.
+  Case case = 1;
+  // created_event is the CASE_CREATED audit event.
+  AuditEvent created_event = 2;
+}
+
+// GetCaseRequest reads one case with optional context.
+message GetCaseRequest {
+  // id is the case (subject_ref) UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_relationships also returns the case's relationships in BOTH
+  // directions (actors, documents, things, parent and child cases).
+  bool include_relationships = 2;
+  // include_audit also returns the 20 most recent audit events.
+  bool include_audit = 3;
+}
+
+// GetCaseResponse returns a case and the requested context.
+message GetCaseResponse {
+  // case is the case with its governance.
+  Case case = 1;
+  // relationships are the outgoing then incoming edges; empty unless include_relationships was set.
+  repeated SubjectRelationship relationships = 2;
+  // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+  repeated AuditEvent recent_audit = 3;
+}
+
+// UpdateCaseRequest replaces the editable metadata of a case (no partial merge).
+// A closed, locked or deleted case is rejected.
+message UpdateCaseRequest {
+  // id is the case UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // title is the new required title (1-500 characters).
+  string title = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // description replaces the description (at most 4000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // metadata replaces the whole extension map.
+  google.protobuf.Struct metadata = 4;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateCaseResponse returns the updated case.
+message UpdateCaseResponse {
+  // case is the updated case.
+  Case case = 1;
+  // update_event is the CASE_UPDATED audit event.
+  AuditEvent update_event = 2;
+}
+
+// TransitionCaseRequest moves a case to another status. Allowed transitions:
+// OPEN → IN_PROGRESS | SUSPENDED | CLOSED; IN_PROGRESS → OPEN | SUSPENDED |
+// CLOSED; SUSPENDED → OPEN | IN_PROGRESS | CLOSED; CLOSED → OPEN (reopen).
+// Closing and reopening require a reason. Anything else is FAILED_PRECONDITION.
+message TransitionCaseRequest {
+  // id is the case UUID; a locked or deleted case is rejected.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // target_status is the requested status; UNSPECIFIED is rejected.
+  CaseStatus target_status = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // reason is the justification (at most 2000 characters); required to close or reopen.
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// TransitionCaseResponse returns the case in its new status.
+message TransitionCaseResponse {
+  // case is the case in its new status.
+  Case case = 1;
+  // transition_event is the CASE_STATUS_CHANGED audit event (before/after status).
+  AuditEvent transition_event = 2;
+}
+
+// SearchCasesRequest performs accent-insensitive search + filters. Results are newest first.
+message SearchCasesRequest {
+  // query is plain text matched accent-insensitively against title and
+  // description, or exactly against the business reference (at most 200
+  // characters); empty matches every case.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // case_type_code restricts results to one type; empty means any.
+  string case_type_code = 2 [(buf.validate.field).string.max_len = 100];
+  // status restricts results to one status; UNSPECIFIED means any.
+  CaseStatus status = 3 [(buf.validate.field).enum.defined_only = true];
+  // include_deleted also returns soft-deleted cases.
+  bool include_deleted = 4;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 5 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 6 [(buf.validate.field).string.max_len = 1024];
+}
+
+// SearchCasesResponse is one page of matching cases.
+message SearchCasesResponse {
+  // cases are the cases of this page.
+  repeated Case cases = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching cases across all pages.
+  int32 total_size = 3;
+}
+
+// DeleteCaseRequest soft-deletes a case.
+message DeleteCaseRequest {
+  // id is the case UUID; an already deleted case is rejected, a locked one is not.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// DeleteCaseResponse confirms a soft delete.
+message DeleteCaseResponse {
+  // deleted_case_id is the soft-deleted case.
+  string deleted_case_id = 1;
+  // delete_event is the CASE_DELETED audit event.
+  AuditEvent delete_event = 2;
+}
+
+// ListCaseTypesRequest filters the case type catalogue.
+message ListCaseTypesRequest {
+  // only_active returns only types offered for new cases.
+  bool only_active = 1;
+}
+
+// ListCaseTypesResponse returns the matching case types, ordered by code.
+message ListCaseTypesResponse {
+  // case_types are the matching types.
+  repeated CaseType case_types = 1;
+}
+
+// =============================================
+// CASE SERVICE
+// =============================================
+
+// CaseService is the case (affaire) component of the Goéland POC. Every RPC carries a
+// google.api.http annotation so Vanguard also exposes it as REST/JSON; the
+// Connect/gRPC path /goeland.v1.CaseService/<Method> stays available.
+service CaseService {
+  // Open a case. SubjectRef + RecordMetadata via Core, business reference
+  // allocated in the case type's namespace when it has one.
+  // Requires goeland:write; writes a CASE_CREATED audit event in the same transaction.
+  rpc CreateCase(CreateCaseRequest) returns (CreateCaseResponse) {
+    option (google.api.http) = {
+      post: "/api/cases"
+      body: "*"
+    };
+  }
+
+  // Retrieve a case with optional relationships (both directions) and audit.
+  // Requires goeland:read; NOT_FOUND when the case does not exist.
+  rpc GetCase(GetCaseRequest) returns (GetCaseResponse) {
+    option (google.api.http) = {get: "/api/cases/{id}"};
+  }
+
+  // Replace the editable metadata of a case.
+  // Requires goeland:write; FAILED_PRECONDITION when the case is closed, locked or deleted.
+  rpc UpdateCase(UpdateCaseRequest) returns (UpdateCaseResponse) {
+    option (google.api.http) = {
+      patch: "/api/cases/{id}"
+      body: "*"
+    };
+  }
+
+  // Move a case to another status (see TransitionCaseRequest for the allowed moves).
+  // Requires goeland:write; writes a CASE_STATUS_CHANGED audit event.
+  rpc TransitionCase(TransitionCaseRequest) returns (TransitionCaseResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{id}/transition"
+      body: "*"
+    };
+  }
+
+  // Accent-insensitive search by title/description or exact business reference,
+  // with type / status filters. Requires goeland:read.
+  rpc SearchCases(SearchCasesRequest) returns (SearchCasesResponse) {
+    option (google.api.http) = {get: "/api/cases/search"};
+  }
+
+  // Soft-delete a case (non-destructive) and write an audit event.
+  // Requires goeland:write.
+  rpc DeleteCase(DeleteCaseRequest) returns (DeleteCaseResponse) {
+    option (google.api.http) = {delete: "/api/cases/{id}"};
+  }
+
+  // List the controlled case types (classification catalogue).
+  // Requires goeland:read.
+  rpc ListCaseTypes(ListCaseTypesRequest) returns (ListCaseTypesResponse) {
+    option (google.api.http) = {get: "/api/case-types"};
+  }
+}

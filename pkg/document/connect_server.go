@@ -6,11 +6,9 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
-	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
-	"google.golang.org/protobuf/types/known/structpb"
 )
 
 // ConnectServer exposes Service through the generated DocumentService contract.
@@ -42,11 +40,11 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("official_date must be an ISO date (YYYY-MM-DD)"))
 	}
-	blobID, err := optionalUUID(msg.ContentBlobId)
+	blobID, err := core.OptionalUUID(msg.ContentBlobId)
 	if err != nil {
 		return nil, err
 	}
-	linkCase, err := optionalUUID(msg.LinkToCaseId)
+	linkCase, err := core.OptionalUUID(msg.LinkToCaseId)
 	if err != nil {
 		return nil, err
 	}
@@ -63,7 +61,7 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		IsRecord:         msg.IsRecord,
 		Language:         msg.Language,
 		PageCount:        msg.PageCount,
-		Metadata:         structToMap(msg.Metadata),
+		Metadata:         core.StructToMap(msg.Metadata),
 		OperatorID:       core.OperatorID(user),
 		LinkToCaseID:     linkCase,
 	}
@@ -96,11 +94,11 @@ func (s *ConnectServer) AddDocumentVersion(ctx context.Context, req *connect.Req
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.DocumentId)
+	id, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
 		return nil, err
 	}
-	blobID, err := optionalUUID(req.Msg.ContentBlobId)
+	blobID, err := core.OptionalUUID(req.Msg.ContentBlobId)
 	if err != nil {
 		return nil, err
 	}
@@ -109,7 +107,7 @@ func (s *ConnectServer) AddDocumentVersion(ctx context.Context, req *connect.Req
 		IsFinal:       req.Msg.IsFinal,
 		IsRecord:      req.Msg.IsRecord,
 		PageCount:     req.Msg.PageCount,
-		Metadata:      structToMap(req.Msg.Metadata),
+		Metadata:      core.StructToMap(req.Msg.Metadata),
 		OperatorID:    core.OperatorID(user),
 		Reason:        req.Msg.Reason,
 	})
@@ -128,7 +126,7 @@ func (s *ConnectServer) ListDocumentVersions(ctx context.Context, req *connect.R
 	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.DocumentId)
+	id, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
 		return nil, err
 	}
@@ -148,7 +146,7 @@ func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[go
 	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +178,7 @@ func (s *ConnectServer) UpdateDocumentMetadata(ctx context.Context, req *connect
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -193,7 +191,7 @@ func (s *ConnectServer) UpdateDocumentMetadata(ctx context.Context, req *connect
 		Description:  req.Msg.Description,
 		OfficialDate: officialDate,
 		Language:     req.Msg.Language,
-		Metadata:     structToMap(req.Msg.Metadata),
+		Metadata:     core.StructToMap(req.Msg.Metadata),
 		OperatorID:   core.OperatorID(user),
 		Reason:       req.Msg.Reason,
 	})
@@ -212,7 +210,7 @@ func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -233,7 +231,7 @@ func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connec
 	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -259,11 +257,11 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	caseID, err := optionalUUID(req.Msg.CaseId)
+	caseID, err := core.OptionalUUID(req.Msg.CaseId)
 	if err != nil {
 		return nil, err
 	}
-	thingID, err := optionalUUID(req.Msg.ThingId)
+	thingID, err := core.OptionalUUID(req.Msg.ThingId)
 	if err != nil {
 		return nil, err
 	}
@@ -295,11 +293,11 @@ func (s *ConnectServer) LinkDocument(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, err
 	}
-	docID, err := parseUUID(req.Msg.DocumentId)
+	docID, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
 		return nil, err
 	}
-	targetID, err := parseUUID(req.Msg.TargetSubjectId)
+	targetID, err := core.ParseUUID(req.Msg.TargetSubjectId)
 	if err != nil {
 		return nil, err
 	}
@@ -325,7 +323,7 @@ func (s *ConnectServer) DeleteDocument(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
-	id, err := parseUUID(req.Msg.Id)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
@@ -357,38 +355,5 @@ func (s *ConnectServer) ListDocumentTypes(ctx context.Context, req *connect.Requ
 
 // mapError converts domain errors to Connect status codes, logging unexpected ones.
 func (s *ConnectServer) mapError(err error) *connect.Error {
-	if mapped := core.MapError(err); mapped != nil {
-		return mapped
-	}
-	s.log.Error("document request failed", "error", err)
-	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
-}
-
-// parseUUID parses a required UUID field, returning a Connect InvalidArgument error on failure.
-func parseUUID(raw string) (uuid.UUID, error) {
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return uuid.Nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
-	}
-	return id, nil
-}
-
-// optionalUUID parses an optional UUID field: empty string yields nil.
-func optionalUUID(raw string) (*uuid.UUID, error) {
-	if raw == "" {
-		return nil, nil
-	}
-	id, err := uuid.Parse(raw)
-	if err != nil {
-		return nil, connect.NewError(connect.CodeInvalidArgument, errors.New("invalid id"))
-	}
-	return &id, nil
-}
-
-// structToMap converts a proto Struct to a Go map (nil when unset).
-func structToMap(s *structpb.Struct) map[string]any {
-	if s == nil {
-		return nil
-	}
-	return s.AsMap()
+	return core.ToConnectError(s.log, "document", err)
 }

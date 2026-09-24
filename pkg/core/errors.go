@@ -17,4 +17,8 @@ var (
 	ErrLocked = errors.New("record is locked")
 	// ErrDeleted is returned when a mutation targets a soft-deleted record.
 	ErrDeleted = errors.New("record is deleted")
+	// ErrInvalidState is returned when an operation is not allowed in the
+	// subject's current business state (e.g. editing a closed case or an
+	// invalid lifecycle transition).
+	ErrInvalidState = errors.New("operation not allowed in the current state")
 )

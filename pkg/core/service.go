@@ -45,7 +45,7 @@ func (s *Service) CreateSubjectRef(ctx context.Context, in CreateSubjectInput) (
 		return nil, nil, nil, fmt.Errorf("%w: confidentiality_level must be between 0 and 5", ErrInvalidInput)
 	}
 	if !in.BusinessRef.IsZero() {
-		req, err := in.BusinessRef.normalized()
+		req, err := in.BusinessRef.Normalized()
 		if err != nil {
 			return nil, nil, nil, err
 		}
@@ -67,7 +67,7 @@ func (s *Service) AssignBusinessRef(ctx context.Context, subjectID uuid.UUID, re
 	if subjectID == uuid.Nil {
 		return nil, nil, fmt.Errorf("%w: subject id is required", ErrInvalidInput)
 	}
-	req, err := req.normalized()
+	req, err := req.Normalized()
 	if err != nil {
 		return nil, nil, err
 	}

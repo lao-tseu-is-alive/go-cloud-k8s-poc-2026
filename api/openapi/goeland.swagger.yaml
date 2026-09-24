@@ -14,6 +14,11 @@ tags:
       ActorService is the external-party (person / organization) component of the POC.
       Every RPC carries a google.api.http annotation so Vanguard also exposes it as
       REST/JSON; the Connect/gRPC path /goeland.v1.ActorService/<Method> stays available.
+  - name: CaseService
+    description: |-
+      CaseService is the case (affaire) component of the Goéland POC. Every RPC carries a
+      google.api.http annotation so Vanguard also exposes it as REST/JSON; the
+      Connect/gRPC path /goeland.v1.CaseService/<Method> stays available.
   - name: DocumentService
     description: |-
       DocumentService is the modern-GED document component of the Goéland POC.
@@ -212,6 +217,240 @@ paths:
             $ref: '#/definitions/ActorServiceUpdateActorBody'
       tags:
         - ActorService
+  /api/case-types:
+    get:
+      summary: |-
+        List the controlled case types (classification catalogue).
+        Requires goeland:read.
+      operationId: ListCaseTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListCaseTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          description: only_active returns only types offered for new cases.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - CaseService
+  /api/cases:
+    post:
+      summary: |-
+        Open a case. SubjectRef + RecordMetadata via Core, business reference
+        allocated in the case type's namespace when it has one.
+        Requires goeland:write; writes a CASE_CREATED audit event in the same transaction.
+      operationId: CreateCase
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateCaseResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: |-
+            CreateCaseRequest opens a new case. SubjectRef + RecordMetadata are created
+            via Core internally, in the same transaction.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateCaseRequest'
+      tags:
+        - CaseService
+  /api/cases/search:
+    get:
+      summary: |-
+        Accent-insensitive search by title/description or exact business reference,
+        with type / status filters. Requires goeland:read.
+      operationId: SearchCases
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchCasesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: |-
+            query is plain text matched accent-insensitively against title and
+            description, or exactly against the business reference (at most 200
+            characters); empty matches every case.
+          in: query
+          required: false
+          type: string
+        - name: caseTypeCode
+          description: case_type_code restricts results to one type; empty means any.
+          in: query
+          required: false
+          type: string
+        - name: status
+          description: |-
+            status restricts results to one status; UNSPECIFIED means any.
+
+             - CASE_STATUS_UNSPECIFIED: CASE_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in searches.
+             - CASE_STATUS_OPEN: CASE_STATUS_OPEN is a newly opened (or reopened) case.
+             - CASE_STATUS_IN_PROGRESS: CASE_STATUS_IN_PROGRESS is a case being actively processed.
+             - CASE_STATUS_SUSPENDED: CASE_STATUS_SUSPENDED is a case put on hold (e.g. waiting for the requester).
+             - CASE_STATUS_CLOSED: CASE_STATUS_CLOSED is an operationally finished case; its metadata can no
+            longer be edited until it is reopened.
+          in: query
+          required: false
+          type: string
+          enum:
+            - CASE_STATUS_UNSPECIFIED
+            - CASE_STATUS_OPEN
+            - CASE_STATUS_IN_PROGRESS
+            - CASE_STATUS_SUSPENDED
+            - CASE_STATUS_CLOSED
+          default: CASE_STATUS_UNSPECIFIED
+        - name: includeDeleted
+          description: include_deleted also returns soft-deleted cases.
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - CaseService
+  /api/cases/{id}:
+    get:
+      summary: |-
+        Retrieve a case with optional relationships (both directions) and audit.
+        Requires goeland:read; NOT_FOUND when the case does not exist.
+      operationId: GetCase
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetCaseResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the case (subject_ref) UUID.
+          in: path
+          required: true
+          type: string
+        - name: includeRelationships
+          description: |-
+            include_relationships also returns the case's relationships in BOTH
+            directions (actors, documents, things, parent and child cases).
+          in: query
+          required: false
+          type: boolean
+        - name: includeAudit
+          description: include_audit also returns the 20 most recent audit events.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - CaseService
+    delete:
+      summary: |-
+        Soft-delete a case (non-destructive) and write an audit event.
+        Requires goeland:write.
+      operationId: DeleteCase
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DeleteCaseResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the case UUID; an already deleted case is rejected, a locked one is not.
+          in: path
+          required: true
+          type: string
+        - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
+          in: query
+          required: false
+          type: string
+      tags:
+        - CaseService
+    patch:
+      summary: |-
+        Replace the editable metadata of a case.
+        Requires goeland:write; FAILED_PRECONDITION when the case is closed, locked or deleted.
+      operationId: UpdateCase
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateCaseResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CaseServiceUpdateCaseBody'
+      tags:
+        - CaseService
+  /api/cases/{id}/transition:
+    post:
+      summary: |-
+        Move a case to another status (see TransitionCaseRequest for the allowed moves).
+        Requires goeland:write; writes a CASE_STATUS_CHANGED audit event.
+      operationId: TransitionCase
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1TransitionCaseResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the case UUID; a locked or deleted case is rejected.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CaseServiceTransitionCaseBody'
+      tags:
+        - CaseService
   /api/document-types:
     get:
       summary: |-
@@ -991,6 +1230,38 @@ definitions:
     description: |-
       UpdateActorRequest updates mutable fields. Blocked if the record is locked.
       contacts, when provided, replace the full set (managed as a whole for simplicity).
+  CaseServiceTransitionCaseBody:
+    type: object
+    properties:
+      targetStatus:
+        $ref: '#/definitions/v1CaseStatus'
+        description: target_status is the requested status; UNSPECIFIED is rejected.
+      reason:
+        type: string
+        description: reason is the justification (at most 2000 characters); required to close or reopen.
+    description: |-
+      TransitionCaseRequest moves a case to another status. Allowed transitions:
+      OPEN → IN_PROGRESS | SUSPENDED | CLOSED; IN_PROGRESS → OPEN | SUSPENDED |
+      CLOSED; SUSPENDED → OPEN | IN_PROGRESS | CLOSED; CLOSED → OPEN (reopen).
+      Closing and reopening require a reason. Anything else is FAILED_PRECONDITION.
+  CaseServiceUpdateCaseBody:
+    type: object
+    properties:
+      title:
+        type: string
+        description: title is the new required title (1-500 characters).
+      description:
+        type: string
+        description: description replaces the description (at most 4000 characters).
+      metadata:
+        type: object
+        description: metadata replaces the whole extension map.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      UpdateCaseRequest replaces the editable metadata of a case (no partial merge).
+      A closed, locked or deleted case is rejected.
   CoreServiceAssignBusinessRefBody:
     type: object
     properties:
@@ -1297,6 +1568,111 @@ definitions:
     description: |-
       BusinessRefRequest asks for a business reference on a subject: an explicit
       value or a server-allocated one. A subject keeps its first reference.
+  v1Case:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        description: |-
+          subject_ref is the embedded canonical identity (kind = CASE), including the
+          business reference; its id is the case id.
+      caseType:
+        $ref: '#/definitions/v1CaseType'
+        description: case_type is the classification chosen at creation.
+      title:
+        type: string
+        description: title is the case title (1-500 characters), mirrored into the subject label.
+      description:
+        type: string
+        description: description is free text (at most 4000 characters).
+      status:
+        $ref: '#/definitions/v1CaseStatus'
+        description: status is the operational state.
+      openedAt:
+        type: string
+        format: date-time
+        description: opened_at is when the case was opened.
+        readOnly: true
+      closedAt:
+        type: string
+        format: date-time
+        description: closed_at is when the case was closed; absent unless status is CLOSED.
+        readOnly: true
+      closedBy:
+        type: string
+        description: closed_by is the operator who closed the case; empty unless CLOSED.
+      closureReason:
+        type: string
+        description: closure_reason is the justification given when closing; empty unless CLOSED.
+      metadata:
+        type: object
+        description: metadata holds secondary data about the case.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the server creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who created the case.
+      updatedAt:
+        type: string
+        format: date-time
+        description: updated_at is the last modification time, maintained by the database.
+        readOnly: true
+      recordMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: record_metadata is the governance record (confidentiality, lock, owner...).
+    description: Case is an administrative business file, 1:1 with SubjectRef (id == subject id).
+    required:
+      - title
+  v1CaseStatus:
+    type: string
+    enum:
+      - CASE_STATUS_UNSPECIFIED
+      - CASE_STATUS_OPEN
+      - CASE_STATUS_IN_PROGRESS
+      - CASE_STATUS_SUSPENDED
+      - CASE_STATUS_CLOSED
+    default: CASE_STATUS_UNSPECIFIED
+    description: |-
+      CaseStatus is the operational state of a case. ARCHIVED and DISPOSED are
+      records-management states handled by the future retention component, not here.
+
+       - CASE_STATUS_UNSPECIFIED: CASE_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in searches.
+       - CASE_STATUS_OPEN: CASE_STATUS_OPEN is a newly opened (or reopened) case.
+       - CASE_STATUS_IN_PROGRESS: CASE_STATUS_IN_PROGRESS is a case being actively processed.
+       - CASE_STATUS_SUSPENDED: CASE_STATUS_SUSPENDED is a case put on hold (e.g. waiting for the requester).
+       - CASE_STATUS_CLOSED: CASE_STATUS_CLOSED is an operationally finished case; its metadata can no
+      longer be edited until it is reopened.
+  v1CaseType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the catalogue row UUID.
+      code:
+        type: string
+        description: code is the unique stable key (1-100 characters), e.g. OPC_DEMANDE_PC.
+      label:
+        type: string
+        description: label is the human label (at most 200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      businessRefNamespace:
+        type: string
+        description: |-
+          business_ref_namespace, when set, makes CreateCase allocate the case's
+          business reference in this namespace (e.g. OPC → 2026-000042).
+      isActive:
+        type: boolean
+        description: is_active reports whether the type is offered for new cases.
+    description: |-
+      CaseType is a controlled classification of cases (e.g. OPC_DEMANDE_PC).
+      Types are seeded reference data; a case's type is fixed at creation.
+    required:
+      - code
   v1ContactType:
     type: string
     enum:
@@ -1420,6 +1796,50 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the ACTOR_CREATED audit event.
     description: CreateActorResponse returns the created actor.
+  v1CreateCaseRequest:
+    type: object
+    properties:
+      caseTypeCode:
+        type: string
+        description: case_type_code is the required code of an active case type.
+      title:
+        type: string
+        description: title is the required title (1-500 characters); surrounding whitespace is trimmed.
+      description:
+        type: string
+        description: description is optional free text (at most 4000 characters).
+      metadata:
+        type: object
+        description: metadata holds secondary data about the case.
+      businessRef:
+        $ref: '#/definitions/v1BusinessRefRequest'
+        description: |-
+          business_ref overrides the reference: absent means "allocate in the case
+          type's namespace when it has one, otherwise none".
+      initialGovernance:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: |-
+          initial_governance optionally sets the owner, confidentiality and records
+          fields; the owner defaults to the operator.
+
+          NOTE: the acting operator is derived server-side from the authenticated
+          principal (never trusted from the client).
+    description: |-
+      CreateCaseRequest opens a new case. SubjectRef + RecordMetadata are created
+      via Core internally, in the same transaction.
+    required:
+      - caseTypeCode
+      - title
+  v1CreateCaseResponse:
+    type: object
+    properties:
+      case:
+        $ref: '#/definitions/v1Case'
+        description: case is the opened case (status OPEN) with its governance.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the CASE_CREATED audit event.
+    description: CreateCaseResponse returns the opened case.
   v1CreateDocumentRequest:
     type: object
     properties:
@@ -1559,6 +1979,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: delete_event is the ACTOR_DELETED audit event.
     description: DeleteActorResponse confirms a soft delete.
+  v1DeleteCaseResponse:
+    type: object
+    properties:
+      deletedCaseId:
+        type: string
+        description: deleted_case_id is the soft-deleted case.
+      deleteEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: delete_event is the CASE_DELETED audit event.
+    description: DeleteCaseResponse confirms a soft delete.
   v1DeleteDocumentResponse:
     type: object
     properties:
@@ -1763,6 +2193,25 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetActorResponse returns an actor and the requested context.
+  v1GetCaseResponse:
+    type: object
+    properties:
+      case:
+        $ref: '#/definitions/v1Case'
+        description: case is the case with its governance.
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are the outgoing then incoming edges; empty unless include_relationships was set.
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+    description: GetCaseResponse returns a case and the requested context.
   v1GetDocumentResponse:
     type: object
     properties:
@@ -1859,6 +2308,16 @@ definitions:
         format: int32
         description: total_size is the number of matching events across all pages.
     description: ListAuditEventsResponse is one page of audit events.
+  v1ListCaseTypesResponse:
+    type: object
+    properties:
+      caseTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CaseType'
+        description: case_types are the matching types.
+    description: ListCaseTypesResponse returns the matching case types, ordered by code.
   v1ListDocumentTypesResponse:
     type: object
     properties:
@@ -2115,6 +2574,23 @@ definitions:
         format: int32
         description: total_size is the number of matching actors across all pages.
     description: SearchActorsResponse is one page of matching actors.
+  v1SearchCasesResponse:
+    type: object
+    properties:
+      cases:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Case'
+        description: cases are the cases of this page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching cases across all pages.
+    description: SearchCasesResponse is one page of matching cases.
   v1SearchDocumentsResponse:
     type: object
     properties:
@@ -2240,6 +2716,16 @@ definitions:
     description: |-
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one active edge exists per (source, target, type).
+  v1TransitionCaseResponse:
+    type: object
+    properties:
+      case:
+        $ref: '#/definitions/v1Case'
+        description: case is the case in its new status.
+      transitionEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: transition_event is the CASE_STATUS_CHANGED audit event (before/after status).
+    description: TransitionCaseResponse returns the case in its new status.
   v1UnlinkSubjectsResponse:
     type: object
     properties:
@@ -2260,6 +2746,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: update_event is the ACTOR_UPDATED audit event.
     description: UpdateActorResponse returns the updated actor.
+  v1UpdateCaseResponse:
+    type: object
+    properties:
+      case:
+        $ref: '#/definitions/v1Case'
+        description: case is the updated case.
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the CASE_UPDATED audit event.
+    description: UpdateCaseResponse returns the updated case.
   v1UpdateDocumentMetadataResponse:
     type: object
     properties:

@@ -20,6 +20,7 @@ import (
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
+	casemodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
@@ -107,10 +108,20 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err != nil {
 		return nil, fmt.Errorf("actor module: %w", err)
 	}
+	caseMod, err := casemodule.New(ctx, casemodule.Config{RequestTimeout: config.RequestTimeout}, casemodule.Deps{
+		Pool:        pool,
+		Verifier:    verifier,
+		CoreService: coreMod.Service(),
+		Logger:      log,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("case module: %w", err)
+	}
 
 	// Bundle mode: aggregate every module's Vanguard services into ONE transcoder.
 	services := append(coreMod.VanguardServices(), docMod.VanguardServices()...)
 	services = append(services, actorMod.VanguardServices()...)
+	services = append(services, caseMod.VanguardServices()...)
 	transcoder, err := vanguard.NewTranscoder(services)
 	if err != nil {
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
@@ -118,6 +129,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 
 	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
 	serviceNames = append(serviceNames, actorMod.ServiceNames()...)
+	serviceNames = append(serviceNames, caseMod.ServiceNames()...)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler(pool))

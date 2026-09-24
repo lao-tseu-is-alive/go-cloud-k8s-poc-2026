@@ -63,13 +63,16 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `buf.yaml` — Buf module rooted at `proto/`, its dependencies and lint/breaking rules.
 - `proto/.gitignore` — Ignores the locally exported third-party proto tree.
 - `proto/goeland/v1/actor.proto` — Authoritative `ActorService` contract: persons, organizations, typed contacts, categories.
+- `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
+- `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
 
@@ -108,6 +111,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
+- `pkg/core/coretest/coretest.go` — Test helpers: a no-op `core.Repository` stub and a core service built on it for sibling-domain unit tests.
 - `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
 - `pkg/core/doc.go` — Package documentation for the transversal core domain.
 - `pkg/core/errors.go` — Domain sentinel errors shared by every domain package.
@@ -121,6 +125,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/sql.go` — Raw SQL and alias-prefixed column projections for core tables.
 - `pkg/core/storage_postgres.go` — pgx implementation of the core repository.
 - `pkg/core/tx.go` — Exported transaction-scoped helpers reused by sibling domains for atomic identity, governance and audit.
+- `pkg/core/wire.go` — Wire helpers shared by every ConnectRPC adapter: UUID parsing, `structpb` conversion, domain error to Connect error.
 - `pkg/core/module/migrate.go` — Embedded dbmate-format migrator serialized by a PostgreSQL advisory lock.
 - `pkg/core/module/migrate_test.go` — Tests migration parsing, PL/pgSQL block handling and version keys.
 - `pkg/core/module/module.go` — Bundleable core module: dependency validation, service construction, lifecycle.
@@ -133,6 +138,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
+- `pkg/core/module/db/migrations/0010_case.sql` — Schema migration: `case_type` (with reference namespace) and `case_file` (status lifecycle, closure stamps, search vector), expanded case roles.
 - `pkg/core/module/db/migrations/0007_business_ref.sql` — Schema migration: `subject_ref.business_ref` + namespace (unique per namespace) and the `business_ref_counter` allocator.
 
 ## Document domain (`pkg/document`)
@@ -162,10 +168,25 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/actor/module/module.go` — Bundleable actor module: dependency validation and lifecycle.
 - `pkg/actor/module/routes.go` — Actor interceptor chain, Vanguard services and standalone routes.
 
+## Case domain (`pkg/casefile`)
+
+- `pkg/casefile/connect_server.go` — `CaseService` ConnectRPC adapter over the case service.
+- `pkg/casefile/doc.go` — Package documentation for the case (affaire) domain.
+- `pkg/casefile/mappers.go` — Case domain ↔ proto mappers, status enum conversion.
+- `pkg/casefile/model.go` — Case and CaseType models with `db` tags, status transition table, inputs and search filter.
+- `pkg/casefile/repository.go` — Case persistence interface.
+- `pkg/casefile/service.go` — Case business rules: validation, lifecycle transitions with reasons, search, relationships, soft delete.
+- `pkg/casefile/service_test.go` — Tests the transition table, reason requirements and input validation.
+- `pkg/casefile/sql.go` — Raw SQL and alias-prefixed column projections for case tables.
+- `pkg/casefile/storage_postgres.go` — pgx implementation: atomic create with business reference allocation, locked transitions, audit.
+- `pkg/casefile/module/module.go` — Bundleable case module: dependency validation and lifecycle.
+- `pkg/casefile/module/routes.go` — Case interceptor chain, Vanguard services and standalone routes.
+
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, PII-free person specialization.
+- `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
 - `pkg/integration/document_versions_test.go` — DB test: deduplication (incl. concurrent), automatic reuse across cases, versions sharing a blob, immutability trigger, lock guard.
 - `pkg/integration/document_lifecycle_test.go` — DB test: idempotent seeded migrations and the full document lifecycle.
@@ -185,6 +206,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
@@ -200,6 +222,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchFilters.vue` — Actor search filter bar.
 - `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
+- `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
+- `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
+- `cmd/goeland-server/goeland-front/src/components/case/caseForm.ts` — Case form model, status list and the client mirror of the transition table.
 - `cmd/goeland-server/goeland-front/src/components/core/AuditTimeline.vue` — Read-only audit event timeline.
 - `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link; the parent performs the call.
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
@@ -225,6 +250,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail, edit, activation, soft delete, governance and audit page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/cases/CaseCreatePage.vue` — Case creation page (type, title, optional explicit reference).
+- `cmd/goeland-server/goeland-front/src/pages/cases/CaseDetailPage.vue` — Case detail, edit, status transitions with reason, relationships, soft delete, governance and audit page.
+- `cmd/goeland-server/goeland-front/src/pages/cases/CaseListPage.vue` — Case search and list page with status and type filters.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document search and list page.

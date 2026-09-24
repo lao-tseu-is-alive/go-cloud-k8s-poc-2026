@@ -5,6 +5,8 @@
     "language": "Langue"
   },
   "nav": {
+    "cases": "Affaires",
+    "createCase": "Nouvelle affaire",
     "documents": "Documents",
     "createDocument": "Nouveau document",
     "actors": "Acteurs",
@@ -24,6 +26,11 @@
     "document": { "label": "Document", "plural": "Documents" }
   },
   "pages": {
+    "cases": {
+      "list": { "title": "Affaires", "queryHint": "Titre, description ou référence métier (p. ex. 2026-000042)" },
+      "detail": { "title": "Détail de l’affaire" },
+      "create": { "title": "Ouvrir une affaire", "businessRefHint": "La référence métier est attribuée automatiquement selon le type d’affaire." }
+    },
     "documents": {
       "list": { "title": "Documents" },
       "detail": { "title": "Détail du document" },
@@ -36,6 +43,10 @@
     }
   },
   "sections": {
+    "case": {
+      "summary": "Résumé",
+      "relationships": "Intervenants, documents et sujets liés"
+    },
     "document": {
       "summary": "Résumé",
       "storage": "Stockage",
@@ -60,6 +71,15 @@
     }
   },
   "fields": {
+    "case": {
+      "case_type": "Type d’affaire",
+      "title": "Titre",
+      "description": "Description",
+      "status": "Statut",
+      "opened_at": "Ouverte le",
+      "closed_at": "Clôturée le",
+      "closure_reason": "Motif de clôture"
+    },
     "document": {
       "title": "Titre",
       "description": "Description",
@@ -154,6 +174,12 @@
     "common": { "created_at": "Créé le", "actions": "Actions" }
   },
   "actions": {
+    "case": {
+      "create": "Ouvrir l’affaire",
+      "edit": "Modifier l’affaire",
+      "delete": "Supprimer l’affaire",
+      "moveTo": "Passer à « {status} »"
+    },
     "document": {
       "create": "Créer le document",
       "updateMetadata": "Modifier les métadonnées",
@@ -231,6 +257,13 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "CaseStatus": {
+      "CASE_STATUS_UNSPECIFIED": "Statut non spécifié",
+      "CASE_STATUS_OPEN": "Ouverte",
+      "CASE_STATUS_IN_PROGRESS": "En cours",
+      "CASE_STATUS_SUSPENDED": "Suspendue",
+      "CASE_STATUS_CLOSED": "Clôturée"
+    },
     "ActorKind": {
       "ACTOR_KIND_UNSPECIFIED": "Type non précisé",
       "ACTOR_KIND_PERSON": "Personne physique",
@@ -294,6 +327,17 @@
     "invalid_argument": "Données invalides."
   },
   "messages": {
+    "case": {
+      "createSuccess": "Affaire ouverte {ref}.",
+      "updateSuccess": "Affaire mise à jour.",
+      "statusChanged": "Statut de l’affaire modifié.",
+      "deleted": "L’affaire a été supprimée logiquement.",
+      "deleteConfirm": "L’affaire sera supprimée logiquement. Elle restera conservée dans l’historique.",
+      "closedReadOnly": "Cette affaire est clôturée : rouvrez-la pour modifier ses métadonnées.",
+      "deletedReadOnly": "Cette affaire est supprimée logiquement (lecture seule).",
+      "relationshipsHint": "Acteurs (demandeur, mandataire), documents, objets et affaires liés à cette affaire, dans les deux sens.",
+      "reasonRequired": "Un motif est requis pour clôturer ou rouvrir une affaire."
+    },
     "document": {
       "lockedCannotEdit": "Ce document est verrouillé et ne peut plus être modifié.",
       "deletedReadOnly": "Ce document est supprimé logiquement (lecture seule).",

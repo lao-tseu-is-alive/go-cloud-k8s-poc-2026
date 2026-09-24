@@ -8,6 +8,23 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-011** — Case slice: `CaseService` (`goeland.v1`, 7 RPCs with REST bindings under
+  `/api/cases` and `/api/case-types`) over migration `0010` (`case_type` with a reference
+  namespace, `case_file` with its status lifecycle and search vector). A case gets a business
+  reference allocated in its type namespace; statuses OPEN / IN_PROGRESS / SUSPENDED / CLOSED
+  follow an explicit transition table, closing and reopening require a reason, and a closed
+  case rejects edits until reopened. New relationship types `CASE_HAS_ACTOR_OWNER`,
+  `_ARCHITECT`, `_CONTRACTOR` and `CASE_RELATED_TO_CASE`. SPA case list, creation and detail
+  pages (edit, transitions, links, audit), and a `pkg/integration` lifecycle test.
+
+### Changed
+
+- `core.ErrInvalidState` maps to `FAILED_PRECONDITION` for operations the current state
+  forbids; wire helpers (`core.ParseUUID`, `StructFromMap`, `ToConnectError`, …) and the
+  `coretest` stub repository replace per-domain copies in the Connect adapters and tests.
+
 ### Security
 
 - `make vuln-check` (govulncheck, pinned as a `go.mod` tool) joins `make release-check`: a
