@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.6.0**.
+Tracked version: **v0.7.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -25,10 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0. The
-user's review of v0.6.0 opened Phase 1b (usable Actor and Case), done before the Thing
-slice (GLD-016). GLD-035, GLD-036, GLD-037, GLD-025, GLD-038, GLD-039 and GLD-014 are
-implemented and await their release; next is GLD-040 (reference data administration).
+Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
+v0.7.0; next is the Thing slice (GLD-016).
 
 ## Cross-cutting quality
 
@@ -102,34 +100,34 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
 
 Ordered before Thing at the user's request: v0.6.0 could not be used for real work.
 
-- [~] **GLD-035 — Local SSO documentation**: how to run the SPA in `jwt` mode
+- [x] **GLD-035 — Local SSO documentation**: how to run the SPA in `jwt` mode
   against go-cloud-k8s-auth locally (`AUTH_SERVER_URL`, shared JWT settings,
   redirect allowlist and CORS origins; `localhost` and `127.0.0.1` are distinct
   origins), plus a sign-in panel hint when the redirect is refused.
-- [~] **GLD-036 — Navigable relationships**: every relationship row links to
+- [x] **GLD-036 — Navigable relationships**: every relationship row links to
   the page of the related subject (case, document, actor), by mouse and
   keyboard.
-- [~] **GLD-037 — Subject picker**: the link dialog searches subjects of the
+- [x] **GLD-037 — Subject picker**: the link dialog searches subjects of the
   relationship type's target kind (actors, documents, cases) instead of asking
   for a UUID.
-- [~] **GLD-025 — Minimal USER reference** (moved from Phase 4; ORG_UNIT split
+- [x] **GLD-025 — Minimal USER reference** (moved from Phase 4; ORG_UNIT split
   to GLD-041 on 2026-09-24): internal identities recorded from the token (id,
   name, e-mail) as USER subjects so governance and audit show who acted instead
   of a numeric id, the signed-in user's admin scope is visible, and tasks can
   later target users, without the full security model (§3g).
-- [~] **GLD-038 — Actor form clarity and typed complements**: explain display
+- [x] **GLD-038 — Actor form clarity and typed complements**: explain display
   name versus legal name (RC), rename "contacts" to typed complements (phone,
   e-mail, IDE, VAT, ...), and validate each complement type in the SPA and the
   API (protovalidate + service).
-- [~] **GLD-039 — Person minimal identity**: salutation, last name and first
+- [x] **GLD-039 — Person minimal identity**: salutation, last name and first
   name for PERSON actors, the minimum to identify and address a person (§3g
   decision of 2026-09-24).
-- [~] **GLD-014 — Actor addresses** (moved from Actor follow-ups): `address` +
+- [x] **GLD-014 — Actor addresses** (moved from Actor follow-ups): `address` +
   M:N `actor_address` typed (head office, branch, correspondence, billing) with
   one principal address (production `acteur_adresse` + `lien_acteur_adresse`),
   and an `ACTOR_BRANCH_OF_ACTOR` relationship for a branch acting as a distinct
   party, in the API and the Actor UI.
-- [~] **GLD-040 — Reference data administration**: admin-scoped screens for
+- [x] **GLD-040 — Reference data administration**: admin-scoped screens for
   case types, relationship types, organization categories and document types.
 
 ## Phase 2 — Thing (v2 §25)

@@ -8,6 +8,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-09-24
+
+This release completes Phase 1b, "usable Actor and Case", from the review of v0.6.0: local SSO
+documentation and sign-in hints (**GLD-035**), navigable relationships (**GLD-036**), a subject
+picker instead of UUIDs (**GLD-037**), internal users shown by name with a visible admin flag
+(**GLD-025**), typed and validated actor complements (**GLD-038**), a person's minimal identity
+(**GLD-039**), typed addresses with branches and contact persons (**GLD-014**) and reference data
+administration (**GLD-040**). Migrations `0012`–`0015` apply automatically at startup.
+**Behavior change** for API clients: malformed actor complements, a person without last name
+and a Swiss postal code without four digits are now rejected with INVALID_ARGUMENT.
+
 ### Added
 
 - **GLD-035** — README "Running locally with SSO (jwt auth)": go-cloud-k8s-auth redirect

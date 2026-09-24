@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.6.0**.
+Tracked version: **v0.7.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
