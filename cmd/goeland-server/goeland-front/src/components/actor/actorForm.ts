@@ -11,6 +11,7 @@ import type {
   ContactType,
   CreateActorRequest,
   GoActor,
+  Salutation,
   UpdateActorRequest,
 } from '@/api/types'
 
@@ -22,7 +23,10 @@ export interface ActorFormModel {
   legalName: string
   categoryCode: string | undefined
   orgComplement: string
-  // person specialization (no PII: register link only)
+  // person specialization: minimal identity + register link
+  salutation: Salutation
+  lastName: string
+  firstName: string
   isChRegister: boolean
   chRegisterRef: string
   contacts: ActorContact[]
@@ -47,6 +51,13 @@ export const CONTACT_TYPES: ContactType[] = [
 
 export const ACTOR_KINDS: ActorKind[] = ['ACTOR_KIND_PERSON', 'ACTOR_KIND_ORGANIZATION']
 
+export const SALUTATIONS: Salutation[] = ['SALUTATION_UNSPECIFIED', 'SALUTATION_MADAME', 'SALUTATION_MONSIEUR', 'SALUTATION_NEUTRAL']
+
+/** A person's usual name derived from the identity, as the server does: "<first> <last>". */
+export function personDisplayName (firstName: string, lastName: string): string {
+  return `${firstName.trim()} ${lastName.trim()}`.trim()
+}
+
 export function emptyActorForm (): ActorFormModel {
   return {
     actorKind: 'ACTOR_KIND_PERSON',
@@ -55,6 +66,9 @@ export function emptyActorForm (): ActorFormModel {
     legalName: '',
     categoryCode: undefined,
     orgComplement: '',
+    salutation: 'SALUTATION_UNSPECIFIED',
+    lastName: '',
+    firstName: '',
     isChRegister: false,
     chRegisterRef: '',
     contacts: [],
@@ -70,6 +84,9 @@ export function actorToForm (actor: GoActor): ActorFormModel {
     legalName: actor.organization?.legalName ?? '',
     categoryCode: actor.organization?.categoryCode || undefined,
     orgComplement: actor.organization?.complement ?? '',
+    salutation: actor.person?.salutation ?? 'SALUTATION_UNSPECIFIED',
+    lastName: actor.person?.lastName ?? '',
+    firstName: actor.person?.firstName ?? '',
     isChRegister: actor.person?.isChRegister ?? false,
     chRegisterRef: actor.person?.chRegisterRef ?? '',
     contacts: (actor.contacts ?? []).map(c => ({ ...c })),
@@ -101,10 +118,7 @@ export function buildCreateRequest (m: ActorFormModel): CreateActorRequest {
       complement: m.orgComplement.trim() || undefined,
     }
   } else {
-    req.person = {
-      isChRegister: m.isChRegister || undefined,
-      chRegisterRef: m.chRegisterRef.trim() || undefined,
-    }
+    req.person = personDetails(m)
   }
   return req
 }
@@ -125,10 +139,18 @@ export function buildUpdateRequest (m: ActorFormModel, reason: string): UpdateAc
       complement: m.orgComplement.trim() || undefined,
     }
   } else {
-    req.person = {
-      isChRegister: m.isChRegister || undefined,
-      chRegisterRef: m.chRegisterRef.trim() || undefined,
-    }
+    req.person = personDetails(m)
   }
   return req
+}
+
+/** The PERSON block of a request (the whole block is replaced on update). */
+function personDetails (m: ActorFormModel) {
+  return {
+    salutation: m.salutation === 'SALUTATION_UNSPECIFIED' ? undefined : m.salutation,
+    lastName: m.lastName.trim(),
+    firstName: m.firstName.trim() || undefined,
+    isChRegister: m.isChRegister || undefined,
+    chRegisterRef: m.chRegisterRef.trim() || undefined,
+  }
 }

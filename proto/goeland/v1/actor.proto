@@ -48,6 +48,18 @@ enum ActorKind {
   ACTOR_KIND_ORGANIZATION = 2;
 }
 
+// Salutation is how a PERSON actor is addressed in correspondence.
+enum Salutation {
+  // SALUTATION_UNSPECIFIED means not specified (address by name only).
+  SALUTATION_UNSPECIFIED = 0;
+  // SALUTATION_MADAME is "Madame".
+  SALUTATION_MADAME = 1;
+  // SALUTATION_MONSIEUR is "Monsieur".
+  SALUTATION_MONSIEUR = 2;
+  // SALUTATION_NEUTRAL is a neutral form of address (first and last name, no title).
+  SALUTATION_NEUTRAL = 3;
+}
+
 // ContactType is the controlled vocabulary for the typed contact / identity bag
 // (production DicoActeurTypeComplement). Values split into contact channels and
 // probative business identifiers; the latter stay first-class so they are
@@ -144,15 +156,23 @@ message OrganizationDetails {
   string complement = 3 [(buf.validate.field).string.max_len = 1000];
 }
 
-// PersonDetails carries the PERSON-only fields. No civil-registry personal data is
-// stored: only whether the person is linked to the CH population register and an
-// opaque reference to it, so real identity stays in the source system.
+// PersonDetails carries the PERSON-only fields: the minimal identity needed to
+// identify and address the person (salutation, last and first name), plus the
+// link to the CH population register. No birth date, AVS number or other
+// civil-registry data is stored.
 message PersonDetails {
   // is_ch_register reports whether the person is linked to the CH population
   // register (production Acteur.IsFromCH).
   bool is_ch_register = 1;
   // ch_register_ref is an opaque external register key (at most 100 characters); never PII.
   string ch_register_ref = 2 [(buf.validate.field).string.max_len = 100];
+  // salutation is the form of address; UNSPECIFIED when unknown.
+  Salutation salutation = 3 [(buf.validate.field).enum.defined_only = true];
+  // last_name is the family name (at most 100 characters, trimmed); required when
+  // creating or editing a person (INVALID_ARGUMENT otherwise).
+  string last_name = 4 [(buf.validate.field).string.max_len = 100];
+  // first_name is the given name or names (at most 100 characters); empty when unknown.
+  string first_name = 5 [(buf.validate.field).string.max_len = 100];
 }
 
 // Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
@@ -206,17 +226,19 @@ message Actor {
 // CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
 // via Core internally. The kind-specific block must match actor_kind.
 message CreateActorRequest {
+  option (buf.validate.message).cel = {
+    id: "create_actor.display_name"
+    message: "display_name is required, except for a person with a last_name (it is then derived)"
+    expression: "this.display_name.size() > 0 || (has(this.person) && this.person.last_name.size() > 0)"
+  };
   // actor_kind is the required kind; UNSPECIFIED is rejected.
   ActorKind actor_kind = 1 [(buf.validate.field).enum = {
     defined_only: true
     not_in: [0]
   }];
-  // display_name is the required name (1-200 characters, trimmed).
-  string display_name = 2 [
-    (google.api.field_behavior) = REQUIRED,
-    (buf.validate.field).string.min_len = 1,
-    (buf.validate.field).string.max_len = 200
-  ];
+  // display_name is the usual name (at most 200 characters, trimmed); required
+  // except for a person, where an empty value is derived as "<first> <last>".
+  string display_name = 2 [(buf.validate.field).string.max_len = 200];
   // publication_code is the opaque legacy publication code.
   int32 publication_code = 3 [(buf.validate.field).int32.gte = 0];
   // specialization carries the kind-specific fields; organization (with a

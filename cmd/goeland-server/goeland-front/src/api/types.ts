@@ -167,9 +167,19 @@ export interface OrganizationDetails {
   complement?: string
 }
 
+/** Form of address of a PERSON actor. */
+export type Salutation
+  = | 'SALUTATION_UNSPECIFIED'
+    | 'SALUTATION_MADAME'
+    | 'SALUTATION_MONSIEUR'
+    | 'SALUTATION_NEUTRAL'
+
 export interface PersonDetails {
   isChRegister?: boolean
   chRegisterRef?: string
+  salutation?: Salutation
+  lastName?: string
+  firstName?: string
 }
 
 export interface GoActor {

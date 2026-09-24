@@ -9,15 +9,18 @@ package actor
 const actorColumns = `
 a.id, a.actor_kind, a.display_name, a.name_for_search, a.is_active, a.publication_code,
 a.legal_name, a.organization_category_id, a.org_complement, a.is_ch_register, a.ch_register_ref,
+a.salutation, a.last_name, a.first_name,
 a.created_at, a.created_by, a.updated_at`
 
 const insertActorSQL = `
 INSERT INTO actor AS a (
     id, actor_kind, display_name, name_for_search, is_active, publication_code,
-    legal_name, organization_category_id, org_complement, is_ch_register, ch_register_ref, created_by
+    legal_name, organization_category_id, org_complement, is_ch_register, ch_register_ref,
+    salutation, last_name, first_name, created_by
 ) VALUES (
     @id, @actor_kind, @display_name, @name_for_search, @is_active, @publication_code,
-    @legal_name, @organization_category_id, @org_complement, @is_ch_register, @ch_register_ref, @created_by
+    @legal_name, @organization_category_id, @org_complement, @is_ch_register, @ch_register_ref,
+    @salutation, @last_name, @first_name, @created_by
 )
 RETURNING ` + actorColumns + `;`
 
@@ -39,7 +42,10 @@ SET display_name             = CASE WHEN @set_display_name THEN @display_name EL
     organization_category_id = CASE WHEN @set_category THEN @organization_category_id ELSE a.organization_category_id END,
     org_complement           = CASE WHEN @set_org_complement THEN @org_complement ELSE a.org_complement END,
     is_ch_register           = CASE WHEN @set_is_ch_register THEN @is_ch_register ELSE a.is_ch_register END,
-    ch_register_ref          = CASE WHEN @set_ch_register_ref THEN @ch_register_ref ELSE a.ch_register_ref END
+    ch_register_ref          = CASE WHEN @set_ch_register_ref THEN @ch_register_ref ELSE a.ch_register_ref END,
+    salutation               = CASE WHEN @set_salutation THEN @salutation::smallint ELSE a.salutation END,
+    last_name                = CASE WHEN @set_last_name THEN @last_name::text ELSE a.last_name END,
+    first_name               = CASE WHEN @set_first_name THEN @first_name::text ELSE a.first_name END
 WHERE a.id = @id
 RETURNING ` + actorColumns + `;`
 

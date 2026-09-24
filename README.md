@@ -85,8 +85,9 @@ Actor component (`pkg/actor`), also a first-class subject (`actor.id` **is** a
 - `actor_kind` discriminates a physical **PERSON** from a moral **ORGANIZATION**
   (flattened `ActMoral` / `ActPhys*` specialization, guarded by DB CHECK constraints);
 - organization fields (`legal_name`, `organization_category` classification, complement);
-- **no personal data** for persons — only an `is_ch_register` flag + opaque
-  `ch_register_ref` (civil-registry identity stays in the source system);
+- a **minimal identity** for persons — salutation, last and first name (the display name is
+  derived as "<first> <last>" when blank) plus an `is_ch_register` flag and opaque
+  `ch_register_ref`; no birth date, AVS number or other civil-registry data;
 - typed `actor_contact` channels + business identifiers (IDE fédéral, TVA, débiteur
   ABACUS, registre du commerce), kept queryable rather than in a JSON blob;
 - accent-insensitive name search via a generated `search_vector`;

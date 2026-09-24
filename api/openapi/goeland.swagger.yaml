@@ -1867,7 +1867,9 @@ definitions:
         description: actor_kind is the required kind; UNSPECIFIED is rejected.
       displayName:
         type: string
-        description: display_name is the required name (1-200 characters, trimmed).
+        description: |-
+          display_name is the usual name (at most 200 characters, trimmed); required
+          except for a person, where an empty value is derived as "<first> <last>".
       publicationCode:
         type: integer
         format: int32
@@ -1895,8 +1897,6 @@ definitions:
     description: |-
       CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
       via Core internally. The kind-specific block must match actor_kind.
-    required:
-      - displayName
   v1CreateActorResponse:
     type: object
     properties:
@@ -2572,10 +2572,22 @@ definitions:
       chRegisterRef:
         type: string
         description: ch_register_ref is an opaque external register key (at most 100 characters); never PII.
+      salutation:
+        $ref: '#/definitions/v1Salutation'
+        description: salutation is the form of address; UNSPECIFIED when unknown.
+      lastName:
+        type: string
+        description: |-
+          last_name is the family name (at most 100 characters, trimmed); required when
+          creating or editing a person (INVALID_ARGUMENT otherwise).
+      firstName:
+        type: string
+        description: first_name is the given name or names (at most 100 characters); empty when unknown.
     description: |-
-      PersonDetails carries the PERSON-only fields. No civil-registry personal data is
-      stored: only whether the person is linked to the CH population register and an
-      opaque reference to it, so real identity stays in the source system.
+      PersonDetails carries the PERSON-only fields: the minimal identity needed to
+      identify and address the person (salutation, last and first name), plus the
+      link to the CH population register. No birth date, AVS number or other
+      civil-registry data is stored.
   v1RecordMetadata:
     type: object
     properties:
@@ -2696,6 +2708,21 @@ definitions:
       kinds equal source_kind and target_kind.
     required:
       - code
+  v1Salutation:
+    type: string
+    enum:
+      - SALUTATION_UNSPECIFIED
+      - SALUTATION_MADAME
+      - SALUTATION_MONSIEUR
+      - SALUTATION_NEUTRAL
+    default: SALUTATION_UNSPECIFIED
+    description: |-
+      Salutation is how a PERSON actor is addressed in correspondence.
+
+       - SALUTATION_UNSPECIFIED: SALUTATION_UNSPECIFIED means not specified (address by name only).
+       - SALUTATION_MADAME: SALUTATION_MADAME is "Madame".
+       - SALUTATION_MONSIEUR: SALUTATION_MONSIEUR is "Monsieur".
+       - SALUTATION_NEUTRAL: SALUTATION_NEUTRAL is a neutral form of address (first and last name, no title).
   v1SearchActorsResponse:
     type: object
     properties:

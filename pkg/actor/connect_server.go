@@ -51,6 +51,9 @@ func (s *ConnectServer) CreateActor(ctx context.Context, req *connect.Request[go
 	if p := msg.GetPerson(); p != nil {
 		in.IsCHRegister = p.IsChRegister
 		in.CHRegisterRef = p.ChRegisterRef
+		in.Salutation = Salutation(p.Salutation)
+		in.LastName = p.LastName
+		in.FirstName = p.FirstName
 	}
 	if gov := msg.InitialGovernance; gov != nil {
 		in.Governance.OwnerUserID = gov.OwnerUserId
@@ -132,6 +135,8 @@ func (s *ConnectServer) UpdateActor(ctx context.Context, req *connect.Request[go
 	if p := msg.GetPerson(); p != nil {
 		isCH, ref := p.IsChRegister, p.ChRegisterRef
 		in.IsCHRegister, in.CHRegisterRef = &isCH, &ref
+		salutation, last, first := Salutation(p.Salutation), p.LastName, p.FirstName
+		in.Salutation, in.LastName, in.FirstName = &salutation, &last, &first
 	}
 	act, ev, err := s.service.Update(ctx, id, in)
 	if err != nil {

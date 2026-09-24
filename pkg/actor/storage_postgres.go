@@ -68,6 +68,9 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Actor
 		"org_complement":           in.OrgComplement,
 		"is_ch_register":           in.IsCHRegister,
 		"ch_register_ref":          in.CHRegisterRef,
+		"salutation":               int16(in.Salutation),
+		"last_name":                in.LastName,
+		"first_name":               in.FirstName,
 		"created_by":               in.OperatorID,
 	})
 	if err != nil {
@@ -86,7 +89,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Actor
 		SubjectID:   ref.ID,
 		EventType:   "ACTOR_CREATED",
 		ActorUserID: in.OperatorID,
-		AfterState:  map[string]any{"display_name": act.DisplayName, "actor_kind": int16(in.ActorKind)},
+		AfterState:  actorAuditState(act),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
@@ -152,7 +155,7 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 		EventType:   "ACTOR_UPDATED",
 		ActorUserID: in.OperatorID,
 		Reason:      in.Reason,
-		AfterState:  map[string]any{"display_name": act.DisplayName},
+		AfterState:  actorAuditState(act),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
@@ -195,6 +198,12 @@ func updateActorRow(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateInput
 		"is_ch_register":           derefBool(in.IsCHRegister),
 		"set_ch_register_ref":      in.CHRegisterRef != nil,
 		"ch_register_ref":          deref(in.CHRegisterRef),
+		"set_salutation":           in.Salutation != nil,
+		"salutation":               derefSalutation(in.Salutation),
+		"set_last_name":            in.LastName != nil,
+		"last_name":                deref(in.LastName),
+		"set_first_name":           in.FirstName != nil,
+		"first_name":               deref(in.FirstName),
 	})
 	if err != nil {
 		return nil, fmt.Errorf("update actor: %w", err)
@@ -425,4 +434,24 @@ func mapDBError(err error) error {
 		return core.ErrNotFound
 	}
 	return err
+}
+
+// derefSalutation returns the salutation as its column value, 0 when nil.
+func derefSalutation(s *Salutation) int16 {
+	if s == nil {
+		return 0
+	}
+	return int16(*s)
+}
+
+// actorAuditState is the audited identity of an actor: its names (a person's
+// minimal identity included) and kind; contacts are not copied into the log.
+func actorAuditState(act *Actor) map[string]any {
+	state := map[string]any{"display_name": act.DisplayName, "actor_kind": int16(act.ActorKind)}
+	if act.ActorKind == KindPerson {
+		state["salutation"] = int16(act.Salutation)
+		state["last_name"] = act.LastName
+		state["first_name"] = act.FirstName
+	}
+	return state
 }

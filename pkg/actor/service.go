@@ -42,35 +42,18 @@ func NewService(repo Repository, coreSvc *core.Service, log *slog.Logger) (*Serv
 
 // Create validates and persists a new actor.
 func (s *Service) Create(ctx context.Context, in CreateInput) (*Actor, *core.AuditEvent, error) {
-	in.DisplayName = strings.TrimSpace(in.DisplayName)
-	if err := validateDisplayName(in.DisplayName); err != nil {
-		return nil, nil, err
-	}
 	if !in.ActorKind.Valid() {
 		return nil, nil, fmt.Errorf("%w: actor_kind must be PERSON or ORGANIZATION", core.ErrInvalidInput)
 	}
-	// Enforce that the specialization matches the kind (defence in depth on top of
-	// the DB CHECK constraints), so person/organization columns never cross over.
-	in.LegalName = strings.TrimSpace(in.LegalName)
-	in.OrgComplement = strings.TrimSpace(in.OrgComplement)
-	in.CategoryCode = strings.TrimSpace(in.CategoryCode)
-	in.CHRegisterRef = strings.TrimSpace(in.CHRegisterRef)
-	switch in.ActorKind {
-	case KindOrganization:
-		if in.LegalName == "" {
-			return nil, nil, fmt.Errorf("%w: legal_name is required for an organization", core.ErrInvalidInput)
-		}
-		if utf8.RuneCountInString(in.LegalName) > MaxDisplayNameLength {
-			return nil, nil, fmt.Errorf("%w: legal_name exceeds %d characters", core.ErrInvalidInput, MaxDisplayNameLength)
-		}
-		// Clear any person-only fields defensively.
-		in.IsCHRegister = false
-		in.CHRegisterRef = ""
-	case KindPerson:
-		// Clear any organization-only fields defensively.
-		in.LegalName = ""
-		in.OrgComplement = ""
-		in.CategoryCode = ""
+	if err := normalizeSpecialization(&in); err != nil {
+		return nil, nil, err
+	}
+	in.DisplayName = strings.TrimSpace(in.DisplayName)
+	if in.DisplayName == "" && in.ActorKind == KindPerson {
+		in.DisplayName = personDisplayName(in.FirstName, in.LastName)
+	}
+	if err := validateDisplayName(in.DisplayName); err != nil {
+		return nil, nil, err
 	}
 	contacts, err := normalizeContacts(in.Contacts)
 	if err != nil {
@@ -135,6 +118,9 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Ac
 		}
 		in.DisplayName = &name
 	}
+	if err := normalizePersonUpdate(&in); err != nil {
+		return nil, nil, err
+	}
 	if in.ReplaceContacts {
 		contacts, err := normalizeContacts(in.Contacts)
 		if err != nil {
@@ -181,6 +167,72 @@ func (s *Service) SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reas
 // ListCategories returns the organization category catalogue.
 func (s *Service) ListCategories(ctx context.Context, onlyActive bool) ([]*OrganizationCategory, error) {
 	return s.repo.ListCategories(ctx, onlyActive)
+}
+
+// normalizeSpecialization trims the kind-specific fields, validates those of
+// in.ActorKind and clears those of the other kind (defence in depth on top of the
+// DB CHECK constraints, so person/organization columns never cross over).
+func normalizeSpecialization(in *CreateInput) error {
+	in.LegalName = strings.TrimSpace(in.LegalName)
+	in.OrgComplement = strings.TrimSpace(in.OrgComplement)
+	in.CategoryCode = strings.TrimSpace(in.CategoryCode)
+	in.CHRegisterRef = strings.TrimSpace(in.CHRegisterRef)
+	in.LastName = strings.TrimSpace(in.LastName)
+	in.FirstName = strings.TrimSpace(in.FirstName)
+	if in.ActorKind == KindPerson {
+		in.LegalName, in.OrgComplement, in.CategoryCode = "", "", ""
+		return validatePersonIdentity(in.Salutation, in.LastName, in.FirstName)
+	}
+	in.IsCHRegister, in.CHRegisterRef = false, ""
+	in.Salutation, in.LastName, in.FirstName = SalutationUnspecified, "", ""
+	if in.LegalName == "" {
+		return fmt.Errorf("%w: legal_name is required for an organization", core.ErrInvalidInput)
+	}
+	if utf8.RuneCountInString(in.LegalName) > MaxDisplayNameLength {
+		return fmt.Errorf("%w: legal_name exceeds %d characters", core.ErrInvalidInput, MaxDisplayNameLength)
+	}
+	return nil
+}
+
+// normalizePersonUpdate trims and validates the person identity fields of an
+// update; a person block always carries the last name (the whole block is replaced).
+func normalizePersonUpdate(in *UpdateInput) error {
+	if in.LastName == nil {
+		return nil
+	}
+	last := strings.TrimSpace(*in.LastName)
+	first := ""
+	if in.FirstName != nil {
+		first = strings.TrimSpace(*in.FirstName)
+	}
+	salutation := SalutationUnspecified
+	if in.Salutation != nil {
+		salutation = *in.Salutation
+	}
+	if err := validatePersonIdentity(salutation, last, first); err != nil {
+		return err
+	}
+	in.LastName, in.FirstName, in.Salutation = &last, &first, &salutation
+	return nil
+}
+
+// validatePersonIdentity checks a person's minimal identity: a known
+// salutation, a required last name and bounded names.
+func validatePersonIdentity(salutation Salutation, last, first string) error {
+	switch {
+	case !salutation.Valid():
+		return fmt.Errorf("%w: invalid salutation", core.ErrInvalidInput)
+	case last == "":
+		return fmt.Errorf("%w: last_name is required for a person", core.ErrInvalidInput)
+	case utf8.RuneCountInString(last) > MaxPersonNameLength || utf8.RuneCountInString(first) > MaxPersonNameLength:
+		return fmt.Errorf("%w: first and last names are limited to %d characters", core.ErrInvalidInput, MaxPersonNameLength)
+	}
+	return nil
+}
+
+// personDisplayName derives a person's usual name as "<first> <last>".
+func personDisplayName(first, last string) string {
+	return strings.TrimSpace(first + " " + last)
 }
 
 // validateDisplayName enforces the non-empty + max-length rule on a display name.

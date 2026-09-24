@@ -124,18 +124,21 @@
       "org_complement": "Complément de nom",
       "is_ch_register": "Lié au registre des habitants",
       "ch_register_ref": "Référence registre",
-      "ch_register_ref_hint": "Clé externe opaque — aucune donnée personnelle n'est stockée.",
+      "ch_register_ref_hint": "Clé externe du registre des habitants (aucune autre donnée civile n'est stockée).",
       "publication_code": "Code de publication",
       "is_active": "Actif",
       "only_active": "Seulement les actifs",
       "contact_type": "Type",
       "contact_value": "Valeur",
       "contact_primary": "Principal",
-      "display_name_hint": "Nom affiché et recherché.",
+      "display_name_hint": "Nom affiché et recherché ; proposé à partir du prénom et du nom.",
       "display_name_hint_org": "Nom affiché et recherché (enseigne, nom courant), p. ex. « Migros Flon ».",
       "legal_name_hint": "Nom exact inscrit au registre du commerce, p. ex. « Société coopérative Migros Vaud ».",
       "org_complement_hint": "Précision ajoutée au nom : « c/o … », « Succursale de Nyon », « Service des parcs ». Les téléphones, e-mails et identifiants vont dans les compléments ci-dessous.",
-      "contact_label": "Précision (facultative)"
+      "contact_label": "Précision (facultative)",
+      "salutation": "Civilité",
+      "last_name": "Nom",
+      "first_name": "Prénom"
     },
     "recordMetadata": {
       "created_at": "Créé le",
@@ -335,6 +338,12 @@
       "PERMISSION_CONTRIBUTE": "Contribution",
       "PERMISSION_MANAGE": "Gestion",
       "PERMISSION_FULL_CONTROL": "Contrôle complet"
+    },
+    "Salutation": {
+      "SALUTATION_UNSPECIFIED": "Non précisée",
+      "SALUTATION_MADAME": "Madame",
+      "SALUTATION_MONSIEUR": "Monsieur",
+      "SALUTATION_NEUTRAL": "Neutre (prénom et nom)"
     }
   },
   "validation": {

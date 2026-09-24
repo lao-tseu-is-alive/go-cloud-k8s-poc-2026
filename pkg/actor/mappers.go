@@ -66,6 +66,9 @@ func DomainToProto(act *Actor) *goelandv1.Actor {
 			Person: &goelandv1.PersonDetails{
 				IsChRegister:  act.IsCHRegister,
 				ChRegisterRef: act.CHRegisterRef,
+				Salutation:    goelandv1.Salutation(act.Salutation),
+				LastName:      act.LastName,
+				FirstName:     act.FirstName,
 			},
 		}
 	}

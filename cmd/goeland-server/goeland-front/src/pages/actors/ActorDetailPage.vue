@@ -221,6 +221,9 @@
                   </template>
 
                   <template v-else>
+                    <tr><td class="text-medium-emphasis">{{ t('fields.actor.salutation') }}</td><td>{{ enumLabel('Salutation', actor.person?.salutation ?? 'SALUTATION_UNSPECIFIED') }}</td></tr>
+                    <tr><td class="text-medium-emphasis">{{ t('fields.actor.first_name') }}</td><td>{{ actor.person?.firstName || '—' }}</td></tr>
+                    <tr><td class="text-medium-emphasis">{{ t('fields.actor.last_name') }}</td><td>{{ actor.person?.lastName || '—' }}</td></tr>
                     <tr><td class="text-medium-emphasis">{{ t('fields.actor.is_ch_register') }}</td><td>{{ actor.person?.isChRegister ? '✓' : '—' }}</td></tr>
                     <tr v-if="actor.person?.isChRegister"><td class="text-medium-emphasis">{{ t('fields.actor.ch_register_ref') }}</td><td>{{ actor.person?.chRegisterRef || '—' }}</td></tr>
                   </template>

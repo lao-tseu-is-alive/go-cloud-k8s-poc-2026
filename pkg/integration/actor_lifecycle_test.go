@@ -177,9 +177,12 @@ func TestPersonActorSpecialization(t *testing.T) {
 	ctx := env.ctx
 	token := uniqueToken()
 
+	// No display name: it is derived from the minimal identity (GLD-039).
 	created, _, err := env.actorSvc.Create(ctx, actor.CreateInput{
 		ActorKind:     actor.KindPerson,
-		DisplayName:   "Person " + token,
+		Salutation:    actor.SalutationMadame,
+		FirstName:     " Élise ",
+		LastName:      "Person" + token,
 		IsCHRegister:  true,
 		CHRegisterRef: "REG-" + token,
 		OperatorID:    testOperator,
@@ -196,6 +199,10 @@ func TestPersonActorSpecialization(t *testing.T) {
 	if created.LegalName != "" || created.CategoryID != nil {
 		t.Fatalf("person actor must not carry organization fields: %+v", created)
 	}
+	if created.Salutation != actor.SalutationMadame || created.FirstName != "Élise" || created.DisplayName != "Élise Person"+token {
+		t.Fatalf("person identity not persisted or display name not derived: %+v", created)
+	}
+	assertPersonIdentityRules(t, env, created, token)
 
 	t.Run("organization legal_name is required", func(t *testing.T) {
 		if _, _, err := env.actorSvc.Create(ctx, actor.CreateInput{
@@ -206,6 +213,31 @@ func TestPersonActorSpecialization(t *testing.T) {
 			t.Fatalf("creating an organization without legal_name should fail with ErrInvalidInput, got %v", err)
 		}
 	})
+}
+
+// assertPersonIdentityRules covers search by first name, the required last name
+// and an identity update.
+func assertPersonIdentityRules(t *testing.T, env *testEnv, person *actor.Actor, token string) {
+	t.Helper()
+	res, err := env.actorSvc.Search(env.ctx, actor.SearchFilter{Query: "elise person" + token})
+	if err != nil || len(res.Actors) != 1 || res.Actors[0].ID != person.ID {
+		t.Fatalf("accent-insensitive search by first + last name: %+v (%v)", res.Actors, err)
+	}
+	if _, _, err := env.actorSvc.Create(env.ctx, actor.CreateInput{ActorKind: actor.KindPerson, DisplayName: "Nameless", OperatorID: testOperator}); !errors.Is(err, core.ErrInvalidInput) {
+		t.Fatalf("a person without last name: want ErrInvalidInput, got %v", err)
+	}
+	blank := "  "
+	if _, _, err := env.actorSvc.Update(env.ctx, person.ID, actor.UpdateInput{LastName: &blank, OperatorID: testOperator}); !errors.Is(err, core.ErrInvalidInput) {
+		t.Fatalf("blanking the last name: want ErrInvalidInput, got %v", err)
+	}
+	last, first, neutral := "Married"+token, "Élise", actor.SalutationNeutral
+	updated, ev, err := env.actorSvc.Update(env.ctx, person.ID, actor.UpdateInput{LastName: &last, FirstName: &first, Salutation: &neutral, OperatorID: testOperator})
+	if err != nil || updated.LastName != last || updated.Salutation != actor.SalutationNeutral {
+		t.Fatalf("identity update: %+v (%v)", updated, err)
+	}
+	if ev.AfterState["last_name"] != last {
+		t.Fatalf("identity change not audited: %+v", ev.AfterState)
+	}
 }
 
 func containsCategoryCode(cats []*actor.OrganizationCategory, code string) bool {

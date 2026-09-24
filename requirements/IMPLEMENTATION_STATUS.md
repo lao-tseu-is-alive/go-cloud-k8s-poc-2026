@@ -49,7 +49,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
 | v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
-| §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry no PII (register link only) |
+| §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010` (case types) | — | 🟡 | `OPC_DEMANDE_PC` (namespace OPC), `GENERIC_REQUEST` (GEN); users, org units, thing types pending |
@@ -202,8 +202,9 @@ The Actor component (spec §6.4) was designed against the **real production Goé
   `ActeurRole` table is the legacy form of our typed `subject_relationship`. The actor entity
   carries **zero** role columns; actors attach to cases/documents/things via `relationship_type`
   edges, so the real 46-role vocabulary maps in with the Case/Thing slices (nothing blocks it).
-- 🔒 **PII-free by construction** — the PERSON specialization stores only `is_ch_register` +
-  an opaque `ch_register_ref`; no civil-registry personal data enters the POC.
+- 🔒 **Minimal personal data** — the PERSON specialization stores only the minimal identity
+  (salutation, last and first name, GLD-039, which superseded the initial register-link-only
+  rule; see §3g) plus `is_ch_register` + an opaque `ch_register_ref`; no civil-registry data.
 - 🖥️ **Full vertical slice** — proto-first `ActorService` (6 RPCs) + `0006_actor.sql` +
   atomic create (subject_ref + record_metadata + contacts + audit) + embedded Vue/Vuetify panel
   (bilingual) + `pkg/integration` lifecycle/specialization tests, all green against real PostGIS.
@@ -279,7 +280,7 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   the full document lifecycle (create → search → metadata update → link → finalize+lock →
   locked-update rejected → soft delete → deleted-mutation rejected → audit trail), and the
   **actor lifecycle** (org create with contacts+category → search → update/label-sync →
-  case→actor link → soft-delete+rejection → audit; person PII-free specialization;
+  case→actor link → soft-delete+rejection → audit; person minimal identity (derived display name, search by names, required last name);
   organization `legal_name` required; 33 categories seeded), and the **case lifecycle**
   (seeded types → create with allocated reference → actor roles + document links →
   transitions with reasons → closed-case freeze → reopen → explicit reference → soft delete).

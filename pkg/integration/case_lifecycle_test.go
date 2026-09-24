@@ -97,7 +97,7 @@ func TestCaseLifecycle(t *testing.T) {
 // linkParticipants links a requester, a mandatee and a document to the case.
 func linkParticipants(t *testing.T, env *testEnv, c *casefile.Case) {
 	t.Helper()
-	requester, _, err := env.actorSvc.Create(env.ctx, actor.CreateInput{ActorKind: actor.KindPerson, DisplayName: "Requester " + uniqueToken(), OperatorID: testOperator})
+	requester, _, err := env.actorSvc.Create(env.ctx, actor.CreateInput{ActorKind: actor.KindPerson, LastName: "Requester " + uniqueToken(), OperatorID: testOperator})
 	if err != nil {
 		t.Fatalf("create requester: %v", err)
 	}

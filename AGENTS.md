@@ -63,7 +63,9 @@ whenever a task starts, completes, changes scope or order.
   Modelled from the real production `Acteur` schema (`actor_kind` PERSON/ORGANIZATION,
   typed `actor_contact`, seeded `organization_category`). Roles are NOT columns —
   actors attach via typed `CoreService` relationships (`CASE_HAS_ACTOR_*`,
-  `DOCUMENT_*_ACTOR`); persons carry no PII (register link only). Typed complements
+  `DOCUMENT_*_ACTOR`); a person carries only a minimal identity (salutation, last and first
+  name, GLD-039; display name derived as "<first> <last>" when blank) plus the register link
+  — no birth date, AVS number or civil-registry data. Typed complements
   ("contacts": phone, e-mail, IDE, VAT, ...) are validated and stored normalized per type
   by `pkg/actor/contacts.go` (E.164 phones, IDE check digit, ...); the SPA mirrors the rules
   in `utils/contactRules.ts` — change both together.

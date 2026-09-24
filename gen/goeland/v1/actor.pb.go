@@ -101,6 +101,63 @@ func (ActorKind) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{0}
 }
 
+// Salutation is how a PERSON actor is addressed in correspondence.
+type Salutation int32
+
+const (
+	// SALUTATION_UNSPECIFIED means not specified (address by name only).
+	Salutation_SALUTATION_UNSPECIFIED Salutation = 0
+	// SALUTATION_MADAME is "Madame".
+	Salutation_SALUTATION_MADAME Salutation = 1
+	// SALUTATION_MONSIEUR is "Monsieur".
+	Salutation_SALUTATION_MONSIEUR Salutation = 2
+	// SALUTATION_NEUTRAL is a neutral form of address (first and last name, no title).
+	Salutation_SALUTATION_NEUTRAL Salutation = 3
+)
+
+// Enum value maps for Salutation.
+var (
+	Salutation_name = map[int32]string{
+		0: "SALUTATION_UNSPECIFIED",
+		1: "SALUTATION_MADAME",
+		2: "SALUTATION_MONSIEUR",
+		3: "SALUTATION_NEUTRAL",
+	}
+	Salutation_value = map[string]int32{
+		"SALUTATION_UNSPECIFIED": 0,
+		"SALUTATION_MADAME":      1,
+		"SALUTATION_MONSIEUR":    2,
+		"SALUTATION_NEUTRAL":     3,
+	}
+)
+
+func (x Salutation) Enum() *Salutation {
+	p := new(Salutation)
+	*p = x
+	return p
+}
+
+func (x Salutation) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (Salutation) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_actor_proto_enumTypes[1].Descriptor()
+}
+
+func (Salutation) Type() protoreflect.EnumType {
+	return &file_goeland_v1_actor_proto_enumTypes[1]
+}
+
+func (x Salutation) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use Salutation.Descriptor instead.
+func (Salutation) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{1}
+}
+
 // ContactType is the controlled vocabulary for the typed contact / identity bag
 // (production DicoActeurTypeComplement). Values split into contact channels and
 // probative business identifiers; the latter stay first-class so they are
@@ -185,11 +242,11 @@ func (x ContactType) String() string {
 }
 
 func (ContactType) Descriptor() protoreflect.EnumDescriptor {
-	return file_goeland_v1_actor_proto_enumTypes[1].Descriptor()
+	return file_goeland_v1_actor_proto_enumTypes[2].Descriptor()
 }
 
 func (ContactType) Type() protoreflect.EnumType {
-	return &file_goeland_v1_actor_proto_enumTypes[1]
+	return &file_goeland_v1_actor_proto_enumTypes[2]
 }
 
 func (x ContactType) Number() protoreflect.EnumNumber {
@@ -198,7 +255,7 @@ func (x ContactType) Number() protoreflect.EnumNumber {
 
 // Deprecated: Use ContactType.Descriptor instead.
 func (ContactType) EnumDescriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{1}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{2}
 }
 
 // OrganizationCategory is the controlled classification of a moral person
@@ -423,9 +480,10 @@ func (x *OrganizationDetails) GetComplement() string {
 	return ""
 }
 
-// PersonDetails carries the PERSON-only fields. No civil-registry personal data is
-// stored: only whether the person is linked to the CH population register and an
-// opaque reference to it, so real identity stays in the source system.
+// PersonDetails carries the PERSON-only fields: the minimal identity needed to
+// identify and address the person (salutation, last and first name), plus the
+// link to the CH population register. No birth date, AVS number or other
+// civil-registry data is stored.
 type PersonDetails struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// is_ch_register reports whether the person is linked to the CH population
@@ -433,6 +491,13 @@ type PersonDetails struct {
 	IsChRegister bool `protobuf:"varint,1,opt,name=is_ch_register,json=isChRegister,proto3" json:"is_ch_register,omitempty"`
 	// ch_register_ref is an opaque external register key (at most 100 characters); never PII.
 	ChRegisterRef string `protobuf:"bytes,2,opt,name=ch_register_ref,json=chRegisterRef,proto3" json:"ch_register_ref,omitempty"`
+	// salutation is the form of address; UNSPECIFIED when unknown.
+	Salutation Salutation `protobuf:"varint,3,opt,name=salutation,proto3,enum=goeland.v1.Salutation" json:"salutation,omitempty"`
+	// last_name is the family name (at most 100 characters, trimmed); required when
+	// creating or editing a person (INVALID_ARGUMENT otherwise).
+	LastName string `protobuf:"bytes,4,opt,name=last_name,json=lastName,proto3" json:"last_name,omitempty"`
+	// first_name is the given name or names (at most 100 characters); empty when unknown.
+	FirstName     string `protobuf:"bytes,5,opt,name=first_name,json=firstName,proto3" json:"first_name,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -477,6 +542,27 @@ func (x *PersonDetails) GetIsChRegister() bool {
 func (x *PersonDetails) GetChRegisterRef() string {
 	if x != nil {
 		return x.ChRegisterRef
+	}
+	return ""
+}
+
+func (x *PersonDetails) GetSalutation() Salutation {
+	if x != nil {
+		return x.Salutation
+	}
+	return Salutation_SALUTATION_UNSPECIFIED
+}
+
+func (x *PersonDetails) GetLastName() string {
+	if x != nil {
+		return x.LastName
+	}
+	return ""
+}
+
+func (x *PersonDetails) GetFirstName() string {
+	if x != nil {
+		return x.FirstName
 	}
 	return ""
 }
@@ -677,7 +763,8 @@ type CreateActorRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// actor_kind is the required kind; UNSPECIFIED is rejected.
 	ActorKind ActorKind `protobuf:"varint,1,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
-	// display_name is the required name (1-200 characters, trimmed).
+	// display_name is the usual name (at most 200 characters, trimmed); required
+	// except for a person, where an empty value is derived as "<first> <last>".
 	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// publication_code is the opaque legacy publication code.
 	PublicationCode int32 `protobuf:"varint,3,opt,name=publication_code,json=publicationCode,proto3" json:"publication_code,omitempty"`
@@ -1596,10 +1683,16 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\rcategory_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\fcategoryCode\x12(\n" +
 	"\n" +
 	"complement\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xe8\aR\n" +
-	"complement\"f\n" +
+	"complement\"\xf6\x01\n" +
 	"\rPersonDetails\x12$\n" +
 	"\x0eis_ch_register\x18\x01 \x01(\bR\fisChRegister\x12/\n" +
-	"\x0fch_register_ref\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\rchRegisterRef\"\xd8\x05\n" +
+	"\x0fch_register_ref\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\rchRegisterRef\x12@\n" +
+	"\n" +
+	"salutation\x18\x03 \x01(\x0e2\x16.goeland.v1.SalutationB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
+	"salutation\x12$\n" +
+	"\tlast_name\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\blastName\x12&\n" +
+	"\n" +
+	"first_name\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\tfirstName\"\xd8\x05\n" +
 	"\x05Actor\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x12>\n" +
@@ -1619,17 +1712,18 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\n" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
 	"\x0frecord_metadata\x18\x17 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadataB\x10\n" +
-	"\x0especialization\"\xcb\x03\n" +
+	"\x0especialization\"\x98\x05\n" +
 	"\x12CreateActorRequest\x12@\n" +
 	"\n" +
 	"actor_kind\x18\x01 \x01(\x0e2\x15.goeland.v1.ActorKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tactorKind\x120\n" +
-	"\fdisplay_name\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\vdisplayName\x122\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tactorKind\x12+\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vdisplayName\x122\n" +
 	"\x10publication_code\x18\x03 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00R\x0fpublicationCode\x123\n" +
 	"\x06person\x18\x04 \x01(\v2\x19.goeland.v1.PersonDetailsH\x00R\x06person\x12E\n" +
 	"\forganization\x18\x05 \x01(\v2\x1f.goeland.v1.OrganizationDetailsH\x00R\forganization\x124\n" +
 	"\bcontacts\x18\x06 \x03(\v2\x18.goeland.v1.ActorContactR\bcontacts\x12I\n" +
-	"\x12initial_governance\x18\a \x01(\v2\x1a.goeland.v1.RecordMetadataR\x11initialGovernanceB\x10\n" +
+	"\x12initial_governance\x18\a \x01(\v2\x1a.goeland.v1.RecordMetadataR\x11initialGovernance:\xcf\x01\xbaH\xcb\x01\x1a\xc8\x01\n" +
+	"\x19create_actor.display_name\x12Sdisplay_name is required, except for a person with a last_name (it is then derived)\x1aVthis.display_name.size() > 0 || (has(this.person) && this.person.last_name.size() > 0)B\x10\n" +
 	"\x0especialization\"{\n" +
 	"\x13CreateActorResponse\x12'\n" +
 	"\x05actor\x18\x01 \x01(\v2\x11.goeland.v1.ActorR\x05actor\x12;\n" +
@@ -1693,7 +1787,13 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\tActorKind\x12\x1a\n" +
 	"\x16ACTOR_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACTOR_KIND_PERSON\x10\x01\x12\x1b\n" +
-	"\x17ACTOR_KIND_ORGANIZATION\x10\x02*\x96\x03\n" +
+	"\x17ACTOR_KIND_ORGANIZATION\x10\x02*p\n" +
+	"\n" +
+	"Salutation\x12\x1a\n" +
+	"\x16SALUTATION_UNSPECIFIED\x10\x00\x12\x15\n" +
+	"\x11SALUTATION_MADAME\x10\x01\x12\x17\n" +
+	"\x13SALUTATION_MONSIEUR\x10\x02\x12\x16\n" +
+	"\x12SALUTATION_NEUTRAL\x10\x03*\x96\x03\n" +
 	"\vContactType\x12\x1c\n" +
 	"\x18CONTACT_TYPE_UNSPECIFIED\x10\x00\x12\x16\n" +
 	"\x12CONTACT_TYPE_PHONE\x10\x01\x12\x1e\n" +
@@ -1733,80 +1833,82 @@ func file_goeland_v1_actor_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_actor_proto_rawDescData
 }
 
-var file_goeland_v1_actor_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_goeland_v1_actor_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
 var file_goeland_v1_actor_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
 var file_goeland_v1_actor_proto_goTypes = []any{
 	(ActorKind)(0),                             // 0: goeland.v1.ActorKind
-	(ContactType)(0),                           // 1: goeland.v1.ContactType
-	(*OrganizationCategory)(nil),               // 2: goeland.v1.OrganizationCategory
-	(*ActorContact)(nil),                       // 3: goeland.v1.ActorContact
-	(*OrganizationDetails)(nil),                // 4: goeland.v1.OrganizationDetails
-	(*PersonDetails)(nil),                      // 5: goeland.v1.PersonDetails
-	(*Actor)(nil),                              // 6: goeland.v1.Actor
-	(*CreateActorRequest)(nil),                 // 7: goeland.v1.CreateActorRequest
-	(*CreateActorResponse)(nil),                // 8: goeland.v1.CreateActorResponse
-	(*GetActorRequest)(nil),                    // 9: goeland.v1.GetActorRequest
-	(*GetActorResponse)(nil),                   // 10: goeland.v1.GetActorResponse
-	(*UpdateActorRequest)(nil),                 // 11: goeland.v1.UpdateActorRequest
-	(*UpdateActorResponse)(nil),                // 12: goeland.v1.UpdateActorResponse
-	(*SearchActorsRequest)(nil),                // 13: goeland.v1.SearchActorsRequest
-	(*SearchActorsResponse)(nil),               // 14: goeland.v1.SearchActorsResponse
-	(*DeleteActorRequest)(nil),                 // 15: goeland.v1.DeleteActorRequest
-	(*DeleteActorResponse)(nil),                // 16: goeland.v1.DeleteActorResponse
-	(*ListOrganizationCategoriesRequest)(nil),  // 17: goeland.v1.ListOrganizationCategoriesRequest
-	(*ListOrganizationCategoriesResponse)(nil), // 18: goeland.v1.ListOrganizationCategoriesResponse
-	(*SubjectRef)(nil),                         // 19: goeland.v1.SubjectRef
-	(*timestamppb.Timestamp)(nil),              // 20: google.protobuf.Timestamp
-	(*RecordMetadata)(nil),                     // 21: goeland.v1.RecordMetadata
-	(*AuditEvent)(nil),                         // 22: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),                // 23: goeland.v1.SubjectRelationship
+	(Salutation)(0),                            // 1: goeland.v1.Salutation
+	(ContactType)(0),                           // 2: goeland.v1.ContactType
+	(*OrganizationCategory)(nil),               // 3: goeland.v1.OrganizationCategory
+	(*ActorContact)(nil),                       // 4: goeland.v1.ActorContact
+	(*OrganizationDetails)(nil),                // 5: goeland.v1.OrganizationDetails
+	(*PersonDetails)(nil),                      // 6: goeland.v1.PersonDetails
+	(*Actor)(nil),                              // 7: goeland.v1.Actor
+	(*CreateActorRequest)(nil),                 // 8: goeland.v1.CreateActorRequest
+	(*CreateActorResponse)(nil),                // 9: goeland.v1.CreateActorResponse
+	(*GetActorRequest)(nil),                    // 10: goeland.v1.GetActorRequest
+	(*GetActorResponse)(nil),                   // 11: goeland.v1.GetActorResponse
+	(*UpdateActorRequest)(nil),                 // 12: goeland.v1.UpdateActorRequest
+	(*UpdateActorResponse)(nil),                // 13: goeland.v1.UpdateActorResponse
+	(*SearchActorsRequest)(nil),                // 14: goeland.v1.SearchActorsRequest
+	(*SearchActorsResponse)(nil),               // 15: goeland.v1.SearchActorsResponse
+	(*DeleteActorRequest)(nil),                 // 16: goeland.v1.DeleteActorRequest
+	(*DeleteActorResponse)(nil),                // 17: goeland.v1.DeleteActorResponse
+	(*ListOrganizationCategoriesRequest)(nil),  // 18: goeland.v1.ListOrganizationCategoriesRequest
+	(*ListOrganizationCategoriesResponse)(nil), // 19: goeland.v1.ListOrganizationCategoriesResponse
+	(*SubjectRef)(nil),                         // 20: goeland.v1.SubjectRef
+	(*timestamppb.Timestamp)(nil),              // 21: google.protobuf.Timestamp
+	(*RecordMetadata)(nil),                     // 22: goeland.v1.RecordMetadata
+	(*AuditEvent)(nil),                         // 23: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),                // 24: goeland.v1.SubjectRelationship
 }
 var file_goeland_v1_actor_proto_depIdxs = []int32{
-	1,  // 0: goeland.v1.ActorContact.contact_type:type_name -> goeland.v1.ContactType
-	19, // 1: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
-	0,  // 2: goeland.v1.Actor.actor_kind:type_name -> goeland.v1.ActorKind
-	5,  // 3: goeland.v1.Actor.person:type_name -> goeland.v1.PersonDetails
-	4,  // 4: goeland.v1.Actor.organization:type_name -> goeland.v1.OrganizationDetails
-	3,  // 5: goeland.v1.Actor.contacts:type_name -> goeland.v1.ActorContact
-	20, // 6: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
-	20, // 7: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
-	21, // 8: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
-	0,  // 9: goeland.v1.CreateActorRequest.actor_kind:type_name -> goeland.v1.ActorKind
-	5,  // 10: goeland.v1.CreateActorRequest.person:type_name -> goeland.v1.PersonDetails
-	4,  // 11: goeland.v1.CreateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
-	3,  // 12: goeland.v1.CreateActorRequest.contacts:type_name -> goeland.v1.ActorContact
-	21, // 13: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
-	6,  // 14: goeland.v1.CreateActorResponse.actor:type_name -> goeland.v1.Actor
-	22, // 15: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
-	6,  // 16: goeland.v1.GetActorResponse.actor:type_name -> goeland.v1.Actor
-	23, // 17: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	22, // 18: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	5,  // 19: goeland.v1.UpdateActorRequest.person:type_name -> goeland.v1.PersonDetails
-	4,  // 20: goeland.v1.UpdateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
-	3,  // 21: goeland.v1.UpdateActorRequest.contacts:type_name -> goeland.v1.ActorContact
-	6,  // 22: goeland.v1.UpdateActorResponse.actor:type_name -> goeland.v1.Actor
-	22, // 23: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
-	0,  // 24: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
-	6,  // 25: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
-	22, // 26: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	2,  // 27: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
-	7,  // 28: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
-	9,  // 29: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
-	11, // 30: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
-	13, // 31: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
-	15, // 32: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
-	17, // 33: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
-	8,  // 34: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
-	10, // 35: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
-	12, // 36: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
-	14, // 37: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
-	16, // 38: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
-	18, // 39: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
-	34, // [34:40] is the sub-list for method output_type
-	28, // [28:34] is the sub-list for method input_type
-	28, // [28:28] is the sub-list for extension type_name
-	28, // [28:28] is the sub-list for extension extendee
-	0,  // [0:28] is the sub-list for field type_name
+	2,  // 0: goeland.v1.ActorContact.contact_type:type_name -> goeland.v1.ContactType
+	1,  // 1: goeland.v1.PersonDetails.salutation:type_name -> goeland.v1.Salutation
+	20, // 2: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
+	0,  // 3: goeland.v1.Actor.actor_kind:type_name -> goeland.v1.ActorKind
+	6,  // 4: goeland.v1.Actor.person:type_name -> goeland.v1.PersonDetails
+	5,  // 5: goeland.v1.Actor.organization:type_name -> goeland.v1.OrganizationDetails
+	4,  // 6: goeland.v1.Actor.contacts:type_name -> goeland.v1.ActorContact
+	21, // 7: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
+	21, // 8: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
+	22, // 9: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
+	0,  // 10: goeland.v1.CreateActorRequest.actor_kind:type_name -> goeland.v1.ActorKind
+	6,  // 11: goeland.v1.CreateActorRequest.person:type_name -> goeland.v1.PersonDetails
+	5,  // 12: goeland.v1.CreateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
+	4,  // 13: goeland.v1.CreateActorRequest.contacts:type_name -> goeland.v1.ActorContact
+	22, // 14: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	7,  // 15: goeland.v1.CreateActorResponse.actor:type_name -> goeland.v1.Actor
+	23, // 16: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
+	7,  // 17: goeland.v1.GetActorResponse.actor:type_name -> goeland.v1.Actor
+	24, // 18: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	23, // 19: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	6,  // 20: goeland.v1.UpdateActorRequest.person:type_name -> goeland.v1.PersonDetails
+	5,  // 21: goeland.v1.UpdateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
+	4,  // 22: goeland.v1.UpdateActorRequest.contacts:type_name -> goeland.v1.ActorContact
+	7,  // 23: goeland.v1.UpdateActorResponse.actor:type_name -> goeland.v1.Actor
+	23, // 24: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
+	0,  // 25: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
+	7,  // 26: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
+	23, // 27: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	3,  // 28: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
+	8,  // 29: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
+	10, // 30: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
+	12, // 31: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
+	14, // 32: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
+	16, // 33: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
+	18, // 34: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
+	9,  // 35: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
+	11, // 36: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
+	13, // 37: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
+	15, // 38: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
+	17, // 39: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
+	19, // 40: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
+	35, // [35:41] is the sub-list for method output_type
+	29, // [29:35] is the sub-list for method input_type
+	29, // [29:29] is the sub-list for extension type_name
+	29, // [29:29] is the sub-list for extension extendee
+	0,  // [0:29] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_actor_proto_init() }
@@ -1832,7 +1934,7 @@ func file_goeland_v1_actor_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_actor_proto_rawDesc), len(file_goeland_v1_actor_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      3,
 			NumMessages:   17,
 			NumExtensions: 0,
 			NumServices:   1,

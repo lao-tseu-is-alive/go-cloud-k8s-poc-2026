@@ -63,6 +63,29 @@ const (
 	ContactTypeOther ContactType = 99
 )
 
+// Salutation is how a person is addressed; it mirrors the Salutation proto enum
+// and the actor.salutation column.
+type Salutation int16
+
+const (
+	// SalutationUnspecified means not specified (address by name only).
+	SalutationUnspecified Salutation = 0
+	// SalutationMadame is "Madame".
+	SalutationMadame Salutation = 1
+	// SalutationMonsieur is "Monsieur".
+	SalutationMonsieur Salutation = 2
+	// SalutationNeutral is a neutral form of address (names, no title).
+	SalutationNeutral Salutation = 3
+)
+
+// Valid reports whether s is a known salutation (the zero value included).
+func (s Salutation) Valid() bool {
+	return s >= SalutationUnspecified && s <= SalutationNeutral
+}
+
+// MaxPersonNameLength is the maximum number of code points of a first or last name.
+const MaxPersonNameLength = 100
+
 // contactTypeNames lists the persistable contact types (the zero value is
 // excluded) with the name used in messages.
 var contactTypeNames = map[ContactType]string{
@@ -157,6 +180,14 @@ type Actor struct {
 	// CHRegisterRef is an opaque key into the population register, never civil
 	// data; empty for an organization.
 	CHRegisterRef string `db:"ch_register_ref"`
+	// Salutation is a person's form of address; unspecified for an organization.
+	Salutation Salutation `db:"salutation"`
+	// LastName is a person's family name; empty for an organization (and for
+	// persons recorded before GLD-039).
+	LastName string `db:"last_name"`
+	// FirstName is a person's given name or names; empty when unknown or for an
+	// organization.
+	FirstName string `db:"first_name"`
 	// CreatedAt is the database insertion time.
 	CreatedAt time.Time `db:"created_at"`
 	// CreatedBy is the operator who created the actor.
@@ -213,6 +244,12 @@ type CreateInput struct {
 	IsCHRegister bool
 	// CHRegisterRef is the opaque register key of a person; never civil data.
 	CHRegisterRef string
+	// Salutation is a person's form of address.
+	Salutation Salutation
+	// LastName is a person's required family name (at most MaxPersonNameLength).
+	LastName string
+	// FirstName is a person's optional given name (at most MaxPersonNameLength).
+	FirstName string
 
 	// Contacts are the initial contacts.
 	Contacts []ContactInput
@@ -248,6 +285,12 @@ type UpdateInput struct {
 	IsCHRegister *bool
 	// CHRegisterRef replaces a person's opaque register key when non-nil.
 	CHRegisterRef *string
+	// Salutation replaces a person's form of address when non-nil.
+	Salutation *Salutation
+	// LastName replaces a person's family name when non-nil; it must not be blank.
+	LastName *string
+	// FirstName replaces a person's given name when non-nil.
+	FirstName *string
 
 	// ReplaceContacts, when true, replaces the whole contact list by Contacts;
 	// when false, Contacts is ignored and existing contacts are kept.

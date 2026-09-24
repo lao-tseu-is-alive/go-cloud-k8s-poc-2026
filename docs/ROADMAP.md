@@ -27,8 +27,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0. The
 user's review of v0.6.0 opened Phase 1b (usable Actor and Case), done before the Thing
-slice (GLD-016). GLD-035, GLD-036, GLD-037, GLD-025 and GLD-038 are implemented and await
-their release; next is GLD-039 (person minimal identity).
+slice (GLD-016). GLD-035, GLD-036, GLD-037, GLD-025, GLD-038 and GLD-039 are implemented
+and await their release; next is GLD-014 (actor addresses and branches).
 
 ## Cross-cutting quality
 
@@ -121,7 +121,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
   name versus legal name (RC), rename "contacts" to typed complements (phone,
   e-mail, IDE, VAT, ...), and validate each complement type in the SPA and the
   API (protovalidate + service).
-- [ ] **GLD-039 — Person minimal identity**: salutation, last name and first
+- [~] **GLD-039 — Person minimal identity**: salutation, last name and first
   name for PERSON actors, the minimum to identify and address a person (§3g
   decision of 2026-09-24).
 - [ ] **GLD-014 — Actor addresses** (moved from Actor follow-ups): `address` +

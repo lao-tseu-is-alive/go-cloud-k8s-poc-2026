@@ -124,18 +124,21 @@
       "org_complement": "Name complement",
       "is_ch_register": "Linked to population register",
       "ch_register_ref": "Register reference",
-      "ch_register_ref_hint": "Opaque external key — no personal data is stored.",
+      "ch_register_ref_hint": "External key of the population register (no other civil data is stored).",
       "publication_code": "Publication code",
       "is_active": "Active",
       "only_active": "Active only",
       "contact_type": "Type",
       "contact_value": "Value",
       "contact_primary": "Primary",
-      "display_name_hint": "Name shown and searched.",
+      "display_name_hint": "Name shown and searched; suggested from the first and last name.",
       "display_name_hint_org": "Name shown and searched (trade or usual name), e.g. \"Migros Flon\".",
       "legal_name_hint": "Exact name registered in the commercial register, e.g. \"Société coopérative Migros Vaud\".",
       "org_complement_hint": "Precision added to the name: \"c/o …\", \"Nyon branch\", \"Parks department\". Phones, e-mails and identifiers go in the complements below.",
-      "contact_label": "Note (optional)"
+      "contact_label": "Note (optional)",
+      "salutation": "Salutation",
+      "last_name": "Last name",
+      "first_name": "First name"
     },
     "recordMetadata": {
       "created_at": "Created at",
@@ -335,6 +338,12 @@
       "PERMISSION_CONTRIBUTE": "Contribute",
       "PERMISSION_MANAGE": "Manage",
       "PERMISSION_FULL_CONTROL": "Full control"
+    },
+    "Salutation": {
+      "SALUTATION_UNSPECIFIED": "Not specified",
+      "SALUTATION_MADAME": "Madame (Ms)",
+      "SALUTATION_MONSIEUR": "Monsieur (Mr)",
+      "SALUTATION_NEUTRAL": "Neutral (first and last name)"
     }
   },
   "validation": {

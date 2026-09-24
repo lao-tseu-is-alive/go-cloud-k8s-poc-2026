@@ -39,6 +39,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   form before saving. **Behavior change:** malformed complement values are rejected with
   INVALID_ARGUMENT (no production data yet).
 
+- **GLD-039** — Person minimal identity: `PersonDetails` gains `salutation` (new `Salutation`
+  enum: Madame, Monsieur, neutral, unspecified), `last_name` (required when creating or editing
+  a person) and `first_name` (migration `0013`, person-only by a CHECK constraint). A person's
+  `display_name` may be omitted and is then derived as "<first> <last>"; search also matches
+  first and last names (accent-insensitive); actor audit events record the identity. The SPA
+  person form has salutation, first and last name, and proposes the usual name from them.
+  No birth date, AVS number or civil-registry data is stored.
+
 ### Changed
 
 - The SPA opens on the case list (`/`) instead of the document list.
