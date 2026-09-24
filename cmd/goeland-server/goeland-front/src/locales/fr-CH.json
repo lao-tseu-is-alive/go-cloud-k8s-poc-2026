@@ -20,7 +20,10 @@
     "devTokenLabel": "Jeton de développement",
     "devTokenHint": "Mode dev : collez le jeton statique du serveur.",
     "apply": "Appliquer",
-    "unreachable": "Service d'authentification injoignable."
+    "unreachable": "Service d'authentification injoignable.",
+    "devExplain": "Mode développement : collez le jeton statique configuré sur le serveur (GOELAND_DEV_TOKEN).",
+    "ssoExplain": "Connectez-vous via le service d'authentification (SSO) ; vous reviendrez ici automatiquement. Si vous êtes déjà connecté dans un autre onglet, réessayez.",
+    "retry": "Réessayer"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -244,7 +247,7 @@
     "reason": "Motif de la suppression"
   },
   "link": {
-    "title": "Lier le document à un sujet",
+    "title": "Lier à un autre sujet",
     "chooseType": "Type de relation",
     "targetId": "Identifiant du sujet cible"
   },

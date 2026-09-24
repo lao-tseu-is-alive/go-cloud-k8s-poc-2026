@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.5.0**.
+Tracked version: **v0.6.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -25,8 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-The Case slice (GLD-011) and ending a relationship (GLD-034) are implemented and
-await their release; next is the Thing slice (GLD-016).
+The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0; next is
+the Thing slice (GLD-016).
 
 ## Cross-cutting quality
 
@@ -87,12 +87,12 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
 
 ## Phase 1 — Case (v2 §24)
 
-- [~] **GLD-011 — Case slice**: `case_type` + `case_file` + `CaseService`
+- [x] **GLD-011 — Case slice**: `case_type` + `case_file` + `CaseService`
   (proto-first, mirroring Document/Actor) with `business_ref`, open/close
   lifecycle independent of any workflow, the first `CASE`-source relationship
   types including expanded `CASE_HAS_ACTOR_*` roles, a Vue panel and a
   `pkg/integration` lifecycle test.
-- [~] **GLD-034 — End a relationship**: an operation that sets `valid_to`
+- [x] **GLD-034 — End a relationship**: an operation that sets `valid_to`
   ("the relationship ended"), distinct from `UnlinkSubjects` ("the edge was a
   mistake"), each with its own audit event (§3g).
 

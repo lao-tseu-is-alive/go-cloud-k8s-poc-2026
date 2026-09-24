@@ -3,6 +3,7 @@
   import { onMounted } from 'vue'
   import { useI18n } from 'vue-i18n'
   import AppAuthControls from '@/components/AppAuthControls.vue'
+  import SignInPanel from '@/components/SignInPanel.vue'
   import { SUPPORTED_LOCALES } from '@/plugins/i18n'
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
@@ -24,15 +25,33 @@
         <span class="text-caption ml-2 d-none d-sm-inline">{{ t('app.subtitle') }}</span>
       </v-app-bar-title>
 
-      <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-briefcase-outline" to="/cases" variant="text">
+      <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-briefcase-outline"
+        to="/cases"
+        variant="text"
+      >
         {{ t('nav.cases') }}
       </v-btn>
 
-      <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-file-document-multiple" to="/documents" variant="text">
+      <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-file-document-multiple"
+        to="/documents"
+        variant="text"
+      >
         {{ t('nav.documents') }}
       </v-btn>
 
-      <v-btn class="d-none d-sm-inline-flex" prepend-icon="mdi-account-multiple" to="/actors" variant="text">
+      <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-account-multiple"
+        to="/actors"
+        variant="text"
+      >
         {{ t('nav.actors') }}
       </v-btn>
 
@@ -60,9 +79,8 @@
       <template v-if="ready">
         <router-view v-if="isAuthenticated" />
 
-        <v-container v-else class="d-flex flex-column align-center justify-center" style="min-height: 60vh">
-          <v-icon class="mb-4" icon="mdi-lock-outline" size="64" />
-          <p class="text-medium-emphasis">{{ t('messages.common.signInRequired') }}</p>
+        <v-container v-else class="d-flex justify-center align-center" style="min-height: 60vh">
+          <SignInPanel />
         </v-container>
       </template>
 

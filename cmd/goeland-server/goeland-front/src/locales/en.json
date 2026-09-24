@@ -20,7 +20,10 @@
     "devTokenLabel": "Development token",
     "devTokenHint": "Dev mode: paste the server's static token.",
     "apply": "Apply",
-    "unreachable": "Authentication service unreachable."
+    "unreachable": "Authentication service unreachable.",
+    "devExplain": "Development mode: paste the static token configured on the server (GOELAND_DEV_TOKEN).",
+    "ssoExplain": "Sign in through the authentication service (SSO); you will come back here automatically. If you already signed in in another tab, retry.",
+    "retry": "Retry"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -244,7 +247,7 @@
     "reason": "Deletion reason"
   },
   "link": {
-    "title": "Link document to a subject",
+    "title": "Link to another subject",
     "chooseType": "Relationship type",
     "targetId": "Target subject id"
   },

@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-09-24
+
+This release opens spec v2 Phase 1: the Case slice (**GLD-011**) and ending a relationship as
+distinct from unlinking it (**GLD-034**), both usable from the embedded SPA. Migrations `0010`
+and `0011` apply automatically at startup; no breaking change for existing `goeland.v1` clients.
+
 ### Added
 
 - **GLD-011** — Case slice: `CaseService` (`goeland.v1`, 7 RPCs with REST bindings under
@@ -30,6 +36,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - `core.ErrInvalidState` maps to `FAILED_PRECONDITION` for operations the current state
   forbids; wire helpers (`core.ParseUUID`, `StructFromMap`, `ToConnectError`, …) and the
   `coretest` stub repository replace per-domain copies in the Connect adapters and tests.
+
+### Fixed
+
+- SPA sign-in: in `jwt` mode the app bar "Sign in" button was invisible (primary on the primary
+  app bar), leaving only "Sign in to access the application." with no way forward. The signed-out
+  screen now explains how to sign in for the configured mode (SSO button and retry, or the dev
+  token field) and reports an unreachable authentication service; navigation is hidden until
+  signed in.
+- SPA: the case search field showed a raw i18n key, the link dialog title always said
+  "document", and the subject identity card used the document icon for every kind.
 
 ### Security
 

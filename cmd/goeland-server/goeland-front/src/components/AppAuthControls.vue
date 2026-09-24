@@ -1,13 +1,12 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
-  import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useAuthStore } from '@/stores/auth'
+  import DevTokenForm from './DevTokenForm.vue'
 
   const { t } = useI18n()
   const auth = useAuthStore()
   const { isAuthenticated, mode, displayName } = storeToRefs(auth)
-  const devToken = ref('')
 </script>
 
 <template>
@@ -37,33 +36,17 @@
 
       <v-card min-width="320">
         <v-card-text>
-          <v-text-field
-            v-model="devToken"
-            autofocus
-            :hint="t('auth.devTokenHint')"
-            :label="t('auth.devTokenLabel')"
-            persistent-hint
-            type="password"
-            @keyup.enter="auth.applyDevToken(devToken)"
-          />
+          <DevTokenForm />
         </v-card-text>
-
-        <v-card-actions>
-          <v-spacer />
-
-          <v-btn color="primary" variant="flat" @click="auth.applyDevToken(devToken)">
-            {{ t('auth.apply') }}
-          </v-btn>
-        </v-card-actions>
       </v-card>
     </v-menu>
 
-    <!-- jwt mode, not connected: redirect to SSO -->
+    <!-- jwt mode, not connected: redirect to SSO. Outlined without a color so it
+         inherits the app bar's on-primary text (color="primary" was invisible on it). -->
     <v-btn
       v-else
-      color="primary"
       prepend-icon="mdi-login"
-      variant="tonal"
+      variant="outlined"
       @click="auth.signIn()"
     >
       {{ t('auth.signIn') }}

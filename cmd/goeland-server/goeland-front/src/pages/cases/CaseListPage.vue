@@ -83,7 +83,7 @@
               clearable
               density="compact"
               :hint="t('pages.cases.list.queryHint')"
-              :label="t('search.query')"
+              :label="t('fields.search.query')"
               prepend-inner-icon="mdi-magnify"
               @keydown.enter="onSearch"
             />
