@@ -8,6 +8,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.8.0] - 2026-09-24
+
+This release adds the Thing slice (**GLD-016**, spec v2 Phase 2): parcels, buildings and other
+business objects with an EPSG:2056 (LV95) PostGIS geometry, linked to cases, documents and
+actors. Migration `0016` applies automatically at startup; no breaking change for existing
+`goeland.v1` clients. It also fixes the size of small buttons in card titles across the SPA.
+
 ### Added
 
 - **GLD-016** — Thing slice: `ThingService` (`goeland.v1`, REST under `/api/things` and
