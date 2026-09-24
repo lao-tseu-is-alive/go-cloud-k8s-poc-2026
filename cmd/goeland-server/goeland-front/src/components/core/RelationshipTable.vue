@@ -26,7 +26,7 @@
           <th scope="col">{{ t('fields.relationship.target') }}</th>
           <th scope="col">{{ t('fields.relationship.role_detail') }}</th>
           <th scope="col">{{ t('fields.relationship.created_at') }}</th>
-          <th scope="col" v-if="canUnlink" />
+          <th v-if="canUnlink" scope="col" />
         </tr>
       </thead>
 
