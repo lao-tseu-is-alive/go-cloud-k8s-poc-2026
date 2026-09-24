@@ -6,7 +6,7 @@
 
   const { t } = useI18n()
   const auth = useAuthStore()
-  const { isAuthenticated, mode, displayName } = storeToRefs(auth)
+  const { isAuthenticated, mode, displayName, me, isAdmin, scopes } = storeToRefs(auth)
 </script>
 
 <template>
@@ -14,13 +14,24 @@
     <!-- Connected: show identity + sign out -->
     <v-menu v-if="isAuthenticated" location="bottom end">
       <template #activator="{ props }">
-        <v-btn v-bind="props" prepend-icon="mdi-account-circle" variant="text">
-          {{ displayName }}
+        <v-btn v-bind="props" :prepend-icon="isAdmin ? 'mdi-shield-account' : 'mdi-account-circle'" variant="text">
+          {{ displayName || t('auth.connected') }}
         </v-btn>
       </template>
 
-      <v-list>
-        <v-list-item :subtitle="mode.toUpperCase()" :title="displayName" />
+      <v-list min-width="280">
+        <v-list-item :subtitle="me?.email" :title="displayName || t('auth.connected')">
+          <template #append>
+            <v-chip v-if="isAdmin" color="warning" label size="small">{{ t('auth.admin') }}</v-chip>
+          </template>
+        </v-list-item>
+
+        <v-list-item class="text-caption text-medium-emphasis">
+          {{ t('auth.modeLabel', { mode: mode.toUpperCase() }) }}
+          <span v-if="me?.id"> · #{{ me.id }}</span>
+          <div v-if="scopes.length > 0">{{ t('auth.scopes') }} : {{ scopes.join(', ') }}</div>
+        </v-list-item>
+
         <v-divider />
         <v-list-item prepend-icon="mdi-logout" :title="t('auth.signOut')" @click="auth.signOut()" />
       </v-list>

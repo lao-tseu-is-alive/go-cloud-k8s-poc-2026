@@ -109,7 +109,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0011 (dbmate format)
+      └── db/migrations/  0001..0012 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -161,6 +161,8 @@ go run ./cmd/goeland-server
 ```
 
 Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: `/readiness`.
+Add `GOELAND_DEV_USER_NAME='Jane Doe' GOELAND_DEV_USER_ADMIN=true` to sign in as a named
+administrator; governance and audit then show that name (users are recorded from their token).
 
 ## Running locally with SSO (jwt auth)
 
@@ -302,6 +304,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0009_drop_document_file_columns.sql  drop the file/version columns superseded by 0008
 0010_case.sql                case_type (reference namespace) + case_file (status lifecycle) + expanded case roles
 0011_relationship_end.sql    uniqueness on open edges only (ended edges kept as history) + validity order check
+0012_app_user.sql            app_user: internal users recorded from verified tokens (each a USER subject)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

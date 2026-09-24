@@ -27,6 +27,7 @@ const testDatabaseURLEnv = "GOELAND_TEST_DATABASE_URL"
 type testEnv struct {
 	ctx      context.Context
 	pool     *pgxpool.Pool
+	coreRepo *core.PostgresRepository
 	coreSvc  *core.Service
 	docSvc   *document.Service
 	actorSvc *actor.Service
@@ -113,7 +114,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build case service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, blobDir: store.Root()}
+	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

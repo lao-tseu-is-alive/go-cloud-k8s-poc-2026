@@ -20,5 +20,7 @@ type Repository interface {
 	ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error)
 	ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error)
 	AppendAuditEvent(ctx context.Context, ev AuditEvent) (*AuditEvent, error)
+	RecordUser(ctx context.Context, profile UserProfile) (*AppUser, error)
+	GetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error)
 	ListAuditEvents(ctx context.Context, filter AuditFilter) (AuditResult, error)
 }

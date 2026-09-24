@@ -4,6 +4,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"slices"
 
 	"connectrpc.com/connect"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
@@ -281,4 +282,36 @@ func (s *ConnectServer) ListAuditEvents(ctx context.Context, req *connect.Reques
 // mapError converts domain errors to Connect status codes, logging unexpected ones.
 func (s *ConnectServer) mapError(err error) *connect.Error {
 	return ToConnectError(s.log, "core", err)
+}
+
+// GetCurrentUser describes the authenticated caller.
+func (s *ConnectServer) GetCurrentUser(ctx context.Context, _ *connect.Request[goelandv1.GetCurrentUserRequest]) (*connect.Response[goelandv1.GetCurrentUserResponse], error) {
+	user, err := RequireCaller(ctx, ScopeRead)
+	if err != nil {
+		return nil, err
+	}
+	current, err := s.service.CurrentUser(ctx, user)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.GetCurrentUserResponse{
+		User:   DomainUserToProto(current),
+		Scopes: slices.Clone(user.Scopes),
+	}), nil
+}
+
+// BatchGetUsers resolves operator ids to users.
+func (s *ConnectServer) BatchGetUsers(ctx context.Context, req *connect.Request[goelandv1.BatchGetUsersRequest]) (*connect.Response[goelandv1.BatchGetUsersResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
+	}
+	users, err := s.service.BatchGetUsers(ctx, req.Msg.UserIds)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.User, len(users))
+	for i, u := range users {
+		out[i] = DomainUserToProto(u)
+	}
+	return connect.NewResponse(&goelandv1.BatchGetUsersResponse{Users: out}), nil
 }

@@ -75,6 +75,12 @@ const (
 	// CoreServiceLookupSubjectsProcedure is the fully-qualified name of the CoreService's
 	// LookupSubjects RPC.
 	CoreServiceLookupSubjectsProcedure = "/goeland.v1.CoreService/LookupSubjects"
+	// CoreServiceGetCurrentUserProcedure is the fully-qualified name of the CoreService's
+	// GetCurrentUser RPC.
+	CoreServiceGetCurrentUserProcedure = "/goeland.v1.CoreService/GetCurrentUser"
+	// CoreServiceBatchGetUsersProcedure is the fully-qualified name of the CoreService's BatchGetUsers
+	// RPC.
+	CoreServiceBatchGetUsersProcedure = "/goeland.v1.CoreService/BatchGetUsers"
 	// CoreServiceLinkSubjectsProcedure is the fully-qualified name of the CoreService's LinkSubjects
 	// RPC.
 	CoreServiceLinkSubjectsProcedure = "/goeland.v1.CoreService/LinkSubjects"
@@ -112,6 +118,12 @@ type CoreServiceClient interface {
 	// Find subjects by exact business reference, optionally by namespace and kind.
 	// Requires goeland:read.
 	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
+	// Describe the authenticated caller: recorded profile, admin flag and scopes.
+	// Requires goeland:read.
+	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
+	// Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
+	// /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
+	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -173,6 +185,18 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
 			connect.WithClientOptions(opts...),
 		),
+		getCurrentUser: connect.NewClient[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse](
+			httpClient,
+			baseURL+CoreServiceGetCurrentUserProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("GetCurrentUser")),
+			connect.WithClientOptions(opts...),
+		),
+		batchGetUsers: connect.NewClient[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse](
+			httpClient,
+			baseURL+CoreServiceBatchGetUsersProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("BatchGetUsers")),
+			connect.WithClientOptions(opts...),
+		),
 		linkSubjects: connect.NewClient[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse](
 			httpClient,
 			baseURL+CoreServiceLinkSubjectsProcedure,
@@ -218,6 +242,8 @@ type coreServiceClient struct {
 	getSubjectRef         *connect.Client[v1.GetSubjectRefRequest, v1.GetSubjectRefResponse]
 	assignBusinessRef     *connect.Client[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse]
 	lookupSubjects        *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
+	getCurrentUser        *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
+	batchGetUsers         *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
 	linkSubjects          *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
 	unlinkSubjects        *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
 	endRelationship       *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
@@ -244,6 +270,16 @@ func (c *coreServiceClient) AssignBusinessRef(ctx context.Context, req *connect.
 // LookupSubjects calls goeland.v1.CoreService.LookupSubjects.
 func (c *coreServiceClient) LookupSubjects(ctx context.Context, req *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
 	return c.lookupSubjects.CallUnary(ctx, req)
+}
+
+// GetCurrentUser calls goeland.v1.CoreService.GetCurrentUser.
+func (c *coreServiceClient) GetCurrentUser(ctx context.Context, req *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error) {
+	return c.getCurrentUser.CallUnary(ctx, req)
+}
+
+// BatchGetUsers calls goeland.v1.CoreService.BatchGetUsers.
+func (c *coreServiceClient) BatchGetUsers(ctx context.Context, req *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error) {
+	return c.batchGetUsers.CallUnary(ctx, req)
 }
 
 // LinkSubjects calls goeland.v1.CoreService.LinkSubjects.
@@ -293,6 +329,12 @@ type CoreServiceHandler interface {
 	// Find subjects by exact business reference, optionally by namespace and kind.
 	// Requires goeland:read.
 	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
+	// Describe the authenticated caller: recorded profile, admin flag and scopes.
+	// Requires goeland:read.
+	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
+	// Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
+	// /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
+	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -350,6 +392,18 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceGetCurrentUserHandler := connect.NewUnaryHandler(
+		CoreServiceGetCurrentUserProcedure,
+		svc.GetCurrentUser,
+		connect.WithSchema(coreServiceMethods.ByName("GetCurrentUser")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceBatchGetUsersHandler := connect.NewUnaryHandler(
+		CoreServiceBatchGetUsersProcedure,
+		svc.BatchGetUsers,
+		connect.WithSchema(coreServiceMethods.ByName("BatchGetUsers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceLinkSubjectsHandler := connect.NewUnaryHandler(
 		CoreServiceLinkSubjectsProcedure,
 		svc.LinkSubjects,
@@ -396,6 +450,10 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceAssignBusinessRefHandler.ServeHTTP(w, r)
 		case CoreServiceLookupSubjectsProcedure:
 			coreServiceLookupSubjectsHandler.ServeHTTP(w, r)
+		case CoreServiceGetCurrentUserProcedure:
+			coreServiceGetCurrentUserHandler.ServeHTTP(w, r)
+		case CoreServiceBatchGetUsersProcedure:
+			coreServiceBatchGetUsersHandler.ServeHTTP(w, r)
 		case CoreServiceLinkSubjectsProcedure:
 			coreServiceLinkSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceUnlinkSubjectsProcedure:
@@ -431,6 +489,14 @@ func (UnimplementedCoreServiceHandler) AssignBusinessRef(context.Context, *conne
 
 func (UnimplementedCoreServiceHandler) LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.LookupSubjects is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.GetCurrentUser is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.BatchGetUsers is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error) {

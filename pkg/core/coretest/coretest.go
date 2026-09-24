@@ -63,6 +63,16 @@ func (StubRepository) UnlinkSubjects(context.Context, uuid.UUID, string, string)
 	return nil, nil, nil
 }
 
+// RecordUser returns zero values.
+func (StubRepository) RecordUser(context.Context, core.UserProfile) (*core.AppUser, error) {
+	return nil, nil
+}
+
+// GetUsers returns no users.
+func (StubRepository) GetUsers(context.Context, []string) ([]*core.AppUser, error) {
+	return nil, nil
+}
+
 // EndRelationship returns zero values.
 func (StubRepository) EndRelationship(context.Context, core.EndInput) (*core.SubjectRelationship, *core.AuditEvent, error) {
 	return nil, nil, nil

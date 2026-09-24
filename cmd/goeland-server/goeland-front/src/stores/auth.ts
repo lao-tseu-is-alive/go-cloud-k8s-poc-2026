@@ -1,4 +1,4 @@
-import type { FrontendConfig, TokenResponse, TokenUser } from '@/api/types'
+import type { FrontendConfig, TokenResponse, TokenUser, User } from '@/api/types'
 /**
  * Authentication store (setup style).
  *
@@ -12,7 +12,9 @@ import type { FrontendConfig, TokenResponse, TokenUser } from '@/api/types'
  */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
-import { setAuthToken } from '@/api/client'
+import { ApiError, setAuthToken } from '@/api/client'
+import { getCurrentUser } from '@/api/coreClient'
+import { useUsersStore } from '@/stores/users'
 
 export const useAuthStore = defineStore('auth', () => {
   const mode = ref<'dev' | 'jwt'>('jwt')
@@ -21,11 +23,31 @@ export const useAuthStore = defineStore('auth', () => {
   const user = ref<TokenUser | null>(null)
   const ready = ref(false)
   const error = ref('')
+  // The caller as the Goéland server records it (GET /api/me), with its scopes.
+  const me = ref<User | null>(null)
+  const scopes = ref<string[]>([])
   let remintTimer: ReturnType<typeof setTimeout> | null = null
 
   const isAuthenticated = computed(() => token.value !== '')
   const displayName = computed(() =>
-    user.value?.name || user.value?.email || (mode.value === 'dev' ? 'Local dev user' : ''))
+    me.value?.displayName || user.value?.name || user.value?.email || me.value?.email || '')
+  const isAdmin = computed(() => !!me.value?.isAdmin || scopes.value.includes('goeland:admin'))
+
+  /**
+   * Loads the caller from the server. Returns false only when the server
+   * rejects the token (401); other failures keep the session.
+   */
+  async function loadMe (): Promise<boolean> {
+    try {
+      const res = await getCurrentUser()
+      me.value = res.user ?? null
+      scopes.value = res.scopes ?? []
+      useUsersStore().remember(res.user)
+      return true
+    } catch (error_) {
+      return !(error_ instanceof ApiError && error_.status === 401)
+    }
+  }
 
   function setToken (newToken: string, newUser: TokenUser | null): void {
     token.value = newToken
@@ -36,6 +58,9 @@ export const useAuthStore = defineStore('auth', () => {
   function clear (): void {
     token.value = ''
     user.value = null
+    me.value = null
+    scopes.value = []
+    useUsersStore().clear()
     setAuthToken('')
     if (remintTimer) {
       clearTimeout(remintTimer)
@@ -72,6 +97,9 @@ export const useAuthStore = defineStore('auth', () => {
       const data = await res.json() as TokenResponse
       setToken(data.token, data.user)
       scheduleRemint(data.expires_in_seconds)
+      if (!me.value) {
+        void loadMe()
+      }
       error.value = ''
       return true
     } catch {
@@ -98,14 +126,22 @@ export const useAuthStore = defineStore('auth', () => {
     ready.value = true
   }
 
-  /** dev mode: apply a manually entered static token. */
-  function applyDevToken (rawToken: string): void {
+  /** dev mode: apply a manually entered static token; false when the server rejects it. */
+  async function applyDevToken (rawToken: string): Promise<boolean> {
     const trimmed = rawToken.trim()
     if (!trimmed) {
-      return
+      return false
     }
-    setToken(trimmed, { name: 'Local dev user', email: 'dev@localhost' })
+    // Verify before adopting it: only the REST client carries the token while
+    // /api/me checks it, so a rejected token never flips the app to signed-in.
+    setAuthToken(trimmed)
+    if (!(await loadMe())) {
+      clear()
+      return false
+    }
+    setToken(trimmed, null)
     error.value = ''
+    return true
   }
 
   /** jwt mode: redirect to the external auth service login page. */
@@ -126,8 +162,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    mode, authBaseUrl, token, user, ready, error,
-    isAuthenticated, displayName,
+    mode, authBaseUrl, token, user, me, scopes, ready, error,
+    isAuthenticated, displayName, isAdmin, loadMe,
     bootstrap, applyDevToken, mintToken, signIn, signOut, clear,
   }
 })

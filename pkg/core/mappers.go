@@ -196,3 +196,19 @@ func DomainRelationshipsToProto(rels []*SubjectRelationship) []*goelandv1.Subjec
 	}
 	return out
 }
+
+// DomainUserToProto converts an internal user to its proto representation.
+func DomainUserToProto(u *AppUser) *goelandv1.User {
+	if u == nil {
+		return nil
+	}
+	return &goelandv1.User{
+		Id:          u.UserID,
+		SubjectId:   u.SubjectID.String(),
+		DisplayName: u.DisplayName,
+		Email:       u.Email,
+		IsAdmin:     u.IsAdmin,
+		FirstSeenAt: TimestampOrNil(u.FirstSeenAt),
+		LastSeenAt:  TimestampOrNil(u.LastSeenAt),
+	}
+}

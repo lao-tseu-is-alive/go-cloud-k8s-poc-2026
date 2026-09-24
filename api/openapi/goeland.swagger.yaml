@@ -804,6 +804,23 @@ paths:
           type: string
       tags:
         - DocumentService
+  /api/me:
+    get:
+      summary: |-
+        Describe the authenticated caller: recorded profile, admin flag and scopes.
+        Requires goeland:read.
+      operationId: GetCurrentUser
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetCurrentUserResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      tags:
+        - CoreService
   /api/organization-categories:
     get:
       summary: |-
@@ -1224,6 +1241,32 @@ paths:
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
+  /api/users:batchGet:
+    get:
+      summary: |-
+        Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
+        /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
+      operationId: BatchGetUsers
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1BatchGetUsersResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: userIds
+          description: user_ids are the operator ids to resolve (1 to 200, each 1-100 characters).
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+          collectionFormat: multi
+      tags:
+        - CoreService
 definitions:
   ActorServiceUpdateActorBody:
     type: object
@@ -1598,6 +1641,16 @@ definitions:
       in the same transaction as the change it records.
     required:
       - eventType
+  v1BatchGetUsersResponse:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1User'
+        description: users are the resolved users, ordered by id.
+    description: BatchGetUsersResponse returns the known users; unknown ids are absent.
   v1BusinessRefRequest:
     type: object
     properties:
@@ -2272,6 +2325,18 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetCaseResponse returns a case and the requested context.
+  v1GetCurrentUserResponse:
+    type: object
+    properties:
+      user:
+        $ref: '#/definitions/v1User'
+        description: user is the caller as recorded from its token.
+      scopes:
+        type: array
+        items:
+          type: string
+        description: scopes are the scopes granted to the caller's token.
+    description: GetCurrentUserResponse describes the authenticated caller.
   v1GetDocumentResponse:
     type: object
     properties:
@@ -2829,6 +2894,43 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: update_event is the DOCUMENT_METADATA_UPDATED audit event.
     description: UpdateDocumentMetadataResponse returns the updated document.
+  v1User:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the operator id stored in governance and audit fields.
+        readOnly: true
+      subjectId:
+        type: string
+        description: subject_id is the user's USER subject.
+        readOnly: true
+      displayName:
+        type: string
+        description: display_name is the human name from the token; empty when it carried none.
+        readOnly: true
+      email:
+        type: string
+        description: email is the e-mail address from the token; empty when it carried none.
+        readOnly: true
+      isAdmin:
+        type: boolean
+        description: is_admin reports whether the user's last token granted goeland:admin.
+        readOnly: true
+      firstSeenAt:
+        type: string
+        format: date-time
+        description: first_seen_at is when the user was first recorded.
+        readOnly: true
+      lastSeenAt:
+        type: string
+        format: date-time
+        description: last_seen_at is when the user was last recorded.
+        readOnly: true
+    description: |-
+      User is an internal, authenticated user (an employee), recorded from its
+      verified token; never an external ACTOR. Governance and audit fields that
+      hold an operator id (created_by, actor_user_id, ...) refer to User.id.
   v1VerifyDocumentIntegrityResponse:
     type: object
     properties:

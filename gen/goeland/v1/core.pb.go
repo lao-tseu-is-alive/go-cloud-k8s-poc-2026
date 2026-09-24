@@ -1496,6 +1496,292 @@ func (x *LookupSubjectsResponse) GetSubjectRefs() []*SubjectRef {
 	return nil
 }
 
+// User is an internal, authenticated user (an employee), recorded from its
+// verified token; never an external ACTOR. Governance and audit fields that
+// hold an operator id (created_by, actor_user_id, ...) refer to User.id.
+type User struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the operator id stored in governance and audit fields.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// subject_id is the user's USER subject.
+	SubjectId string `protobuf:"bytes,2,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// display_name is the human name from the token; empty when it carried none.
+	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
+	// email is the e-mail address from the token; empty when it carried none.
+	Email string `protobuf:"bytes,4,opt,name=email,proto3" json:"email,omitempty"`
+	// is_admin reports whether the user's last token granted goeland:admin.
+	IsAdmin bool `protobuf:"varint,5,opt,name=is_admin,json=isAdmin,proto3" json:"is_admin,omitempty"`
+	// first_seen_at is when the user was first recorded.
+	FirstSeenAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=first_seen_at,json=firstSeenAt,proto3" json:"first_seen_at,omitempty"`
+	// last_seen_at is when the user was last recorded.
+	LastSeenAt    *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=last_seen_at,json=lastSeenAt,proto3" json:"last_seen_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *User) Reset() {
+	*x = User{}
+	mi := &file_goeland_v1_core_proto_msgTypes[14]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *User) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*User) ProtoMessage() {}
+
+func (x *User) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[14]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use User.ProtoReflect.Descriptor instead.
+func (*User) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{14}
+}
+
+func (x *User) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *User) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *User) GetDisplayName() string {
+	if x != nil {
+		return x.DisplayName
+	}
+	return ""
+}
+
+func (x *User) GetEmail() string {
+	if x != nil {
+		return x.Email
+	}
+	return ""
+}
+
+func (x *User) GetIsAdmin() bool {
+	if x != nil {
+		return x.IsAdmin
+	}
+	return false
+}
+
+func (x *User) GetFirstSeenAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FirstSeenAt
+	}
+	return nil
+}
+
+func (x *User) GetLastSeenAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.LastSeenAt
+	}
+	return nil
+}
+
+// GetCurrentUserRequest asks who the caller is; it has no fields.
+type GetCurrentUserRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserRequest) Reset() {
+	*x = GetCurrentUserRequest{}
+	mi := &file_goeland_v1_core_proto_msgTypes[15]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserRequest) ProtoMessage() {}
+
+func (x *GetCurrentUserRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[15]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserRequest.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{15}
+}
+
+// GetCurrentUserResponse describes the authenticated caller.
+type GetCurrentUserResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// user is the caller as recorded from its token.
+	User *User `protobuf:"bytes,1,opt,name=user,proto3" json:"user,omitempty"`
+	// scopes are the scopes granted to the caller's token.
+	Scopes        []string `protobuf:"bytes,2,rep,name=scopes,proto3" json:"scopes,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetCurrentUserResponse) Reset() {
+	*x = GetCurrentUserResponse{}
+	mi := &file_goeland_v1_core_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetCurrentUserResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetCurrentUserResponse) ProtoMessage() {}
+
+func (x *GetCurrentUserResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetCurrentUserResponse.ProtoReflect.Descriptor instead.
+func (*GetCurrentUserResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *GetCurrentUserResponse) GetUser() *User {
+	if x != nil {
+		return x.User
+	}
+	return nil
+}
+
+func (x *GetCurrentUserResponse) GetScopes() []string {
+	if x != nil {
+		return x.Scopes
+	}
+	return nil
+}
+
+// BatchGetUsersRequest resolves operator ids to users.
+type BatchGetUsersRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// user_ids are the operator ids to resolve (1 to 200, each 1-100 characters).
+	UserIds       []string `protobuf:"bytes,1,rep,name=user_ids,json=userIds,proto3" json:"user_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchGetUsersRequest) Reset() {
+	*x = BatchGetUsersRequest{}
+	mi := &file_goeland_v1_core_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchGetUsersRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchGetUsersRequest) ProtoMessage() {}
+
+func (x *BatchGetUsersRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchGetUsersRequest.ProtoReflect.Descriptor instead.
+func (*BatchGetUsersRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *BatchGetUsersRequest) GetUserIds() []string {
+	if x != nil {
+		return x.UserIds
+	}
+	return nil
+}
+
+// BatchGetUsersResponse returns the known users; unknown ids are absent.
+type BatchGetUsersResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// users are the resolved users, ordered by id.
+	Users         []*User `protobuf:"bytes,1,rep,name=users,proto3" json:"users,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *BatchGetUsersResponse) Reset() {
+	*x = BatchGetUsersResponse{}
+	mi := &file_goeland_v1_core_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *BatchGetUsersResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*BatchGetUsersResponse) ProtoMessage() {}
+
+func (x *BatchGetUsersResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use BatchGetUsersResponse.ProtoReflect.Descriptor instead.
+func (*BatchGetUsersResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *BatchGetUsersResponse) GetUsers() []*User {
+	if x != nil {
+		return x.Users
+	}
+	return nil
+}
+
 // LinkSubjectsRequest creates a typed edge between two existing subjects.
 type LinkSubjectsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1516,7 +1802,7 @@ type LinkSubjectsRequest struct {
 
 func (x *LinkSubjectsRequest) Reset() {
 	*x = LinkSubjectsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[14]
+	mi := &file_goeland_v1_core_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1528,7 +1814,7 @@ func (x *LinkSubjectsRequest) String() string {
 func (*LinkSubjectsRequest) ProtoMessage() {}
 
 func (x *LinkSubjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[14]
+	mi := &file_goeland_v1_core_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1541,7 +1827,7 @@ func (x *LinkSubjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkSubjectsRequest.ProtoReflect.Descriptor instead.
 func (*LinkSubjectsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{14}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *LinkSubjectsRequest) GetSourceSubjectId() string {
@@ -1592,7 +1878,7 @@ type LinkSubjectsResponse struct {
 
 func (x *LinkSubjectsResponse) Reset() {
 	*x = LinkSubjectsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[15]
+	mi := &file_goeland_v1_core_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1604,7 +1890,7 @@ func (x *LinkSubjectsResponse) String() string {
 func (*LinkSubjectsResponse) ProtoMessage() {}
 
 func (x *LinkSubjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[15]
+	mi := &file_goeland_v1_core_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1617,7 +1903,7 @@ func (x *LinkSubjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkSubjectsResponse.ProtoReflect.Descriptor instead.
 func (*LinkSubjectsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{15}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *LinkSubjectsResponse) GetRelationship() *SubjectRelationship {
@@ -1647,7 +1933,7 @@ type UnlinkSubjectsRequest struct {
 
 func (x *UnlinkSubjectsRequest) Reset() {
 	*x = UnlinkSubjectsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[16]
+	mi := &file_goeland_v1_core_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1659,7 +1945,7 @@ func (x *UnlinkSubjectsRequest) String() string {
 func (*UnlinkSubjectsRequest) ProtoMessage() {}
 
 func (x *UnlinkSubjectsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[16]
+	mi := &file_goeland_v1_core_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1672,7 +1958,7 @@ func (x *UnlinkSubjectsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlinkSubjectsRequest.ProtoReflect.Descriptor instead.
 func (*UnlinkSubjectsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{16}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *UnlinkSubjectsRequest) GetRelationshipId() string {
@@ -1702,7 +1988,7 @@ type UnlinkSubjectsResponse struct {
 
 func (x *UnlinkSubjectsResponse) Reset() {
 	*x = UnlinkSubjectsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[17]
+	mi := &file_goeland_v1_core_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1714,7 +2000,7 @@ func (x *UnlinkSubjectsResponse) String() string {
 func (*UnlinkSubjectsResponse) ProtoMessage() {}
 
 func (x *UnlinkSubjectsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[17]
+	mi := &file_goeland_v1_core_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1727,7 +2013,7 @@ func (x *UnlinkSubjectsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UnlinkSubjectsResponse.ProtoReflect.Descriptor instead.
 func (*UnlinkSubjectsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{17}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UnlinkSubjectsResponse) GetRelationshipId() string {
@@ -1764,7 +2050,7 @@ type EndRelationshipRequest struct {
 
 func (x *EndRelationshipRequest) Reset() {
 	*x = EndRelationshipRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[18]
+	mi := &file_goeland_v1_core_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1776,7 +2062,7 @@ func (x *EndRelationshipRequest) String() string {
 func (*EndRelationshipRequest) ProtoMessage() {}
 
 func (x *EndRelationshipRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[18]
+	mi := &file_goeland_v1_core_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1789,7 +2075,7 @@ func (x *EndRelationshipRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndRelationshipRequest.ProtoReflect.Descriptor instead.
 func (*EndRelationshipRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{18}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *EndRelationshipRequest) GetRelationshipId() string {
@@ -1826,7 +2112,7 @@ type EndRelationshipResponse struct {
 
 func (x *EndRelationshipResponse) Reset() {
 	*x = EndRelationshipResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[19]
+	mi := &file_goeland_v1_core_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1838,7 +2124,7 @@ func (x *EndRelationshipResponse) String() string {
 func (*EndRelationshipResponse) ProtoMessage() {}
 
 func (x *EndRelationshipResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[19]
+	mi := &file_goeland_v1_core_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1851,7 +2137,7 @@ func (x *EndRelationshipResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use EndRelationshipResponse.ProtoReflect.Descriptor instead.
 func (*EndRelationshipResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{19}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *EndRelationshipResponse) GetRelationship() *SubjectRelationship {
@@ -1887,7 +2173,7 @@ type ListRelationshipsRequest struct {
 
 func (x *ListRelationshipsRequest) Reset() {
 	*x = ListRelationshipsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[20]
+	mi := &file_goeland_v1_core_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1899,7 +2185,7 @@ func (x *ListRelationshipsRequest) String() string {
 func (*ListRelationshipsRequest) ProtoMessage() {}
 
 func (x *ListRelationshipsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[20]
+	mi := &file_goeland_v1_core_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1912,7 +2198,7 @@ func (x *ListRelationshipsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipsRequest.ProtoReflect.Descriptor instead.
 func (*ListRelationshipsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{20}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *ListRelationshipsRequest) GetSubjectId() string {
@@ -1965,7 +2251,7 @@ type ListRelationshipsResponse struct {
 
 func (x *ListRelationshipsResponse) Reset() {
 	*x = ListRelationshipsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[21]
+	mi := &file_goeland_v1_core_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1977,7 +2263,7 @@ func (x *ListRelationshipsResponse) String() string {
 func (*ListRelationshipsResponse) ProtoMessage() {}
 
 func (x *ListRelationshipsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[21]
+	mi := &file_goeland_v1_core_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1990,7 +2276,7 @@ func (x *ListRelationshipsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipsResponse.ProtoReflect.Descriptor instead.
 func (*ListRelationshipsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{21}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListRelationshipsResponse) GetRelationships() []*SubjectRelationship {
@@ -2029,7 +2315,7 @@ type ListRelationshipTypesRequest struct {
 
 func (x *ListRelationshipTypesRequest) Reset() {
 	*x = ListRelationshipTypesRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[22]
+	mi := &file_goeland_v1_core_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2041,7 +2327,7 @@ func (x *ListRelationshipTypesRequest) String() string {
 func (*ListRelationshipTypesRequest) ProtoMessage() {}
 
 func (x *ListRelationshipTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[22]
+	mi := &file_goeland_v1_core_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2054,7 +2340,7 @@ func (x *ListRelationshipTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListRelationshipTypesRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{22}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListRelationshipTypesRequest) GetOnlyActive() bool {
@@ -2089,7 +2375,7 @@ type ListRelationshipTypesResponse struct {
 
 func (x *ListRelationshipTypesResponse) Reset() {
 	*x = ListRelationshipTypesResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[23]
+	mi := &file_goeland_v1_core_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2101,7 +2387,7 @@ func (x *ListRelationshipTypesResponse) String() string {
 func (*ListRelationshipTypesResponse) ProtoMessage() {}
 
 func (x *ListRelationshipTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[23]
+	mi := &file_goeland_v1_core_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2114,7 +2400,7 @@ func (x *ListRelationshipTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListRelationshipTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListRelationshipTypesResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{23}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *ListRelationshipTypesResponse) GetRelationshipTypes() []*RelationshipType {
@@ -2145,7 +2431,7 @@ type ListAuditEventsRequest struct {
 
 func (x *ListAuditEventsRequest) Reset() {
 	*x = ListAuditEventsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[24]
+	mi := &file_goeland_v1_core_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2157,7 +2443,7 @@ func (x *ListAuditEventsRequest) String() string {
 func (*ListAuditEventsRequest) ProtoMessage() {}
 
 func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[24]
+	mi := &file_goeland_v1_core_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2170,7 +2456,7 @@ func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{24}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *ListAuditEventsRequest) GetSubjectId() string {
@@ -2230,7 +2516,7 @@ type ListAuditEventsResponse struct {
 
 func (x *ListAuditEventsResponse) Reset() {
 	*x = ListAuditEventsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[25]
+	mi := &file_goeland_v1_core_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2242,7 +2528,7 @@ func (x *ListAuditEventsResponse) String() string {
 func (*ListAuditEventsResponse) ProtoMessage() {}
 
 func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[25]
+	mi := &file_goeland_v1_core_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2255,7 +2541,7 @@ func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{25}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *ListAuditEventsResponse) GetEvents() []*AuditEvent {
@@ -2417,7 +2703,25 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\tnamespace\x125\n" +
 	"\x04kind\x18\x03 \x01(\x0e2\x17.goeland.v1.SubjectKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\"S\n" +
 	"\x16LookupSubjectsResponse\x129\n" +
-	"\fsubject_refs\x18\x01 \x03(\v2\x16.goeland.v1.SubjectRefR\vsubjectRefs\"\xab\x02\n" +
+	"\fsubject_refs\x18\x01 \x03(\v2\x16.goeland.v1.SubjectRefR\vsubjectRefs\"\xaa\x02\n" +
+	"\x04User\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\"\n" +
+	"\n" +
+	"subject_id\x18\x02 \x01(\tB\x03\xe0A\x03R\tsubjectId\x12&\n" +
+	"\fdisplay_name\x18\x03 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12\x19\n" +
+	"\x05email\x18\x04 \x01(\tB\x03\xe0A\x03R\x05email\x12\x1e\n" +
+	"\bis_admin\x18\x05 \x01(\bB\x03\xe0A\x03R\aisAdmin\x12C\n" +
+	"\rfirst_seen_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vfirstSeenAt\x12A\n" +
+	"\flast_seen_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"lastSeenAt\"\x17\n" +
+	"\x15GetCurrentUserRequest\"V\n" +
+	"\x16GetCurrentUserResponse\x12$\n" +
+	"\x04user\x18\x01 \x01(\v2\x10.goeland.v1.UserR\x04user\x12\x16\n" +
+	"\x06scopes\x18\x02 \x03(\tR\x06scopes\"F\n" +
+	"\x14BatchGetUsersRequest\x12.\n" +
+	"\buser_ids\x18\x01 \x03(\tB\x13\xbaH\x10\x92\x01\r\b\x01\x10\xc8\x01\"\x06r\x04\x10\x01\x18dR\auserIds\"?\n" +
+	"\x15BatchGetUsersResponse\x12&\n" +
+	"\x05users\x18\x01 \x03(\v2\x10.goeland.v1.UserR\x05users\"\xab\x02\n" +
 	"\x13LinkSubjectsRequest\x124\n" +
 	"\x11source_subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceSubjectId\x124\n" +
 	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12B\n" +
@@ -2499,13 +2803,14 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x0fPERMISSION_READ\x10\x02\x12\x19\n" +
 	"\x15PERMISSION_CONTRIBUTE\x10\x03\x12\x15\n" +
 	"\x11PERMISSION_MANAGE\x10\x04\x12\x1b\n" +
-	"\x17PERMISSION_FULL_CONTROL\x10\x052\xbe\n" +
-	"\n" +
+	"\x17PERMISSION_FULL_CONTROL\x10\x052\x9b\f\n" +
 	"\vCoreService\x12w\n" +
 	"\x10CreateSubjectRef\x12#.goeland.v1.CreateSubjectRefRequest\x1a$.goeland.v1.CreateSubjectRefResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/subjects\x12p\n" +
 	"\rGetSubjectRef\x12 .goeland.v1.GetSubjectRefRequest\x1a!.goeland.v1.GetSubjectRefResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/subjects/{id}\x12\x94\x01\n" +
 	"\x11AssignBusinessRef\x12$.goeland.v1.AssignBusinessRefRequest\x1a%.goeland.v1.AssignBusinessRefResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/subjects/{subject_id}/business-ref\x12u\n" +
-	"\x0eLookupSubjects\x12!.goeland.v1.LookupSubjectsRequest\x1a\".goeland.v1.LookupSubjectsResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/subjects:lookup\x12p\n" +
+	"\x0eLookupSubjects\x12!.goeland.v1.LookupSubjectsRequest\x1a\".goeland.v1.LookupSubjectsResponse\"\x1c\x82\xd3\xe4\x93\x02\x16\x12\x14/api/subjects:lookup\x12h\n" +
+	"\x0eGetCurrentUser\x12!.goeland.v1.GetCurrentUserRequest\x1a\".goeland.v1.GetCurrentUserResponse\"\x0f\x82\xd3\xe4\x93\x02\t\x12\a/api/me\x12q\n" +
+	"\rBatchGetUsers\x12 .goeland.v1.BatchGetUsersRequest\x1a!.goeland.v1.BatchGetUsersResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/users:batchGet\x12p\n" +
 	"\fLinkSubjects\x12\x1f.goeland.v1.LinkSubjectsRequest\x1a .goeland.v1.LinkSubjectsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/relationships\x12\x85\x01\n" +
 	"\x0eUnlinkSubjects\x12!.goeland.v1.UnlinkSubjectsRequest\x1a\".goeland.v1.UnlinkSubjectsResponse\",\x82\xd3\xe4\x93\x02&*$/api/relationships/{relationship_id}\x12\x8f\x01\n" +
 	"\x0fEndRelationship\x12\".goeland.v1.EndRelationshipRequest\x1a#.goeland.v1.EndRelationshipResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/relationships/{relationship_id}/end\x12\x92\x01\n" +
@@ -2529,7 +2834,7 @@ func file_goeland_v1_core_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 27)
+var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_goeland_v1_core_proto_goTypes = []any{
 	(SubjectKind)(0),                      // 0: goeland.v1.SubjectKind
 	(Permission)(0),                       // 1: goeland.v1.Permission
@@ -2547,43 +2852,48 @@ var file_goeland_v1_core_proto_goTypes = []any{
 	(*AssignBusinessRefResponse)(nil),     // 13: goeland.v1.AssignBusinessRefResponse
 	(*LookupSubjectsRequest)(nil),         // 14: goeland.v1.LookupSubjectsRequest
 	(*LookupSubjectsResponse)(nil),        // 15: goeland.v1.LookupSubjectsResponse
-	(*LinkSubjectsRequest)(nil),           // 16: goeland.v1.LinkSubjectsRequest
-	(*LinkSubjectsResponse)(nil),          // 17: goeland.v1.LinkSubjectsResponse
-	(*UnlinkSubjectsRequest)(nil),         // 18: goeland.v1.UnlinkSubjectsRequest
-	(*UnlinkSubjectsResponse)(nil),        // 19: goeland.v1.UnlinkSubjectsResponse
-	(*EndRelationshipRequest)(nil),        // 20: goeland.v1.EndRelationshipRequest
-	(*EndRelationshipResponse)(nil),       // 21: goeland.v1.EndRelationshipResponse
-	(*ListRelationshipsRequest)(nil),      // 22: goeland.v1.ListRelationshipsRequest
-	(*ListRelationshipsResponse)(nil),     // 23: goeland.v1.ListRelationshipsResponse
-	(*ListRelationshipTypesRequest)(nil),  // 24: goeland.v1.ListRelationshipTypesRequest
-	(*ListRelationshipTypesResponse)(nil), // 25: goeland.v1.ListRelationshipTypesResponse
-	(*ListAuditEventsRequest)(nil),        // 26: goeland.v1.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),       // 27: goeland.v1.ListAuditEventsResponse
-	nil,                                   // 28: goeland.v1.RecordMetadata.MetadataEntry
-	(*timestamppb.Timestamp)(nil),         // 29: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),               // 30: google.protobuf.Struct
+	(*User)(nil),                          // 16: goeland.v1.User
+	(*GetCurrentUserRequest)(nil),         // 17: goeland.v1.GetCurrentUserRequest
+	(*GetCurrentUserResponse)(nil),        // 18: goeland.v1.GetCurrentUserResponse
+	(*BatchGetUsersRequest)(nil),          // 19: goeland.v1.BatchGetUsersRequest
+	(*BatchGetUsersResponse)(nil),         // 20: goeland.v1.BatchGetUsersResponse
+	(*LinkSubjectsRequest)(nil),           // 21: goeland.v1.LinkSubjectsRequest
+	(*LinkSubjectsResponse)(nil),          // 22: goeland.v1.LinkSubjectsResponse
+	(*UnlinkSubjectsRequest)(nil),         // 23: goeland.v1.UnlinkSubjectsRequest
+	(*UnlinkSubjectsResponse)(nil),        // 24: goeland.v1.UnlinkSubjectsResponse
+	(*EndRelationshipRequest)(nil),        // 25: goeland.v1.EndRelationshipRequest
+	(*EndRelationshipResponse)(nil),       // 26: goeland.v1.EndRelationshipResponse
+	(*ListRelationshipsRequest)(nil),      // 27: goeland.v1.ListRelationshipsRequest
+	(*ListRelationshipsResponse)(nil),     // 28: goeland.v1.ListRelationshipsResponse
+	(*ListRelationshipTypesRequest)(nil),  // 29: goeland.v1.ListRelationshipTypesRequest
+	(*ListRelationshipTypesResponse)(nil), // 30: goeland.v1.ListRelationshipTypesResponse
+	(*ListAuditEventsRequest)(nil),        // 31: goeland.v1.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),       // 32: goeland.v1.ListAuditEventsResponse
+	nil,                                   // 33: goeland.v1.RecordMetadata.MetadataEntry
+	(*timestamppb.Timestamp)(nil),         // 34: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),               // 35: google.protobuf.Struct
 }
 var file_goeland_v1_core_proto_depIdxs = []int32{
 	0,  // 0: goeland.v1.SubjectRef.kind:type_name -> goeland.v1.SubjectKind
-	29, // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
-	29, // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
-	29, // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
-	29, // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
-	29, // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
-	28, // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
-	29, // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	30, // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
-	30, // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
-	30, // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
+	34, // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
+	34, // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
+	34, // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
+	34, // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
+	34, // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
+	33, // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
+	34, // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	35, // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
+	35, // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
+	35, // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
 	0,  // 11: goeland.v1.RelationshipType.source_kind:type_name -> goeland.v1.SubjectKind
 	0,  // 12: goeland.v1.RelationshipType.target_kind:type_name -> goeland.v1.SubjectKind
 	2,  // 13: goeland.v1.SubjectRelationship.source:type_name -> goeland.v1.SubjectRef
 	2,  // 14: goeland.v1.SubjectRelationship.target:type_name -> goeland.v1.SubjectRef
 	6,  // 15: goeland.v1.SubjectRelationship.relationship_type:type_name -> goeland.v1.RelationshipType
-	29, // 16: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
-	29, // 17: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
-	29, // 18: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
-	29, // 19: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
+	34, // 16: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
+	34, // 17: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
+	34, // 18: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
+	34, // 19: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
 	0,  // 20: goeland.v1.CreateSubjectRefRequest.kind:type_name -> goeland.v1.SubjectKind
 	4,  // 21: goeland.v1.CreateSubjectRefRequest.initial_metadata:type_name -> goeland.v1.RecordMetadata
 	3,  // 22: goeland.v1.CreateSubjectRefRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
@@ -2598,45 +2908,53 @@ var file_goeland_v1_core_proto_depIdxs = []int32{
 	5,  // 31: goeland.v1.AssignBusinessRefResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	0,  // 32: goeland.v1.LookupSubjectsRequest.kind:type_name -> goeland.v1.SubjectKind
 	2,  // 33: goeland.v1.LookupSubjectsResponse.subject_refs:type_name -> goeland.v1.SubjectRef
-	29, // 34: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
-	7,  // 35: goeland.v1.LinkSubjectsResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	5,  // 36: goeland.v1.LinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	5,  // 37: goeland.v1.UnlinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	29, // 38: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
-	7,  // 39: goeland.v1.EndRelationshipResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	5,  // 40: goeland.v1.EndRelationshipResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	7,  // 41: goeland.v1.ListRelationshipsResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	0,  // 42: goeland.v1.ListRelationshipTypesRequest.source_kind:type_name -> goeland.v1.SubjectKind
-	0,  // 43: goeland.v1.ListRelationshipTypesRequest.target_kind:type_name -> goeland.v1.SubjectKind
-	6,  // 44: goeland.v1.ListRelationshipTypesResponse.relationship_types:type_name -> goeland.v1.RelationshipType
-	29, // 45: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
-	29, // 46: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
-	5,  // 47: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
-	8,  // 48: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
-	10, // 49: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
-	12, // 50: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
-	14, // 51: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
-	16, // 52: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
-	18, // 53: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
-	20, // 54: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
-	22, // 55: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
-	24, // 56: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
-	26, // 57: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
-	9,  // 58: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
-	11, // 59: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
-	13, // 60: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
-	15, // 61: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
-	17, // 62: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
-	19, // 63: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
-	21, // 64: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
-	23, // 65: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
-	25, // 66: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
-	27, // 67: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
-	58, // [58:68] is the sub-list for method output_type
-	48, // [48:58] is the sub-list for method input_type
-	48, // [48:48] is the sub-list for extension type_name
-	48, // [48:48] is the sub-list for extension extendee
-	0,  // [0:48] is the sub-list for field type_name
+	34, // 34: goeland.v1.User.first_seen_at:type_name -> google.protobuf.Timestamp
+	34, // 35: goeland.v1.User.last_seen_at:type_name -> google.protobuf.Timestamp
+	16, // 36: goeland.v1.GetCurrentUserResponse.user:type_name -> goeland.v1.User
+	16, // 37: goeland.v1.BatchGetUsersResponse.users:type_name -> goeland.v1.User
+	34, // 38: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
+	7,  // 39: goeland.v1.LinkSubjectsResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	5,  // 40: goeland.v1.LinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	5,  // 41: goeland.v1.UnlinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	34, // 42: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
+	7,  // 43: goeland.v1.EndRelationshipResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	5,  // 44: goeland.v1.EndRelationshipResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	7,  // 45: goeland.v1.ListRelationshipsResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	0,  // 46: goeland.v1.ListRelationshipTypesRequest.source_kind:type_name -> goeland.v1.SubjectKind
+	0,  // 47: goeland.v1.ListRelationshipTypesRequest.target_kind:type_name -> goeland.v1.SubjectKind
+	6,  // 48: goeland.v1.ListRelationshipTypesResponse.relationship_types:type_name -> goeland.v1.RelationshipType
+	34, // 49: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
+	34, // 50: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
+	5,  // 51: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
+	8,  // 52: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
+	10, // 53: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
+	12, // 54: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
+	14, // 55: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
+	17, // 56: goeland.v1.CoreService.GetCurrentUser:input_type -> goeland.v1.GetCurrentUserRequest
+	19, // 57: goeland.v1.CoreService.BatchGetUsers:input_type -> goeland.v1.BatchGetUsersRequest
+	21, // 58: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
+	23, // 59: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
+	25, // 60: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
+	27, // 61: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
+	29, // 62: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
+	31, // 63: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
+	9,  // 64: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
+	11, // 65: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
+	13, // 66: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
+	15, // 67: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
+	18, // 68: goeland.v1.CoreService.GetCurrentUser:output_type -> goeland.v1.GetCurrentUserResponse
+	20, // 69: goeland.v1.CoreService.BatchGetUsers:output_type -> goeland.v1.BatchGetUsersResponse
+	22, // 70: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
+	24, // 71: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
+	26, // 72: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
+	28, // 73: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
+	30, // 74: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
+	32, // 75: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
+	64, // [64:76] is the sub-list for method output_type
+	52, // [52:64] is the sub-list for method input_type
+	52, // [52:52] is the sub-list for extension type_name
+	52, // [52:52] is the sub-list for extension extendee
+	0,  // [0:52] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_core_proto_init() }
@@ -2654,7 +2972,7 @@ func file_goeland_v1_core_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_core_proto_rawDesc), len(file_goeland_v1_core_proto_rawDesc)),
 			NumEnums:      2,
-			NumMessages:   27,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

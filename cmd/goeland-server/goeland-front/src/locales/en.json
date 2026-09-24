@@ -25,7 +25,11 @@
     "ssoExplain": "Sign in through the authentication service (SSO); you will come back here automatically. If you already signed in in another tab, retry.",
     "retry": "Retry",
     "originMismatch": "The authentication service runs under another local host name, so it will refuse to send you back here. Open the application at:",
-    "ssoAllowlist": "If sign-in fails, the authentication service must allow {origin} (ALLOWED_REDIRECT_URIS and ALLOWED_ORIGINS)."
+    "ssoAllowlist": "If sign-in fails, the authentication service must allow {origin} (ALLOWED_REDIRECT_URIS and ALLOWED_ORIGINS).",
+    "devTokenRejected": "The server rejected this token.",
+    "admin": "Administrator",
+    "modeLabel": "Sign-in mode: {mode}",
+    "scopes": "Rights"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -172,7 +176,7 @@
     "audit": {
       "occurred_at": "Occurred at",
       "event_type": "Event type",
-      "actor_user_id": "Actor",
+      "actor_user_id": "By",
       "reason": "Reason",
       "correlation_id": "Correlation",
       "request_id": "Request",

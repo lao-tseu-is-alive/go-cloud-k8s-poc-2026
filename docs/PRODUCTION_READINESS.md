@@ -80,8 +80,13 @@ roadmap item — see [IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_S
   accepts PATs introspected against `AUTH_SERVER_URL`. Requires the JWT settings:
   `JWT_SECRET`, `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`, `JWT_DURATION_MINUTES`.
 - `dev` (local only): accepts one static token. Requires `GOELAND_DEV_TOKEN` (startup
-  fails without it) and the `GOELAND_DEV_USER_*` identity fields. **Never enable in
-  production.**
+  fails without it) and the `GOELAND_DEV_USER_*` identity fields (`GOELAND_DEV_USER_ADMIN`
+  grants `goeland:admin`). **Never enable in production.**
+
+Every verified caller is recorded in `app_user` (operator id, display name, e-mail, admin flag,
+first/last seen) so governance and audit can show names: employee personal data, mirrored from
+the auth service and never edited here; the audit log records name and admin changes, not
+e-mail addresses.
 
 `AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect). The auth
 service must list the SPA's public origin in its redirect allowlist and CORS origins (README,

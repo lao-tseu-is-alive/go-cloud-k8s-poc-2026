@@ -440,3 +440,25 @@ export interface SearchCasesResponse {
   nextPageToken?: string
   totalSize?: number
 }
+
+// --- Internal users (CoreService, GLD-025) ------------------------------------
+
+/** An internal, authenticated user (employee); governance/audit ids refer to User.id. */
+export interface User {
+  id: string
+  subjectId?: string
+  displayName?: string
+  email?: string
+  isAdmin?: boolean
+  firstSeenAt?: string
+  lastSeenAt?: string
+}
+
+export interface GetCurrentUserResponse {
+  user?: User
+  scopes?: string[]
+}
+
+export interface BatchGetUsersResponse {
+  users?: User[]
+}

@@ -48,6 +48,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
 | §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
+| v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
 | §6.4 `actor` + `actor_contact` + `organization_category` | ✅ `0006` | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed contacts (IDE/TVA/ABACUS/RC); 33 seeded categories; roles kept as relationships; persons carry no PII (register link only) |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
@@ -233,7 +234,9 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
 - **Outbox only from v2 Phase 7** — the v2 §54 criterion "mutation + audit + outbox" applies
   once the outbox exists; until then "mutation + audit".
 - **Minimal USER / ORG_UNIT reference before Task (v2 §28, §50)** — task assignees need real
-  targets; full security stays in Phase 6.
+  targets; full security stays in Phase 6. USER shipped first (GLD-025, 2026-09-24): the auth
+  service owns accounts, `app_user` only mirrors what verified tokens say, and the audit log
+  records name and admin changes but not e-mail addresses. ORG_UNIT follows as GLD-041.
 - **business_ref allocation** — a transactional per-namespace (and per-year when relevant)
   counter plus a partial unique index on `(namespace, business_ref)`.
 - **Thing geometry** — explicit SRID (EPSG:2056, Swiss LV95), geometry type and GIST index.

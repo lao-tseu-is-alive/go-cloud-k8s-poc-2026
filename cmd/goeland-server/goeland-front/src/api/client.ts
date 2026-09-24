@@ -44,16 +44,26 @@ export interface RequestOptions {
   signal?: AbortSignal
 }
 
+/** Appends a scalar query value; empty values and non-scalars are skipped. */
+function appendParam (params: URLSearchParams, key: string, value: unknown): void {
+  if (([undefined, null, '', false] as unknown[]).includes(value)) {
+    return
+  }
+  if (typeof value === 'string' || typeof value === 'number' || typeof value === 'boolean') {
+    params.append(key, String(value))
+  }
+}
+
 function buildUrl (path: string, query?: Record<string, unknown>): string {
   if (!query) {
     return path
   }
   const params = new URLSearchParams()
   for (const [key, value] of Object.entries(query)) {
-    if (([undefined, null, '', false] as unknown[]).includes(value)) {
-      continue
+    // A repeated proto field travels as a repeated key (?ids=1&ids=2).
+    for (const item of Array.isArray(value) ? value : [value]) {
+      appendParam(params, key, item)
     }
-    params.append(key, String(value))
   }
   const qs = params.toString()
   return qs ? `${path}?${qs}` : path

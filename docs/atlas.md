@@ -124,7 +124,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/service.go` — Core business rules: subject creation, typed linking, audit listing.
 - `pkg/core/sql.go` — Raw SQL and alias-prefixed column projections for core tables.
 - `pkg/core/storage_postgres.go` — pgx implementation of the core repository.
+- `pkg/core/storage_users.go` — pgx persistence of internal users: first-sight registration (USER subject, governance, audit), profile updates, batch lookup.
 - `pkg/core/tx.go` — Exported transaction-scoped helpers reused by sibling domains for atomic identity, governance and audit.
+- `pkg/core/user.go` — Internal user model, token profile, admin scope and the `RecordingVerifier` that records every verified caller.
+- `pkg/core/user_test.go` — Tests token profiles, labels and the recording verifier (change-only writes, best effort, invalid tokens).
+- `pkg/core/users_service_test.go` — Tests `BatchGetUsers` validation (blank, too many, repeated ids).
 - `pkg/core/wire.go` — Wire helpers shared by every ConnectRPC adapter: UUID parsing, `structpb` conversion, domain error to Connect error.
 - `pkg/core/module/migrate.go` — Embedded dbmate-format migrator serialized by a PostgreSQL advisory lock.
 - `pkg/core/module/migrate_test.go` — Tests migration parsing, PL/pgSQL block handling and version keys.
@@ -138,6 +142,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
+- `pkg/core/module/db/migrations/0012_app_user.sql` — Schema migration: `app_user`, the internal users recorded from verified tokens, each a USER subject.
 - `pkg/core/module/db/migrations/0011_relationship_end.sql` — Schema migration: uniqueness on open relationships only (ended ones kept as history) and the validity-order check.
 - `pkg/core/module/db/migrations/0010_case.sql` — Schema migration: `case_type` (with reference namespace) and `case_file` (status lifecycle, closure stamps, search vector), expanded case roles.
 - `pkg/core/module/db/migrations/0007_business_ref.sql` — Schema migration: `subject_ref.business_ref` + namespace (unique per namespace) and the `business_ref_counter` allocator.
@@ -187,6 +192,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, PII-free person specialization.
+- `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
@@ -235,6 +241,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
+- `cmd/goeland-server/goeland-front/src/components/core/UserLabel.vue` — Internal user shown by name (admin icon, e-mail and id in the tooltip) from an operator id.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
@@ -271,6 +278,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token or silent JWT minting and re-mint, in-memory token.
+- `cmd/goeland-server/goeland-front/src/stores/users.ts` — Operator id → user directory: batched `BatchGetUsers` calls and a page-lifetime cache.
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.

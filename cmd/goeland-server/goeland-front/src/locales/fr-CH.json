@@ -25,7 +25,11 @@
     "ssoExplain": "Connectez-vous via le service d'authentification (SSO) ; vous reviendrez ici automatiquement. Si vous êtes déjà connecté dans un autre onglet, réessayez.",
     "retry": "Réessayer",
     "originMismatch": "Le service d'authentification tourne sous un autre nom d'hôte local : il refusera de vous renvoyer ici. Ouvrez l'application à l'adresse :",
-    "ssoAllowlist": "Si la connexion échoue, le service d'authentification doit autoriser {origin} (ALLOWED_REDIRECT_URIS et ALLOWED_ORIGINS)."
+    "ssoAllowlist": "Si la connexion échoue, le service d'authentification doit autoriser {origin} (ALLOWED_REDIRECT_URIS et ALLOWED_ORIGINS).",
+    "devTokenRejected": "Le serveur a refusé ce jeton.",
+    "admin": "Administrateur",
+    "modeLabel": "Mode de connexion : {mode}",
+    "scopes": "Droits"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -172,7 +176,7 @@
     "audit": {
       "occurred_at": "Survenu le",
       "event_type": "Type d'événement",
-      "actor_user_id": "Acteur",
+      "actor_user_id": "Par",
       "reason": "Motif",
       "correlation_id": "Corrélation",
       "request_id": "Requête",

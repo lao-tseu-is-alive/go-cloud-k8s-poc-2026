@@ -382,6 +382,58 @@ message LookupSubjectsResponse {
   repeated SubjectRef subject_refs = 1;
 }
 
+// User is an internal, authenticated user (an employee), recorded from its
+// verified token; never an external ACTOR. Governance and audit fields that
+// hold an operator id (created_by, actor_user_id, ...) refer to User.id.
+message User {
+  // id is the operator id stored in governance and audit fields.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // subject_id is the user's USER subject.
+  string subject_id = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // display_name is the human name from the token; empty when it carried none.
+  string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // email is the e-mail address from the token; empty when it carried none.
+  string email = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // is_admin reports whether the user's last token granted goeland:admin.
+  bool is_admin = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // first_seen_at is when the user was first recorded.
+  google.protobuf.Timestamp first_seen_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // last_seen_at is when the user was last recorded.
+  google.protobuf.Timestamp last_seen_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// GetCurrentUserRequest asks who the caller is; it has no fields.
+message GetCurrentUserRequest {}
+
+// GetCurrentUserResponse describes the authenticated caller.
+message GetCurrentUserResponse {
+  // user is the caller as recorded from its token.
+  User user = 1;
+  // scopes are the scopes granted to the caller's token.
+  repeated string scopes = 2;
+}
+
+// BatchGetUsersRequest resolves operator ids to users.
+message BatchGetUsersRequest {
+  // user_ids are the operator ids to resolve (1 to 200, each 1-100 characters).
+  repeated string user_ids = 1 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 200
+    items: {
+      string: {
+        min_len: 1
+        max_len: 100
+      }
+    }
+  }];
+}
+
+// BatchGetUsersResponse returns the known users; unknown ids are absent.
+message BatchGetUsersResponse {
+  // users are the resolved users, ordered by id.
+  repeated User users = 1;
+}
+
 // LinkSubjectsRequest creates a typed edge between two existing subjects.
 message LinkSubjectsRequest {
   // source_subject_id is the subject the edge starts from.
@@ -560,6 +612,18 @@ service CoreService {
   // Requires goeland:read.
   rpc LookupSubjects(LookupSubjectsRequest) returns (LookupSubjectsResponse) {
     option (google.api.http) = {get: "/api/subjects:lookup"};
+  }
+
+  // Describe the authenticated caller: recorded profile, admin flag and scopes.
+  // Requires goeland:read.
+  rpc GetCurrentUser(GetCurrentUserRequest) returns (GetCurrentUserResponse) {
+    option (google.api.http) = {get: "/api/me"};
+  }
+
+  // Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
+  // /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
+  rpc BatchGetUsers(BatchGetUsersRequest) returns (BatchGetUsersResponse) {
+    option (google.api.http) = {get: "/api/users:batchGet"};
   }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).

@@ -47,6 +47,9 @@ type serverConfig struct {
 	// DevDisplayName is the display name of the dev-mode user
 	// (GOELAND_DEV_USER_NAME).
 	DevDisplayName string
+	// DevUserAdmin grants the dev-mode user the goeland:admin scope
+	// (GOELAND_DEV_USER_ADMIN=true, default false).
+	DevUserAdmin bool
 	// LogLevel is the slog level parsed from LOG_LEVEL (default info).
 	LogLevel slog.Level
 	// MaxConnections caps the pgx pool size (GOELAND_DB_MAX_CONNECTIONS).
@@ -89,6 +92,10 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+	devUserAdmin, err := envBool("GOELAND_DEV_USER_ADMIN", false)
+	if err != nil {
+		return serverConfig{}, err
+	}
 	maxConnections, err := envInt64InRange("GOELAND_DB_MAX_CONNECTIONS", defaultMaxConnections, 1, 1000)
 	if err != nil {
 		return serverConfig{}, err
@@ -119,6 +126,7 @@ func loadConfig() (serverConfig, error) {
 		DevUserID:      devUserID,
 		DevUserEmail:   envOrDefault("GOELAND_DEV_USER_EMAIL", "dev@localhost"),
 		DevDisplayName: envOrDefault("GOELAND_DEV_USER_NAME", "Local Goeland User"),
+		DevUserAdmin:   devUserAdmin,
 		LogLevel:       logLevel,
 		MaxConnections: int32(maxConnections),
 		ShutdownPeriod: time.Duration(shutdownSeconds) * time.Second,
@@ -199,6 +207,19 @@ func envInt64(name string, fallback int64) (int64, error) {
 	value, err := strconv.ParseInt(raw, 10, 64)
 	if err != nil {
 		return 0, fmt.Errorf("%s must be an integer: %w", name, err)
+	}
+	return value, nil
+}
+
+// envBool reads a boolean (strconv.ParseBool syntax), fallback when unset.
+func envBool(name string, fallback bool) (bool, error) {
+	raw := strings.TrimSpace(os.Getenv(name))
+	if raw == "" {
+		return fallback, nil
+	}
+	value, err := strconv.ParseBool(raw)
+	if err != nil {
+		return false, fmt.Errorf("%s must be a boolean: %w", name, err)
 	}
 	return value, nil
 }

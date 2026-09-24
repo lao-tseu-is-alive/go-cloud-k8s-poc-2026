@@ -27,8 +27,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0. The
 user's review of v0.6.0 opened Phase 1b (usable Actor and Case), done before the Thing
-slice (GLD-016). GLD-035, GLD-036 and GLD-037 are implemented and await their release;
-next is GLD-025 (users instead of numeric operator ids).
+slice (GLD-016). GLD-035, GLD-036, GLD-037 and GLD-025 are implemented and await their
+release; next is GLD-038 (actor form clarity and typed complements).
 
 ## Cross-cutting quality
 
@@ -112,11 +112,11 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 - [~] **GLD-037 — Subject picker**: the link dialog searches subjects of the
   relationship type's target kind (actors, documents, cases) instead of asking
   for a UUID.
-- [ ] **GLD-025 — Minimal USER / ORG_UNIT reference** (moved from Phase 4):
-  internal identities recorded from the token (id, name, e-mail) so governance
-  and audit show who acted instead of a numeric id, the signed-in user's admin
-  scope is visible, and tasks and circulations can later target users and
-  units, without the full security model (§3g).
+- [~] **GLD-025 — Minimal USER reference** (moved from Phase 4; ORG_UNIT split
+  to GLD-041 on 2026-09-24): internal identities recorded from the token (id,
+  name, e-mail) as USER subjects so governance and audit show who acted instead
+  of a numeric id, the signed-in user's admin scope is visible, and tasks can
+  later target users, without the full security model (§3g).
 - [ ] **GLD-038 — Actor form clarity and typed complements**: explain display
   name versus legal name (RC), rename "contacts" to typed complements (phone,
   e-mail, IDE, VAT, ...), and validate each complement type in the SPA and the
@@ -149,9 +149,12 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 4 — Task (v2 §28)
 
+- [ ] **GLD-041 — Minimal ORG_UNIT reference**: internal organizational units
+  (code, label, parent) as ORG_UNIT subjects that tasks and circulations can
+  target and that `record_metadata.owner_org_id` can name; split from GLD-025.
 - [ ] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
   a USER or ORG_UNIT, with deadlines, completion and a reassignment history.
-  Depends on GLD-011 and GLD-025.
+  Depends on GLD-011, GLD-025 and GLD-041.
 
 ## Phase 5 — Circulation (v2 §29)
 

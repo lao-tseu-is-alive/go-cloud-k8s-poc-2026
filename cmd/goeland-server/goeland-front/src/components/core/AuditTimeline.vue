@@ -2,6 +2,7 @@
   import type { AuditEvent } from '@/api/types'
   import { useI18n } from 'vue-i18n'
   import { formatDateTime } from '@/utils/formatters'
+  import UserLabel from './UserLabel.vue'
 
   // AuditEvents are append-only: this component is strictly read-only and never
   // offers edit/delete affordances.
@@ -32,7 +33,7 @@
         </div>
 
         <div v-if="event.actorUserId" class="text-caption">
-          {{ t('fields.audit.actor_user_id') }}: {{ event.actorUserId }}
+          {{ t('fields.audit.actor_user_id') }}: <UserLabel :id="event.actorUserId" />
         </div>
 
         <div v-if="event.reason" class="text-body-2">{{ event.reason }}</div>

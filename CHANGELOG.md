@@ -20,9 +20,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   target kind (actors, cases, documents; accent-insensitive, by name, title or reference)
   instead of asking for a UUID.
 
+- **GLD-025** — Internal users: every verified caller is recorded in `app_user` (migration
+  `0012`) as a USER subject — created on first sight (`USER_REGISTERED`), updated when its name
+  or admin flag changes (`USER_PROFILE_UPDATED`) — by a `core.RecordingVerifier` wrapping the
+  token verifier (best effort, never fails authentication). New `CoreService.GetCurrentUser`
+  (`GET /api/me`) and `BatchGetUsers` (`GET /api/users:batchGet`). The SPA shows names instead
+  of numeric ids in governance and audit, and the signed-in user's e-mail, rights and an
+  administrator badge. `GOELAND_DEV_USER_ADMIN=true` makes the dev user an administrator.
+
 ### Changed
 
 - The SPA opens on the case list (`/`) instead of the document list.
+- The audit timeline labels the operator "By" (fr-CH "Par") instead of "Actor", which
+  suggested an external ACTOR.
+
+### Fixed
+
+- SPA dev mode: a wrong dev token was accepted by the SPA, which then failed every call;
+  the token is now checked with `GET /api/me` before signing in and a rejection is shown.
 
 ## [0.6.0] - 2026-09-24
 

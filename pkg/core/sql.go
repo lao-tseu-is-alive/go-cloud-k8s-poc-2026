@@ -211,3 +211,35 @@ WHERE sr.deleted_at IS NULL
   AND (@relationship_type_code = '' OR rt.code = @relationship_type_code)
 ORDER BY sr.created_at DESC
 LIMIT @limit OFFSET @offset;`
+
+// --- app_user ------------------------------------------------------------------
+
+const appUserColumns = `
+user_id, subject_id, display_name, email, is_admin, first_seen_at, last_seen_at`
+
+// lockAppUserSQL serializes the first recording of a user across concurrent
+// requests (no row exists yet to lock) for the rest of the transaction.
+const lockAppUserSQL = `SELECT pg_advisory_xact_lock(hashtextextended('goeland:app_user:' || @user_id, 0));`
+
+const getAppUserForUpdateSQL = `
+SELECT ` + appUserColumns + `
+FROM app_user
+WHERE user_id = @user_id
+FOR UPDATE;`
+
+const insertAppUserSQL = `
+INSERT INTO app_user (user_id, subject_id, display_name, email, is_admin)
+VALUES (@user_id, @subject_id, @display_name, @email, @is_admin)
+RETURNING ` + appUserColumns + `;`
+
+const updateAppUserSQL = `
+UPDATE app_user
+SET display_name = @display_name, email = @email, is_admin = @is_admin, last_seen_at = now()
+WHERE user_id = @user_id
+RETURNING ` + appUserColumns + `;`
+
+const getAppUsersSQL = `
+SELECT ` + appUserColumns + `
+FROM app_user
+WHERE user_id = ANY(@user_ids::text[])
+ORDER BY user_id;`

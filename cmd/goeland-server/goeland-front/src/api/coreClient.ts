@@ -1,8 +1,11 @@
 import type {
   AuditEvent,
+  BatchGetUsersResponse,
+  GetCurrentUserResponse,
   RelationshipType,
   SubjectKind,
   SubjectRelationship,
+  User,
 } from './types'
 /**
  * CoreService REST calls: relationship types, relationships, audit, subjects.
@@ -72,4 +75,15 @@ export async function endRelationship (
     { method: 'POST', body: { reason, validTo } },
   )
   return res.relationship as SubjectRelationship
+}
+
+/** The authenticated caller: recorded profile, admin flag and scopes. */
+export function getCurrentUser (): Promise<GetCurrentUserResponse> {
+  return apiFetch<GetCurrentUserResponse>('/api/me')
+}
+
+/** Resolves operator ids (createdBy, actorUserId, ...) to users; unknown ids are absent. */
+export async function batchGetUsers (userIds: string[]): Promise<User[]> {
+  const res = await apiFetch<BatchGetUsersResponse>('/api/users:batchGet', { query: { userIds } })
+  return res.users ?? []
 }

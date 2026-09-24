@@ -96,7 +96,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0011 (dbmate format)
+  │   └── db/migrations/     0001..0012 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -174,7 +174,14 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
   `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`); `pat_` tokens introspected against
   `<AUTH_SERVER_URL>/goapi/v1/auth/introspect` (cached ~60s).
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
-  (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`).
+  (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` adds `goeland:admin`).
+
+**Internal users (GLD-025):** `server.go` wraps the verifier in `core.RecordingVerifier`, so
+every verified caller is recorded in `app_user` (a USER subject; created on first sight,
+`USER_PROFILE_UPDATED` on change, otherwise at most one `last_seen_at` write per 15 min;
+best effort, never fails authentication). Governance/audit keep storing the operator id;
+the SPA resolves ids to names through `BatchGetUsers` (`stores/users.ts`, `UserLabel.vue`)
+and reads the caller, its scopes and admin flag from `GetCurrentUser` (`GET /api/me`).
 
 Scopes: `goeland:read` (read RPCs), `goeland:write` (mutations). Env vars are
 `GOELAND_*`; DB vars are `DB_*` / `DATABASE_URL`.
@@ -229,7 +236,7 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 `CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
-`/api/subjects:lookup`, `/api/relationships/{id}/end`; ActorService:
+`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`).

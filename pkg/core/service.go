@@ -4,9 +4,11 @@ import (
 	"context"
 	"fmt"
 	"log/slog"
+	"slices"
 	"strings"
 
 	"github.com/google/uuid"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 )
 
 // recentAuditLimit bounds the number of audit events returned inline with a subject.
@@ -206,4 +208,43 @@ func (s *Service) ListAuditEvents(ctx context.Context, filter AuditFilter) (Audi
 	}
 	filter.EventType = strings.TrimSpace(filter.EventType)
 	return s.repo.ListAuditEvents(ctx, filter)
+}
+
+// CurrentUser returns the recorded profile of the authenticated caller,
+// recording it now when the verifier could not (recording is best effort there).
+func (s *Service) CurrentUser(ctx context.Context, user *authadapter.AuthenticatedUser) (*AppUser, error) {
+	profile := ProfileFromUser(user)
+	if profile.UserID == "" {
+		return nil, fmt.Errorf("%w: an authenticated user is required", ErrInvalidInput)
+	}
+	users, err := s.repo.GetUsers(ctx, []string{profile.UserID})
+	if err != nil {
+		return nil, fmt.Errorf("current user: %w", err)
+	}
+	if len(users) == 1 && profile.sameAs(users[0]) {
+		return users[0], nil
+	}
+	recorded, err := s.repo.RecordUser(ctx, profile)
+	if err != nil {
+		return nil, fmt.Errorf("current user: %w", err)
+	}
+	return recorded, nil
+}
+
+// BatchGetUsers resolves operator ids to users; blank and repeated ids are
+// ignored and unknown ids are absent from the result.
+func (s *Service) BatchGetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error) {
+	ids := make([]string, 0, len(userIDs))
+	for _, id := range userIDs {
+		if id = strings.TrimSpace(id); id != "" && !slices.Contains(ids, id) {
+			ids = append(ids, id)
+		}
+	}
+	switch {
+	case len(ids) == 0:
+		return nil, fmt.Errorf("%w: at least one user id is required", ErrInvalidInput)
+	case len(ids) > MaxBatchUsers:
+		return nil, fmt.Errorf("%w: at most %d user ids", ErrInvalidInput, MaxBatchUsers)
+	}
+	return s.repo.GetUsers(ctx, ids)
 }

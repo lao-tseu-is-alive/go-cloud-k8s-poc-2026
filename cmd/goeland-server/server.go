@@ -11,6 +11,7 @@ import (
 	"net"
 	"net/http"
 	"runtime/debug"
+	"slices"
 	"time"
 
 	"connectrpc.com/vanguard"
@@ -68,7 +69,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, err
 	}
 
-	verifier, err := buildTokenVerifier(config, log)
+	verifier, err := buildRecordingVerifier(config, pool, log)
 	if err != nil {
 		return nil, err
 	}
@@ -196,6 +197,26 @@ func spaHandler(fileServer http.Handler, frontendFS fs.FS) http.HandlerFunc {
 	}
 }
 
+// buildRecordingVerifier wraps the auth-mode verifier so every verified caller
+// is recorded as an internal USER (GLD-025) and governance and audit can show
+// names; wrapping the verifier covers the Connect interceptors and the
+// out-of-proto HTTP endpoints alike.
+func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.Logger) (authadapter.TokenVerifier, error) {
+	base, err := buildTokenVerifier(config, log)
+	if err != nil {
+		return nil, err
+	}
+	users, err := core.NewPostgresRepository(pool, log)
+	if err != nil {
+		return nil, fmt.Errorf("user repository: %w", err)
+	}
+	verifier, err := core.NewRecordingVerifier(base, users, log)
+	if err != nil {
+		return nil, fmt.Errorf("user recording verifier: %w", err)
+	}
+	return verifier, nil
+}
+
 // buildTokenVerifier selects the verifier for the configured auth mode.
 func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.TokenVerifier, error) {
 	if config.AuthMode == "dev" {
@@ -203,7 +224,7 @@ func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.Toke
 			AppUserID:   config.DevUserID,
 			Email:       config.DevUserEmail,
 			DisplayName: config.DevDisplayName,
-			Scopes:      authScopes,
+			Scopes:      devScopes(config.DevUserAdmin),
 		})
 	}
 	checker, err := goHttpEcho.GetNewJwtCheckerFromConfig(version.AppName, 60, log)
@@ -374,4 +395,13 @@ func recoverMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(writer, request)
 	})
+}
+
+// devScopes are the dev-mode user's scopes, plus goeland:admin when requested.
+func devScopes(admin bool) []string {
+	scopes := slices.Clone(authScopes)
+	if admin {
+		scopes = append(scopes, core.ScopeAdmin)
+	}
+	return scopes
 }
