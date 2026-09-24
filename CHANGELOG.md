@@ -8,13 +8,22 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-09-24
+
+This release closes the spec v2 Phase 0 alignment: spec v2 adopted (**GLD-002**), a business
+reference on every subject (**GLD-022**), the Document / DocumentVersion / ContentBlob split with
+global deduplication and automatic document reuse (**GLD-023**), and a domain-neutral BlobStore
+interface (**GLD-024**). It also clears the SonarQube dashboard with local parity gates and moves
+to Go 1.27.1. **Breaking** for `goeland.v1` document clients (no production client yet);
+migrations `0007`–`0009` apply automatically at startup.
+
 ### Added
 
 - **GLD-024** — `pkg/blobstore`: domain-neutral, context-aware content-bytes contract (`Store`
   with `Put` / `Get` / `Delete`, `ErrNotFound`, `ErrInvalidRef`; spec v2 §23). The local store
   moves to `pkg/blobstore/filestore` and implements it (cancellation-aware writes, no partial
   file on failure); `pkg/blobstore/blobstoretest` is the conformance suite any implementation
-  (e.g. the future S3 store, GLD-020) must pass. The document service and the download
+  (e.g. the future S3 store) must pass. The document service and the download
   endpoint depend only on the interface; downloads keep range support for seekable objects.
 - **GLD-023** — Document / DocumentVersion / ContentBlob split (spec v2 §15-22). Migration `0008`
   adds `content_blob` (SHA-256 unique: identical content stored once) and `document_version`
@@ -65,7 +74,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `goeland:read` (previously any valid token).
 - Helper scripts (`buf_generate.sh`, `create_k8s_configmap_from_env.sh`, `execWithEnv.sh`,
   `get_jwt_token.sh`) use bash `[[ … ]]` tests instead of `[ … ]` (SonarQube shell rule).
-- **Spec v2 adopted** as the active statement of intent:
+- **GLD-002** — **Spec v2 adopted** as the active statement of intent:
   `requirements/goeland_poc_domain_model_agent_v2.md` (renamed from its review draft); the v1
   spec stays as immutable history. `IMPLEMENTATION_STATUS.md` gains the v2 alignment table
   (§0, v2 §57) and the reconciliation decisions (§3g): automatic document reuse on identical

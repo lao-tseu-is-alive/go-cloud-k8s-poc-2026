@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.4.3**.
+Tracked version: **v0.5.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -25,8 +25,7 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-Release v0.5.0 to close the v2 Phase 0 alignment (GLD-002, GLD-022, GLD-023,
-GLD-024 are implemented), then the Case slice (GLD-011).
+The v2 Phase 0 alignment shipped in v0.5.0; next is the Case slice (GLD-011).
 
 ## Cross-cutting quality
 
@@ -34,10 +33,9 @@ GLD-024 are implemented), then the Case slice (GLD-011).
   [normative contract](DOCUMENTATION.md) in five slices (checker and gates,
   atlas, GoDoc, Protobuf comments, roadmap and guarded release) so drift fails
   `make release-check`, CI and the release workflows.
-- [~] **GLD-002 — Requirements v2 review**: v2 adopted as the active spec
+- [x] **GLD-002 — Requirements v2 review**: v2 adopted as the active spec
   (2026-09-23), v1 kept as history, reconciliation decisions recorded in
-  `IMPLEMENTATION_STATUS.md` §3g and this roadmap re-ordered on v2 §48. Closes
-  with the next release.
+  `IMPLEMENTATION_STATUS.md` §3g and this roadmap re-ordered on v2 §48.
 - [-] **GLD-003 — Duplicate digest error**: superseded by GLD-023 — uniqueness
   moves to `content_blob` and an identical upload reuses the existing content
   and document instead of failing.
@@ -64,11 +62,11 @@ GLD-024 are implemented), then the Case slice (GLD-011).
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
-- [~] **GLD-022 — Business reference**: `subject_ref.business_ref` +
+- [x] **GLD-022 — Business reference**: `subject_ref.business_ref` +
   `business_ref_namespace`, a partial unique index on `(namespace,
   business_ref)`, a transactional per-namespace allocator (e.g. `2026-001245`),
   exposed on `SubjectRef` and filterable. The display label stays non-unique.
-- [~] **GLD-023 — Document / DocumentVersion / ContentBlob**: additive
+- [x] **GLD-023 — Document / DocumentVersion / ContentBlob**: additive
   migration creating `content_blob` (SHA-256 UNIQUE, storage ref, size, mime,
   `verified_at`) and `document_version` (`version_no`, blob, `is_final`,
   `is_record`, validation stamps, immutable once validated or record), plus
@@ -78,7 +76,7 @@ GLD-024 are implemented), then the Case slice (GLD-011).
   version listing), SPA migrated, obsolete `document` columns dropped after
   tests; v2 §49 tests (dedup, shared blob across versions, immutability,
   current version, one document linked to several cases).
-- [~] **GLD-024 — BlobStore interface**: domain-neutral `pkg/blobstore.Store`
+- [x] **GLD-024 — BlobStore interface**: domain-neutral `pkg/blobstore.Store`
   (`Put` / `Get` / `Delete`, context-aware, v2 §23) with the local
   `pkg/blobstore/filestore` implementation and a `blobstoretest` conformance
   suite, so S3 or an institutional GED can replace it without touching the
