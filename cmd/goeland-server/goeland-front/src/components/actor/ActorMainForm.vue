@@ -24,7 +24,9 @@
 
     <v-text-field
       v-model="model.displayName"
+      :hint="t(isOrganization ? 'fields.actor.display_name_hint_org' : 'fields.actor.display_name_hint')"
       :label="t('fields.actor.display_name')"
+      persistent-hint
       :rules="[required(t), maxLength(t, 200)]"
     />
 
@@ -32,17 +34,23 @@
     <template v-if="isOrganization">
       <v-text-field
         v-model="model.legalName"
+        class="mt-2"
+        :hint="t('fields.actor.legal_name_hint')"
         :label="t('fields.actor.legal_name')"
+        persistent-hint
         :rules="[required(t), maxLength(t, 200)]"
       />
 
-      <OrganizationCategorySelect v-model="model.categoryCode" clearable />
+      <OrganizationCategorySelect v-model="model.categoryCode" class="mt-2" clearable />
 
       <v-textarea
         v-model="model.orgComplement"
         auto-grow
+        :hint="t('fields.actor.org_complement_hint')"
         :label="t('fields.actor.org_complement')"
-        rows="2"
+        persistent-hint
+        rows="1"
+        :rules="[maxLength(t, 1000)]"
       />
     </template>
 

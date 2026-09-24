@@ -41,7 +41,7 @@ func TestOrganizationActorLifecycle(t *testing.T) {
 		CategoryCode: "BUREAU_ARCHITECTE",
 		Contacts: []actor.ContactInput{
 			{ContactType: actor.ContactTypeEmail, Value: token + "@example.test", IsPrimary: true},
-			{ContactType: actor.ContactTypeIDEFederal, Value: "CHE-123.456.789"},
+			{ContactType: actor.ContactTypeIDEFederal, Value: "che 123 456 788"},
 		},
 		OperatorID: testOperator,
 		Governance: core.CreateSubjectInput{ConfidentialityLevel: 1},
@@ -60,6 +60,11 @@ func TestOrganizationActorLifecycle(t *testing.T) {
 	}
 	if len(created.Contacts) != 2 {
 		t.Fatalf("expected 2 contacts, got %d", len(created.Contacts))
+	}
+	for _, c := range created.Contacts {
+		if c.ContactType == actor.ContactTypeIDEFederal && c.Value != "CHE-123.456.788" {
+			t.Fatalf("IDE not stored normalized: %q", c.Value)
+		}
 	}
 	actorID := created.ID
 
@@ -93,7 +98,8 @@ func TestOrganizationActorLifecycle(t *testing.T) {
 		if updated.Subject == nil || updated.Subject.DisplayLabel != newName {
 			t.Fatalf("subject label was not kept in sync with the display name: %+v", updated.Subject)
 		}
-		if len(updated.Contacts) != 1 || updated.Contacts[0].ContactType != actor.ContactTypePhone {
+		// Stored normalized: E.164 for phones.
+		if len(updated.Contacts) != 1 || updated.Contacts[0].ContactType != actor.ContactTypePhone || updated.Contacts[0].Value != "+41210000000" {
 			t.Fatalf("contacts were not replaced wholesale: %+v", updated.Contacts)
 		}
 	})

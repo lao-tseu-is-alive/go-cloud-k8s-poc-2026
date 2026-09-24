@@ -281,11 +281,17 @@ type ActorContact struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// contact_type is the required, defined contact type.
 	ContactType ContactType `protobuf:"varint,1,opt,name=contact_type,json=contactType,proto3,enum=goeland.v1.ContactType" json:"contact_type,omitempty"`
-	// value is the channel or identifier (1-400 characters, trimmed).
+	// value is the channel or identifier (1-400 characters, trimmed), validated and
+	// stored normalized per contact_type (INVALID_ARGUMENT otherwise): phones and fax
+	// in E.164 (+41213152222; Swiss national 021 315 22 22 and 00 prefixes are
+	// converted); a bare e-mail address; an http(s) website (https:// added when
+	// missing); "Case postale <n>"; IDE as CHE-123.456.788 with a valid modulo-11
+	// check digit; VAT as an IDE followed by MWST, TVA or IVA; ABACUS as 1-10 digits;
+	// commercial register as CH-550.1.012.345-6 or a register URL; OTHER is free text.
 	Value string `protobuf:"bytes,2,opt,name=value,proto3" json:"value,omitempty"`
 	// is_primary marks the preferred channel of its type; not enforced as unique.
 	IsPrimary bool `protobuf:"varint,3,opt,name=is_primary,json=isPrimary,proto3" json:"is_primary,omitempty"`
-	// label is an optional free note (at most 100 characters).
+	// label is an optional free note (at most 100 characters); required for OTHER.
 	Label         string `protobuf:"bytes,4,opt,name=label,proto3" json:"label,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -352,11 +358,15 @@ func (x *ActorContact) GetLabel() string {
 // OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
 type OrganizationDetails struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// legal_name is the required legal name / RaisonSociale (1-200 characters).
+	// legal_name is the required legal name as registered in the commercial
+	// register (RaisonSociale, 1-200 characters), e.g. "Société coopérative Migros
+	// Vaud"; display_name is the usual name, e.g. "Migros Flon".
 	LegalName string `protobuf:"bytes,1,opt,name=legal_name,json=legalName,proto3" json:"legal_name,omitempty"`
 	// category_code is an OrganizationCategory.code; empty leaves the organization uncategorized.
 	CategoryCode string `protobuf:"bytes,2,opt,name=category_code,json=categoryCode,proto3" json:"category_code,omitempty"`
-	// complement is an optional name complement (at most 1000 characters).
+	// complement is an optional name complement added to the name, such as
+	// "c/o ...", "Succursale de Nyon" or "Service des parcs" (at most 1000 characters);
+	// typed channels and identifiers go in contacts.
 	Complement    string `protobuf:"bytes,3,opt,name=complement,proto3" json:"complement,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -478,8 +488,9 @@ type Actor struct {
 	SubjectRef *SubjectRef `protobuf:"bytes,1,opt,name=subject_ref,json=subjectRef,proto3" json:"subject_ref,omitempty"`
 	// actor_kind is PERSON or ORGANIZATION, fixed at creation.
 	ActorKind ActorKind `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`
-	// display_name is the name (1-200 characters, production Acteur.Name),
-	// mirrored into the subject label.
+	// display_name is the usual name shown and searched (1-200 characters,
+	// production Acteur.Name), e.g. "Migros Flon", mirrored into the subject label;
+	// an organization's registered name is OrganizationDetails.legal_name.
 	DisplayName string `protobuf:"bytes,3,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// name_for_search is the lower-cased display_name, recomputed on rename.
 	NameForSearch string `protobuf:"bytes,4,opt,name=name_for_search,json=nameForSearch,proto3" json:"name_for_search,omitempty"`

@@ -1486,8 +1486,9 @@ definitions:
       displayName:
         type: string
         description: |-
-          display_name is the name (1-200 characters, production Acteur.Name),
-          mirrored into the subject label.
+          display_name is the usual name shown and searched (1-200 characters,
+          production Acteur.Name), e.g. "Migros Flon", mirrored into the subject label;
+          an organization's registered name is OrganizationDetails.legal_name.
       nameForSearch:
         type: string
         description: name_for_search is the lower-cased display_name, recomputed on rename.
@@ -1540,13 +1541,20 @@ definitions:
         description: contact_type is the required, defined contact type.
       value:
         type: string
-        description: value is the channel or identifier (1-400 characters, trimmed).
+        description: |-
+          value is the channel or identifier (1-400 characters, trimmed), validated and
+          stored normalized per contact_type (INVALID_ARGUMENT otherwise): phones and fax
+          in E.164 (+41213152222; Swiss national 021 315 22 22 and 00 prefixes are
+          converted); a bare e-mail address; an http(s) website (https:// added when
+          missing); "Case postale <n>"; IDE as CHE-123.456.788 with a valid modulo-11
+          check digit; VAT as an IDE followed by MWST, TVA or IVA; ABACUS as 1-10 digits;
+          commercial register as CH-550.1.012.345-6 or a register URL; OTHER is free text.
       isPrimary:
         type: boolean
         description: is_primary marks the preferred channel of its type; not enforced as unique.
       label:
         type: string
-        description: label is an optional free note (at most 100 characters).
+        description: label is an optional free note (at most 100 characters); required for OTHER.
     description: |-
       ActorContact is one typed contact channel or business identifier attached to an
       actor (production ActeurComplement row: IdTypeComplement + Complement).
@@ -2537,13 +2545,19 @@ definitions:
     properties:
       legalName:
         type: string
-        description: legal_name is the required legal name / RaisonSociale (1-200 characters).
+        description: |-
+          legal_name is the required legal name as registered in the commercial
+          register (RaisonSociale, 1-200 characters), e.g. "Société coopérative Migros
+          Vaud"; display_name is the usual name, e.g. "Migros Flon".
       categoryCode:
         type: string
         description: category_code is an OrganizationCategory.code; empty leaves the organization uncategorized.
       complement:
         type: string
-        description: complement is an optional name complement (at most 1000 characters).
+        description: |-
+          complement is an optional name complement added to the name, such as
+          "c/o ...", "Succursale de Nyon" or "Service des parcs" (at most 1000 characters);
+          typed channels and identifiers go in contacts.
     description: OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
     required:
       - legalName

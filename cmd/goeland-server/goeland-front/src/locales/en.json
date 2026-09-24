@@ -67,7 +67,7 @@
     },
     "actor": {
       "identity": "Identity",
-      "contacts": "Contacts",
+      "contacts": "Complements (phone, e-mail, identifiers)",
       "relationships": "Relationships",
       "governance": "Governance",
       "audit": "Audit"
@@ -117,20 +117,25 @@
     },
     "actor": {
       "actor_kind": "Actor kind",
-      "display_name": "Name",
+      "display_name": "Usual name",
       "name_for_search": "Search name",
       "legal_name": "Legal name",
       "category": "Category",
-      "org_complement": "Complement",
+      "org_complement": "Name complement",
       "is_ch_register": "Linked to population register",
       "ch_register_ref": "Register reference",
       "ch_register_ref_hint": "Opaque external key — no personal data is stored.",
       "publication_code": "Publication code",
       "is_active": "Active",
       "only_active": "Active only",
-      "contact_type": "Contact type",
+      "contact_type": "Type",
       "contact_value": "Value",
-      "contact_primary": "Primary"
+      "contact_primary": "Primary",
+      "display_name_hint": "Name shown and searched.",
+      "display_name_hint_org": "Name shown and searched (trade or usual name), e.g. \"Migros Flon\".",
+      "legal_name_hint": "Exact name registered in the commercial register, e.g. \"Société coopérative Migros Vaud\".",
+      "org_complement_hint": "Precision added to the name: \"c/o …\", \"Nyon branch\", \"Parks department\". Phones, e-mails and identifiers go in the complements below.",
+      "contact_label": "Note (optional)"
     },
     "recordMetadata": {
       "created_at": "Created at",
@@ -212,7 +217,8 @@
       "delete": "Delete actor",
       "activate": "Activate",
       "deactivate": "Deactivate",
-      "addContact": "Add contact"
+      "addContact": "Add a complement",
+      "removeContact": "Remove this complement"
     },
     "common": {
       "save": "Save",
@@ -337,7 +343,18 @@
     "maxLength": "This field must not exceed {max} characters.",
     "uuid": "Invalid identifier.",
     "sha256": "The SHA-256 fingerprint must contain 64 hexadecimal characters.",
-    "pattern": "Invalid field format."
+    "pattern": "Invalid field format.",
+    "contact": {
+      "phone": "Invalid number: Swiss ({example}) or international (+41 …) format.",
+      "email": "Invalid e-mail address, e.g. {example}.",
+      "website": "Invalid web address, e.g. {example}.",
+      "postalBox": "Postal box number expected, e.g. {example}.",
+      "ide": "Invalid UID (check digit included), e.g. {example}.",
+      "vat": "VAT number expected: UID followed by MWST, TVA or IVA, e.g. {example}.",
+      "abacus": "Debtor number: 1 to 10 digits.",
+      "register": "Register identifier ({example}) or register web address expected.",
+      "other": "Invalid value."
+    }
   },
   "errors": {
     "unauthenticated": "Authentication required.",
@@ -386,7 +403,8 @@
       "deleteConfirm": "The actor will be soft-deleted. It stays preserved in history.",
       "lockedCannotEdit": "This actor is locked and can no longer be modified.",
       "deletedReadOnly": "This actor is soft-deleted (read only).",
-      "relationshipsHint": "Relationships where the actor is the target (roles from a case, document or thing)."
+      "relationshipsHint": "Relationships where the actor is the target (roles from a case, document or thing).",
+      "contactsHint": "Ways to reach the actor and official identifiers (UID, VAT, register…). A contact person in the company is another actor, linked by a relationship."
     },
     "common": {
       "loading": "Loading…",

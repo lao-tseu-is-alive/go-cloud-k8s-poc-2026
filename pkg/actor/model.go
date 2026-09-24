@@ -1,6 +1,7 @@
 package actor
 
 import (
+	"fmt"
 	"time"
 
 	"github.com/google/uuid"
@@ -62,19 +63,28 @@ const (
 	ContactTypeOther ContactType = 99
 )
 
-// validContactTypes is the set of contact types accepted on the wire.
-var validContactTypes = map[ContactType]struct{}{
-	ContactTypePhone: {}, ContactTypePhonePrivate: {}, ContactTypePhonePro: {},
-	ContactTypeMobile: {}, ContactTypeFax: {}, ContactTypeEmail: {},
-	ContactTypeWebsite: {}, ContactTypePostalBox: {}, ContactTypeIDEFederal: {},
-	ContactTypeVATNumber: {}, ContactTypeABACUSDebtor: {},
-	ContactTypeCommercialRegister: {}, ContactTypeOther: {},
+// contactTypeNames lists the persistable contact types (the zero value is
+// excluded) with the name used in messages.
+var contactTypeNames = map[ContactType]string{
+	ContactTypePhone: "phone", ContactTypePhonePrivate: "private phone", ContactTypePhonePro: "professional phone",
+	ContactTypeMobile: "mobile", ContactTypeFax: "fax", ContactTypeEmail: "e-mail",
+	ContactTypeWebsite: "website", ContactTypePostalBox: "postal box", ContactTypeIDEFederal: "IDE",
+	ContactTypeVATNumber: "VAT number", ContactTypeABACUSDebtor: "ABACUS debtor",
+	ContactTypeCommercialRegister: "commercial register", ContactTypeOther: "other",
 }
 
 // Valid reports whether t is a known, persistable contact type (excludes the zero value).
 func (t ContactType) Valid() bool {
-	_, ok := validContactTypes[t]
+	_, ok := contactTypeNames[t]
 	return ok
+}
+
+// String returns the contact type name used in messages.
+func (t ContactType) String() string {
+	if name, ok := contactTypeNames[t]; ok {
+		return name
+	}
+	return fmt.Sprintf("contact type %d", int16(t))
 }
 
 // OrganizationCategory is a controlled classification of organizations

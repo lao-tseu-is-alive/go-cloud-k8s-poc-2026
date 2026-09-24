@@ -164,11 +164,13 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Actor domain (`pkg/actor`)
 
 - `pkg/actor/connect_server.go` — `ActorService` ConnectRPC adapter over the actor service.
+- `pkg/actor/contacts.go` — Per-type validation and normalization of typed complements (E.164 phones, e-mail, website, postal box, IDE check digit, VAT, ABACUS, register).
+- `pkg/actor/contacts_test.go` — Accepted/normalized and rejected values for every complement type, and the OTHER label rule.
 - `pkg/actor/doc.go` — Package documentation for the external persons and organizations domain.
 - `pkg/actor/mappers.go` — Actor domain ↔ proto mappers.
-- `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contacts, categories, inputs, filter.
+- `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contact types and their names, categories, inputs, filter.
 - `pkg/actor/repository.go` — Actor persistence interface.
-- `pkg/actor/service.go` — Actor business rules: validation, contact normalization, search, soft delete.
+- `pkg/actor/service.go` — Actor business rules: validation, per-type contact normalization, search, soft delete.
 - `pkg/actor/sql.go` — Raw SQL and alias-prefixed column projections for actor tables.
 - `pkg/actor/storage_postgres.go` — pgx implementation composing core transaction helpers for atomic actor mutations.
 - `pkg/actor/module/module.go` — Bundleable actor module: dependency validation and lifecycle.
@@ -225,10 +227,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/DevTokenForm.vue` — Dev-mode static token entry shared by the app bar and the sign-in panel.
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
-- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed actor contacts.
-- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's contacts.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed complements (type, value checked against its type, note, primary).
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's complements, formatted, with tel:/mailto:/web links.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorKindSelect.vue` — Person/organization kind selector.
-- `cmd/goeland-server/goeland-front/src/components/actor/ActorMainForm.vue` — Actor create/edit form with kind-specific sections.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorMainForm.vue` — Actor create/edit form with kind-specific sections and hints (usual name, legal name, name complement).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchFilters.vue` — Actor search filter bar.
 - `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
@@ -283,6 +285,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
+- `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.

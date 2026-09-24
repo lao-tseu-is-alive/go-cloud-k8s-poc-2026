@@ -195,7 +195,8 @@ func validateDisplayName(name string) error {
 }
 
 // normalizeContacts trims and validates each contact, rejecting unknown types,
-// blank values and over-long values.
+// blank, over-long or malformed values (per type, see NormalizeContactValue)
+// and an OTHER contact without a label.
 func normalizeContacts(in []ContactInput) ([]ContactInput, error) {
 	out := make([]ContactInput, 0, len(in))
 	for _, c := range in {
@@ -209,7 +210,15 @@ func normalizeContacts(in []ContactInput) ([]ContactInput, error) {
 		if utf8.RuneCountInString(c.Value) > MaxContactValueLength {
 			return nil, fmt.Errorf("%w: contact value exceeds %d characters", core.ErrInvalidInput, MaxContactValueLength)
 		}
+		value, err := NormalizeContactValue(c.ContactType, c.Value)
+		if err != nil {
+			return nil, err
+		}
+		c.Value = value
 		c.Label = strings.TrimSpace(c.Label)
+		if c.ContactType == ContactTypeOther && c.Label == "" {
+			return nil, fmt.Errorf("%w: a contact of type OTHER needs a label describing it", core.ErrInvalidInput)
+		}
 		out = append(out, c)
 	}
 	return out, nil

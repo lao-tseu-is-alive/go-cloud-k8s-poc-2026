@@ -31,6 +31,7 @@
   const editing = ref(false)
   const editModel = ref(emptyActorForm())
   const editReason = ref('')
+  const editForm = ref()
   const saving = ref(false)
   const togglingActive = ref(false)
 
@@ -67,6 +68,8 @@
   }
 
   async function saveEdit () {
+    const validation = await editForm.value?.validate()
+    if (validation && !validation.valid) return
     saving.value = true
     try {
       await updateActor(id.value, buildUpdateRequest(editModel.value, editReason.value))
@@ -197,15 +200,15 @@
             <v-card-title class="text-subtitle-1">{{ t('sections.actor.identity') }}</v-card-title>
 
             <v-card-text>
-              <template v-if="editing">
+              <v-form v-if="editing" ref="editForm" @submit.prevent="saveEdit">
                 <ActorMainForm v-model="editModel" lock-kind />
                 <v-text-field v-model="editReason" class="mt-2" :label="t('delete.reason')" />
 
                 <div class="d-flex justify-end ga-2">
                   <v-btn variant="text" @click="editing = false">{{ t('actions.common.cancel') }}</v-btn>
-                  <v-btn color="primary" :loading="saving" variant="flat" @click="saveEdit">{{ t('actions.common.save') }}</v-btn>
+                  <v-btn color="primary" :loading="saving" type="submit" variant="flat">{{ t('actions.common.save') }}</v-btn>
                 </div>
-              </template>
+              </v-form>
 
               <v-table v-else density="compact">
                 <tbody>

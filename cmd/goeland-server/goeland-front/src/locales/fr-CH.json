@@ -67,7 +67,7 @@
     },
     "actor": {
       "identity": "Identité",
-      "contacts": "Contacts",
+      "contacts": "Compléments (tél., e-mail, identifiants)",
       "relationships": "Relations",
       "governance": "Gouvernance",
       "audit": "Audit"
@@ -117,20 +117,25 @@
     },
     "actor": {
       "actor_kind": "Type d'acteur",
-      "display_name": "Nom",
+      "display_name": "Nom d'usage",
       "name_for_search": "Nom de recherche",
       "legal_name": "Raison sociale",
       "category": "Catégorie",
-      "org_complement": "Complément",
+      "org_complement": "Complément de nom",
       "is_ch_register": "Lié au registre des habitants",
       "ch_register_ref": "Référence registre",
       "ch_register_ref_hint": "Clé externe opaque — aucune donnée personnelle n'est stockée.",
       "publication_code": "Code de publication",
       "is_active": "Actif",
       "only_active": "Seulement les actifs",
-      "contact_type": "Type de contact",
+      "contact_type": "Type",
       "contact_value": "Valeur",
-      "contact_primary": "Principal"
+      "contact_primary": "Principal",
+      "display_name_hint": "Nom affiché et recherché.",
+      "display_name_hint_org": "Nom affiché et recherché (enseigne, nom courant), p. ex. « Migros Flon ».",
+      "legal_name_hint": "Nom exact inscrit au registre du commerce, p. ex. « Société coopérative Migros Vaud ».",
+      "org_complement_hint": "Précision ajoutée au nom : « c/o … », « Succursale de Nyon », « Service des parcs ». Les téléphones, e-mails et identifiants vont dans les compléments ci-dessous.",
+      "contact_label": "Précision (facultative)"
     },
     "recordMetadata": {
       "created_at": "Créé le",
@@ -212,7 +217,8 @@
       "delete": "Supprimer l'acteur",
       "activate": "Activer",
       "deactivate": "Désactiver",
-      "addContact": "Ajouter un contact"
+      "addContact": "Ajouter un complément",
+      "removeContact": "Retirer ce complément"
     },
     "common": {
       "save": "Enregistrer",
@@ -337,7 +343,18 @@
     "maxLength": "Ce champ ne peut pas dépasser {max} caractères.",
     "uuid": "Identifiant invalide.",
     "sha256": "L'empreinte SHA-256 doit contenir 64 caractères hexadécimaux.",
-    "pattern": "Le format de ce champ est invalide."
+    "pattern": "Le format de ce champ est invalide.",
+    "contact": {
+      "phone": "Numéro invalide : format suisse ({example}) ou international (+41 …).",
+      "email": "Adresse e-mail invalide, p. ex. {example}.",
+      "website": "Adresse web invalide, p. ex. {example}.",
+      "postalBox": "Numéro de case postale attendu, p. ex. {example}.",
+      "ide": "IDE invalide (clé de contrôle comprise), p. ex. {example}.",
+      "vat": "Numéro TVA attendu : IDE suivi de MWST, TVA ou IVA, p. ex. {example}.",
+      "abacus": "N° débiteur : 1 à 10 chiffres.",
+      "register": "Identifiant RC ({example}) ou adresse web du registre attendu.",
+      "other": "Valeur invalide."
+    }
   },
   "errors": {
     "unauthenticated": "Authentification requise.",
@@ -386,7 +403,8 @@
       "deleteConfirm": "L'acteur sera supprimé logiquement. Il restera conservé dans l'historique.",
       "lockedCannotEdit": "Cet acteur est verrouillé et ne peut plus être modifié.",
       "deletedReadOnly": "Cet acteur est supprimé logiquement (lecture seule).",
-      "relationshipsHint": "Relations où l'acteur est la cible (rôles depuis une affaire, un document ou un objet)."
+      "relationshipsHint": "Relations où l'acteur est la cible (rôles depuis une affaire, un document ou un objet).",
+      "contactsHint": "Moyens de joindre l'acteur et identifiants officiels (IDE, TVA, RC…). Une personne de contact dans l'entreprise est un autre acteur, lié par une relation."
     },
     "common": {
       "loading": "Chargement…",

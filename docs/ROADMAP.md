@@ -27,8 +27,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0. The
 user's review of v0.6.0 opened Phase 1b (usable Actor and Case), done before the Thing
-slice (GLD-016). GLD-035, GLD-036, GLD-037 and GLD-025 are implemented and await their
-release; next is GLD-038 (actor form clarity and typed complements).
+slice (GLD-016). GLD-035, GLD-036, GLD-037, GLD-025 and GLD-038 are implemented and await
+their release; next is GLD-039 (person minimal identity).
 
 ## Cross-cutting quality
 
@@ -117,7 +117,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
   name, e-mail) as USER subjects so governance and audit show who acted instead
   of a numeric id, the signed-in user's admin scope is visible, and tasks can
   later target users, without the full security model (§3g).
-- [ ] **GLD-038 — Actor form clarity and typed complements**: explain display
+- [~] **GLD-038 — Actor form clarity and typed complements**: explain display
   name versus legal name (RC), rename "contacts" to typed complements (phone,
   e-mail, IDE, VAT, ...), and validate each complement type in the SPA and the
   API (protovalidate + service).

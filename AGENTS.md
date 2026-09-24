@@ -63,7 +63,10 @@ whenever a task starts, completes, changes scope or order.
   Modelled from the real production `Acteur` schema (`actor_kind` PERSON/ORGANIZATION,
   typed `actor_contact`, seeded `organization_category`). Roles are NOT columns —
   actors attach via typed `CoreService` relationships (`CASE_HAS_ACTOR_*`,
-  `DOCUMENT_*_ACTOR`); persons carry no PII (register link only).
+  `DOCUMENT_*_ACTOR`); persons carry no PII (register link only). Typed complements
+  ("contacts": phone, e-mail, IDE, VAT, ...) are validated and stored normalized per type
+  by `pkg/actor/contacts.go` (E.164 phones, IDE check digit, ...); the SPA mirrors the rules
+  in `utils/contactRules.ts` — change both together.
 - **case** (`pkg/casefile`) — the affaire: `case_type` (with a business-reference
   namespace) + `case_file` → `CaseService`. Status lifecycle OPEN / IN_PROGRESS /
   SUSPENDED / CLOSED (`casefile.transitions`; closing and reopening need a reason, a

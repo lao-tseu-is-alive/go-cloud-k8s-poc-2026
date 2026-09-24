@@ -28,6 +28,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   of numeric ids in governance and audit, and the signed-in user's e-mail, rights and an
   administrator badge. `GOELAND_DEV_USER_ADMIN=true` makes the dev user an administrator.
 
+- **GLD-038** — Actor complements ("contacts") are validated and stored normalized per type,
+  in the API and mirrored in the SPA: phones and fax in E.164 (`021 315 22 22` →
+  `+41213152222`), bare e-mail addresses, http(s) websites, `Case postale <n>`, IDE with its
+  modulo-11 check digit (`CHE-123.456.788`), VAT (IDE + MWST/TVA/IVA), ABACUS debtor digits,
+  commercial register identifier or URL; OTHER needs a label. The actor form explains usual
+  name versus legal name (RC) and the name complement, calls the list "Complements (phone,
+  e-mail, identifiers)" with a per-type placeholder, note field and message, and the detail
+  page shows formatted values with tel:/mailto:/web links. Editing an actor now validates the
+  form before saving. **Behavior change:** malformed complement values are rejected with
+  INVALID_ARGUMENT (no production data yet).
+
 ### Changed
 
 - The SPA opens on the case list (`/`) instead of the document list.

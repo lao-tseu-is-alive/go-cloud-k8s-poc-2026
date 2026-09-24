@@ -2,6 +2,7 @@
   import type { ActorContact } from '@/api/types'
   import { useI18n } from 'vue-i18n'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { contactHref, formatContactValue } from '@/utils/contactRules'
 
   // Read-only display of an actor's typed contacts.
   defineProps<{ contacts?: ActorContact[] }>()
@@ -24,7 +25,17 @@
             <v-icon v-if="contact.isPrimary" color="primary" icon="mdi-star" size="x-small" />
           </td>
 
-          <td>{{ contact.value }}<span v-if="contact.label" class="text-caption text-medium-emphasis"> — {{ contact.label }}</span></td>
+          <td>
+            <a
+              v-if="contactHref(contact.contactType, contact.value)"
+              :href="contactHref(contact.contactType, contact.value)"
+              rel="noopener noreferrer"
+              target="_blank"
+            >{{ formatContactValue(contact.contactType, contact.value) }}</a>
+
+            <span v-else>{{ formatContactValue(contact.contactType, contact.value) }}</span>
+            <span v-if="contact.label" class="text-caption text-medium-emphasis"> — {{ contact.label }}</span>
+          </td>
         </tr>
       </tbody>
     </v-table>
