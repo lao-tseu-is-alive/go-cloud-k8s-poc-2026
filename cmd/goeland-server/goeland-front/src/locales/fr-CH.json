@@ -23,7 +23,9 @@
     "unreachable": "Service d'authentification injoignable.",
     "devExplain": "Mode développement : collez le jeton statique configuré sur le serveur (GOELAND_DEV_TOKEN).",
     "ssoExplain": "Connectez-vous via le service d'authentification (SSO) ; vous reviendrez ici automatiquement. Si vous êtes déjà connecté dans un autre onglet, réessayez.",
-    "retry": "Réessayer"
+    "retry": "Réessayer",
+    "originMismatch": "Le service d'authentification tourne sous un autre nom d'hôte local : il refusera de vous renvoyer ici. Ouvrez l'application à l'adresse :",
+    "ssoAllowlist": "Si la connexion échoue, le service d'authentification doit autoriser {origin} (ALLOWED_REDIRECT_URIS et ALLOWED_ORIGINS)."
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -249,7 +251,11 @@
   "link": {
     "title": "Lier à un autre sujet",
     "chooseType": "Type de relation",
-    "targetId": "Identifiant du sujet cible"
+    "targetId": "Identifiant du sujet cible",
+    "target": "Sujet lié",
+    "pickerHint": "Tapez une partie du nom, du titre ou de la référence.",
+    "noMatch": "Aucun résultat",
+    "chooseTypeFirst": "Choisissez d'abord le type de relation : il détermine les sujets qui peuvent être liés."
   },
   "integrity": {
     "verified": "Vérifié",

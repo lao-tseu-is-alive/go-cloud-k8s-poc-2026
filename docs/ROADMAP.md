@@ -25,8 +25,10 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0; next is
-the Thing slice (GLD-016).
+The Case slice (GLD-011) and ending a relationship (GLD-034) shipped in v0.6.0. The
+user's review of v0.6.0 opened Phase 1b (usable Actor and Case), done before the Thing
+slice (GLD-016). GLD-035, GLD-036 and GLD-037 are implemented and await their release;
+next is GLD-025 (users instead of numeric operator ids).
 
 ## Cross-cutting quality
 
@@ -96,6 +98,40 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
   ("the relationship ended"), distinct from `UnlinkSubjects` ("the edge was a
   mistake"), each with its own audit event (§3g).
 
+## Phase 1b — Usable Actor and Case (review of v0.6.0, 2026-09-24)
+
+Ordered before Thing at the user's request: v0.6.0 could not be used for real work.
+
+- [~] **GLD-035 — Local SSO documentation**: how to run the SPA in `jwt` mode
+  against go-cloud-k8s-auth locally (`AUTH_SERVER_URL`, shared JWT settings,
+  redirect allowlist and CORS origins; `localhost` and `127.0.0.1` are distinct
+  origins), plus a sign-in panel hint when the redirect is refused.
+- [~] **GLD-036 — Navigable relationships**: every relationship row links to
+  the page of the related subject (case, document, actor), by mouse and
+  keyboard.
+- [~] **GLD-037 — Subject picker**: the link dialog searches subjects of the
+  relationship type's target kind (actors, documents, cases) instead of asking
+  for a UUID.
+- [ ] **GLD-025 — Minimal USER / ORG_UNIT reference** (moved from Phase 4):
+  internal identities recorded from the token (id, name, e-mail) so governance
+  and audit show who acted instead of a numeric id, the signed-in user's admin
+  scope is visible, and tasks and circulations can later target users and
+  units, without the full security model (§3g).
+- [ ] **GLD-038 — Actor form clarity and typed complements**: explain display
+  name versus legal name (RC), rename "contacts" to typed complements (phone,
+  e-mail, IDE, VAT, ...), and validate each complement type in the SPA and the
+  API (protovalidate + service).
+- [ ] **GLD-039 — Person minimal identity**: salutation, last name and first
+  name for PERSON actors, the minimum to identify and address a person (§3g
+  decision of 2026-09-24).
+- [ ] **GLD-014 — Actor addresses** (moved from Actor follow-ups): `address` +
+  M:N `actor_address` typed (head office, branch, correspondence, billing) with
+  one principal address (production `acteur_adresse` + `lien_acteur_adresse`),
+  and an `ACTOR_BRANCH_OF_ACTOR` relationship for a branch acting as a distinct
+  party, in the API and the Actor UI.
+- [ ] **GLD-040 — Reference data administration**: admin-scoped screens for
+  case types, relationship types, organization categories and document types.
+
 ## Phase 2 — Thing (v2 §25)
 
 - [ ] **GLD-016 — Thing slice**: `thing` + `thing_type` with `thing_parcel`
@@ -113,9 +149,6 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
 
 ## Phase 4 — Task (v2 §28)
 
-- [ ] **GLD-025 — Minimal USER / ORG_UNIT reference**: internal identities
-  and organizational units that tasks and circulations can target, without the
-  full security model (§3g).
 - [ ] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
   a USER or ORG_UNIT, with deadlines, completion and a reassignment history.
   Depends on GLD-011 and GLD-025.
@@ -173,15 +206,12 @@ covered by an integration test.
 
 ## Actor follow-ups
 
-- [ ] **GLD-014 — Actor addresses**: `address` + M:N `actor_address` with
-  `is_principal` (production `acteur_adresse` + `lien_acteur_adresse`), in the
-  API and the Actor UI.
 - [ ] **GLD-015 — Actor role vocabulary**: seed the remaining production roles
   (`dico_acteur_role`) into `relationship_type` as their target domains land;
   incremental with GLD-011 and GLD-016, not a standalone slice.
 
-A richer CH-register person detail is out of scope unless a real need appears,
-and then only through opaque references (no PII).
+Person identity is limited to the minimum of GLD-039; any richer CH-register detail
+stays out of scope unless a real need appears, and then only through opaque references.
 
 ## Real-data import (MSSQL replica → POC)
 

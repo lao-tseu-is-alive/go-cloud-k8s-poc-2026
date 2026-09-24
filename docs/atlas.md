@@ -218,7 +218,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/AppAuthControls.vue` — App bar login/logout controls for dev-token and JWT modes.
 - `cmd/goeland-server/goeland-front/src/components/DevTokenForm.vue` — Dev-mode static token entry shared by the app bar and the sign-in panel.
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
-- `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service.
+- `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed actor contacts.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's contacts.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorKindSelect.vue` — Person/organization kind selector.
@@ -231,11 +231,13 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/case/caseForm.ts` — Case form model, status list and the client mirror of the transition table.
 - `cmd/goeland-server/goeland-front/src/components/core/AuditTimeline.vue` — Read-only audit event timeline.
 - `cmd/goeland-server/goeland-front/src/components/core/EndRelationshipDialog.vue` — Dialog ending a relationship (optional end date, reason) through `CoreService.EndRelationship`.
-- `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link; the parent performs the call.
+- `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link (type, then a searched target of its kind); the parent performs the call.
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
-- `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with validity (ended / scheduled end) and optional end and unlink actions.
+- `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
+- `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
+- `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and download panel for the current version's content.
@@ -272,7 +274,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
+- `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
+- `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.
 - `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.
 - `cmd/goeland-server/goeland-front/tsconfig.json` — TypeScript project references root.

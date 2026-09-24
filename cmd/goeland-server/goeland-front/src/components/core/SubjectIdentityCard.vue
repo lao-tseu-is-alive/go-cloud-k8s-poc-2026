@@ -1,25 +1,14 @@
 <script setup lang="ts">
-  import type { SubjectKind, SubjectRef } from '@/api/types'
+  import type { SubjectRef } from '@/api/types'
   import { useI18n } from 'vue-i18n'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDateTime } from '@/utils/formatters'
+  import { kindIcon } from '@/utils/subjects'
 
   defineProps<{ subject?: SubjectRef }>()
 
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
-
-  // Same icons as the navigation, so a subject reads the same everywhere.
-  const KIND_ICONS: Partial<Record<SubjectKind, string>> = {
-    SUBJECT_KIND_CASE: 'mdi-briefcase-outline',
-    SUBJECT_KIND_DOCUMENT: 'mdi-file-document-outline',
-    SUBJECT_KIND_ACTOR: 'mdi-account-multiple',
-    SUBJECT_KIND_THING: 'mdi-map-marker-outline',
-  }
-
-  function kindIcon (kind?: SubjectKind): string {
-    return (kind && KIND_ICONS[kind]) ?? 'mdi-shape-outline'
-  }
 </script>
 
 <template>

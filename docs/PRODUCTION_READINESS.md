@@ -83,7 +83,9 @@ roadmap item — see [IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_S
   fails without it) and the `GOELAND_DEV_USER_*` identity fields. **Never enable in
   production.**
 
-`AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect).
+`AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect). The auth
+service must list the SPA's public origin in its redirect allowlist and CORS origins (README,
+"Running locally with SSO").
 
 ## 5. Probes (Kubernetes)
 

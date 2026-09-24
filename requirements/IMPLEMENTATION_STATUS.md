@@ -257,6 +257,13 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   rejects edits (FAILED_PRECONDITION) until reopened. Soft deletion stays in
   `record_metadata`. The type's `business_ref_namespace` drives default reference allocation;
   an explicit reference request overrides it.
+- **Person minimal identity (2026-09-24, GLD-039)** — supersedes "persons carry no PII":
+  a PERSON actor stores salutation, last name and first name, the minimum to identify and
+  address a person; no birth date, AVS number or civil-registry data. The real-data import
+  stays aggregates-only for profiling (GLD-018/019 decide what enters the POC).
+- **Branches (2026-09-24, GLD-014)** — addresses are M:N and typed (head office, branch,
+  correspondence, billing) with one principal; a branch acting as a distinct party (its own
+  complements and cases) is a separate ORGANIZATION linked by `ACTOR_BRANCH_OF_ACTOR`.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 

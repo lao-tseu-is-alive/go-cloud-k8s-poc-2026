@@ -23,7 +23,9 @@
     "unreachable": "Authentication service unreachable.",
     "devExplain": "Development mode: paste the static token configured on the server (GOELAND_DEV_TOKEN).",
     "ssoExplain": "Sign in through the authentication service (SSO); you will come back here automatically. If you already signed in in another tab, retry.",
-    "retry": "Retry"
+    "retry": "Retry",
+    "originMismatch": "The authentication service runs under another local host name, so it will refuse to send you back here. Open the application at:",
+    "ssoAllowlist": "If sign-in fails, the authentication service must allow {origin} (ALLOWED_REDIRECT_URIS and ALLOWED_ORIGINS)."
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }
@@ -249,7 +251,11 @@
   "link": {
     "title": "Link to another subject",
     "chooseType": "Relationship type",
-    "targetId": "Target subject id"
+    "targetId": "Target subject id",
+    "target": "Linked subject",
+    "pickerHint": "Type part of a name, title or reference.",
+    "noMatch": "No match",
+    "chooseTypeFirst": "Choose the relationship type first: it decides which subjects can be linked."
   },
   "integrity": {
     "verified": "Verified",

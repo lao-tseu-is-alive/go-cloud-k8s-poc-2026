@@ -162,14 +162,35 @@ go run ./cmd/goeland-server
 
 Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: `/readiness`.
 
+## Running locally with SSO (jwt auth)
+
+In `jwt` mode the SPA signs in through [go-cloud-k8s-auth](https://github.com/lao-tseu-is-alive/go-cloud-k8s-auth)
+(default `http://localhost:9090`): **Sign in** redirects to `<AUTH_SERVER_URL>/auth/login`, the
+auth service sets its SSO session cookie and redirects back, then the SPA silently mints short-lived
+JWTs from `<AUTH_SERVER_URL>/auth/token` (cookie sent with `credentials: include`).
+
+1. Run go-cloud-k8s-auth (`make run` in its repository). On its side:
+   - `ALLOWED_REDIRECT_URIS` must contain the SPA origin, e.g. `http://localhost:8080`
+     (a prefix match on a path boundary; otherwise it logs `login: redirect_uri not in allowlist`);
+   - `ALLOWED_ORIGINS` (CORS) must contain the same origin, for the token and logout calls.
+2. Configure this server (`.env`): `GOELAND_AUTH_MODE=jwt`, `AUTH_SERVER_URL=http://localhost:9090`,
+   and `JWT_SECRET`, `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY` with **the same values as the auth
+   service**, so the tokens it signs verify here (placeholders only in examples: `<jwt-secret>`).
+3. Open the SPA on **`http://localhost:8080`**, not `http://127.0.0.1:8080`, even though the server
+   listens on `127.0.0.1:8080` by default: `localhost` and `127.0.0.1` are different origins for the
+   allowlist, CORS and cookies. The sign-in panel detects this mismatch and offers the right link.
+
+Scopes: reads need `goeland:read`, mutations `goeland:write` (granted by the auth service).
+
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
-(`cmd/goeland-server/goeland-front`). It exposes vertical slices of two modules:
-the **Document** module — search/list, create (with file upload), detail, edit metadata,
+(`cmd/goeland-server/goeland-front`). It exposes vertical slices of three modules:
+the **Case** module — search/list, open (reference allocated in the type namespace), detail,
+edit, status transitions with reasons, link/end/unlink subjects, soft-delete — the **Document** module — search/list, create (with file upload), detail, edit metadata,
 finalize, verify integrity, link/unlink subjects, soft-delete — and the **Actor** module
 — search/list, create (person/organization with typed contacts), detail, edit,
-activate/deactivate, soft-delete, plus read-only incoming relationships. Both add
+activate/deactivate, soft-delete, plus read-only incoming relationships. All add
 read-only governance and audit panels. Bilingual (fr-CH default, en).
 
 - The SPA reads `GET /config` → `{authMode, authBaseUrl}` and drives either `dev`

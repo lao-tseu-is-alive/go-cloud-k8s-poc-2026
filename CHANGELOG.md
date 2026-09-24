@@ -8,6 +8,22 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-035** — README "Running locally with SSO (jwt auth)": go-cloud-k8s-auth redirect
+  allowlist and CORS origins, shared JWT settings, and why the SPA must be opened on
+  `localhost` rather than `127.0.0.1`; the sign-in panel detects that loopback mismatch and
+  offers the right link, and names the origin the auth service must allow.
+- **GLD-036** — Relationship rows link to the related case, document or actor page (real
+  links: keyboard and middle-click work); detail pages reload when following such a link.
+- **GLD-037** — The link dialog searches the subjects of the chosen relationship type's
+  target kind (actors, cases, documents; accent-insensitive, by name, title or reference)
+  instead of asking for a UUID.
+
+### Changed
+
+- The SPA opens on the case list (`/`) instead of the document list.
+
 ## [0.6.0] - 2026-09-24
 
 This release opens spec v2 Phase 1: the Case slice (**GLD-011**) and ending a relationship as

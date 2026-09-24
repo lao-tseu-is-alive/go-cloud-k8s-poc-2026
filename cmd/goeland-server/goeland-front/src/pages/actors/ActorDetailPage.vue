@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { AuditEvent, GoActor, SubjectRelationship } from '@/api/types'
-  import { computed, onMounted, ref } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteActor, getActor, updateActor } from '@/api/actorClient'
@@ -107,7 +107,8 @@
     }
   }
 
-  onMounted(reload)
+  // Reload on id change too: following a link to another subject reuses this page.
+  watch(id, reload, { immediate: true })
 </script>
 
 <template>

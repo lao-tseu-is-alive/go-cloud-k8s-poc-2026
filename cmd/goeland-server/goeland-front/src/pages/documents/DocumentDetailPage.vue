@@ -1,7 +1,7 @@
 <script setup lang="ts">
   import type { AuditEvent, GoDocument, SubjectRelationship } from '@/api/types'
   import type { DocumentFormModel } from '@/components/document/documentForm'
-  import { computed, onMounted, ref } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { unlinkSubjects } from '@/api/coreClient'
@@ -159,7 +159,8 @@
     }
   }
 
-  onMounted(reload)
+  // Reload on id change too: following a link to another subject reuses this page.
+  watch(id, reload, { immediate: true })
 </script>
 
 <template>
@@ -339,7 +340,14 @@
 
       <!-- dialogs -->
       <DocumentFinalizeDialog v-model="finalizeOpen" :busy="finalizeBusy" @submit="doFinalize" />
-      <LinkSubjectDialog v-model="linkOpen" :busy="linkBusy" source-kind="SUBJECT_KIND_DOCUMENT" @submit="doLink" />
+
+      <LinkSubjectDialog
+        v-model="linkOpen"
+        :busy="linkBusy"
+        :source-id="id"
+        source-kind="SUBJECT_KIND_DOCUMENT"
+        @submit="doLink"
+      />
 
       <v-dialog v-model="deleteOpen" max-width="480">
         <v-card>

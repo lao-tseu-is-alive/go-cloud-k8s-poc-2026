@@ -1,7 +1,9 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
+  import { computed } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useAuthStore } from '@/stores/auth'
+  import { loopbackMismatchUrl } from '@/utils/authOrigin'
   import DevTokenForm from './DevTokenForm.vue'
 
   // Shown instead of the app while nobody is signed in: explains how to sign in
@@ -9,6 +11,12 @@
   const { t } = useI18n()
   const auth = useAuthStore()
   const { mode, error, authBaseUrl } = storeToRefs(auth)
+
+  // 127.0.0.1 vs localhost: the auth service would refuse the redirect.
+  const betterUrl = computed(() => mode.value === 'jwt'
+    ? loopbackMismatchUrl(window.location.href, authBaseUrl.value)
+    : undefined)
+  const currentOrigin = window.location.origin
 </script>
 
 <template>
@@ -35,7 +43,19 @@
       </template>
 
       <template v-else>
-        <p class="mb-4">{{ t('auth.ssoExplain') }}</p>
+        <v-alert
+          v-if="betterUrl"
+          class="mb-4"
+          density="compact"
+          type="info"
+          variant="tonal"
+        >
+          {{ t('auth.originMismatch') }}
+          <a class="d-block mt-1" :href="betterUrl">{{ betterUrl }}</a>
+        </v-alert>
+
+        <p class="mb-2">{{ t('auth.ssoExplain') }}</p>
+        <p class="text-caption text-medium-emphasis mb-4">{{ t('auth.ssoAllowlist', { origin: currentOrigin }) }}</p>
 
         <div class="d-flex flex-wrap ga-2 justify-end">
           <v-btn prepend-icon="mdi-refresh" variant="text" @click="auth.mintToken()">

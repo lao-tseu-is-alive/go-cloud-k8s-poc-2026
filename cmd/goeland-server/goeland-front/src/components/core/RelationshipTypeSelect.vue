@@ -13,6 +13,8 @@
     label?: string
   }>()
   const model = defineModel<string | undefined>()
+  // The selected type itself, so callers can follow its target kind.
+  const emit = defineEmits<{ selected: [type: RelationshipType | undefined] }>()
 
   const { t } = useI18n()
   const { report } = useApiErrors()
@@ -43,5 +45,6 @@
     :items="types"
     :label="props.label ?? t('link.chooseType')"
     :loading="loading"
+    @update:model-value="code => emit('selected', types.find(rt => rt.code === code))"
   />
 </template>

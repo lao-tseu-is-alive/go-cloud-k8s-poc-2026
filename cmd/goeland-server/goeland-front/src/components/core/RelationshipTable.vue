@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { formatDate, formatDateTime } from '@/utils/formatters'
   import EndRelationshipDialog from './EndRelationshipDialog.vue'
+  import SubjectLink from './SubjectLink.vue'
 
   defineProps<{
     relationships?: SubjectRelationship[]
@@ -48,14 +49,14 @@
 
       <tbody>
         <tr v-for="rel in relationships" :key="rel.id" :class="{ 'text-disabled': rel.deletedAt || hasEnded(rel) }">
-          <td>{{ rel.source?.displayLabel }}</td>
+          <td><SubjectLink :subject="rel.source" /></td>
 
           <td>
             <!-- Business label for display; the code is what travels to the API. -->
             <v-chip label size="small">{{ rel.relationshipType?.label ?? rel.relationshipType?.code }}</v-chip>
           </td>
 
-          <td>{{ rel.target?.displayLabel }}</td>
+          <td><SubjectLink :subject="rel.target" /></td>
           <td>{{ rel.roleDetail || '—' }}</td>
 
           <td class="text-caption">
