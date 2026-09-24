@@ -41,6 +41,7 @@ func (s *ConnectServer) CreateActor(ctx context.Context, req *connect.Request[go
 		DisplayName:     msg.DisplayName,
 		PublicationCode: msg.PublicationCode,
 		Contacts:        protoContactsToDomain(msg.Contacts),
+		Addresses:       protoAddressesToDomain(msg.Addresses),
 		OperatorID:      core.OperatorID(user),
 	}
 	if org := msg.GetOrganization(); org != nil {
@@ -116,12 +117,14 @@ func (s *ConnectServer) UpdateActor(ctx context.Context, req *connect.Request[go
 		return nil, err
 	}
 	in := UpdateInput{
-		IsActive:        msg.IsActive,
-		PublicationCode: msg.PublicationCode,
-		ReplaceContacts: msg.ReplaceContacts,
-		Contacts:        protoContactsToDomain(msg.Contacts),
-		OperatorID:      core.OperatorID(user),
-		Reason:          msg.Reason,
+		IsActive:         msg.IsActive,
+		PublicationCode:  msg.PublicationCode,
+		ReplaceContacts:  msg.ReplaceContacts,
+		Contacts:         protoContactsToDomain(msg.Contacts),
+		ReplaceAddresses: msg.ReplaceAddresses,
+		Addresses:        protoAddressesToDomain(msg.Addresses),
+		OperatorID:       core.OperatorID(user),
+		Reason:           msg.Reason,
 	}
 	// display_name is a plain string: a non-empty value signals an intended change.
 	if msg.DisplayName != "" {

@@ -84,6 +84,9 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Actor
 	if err := insertContacts(ctx, tx, ref.ID, in.Contacts); err != nil {
 		return nil, nil, err
 	}
+	if err := insertAddresses(ctx, tx, ref.ID, in.Addresses, in.OperatorID); err != nil {
+		return nil, nil, err
+	}
 
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   ref.ID,
@@ -150,12 +153,17 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 			return nil, nil, err
 		}
 	}
+	if in.ReplaceAddresses {
+		if err := replaceAddresses(ctx, tx, id, in.Addresses, in.OperatorID); err != nil {
+			return nil, nil, err
+		}
+	}
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   id,
 		EventType:   "ACTOR_UPDATED",
 		ActorUserID: in.OperatorID,
 		Reason:      in.Reason,
-		AfterState:  actorAuditState(act),
+		AfterState:  updateAuditState(act, in),
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
@@ -334,6 +342,11 @@ func (r *PostgresRepository) hydrate(ctx context.Context, act *Actor) error {
 		return fmt.Errorf("hydrate contacts: %w", err)
 	}
 	act.Contacts = contacts
+	addresses, err := listAddresses(ctx, r.pool, act.ID)
+	if err != nil {
+		return fmt.Errorf("hydrate addresses: %w", err)
+	}
+	act.Addresses = addresses
 	return nil
 }
 
@@ -452,6 +465,65 @@ func actorAuditState(act *Actor) map[string]any {
 		state["salutation"] = int16(act.Salutation)
 		state["last_name"] = act.LastName
 		state["first_name"] = act.FirstName
+	}
+	return state
+}
+
+// insertAddresses creates one address row per input and links it to the actor.
+func insertAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID, addresses []AddressInput, operatorID string) error {
+	for _, a := range addresses {
+		var addressID uuid.UUID
+		if err := q.QueryRow(ctx, insertAddressSQL, pgx.NamedArgs{
+			"street":        a.Street,
+			"house_number":  a.HouseNumber,
+			"address_line2": a.AddressLine2,
+			"postal_code":   a.PostalCode,
+			"locality":      a.Locality,
+			"country_code":  a.CountryCode,
+			"created_by":    operatorID,
+		}).Scan(&addressID); err != nil {
+			return fmt.Errorf("insert address: %w", mapDBError(err))
+		}
+		if _, err := q.Exec(ctx, insertActorAddressSQL, pgx.NamedArgs{
+			"actor_id":     actorID,
+			"address_id":   addressID,
+			"address_type": int16(a.AddressType),
+			"is_principal": a.IsPrincipal,
+			"label":        a.Label,
+			"created_by":   operatorID,
+		}); err != nil {
+			return fmt.Errorf("insert actor_address: %w", mapDBError(err))
+		}
+	}
+	return nil
+}
+
+// replaceAddresses ends the actor's current address links (kept as history)
+// and links the new set.
+func replaceAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID, addresses []AddressInput, operatorID string) error {
+	if _, err := q.Exec(ctx, endActorAddressesSQL, pgx.NamedArgs{"actor_id": actorID, "operator_id": operatorID}); err != nil {
+		return fmt.Errorf("end actor addresses: %w", err)
+	}
+	return insertAddresses(ctx, q, actorID, addresses, operatorID)
+}
+
+func listAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID) ([]*Address, error) {
+	rows, err := q.Query(ctx, listActorAddressesSQL, pgx.NamedArgs{"actor_id": actorID})
+	if err != nil {
+		return nil, err
+	}
+	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[Address])
+}
+
+// updateAuditState is the actor's audited identity plus which collections the
+// update replaced.
+func updateAuditState(act *Actor, in UpdateInput) map[string]any {
+	state := actorAuditState(act)
+	if in.ReplaceContacts {
+		state["contacts_replaced"] = len(in.Contacts)
+	}
+	if in.ReplaceAddresses {
+		state["addresses_replaced"] = len(in.Addresses)
 	}
 	return state
 }

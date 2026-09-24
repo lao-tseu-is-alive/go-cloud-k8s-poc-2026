@@ -4,7 +4,6 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
-  import { linkSubjects, unlinkSubjects } from '@/api/coreClient'
   import { CASE_TRANSITIONS, transitionNeedsReason } from '@/components/case/caseForm'
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
@@ -14,6 +13,7 @@
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
   import { maxLength, required } from '@/utils/validation'
@@ -40,8 +40,7 @@
   const transitionTarget = ref<CaseStatus | null>(null)
   const transitionReason = ref('')
   const transitionBusy = ref(false)
-  const linkOpen = ref(false)
-  const linkBusy = ref(false)
+  const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload)
   const deleteOpen = ref(false)
   const deleteReason = ref('')
   const deleteBusy = ref(false)
@@ -113,29 +112,6 @@
       report(error)
     } finally {
       transitionBusy.value = false
-    }
-  }
-
-  async function doLink (payload: { targetSubjectId: string, relationshipTypeCode: string, roleDetail: string }) {
-    linkBusy.value = true
-    try {
-      await linkSubjects(id.value, payload.targetSubjectId, payload.relationshipTypeCode, payload.roleDetail || undefined)
-      ui.notify(t('messages.document.linked'), 'success')
-      linkOpen.value = false
-      await reload()
-    } catch (error) {
-      report(error)
-    } finally {
-      linkBusy.value = false
-    }
-  }
-
-  async function doUnlink (rel: SubjectRelationship) {
-    try {
-      await unlinkSubjects(rel.id, '')
-      await reload()
-    } catch (error) {
-      report(error)
     }
   }
 

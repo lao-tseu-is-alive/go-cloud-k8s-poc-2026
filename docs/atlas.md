@@ -142,6 +142,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
+- `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
 - `pkg/core/module/db/migrations/0013_person_identity.sql` — Schema migration: person minimal identity (salutation, last and first name, person-only) and the actor search vector over the names.
 - `pkg/core/module/db/migrations/0012_app_user.sql` — Schema migration: `app_user`, the internal users recorded from verified tokens, each a USER subject.
 - `pkg/core/module/db/migrations/0011_relationship_end.sql` — Schema migration: uniqueness on open relationships only (ended ones kept as history) and the validity-order check.
@@ -164,6 +165,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Actor domain (`pkg/actor`)
 
+- `pkg/actor/addresses.go` — Address types, the address model and input, and their normalization (required fields, CH postal code, one principal).
+- `pkg/actor/addresses_test.go` — Tests address defaults (country, principal) and rejected addresses.
 - `pkg/actor/connect_server.go` — `ActorService` ConnectRPC adapter over the actor service.
 - `pkg/actor/contacts.go` — Per-type validation and normalization of typed complements (E.164 phones, e-mail, website, postal box, IDE check digit, VAT, ABACUS, register).
 - `pkg/actor/contacts_test.go` — Accepted/normalized and rejected values for every complement type, and the OTHER label rule.
@@ -194,6 +197,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
+- `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
@@ -228,6 +232,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/DevTokenForm.vue` — Dev-mode static token entry shared by the app bar and the sign-in panel.
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesPanel.vue` — Read-only address cards (role, principal, formatted lines, map.geo.admin.ch link).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed complements (type, value checked against its type, note, primary).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's complements, formatted, with tel:/mailto:/web links.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorKindSelect.vue` — Person/organization kind selector.
@@ -259,13 +265,14 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the registered content (blob id, digest, reuse flag).
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentVersionsPanel.vue` — Version list of a document and adding a new version from an upload.
 - `cmd/goeland-server/goeland-front/src/components/document/documentForm.ts` — Document metadata form model.
+- `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
-- `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail, edit, activation, soft delete, governance and audit page.
+- `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseCreatePage.vue` — Case creation page (type, title, optional explicit reference).
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseDetailPage.vue` — Case detail, edit, status transitions with reason, relationships, soft delete, governance and audit page.
@@ -285,6 +292,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
+- `cmd/goeland-server/goeland-front/src/utils/address.ts` — Postal code and country rules mirroring the server, address display lines and map link.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.

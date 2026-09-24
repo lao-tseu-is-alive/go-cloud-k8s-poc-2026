@@ -258,6 +258,76 @@ func (ContactType) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{2}
 }
 
+// AddressType is the role an address plays for one actor (production
+// lien_acteur_adresse qualification).
+type AddressType int32
+
+const (
+	// ADDRESS_TYPE_UNSPECIFIED is the zero value; rejected on input.
+	AddressType_ADDRESS_TYPE_UNSPECIFIED AddressType = 0
+	// ADDRESS_TYPE_HEAD_OFFICE is an organization's registered office (siège).
+	AddressType_ADDRESS_TYPE_HEAD_OFFICE AddressType = 1
+	// ADDRESS_TYPE_BRANCH is a branch or establishment (succursale) of the same actor.
+	AddressType_ADDRESS_TYPE_BRANCH AddressType = 2
+	// ADDRESS_TYPE_CORRESPONDENCE is where mail is sent.
+	AddressType_ADDRESS_TYPE_CORRESPONDENCE AddressType = 3
+	// ADDRESS_TYPE_BILLING is where invoices are sent.
+	AddressType_ADDRESS_TYPE_BILLING AddressType = 4
+	// ADDRESS_TYPE_RESIDENCE is a person's home (domicile).
+	AddressType_ADDRESS_TYPE_RESIDENCE AddressType = 5
+	// ADDRESS_TYPE_OTHER is any other role; label should describe it.
+	AddressType_ADDRESS_TYPE_OTHER AddressType = 6
+)
+
+// Enum value maps for AddressType.
+var (
+	AddressType_name = map[int32]string{
+		0: "ADDRESS_TYPE_UNSPECIFIED",
+		1: "ADDRESS_TYPE_HEAD_OFFICE",
+		2: "ADDRESS_TYPE_BRANCH",
+		3: "ADDRESS_TYPE_CORRESPONDENCE",
+		4: "ADDRESS_TYPE_BILLING",
+		5: "ADDRESS_TYPE_RESIDENCE",
+		6: "ADDRESS_TYPE_OTHER",
+	}
+	AddressType_value = map[string]int32{
+		"ADDRESS_TYPE_UNSPECIFIED":    0,
+		"ADDRESS_TYPE_HEAD_OFFICE":    1,
+		"ADDRESS_TYPE_BRANCH":         2,
+		"ADDRESS_TYPE_CORRESPONDENCE": 3,
+		"ADDRESS_TYPE_BILLING":        4,
+		"ADDRESS_TYPE_RESIDENCE":      5,
+		"ADDRESS_TYPE_OTHER":          6,
+	}
+)
+
+func (x AddressType) Enum() *AddressType {
+	p := new(AddressType)
+	*p = x
+	return p
+}
+
+func (x AddressType) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AddressType) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_actor_proto_enumTypes[3].Descriptor()
+}
+
+func (AddressType) Type() protoreflect.EnumType {
+	return &file_goeland_v1_actor_proto_enumTypes[3]
+}
+
+func (x AddressType) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AddressType.Descriptor instead.
+func (AddressType) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{3}
+}
+
 // OrganizationCategory is the controlled classification of a moral person
 // (production DicoActMoralCategory: Commerces, Bureau d'architecte, Gérance, ...).
 type OrganizationCategory struct {
@@ -332,6 +402,146 @@ func (x *OrganizationCategory) GetIsActive() bool {
 	return false
 }
 
+// ActorAddress is one postal address of an actor with its role. Addresses are
+// stored as their own rows linked to actors (M:N); replacing an actor's
+// addresses ends the previous links instead of deleting them.
+type ActorAddress struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the server-assigned id of the actor-address link.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// address_type is the required role of the address for this actor.
+	AddressType AddressType `protobuf:"varint,2,opt,name=address_type,json=addressType,proto3,enum=goeland.v1.AddressType" json:"address_type,omitempty"`
+	// is_principal marks the actor's principal address; at most one per actor,
+	// and the first address becomes principal when none is marked.
+	IsPrincipal bool `protobuf:"varint,3,opt,name=is_principal,json=isPrincipal,proto3" json:"is_principal,omitempty"`
+	// street is the required street name (1-200 characters), e.g. "Place de la Palud".
+	Street string `protobuf:"bytes,4,opt,name=street,proto3" json:"street,omitempty"`
+	// house_number is the optional number with its suffix (at most 20 characters), e.g. "2bis".
+	HouseNumber string `protobuf:"bytes,5,opt,name=house_number,json=houseNumber,proto3" json:"house_number,omitempty"`
+	// address_line2 is an optional complement (at most 200 characters): c/o, building, floor.
+	AddressLine2 string `protobuf:"bytes,6,opt,name=address_line2,json=addressLine2,proto3" json:"address_line2,omitempty"`
+	// postal_code is the required postal code (1-20 characters); a Swiss one has
+	// four digits, 1000-9999 (INVALID_ARGUMENT otherwise).
+	PostalCode string `protobuf:"bytes,7,opt,name=postal_code,json=postalCode,proto3" json:"postal_code,omitempty"`
+	// locality is the required locality (1-100 characters), e.g. "Lausanne".
+	Locality string `protobuf:"bytes,8,opt,name=locality,proto3" json:"locality,omitempty"`
+	// country_code is the ISO 3166-1 alpha-2 country; empty means CH.
+	CountryCode string `protobuf:"bytes,9,opt,name=country_code,json=countryCode,proto3" json:"country_code,omitempty"`
+	// label is an optional free note (at most 100 characters); required for OTHER.
+	Label string `protobuf:"bytes,10,opt,name=label,proto3" json:"label,omitempty"`
+	// created_at is when the address was linked to the actor.
+	CreatedAt     *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ActorAddress) Reset() {
+	*x = ActorAddress{}
+	mi := &file_goeland_v1_actor_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ActorAddress) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ActorAddress) ProtoMessage() {}
+
+func (x *ActorAddress) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_actor_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ActorAddress.ProtoReflect.Descriptor instead.
+func (*ActorAddress) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *ActorAddress) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetAddressType() AddressType {
+	if x != nil {
+		return x.AddressType
+	}
+	return AddressType_ADDRESS_TYPE_UNSPECIFIED
+}
+
+func (x *ActorAddress) GetIsPrincipal() bool {
+	if x != nil {
+		return x.IsPrincipal
+	}
+	return false
+}
+
+func (x *ActorAddress) GetStreet() string {
+	if x != nil {
+		return x.Street
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetHouseNumber() string {
+	if x != nil {
+		return x.HouseNumber
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetAddressLine2() string {
+	if x != nil {
+		return x.AddressLine2
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetPostalCode() string {
+	if x != nil {
+		return x.PostalCode
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetLocality() string {
+	if x != nil {
+		return x.Locality
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetCountryCode() string {
+	if x != nil {
+		return x.CountryCode
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *ActorAddress) GetCreatedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.CreatedAt
+	}
+	return nil
+}
+
 // ActorContact is one typed contact channel or business identifier attached to an
 // actor (production ActeurComplement row: IdTypeComplement + Complement).
 type ActorContact struct {
@@ -356,7 +566,7 @@ type ActorContact struct {
 
 func (x *ActorContact) Reset() {
 	*x = ActorContact{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[1]
+	mi := &file_goeland_v1_actor_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -368,7 +578,7 @@ func (x *ActorContact) String() string {
 func (*ActorContact) ProtoMessage() {}
 
 func (x *ActorContact) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[1]
+	mi := &file_goeland_v1_actor_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -381,7 +591,7 @@ func (x *ActorContact) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ActorContact.ProtoReflect.Descriptor instead.
 func (*ActorContact) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{1}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *ActorContact) GetContactType() ContactType {
@@ -431,7 +641,7 @@ type OrganizationDetails struct {
 
 func (x *OrganizationDetails) Reset() {
 	*x = OrganizationDetails{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[2]
+	mi := &file_goeland_v1_actor_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -443,7 +653,7 @@ func (x *OrganizationDetails) String() string {
 func (*OrganizationDetails) ProtoMessage() {}
 
 func (x *OrganizationDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[2]
+	mi := &file_goeland_v1_actor_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -456,7 +666,7 @@ func (x *OrganizationDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use OrganizationDetails.ProtoReflect.Descriptor instead.
 func (*OrganizationDetails) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{2}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *OrganizationDetails) GetLegalName() string {
@@ -504,7 +714,7 @@ type PersonDetails struct {
 
 func (x *PersonDetails) Reset() {
 	*x = PersonDetails{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[3]
+	mi := &file_goeland_v1_actor_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -516,7 +726,7 @@ func (x *PersonDetails) String() string {
 func (*PersonDetails) ProtoMessage() {}
 
 func (x *PersonDetails) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[3]
+	mi := &file_goeland_v1_actor_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -529,7 +739,7 @@ func (x *PersonDetails) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use PersonDetails.ProtoReflect.Descriptor instead.
 func (*PersonDetails) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{3}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *PersonDetails) GetIsChRegister() bool {
@@ -603,13 +813,15 @@ type Actor struct {
 	UpdatedAt *timestamppb.Timestamp `protobuf:"bytes,22,opt,name=updated_at,json=updatedAt,proto3" json:"updated_at,omitempty"`
 	// record_metadata is the governance record (confidentiality, lock, owner...).
 	RecordMetadata *RecordMetadata `protobuf:"bytes,23,opt,name=record_metadata,json=recordMetadata,proto3" json:"record_metadata,omitempty"`
-	unknownFields  protoimpl.UnknownFields
-	sizeCache      protoimpl.SizeCache
+	// addresses are the actor's current postal addresses, principal first.
+	Addresses     []*ActorAddress `protobuf:"bytes,24,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *Actor) Reset() {
 	*x = Actor{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[4]
+	mi := &file_goeland_v1_actor_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -621,7 +833,7 @@ func (x *Actor) String() string {
 func (*Actor) ProtoMessage() {}
 
 func (x *Actor) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[4]
+	mi := &file_goeland_v1_actor_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -634,7 +846,7 @@ func (x *Actor) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Actor.ProtoReflect.Descriptor instead.
 func (*Actor) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{4}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *Actor) GetSubjectRef() *SubjectRef {
@@ -739,6 +951,13 @@ func (x *Actor) GetRecordMetadata() *RecordMetadata {
 	return nil
 }
 
+func (x *Actor) GetAddresses() []*ActorAddress {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
 type isActor_Specialization interface {
 	isActor_Specialization()
 }
@@ -784,13 +1003,15 @@ type CreateActorRequest struct {
 	// NOTE: the acting operator is derived server-side from the authenticated
 	// principal (never trusted from the client).
 	InitialGovernance *RecordMetadata `protobuf:"bytes,7,opt,name=initial_governance,json=initialGovernance,proto3" json:"initial_governance,omitempty"`
-	unknownFields     protoimpl.UnknownFields
-	sizeCache         protoimpl.SizeCache
+	// addresses are the initial postal addresses (at most 20).
+	Addresses     []*ActorAddress `protobuf:"bytes,8,rep,name=addresses,proto3" json:"addresses,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *CreateActorRequest) Reset() {
 	*x = CreateActorRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[5]
+	mi := &file_goeland_v1_actor_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -802,7 +1023,7 @@ func (x *CreateActorRequest) String() string {
 func (*CreateActorRequest) ProtoMessage() {}
 
 func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[5]
+	mi := &file_goeland_v1_actor_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -815,7 +1036,7 @@ func (x *CreateActorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateActorRequest.ProtoReflect.Descriptor instead.
 func (*CreateActorRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{5}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *CreateActorRequest) GetActorKind() ActorKind {
@@ -878,6 +1099,13 @@ func (x *CreateActorRequest) GetInitialGovernance() *RecordMetadata {
 	return nil
 }
 
+func (x *CreateActorRequest) GetAddresses() []*ActorAddress {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
 type isCreateActorRequest_Specialization interface {
 	isCreateActorRequest_Specialization()
 }
@@ -909,7 +1137,7 @@ type CreateActorResponse struct {
 
 func (x *CreateActorResponse) Reset() {
 	*x = CreateActorResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[6]
+	mi := &file_goeland_v1_actor_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -921,7 +1149,7 @@ func (x *CreateActorResponse) String() string {
 func (*CreateActorResponse) ProtoMessage() {}
 
 func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[6]
+	mi := &file_goeland_v1_actor_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -934,7 +1162,7 @@ func (x *CreateActorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateActorResponse.ProtoReflect.Descriptor instead.
 func (*CreateActorResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{6}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *CreateActorResponse) GetActor() *Actor {
@@ -956,8 +1184,9 @@ type GetActorRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the actor (subject_ref) UUID.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// include_relationships also returns the INCOMING relationships (actors are
-	// the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
+	// include_relationships also returns the relationships in both directions:
+	// incoming roles (CASE_HAS_ACTOR_*, DOCUMENT_*_ACTOR) and actor-to-actor links
+	// (ACTOR_BRANCH_OF_ACTOR, ACTOR_CONTACT_PERSON_OF_ACTOR).
 	IncludeRelationships bool `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"`
 	// include_audit also returns the 20 most recent audit events.
 	IncludeAudit  bool `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
@@ -967,7 +1196,7 @@ type GetActorRequest struct {
 
 func (x *GetActorRequest) Reset() {
 	*x = GetActorRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[7]
+	mi := &file_goeland_v1_actor_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -979,7 +1208,7 @@ func (x *GetActorRequest) String() string {
 func (*GetActorRequest) ProtoMessage() {}
 
 func (x *GetActorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[7]
+	mi := &file_goeland_v1_actor_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -992,7 +1221,7 @@ func (x *GetActorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetActorRequest.ProtoReflect.Descriptor instead.
 func (*GetActorRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{7}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *GetActorRequest) GetId() string {
@@ -1021,7 +1250,8 @@ type GetActorResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// actor is the actor with its contacts and governance.
 	Actor *Actor `protobuf:"bytes,1,opt,name=actor,proto3" json:"actor,omitempty"`
-	// relationships are the incoming edges; empty unless include_relationships was set.
+	// relationships are the actor's edges in both directions (outgoing first);
+	// empty unless include_relationships was set.
 	Relationships []*SubjectRelationship `protobuf:"bytes,2,rep,name=relationships,proto3" json:"relationships,omitempty"`
 	// recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
 	RecentAudit   []*AuditEvent `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`
@@ -1031,7 +1261,7 @@ type GetActorResponse struct {
 
 func (x *GetActorResponse) Reset() {
 	*x = GetActorResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[8]
+	mi := &file_goeland_v1_actor_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1043,7 +1273,7 @@ func (x *GetActorResponse) String() string {
 func (*GetActorResponse) ProtoMessage() {}
 
 func (x *GetActorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[8]
+	mi := &file_goeland_v1_actor_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1056,7 +1286,7 @@ func (x *GetActorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetActorResponse.ProtoReflect.Descriptor instead.
 func (*GetActorResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{8}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *GetActorResponse) GetActor() *Actor {
@@ -1108,14 +1338,19 @@ type UpdateActorRequest struct {
 	// contacts is the new contact set, used only with replace_contacts.
 	Contacts []*ActorContact `protobuf:"bytes,8,rep,name=contacts,proto3" json:"contacts,omitempty"`
 	// reason is the justification recorded on the audit event (at most 2000 characters).
-	Reason        string `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
+	Reason string `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
+	// replace_addresses, when true, makes addresses the new full set (previous
+	// links are ended, not deleted); when false, addresses is ignored.
+	ReplaceAddresses bool `protobuf:"varint,10,opt,name=replace_addresses,json=replaceAddresses,proto3" json:"replace_addresses,omitempty"`
+	// addresses is the new address set (at most 20), used only with replace_addresses.
+	Addresses     []*ActorAddress `protobuf:"bytes,11,rep,name=addresses,proto3" json:"addresses,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
 
 func (x *UpdateActorRequest) Reset() {
 	*x = UpdateActorRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[9]
+	mi := &file_goeland_v1_actor_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1127,7 +1362,7 @@ func (x *UpdateActorRequest) String() string {
 func (*UpdateActorRequest) ProtoMessage() {}
 
 func (x *UpdateActorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[9]
+	mi := &file_goeland_v1_actor_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1140,7 +1375,7 @@ func (x *UpdateActorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateActorRequest.ProtoReflect.Descriptor instead.
 func (*UpdateActorRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{9}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *UpdateActorRequest) GetId() string {
@@ -1217,6 +1452,20 @@ func (x *UpdateActorRequest) GetReason() string {
 	return ""
 }
 
+func (x *UpdateActorRequest) GetReplaceAddresses() bool {
+	if x != nil {
+		return x.ReplaceAddresses
+	}
+	return false
+}
+
+func (x *UpdateActorRequest) GetAddresses() []*ActorAddress {
+	if x != nil {
+		return x.Addresses
+	}
+	return nil
+}
+
 type isUpdateActorRequest_Specialization interface {
 	isUpdateActorRequest_Specialization()
 }
@@ -1248,7 +1497,7 @@ type UpdateActorResponse struct {
 
 func (x *UpdateActorResponse) Reset() {
 	*x = UpdateActorResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[10]
+	mi := &file_goeland_v1_actor_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1260,7 +1509,7 @@ func (x *UpdateActorResponse) String() string {
 func (*UpdateActorResponse) ProtoMessage() {}
 
 func (x *UpdateActorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[10]
+	mi := &file_goeland_v1_actor_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1273,7 +1522,7 @@ func (x *UpdateActorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateActorResponse.ProtoReflect.Descriptor instead.
 func (*UpdateActorResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{10}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *UpdateActorResponse) GetActor() *Actor {
@@ -1316,7 +1565,7 @@ type SearchActorsRequest struct {
 
 func (x *SearchActorsRequest) Reset() {
 	*x = SearchActorsRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[11]
+	mi := &file_goeland_v1_actor_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1328,7 +1577,7 @@ func (x *SearchActorsRequest) String() string {
 func (*SearchActorsRequest) ProtoMessage() {}
 
 func (x *SearchActorsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[11]
+	mi := &file_goeland_v1_actor_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1341,7 +1590,7 @@ func (x *SearchActorsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchActorsRequest.ProtoReflect.Descriptor instead.
 func (*SearchActorsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{11}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SearchActorsRequest) GetQuery() string {
@@ -1408,7 +1657,7 @@ type SearchActorsResponse struct {
 
 func (x *SearchActorsResponse) Reset() {
 	*x = SearchActorsResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[12]
+	mi := &file_goeland_v1_actor_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1420,7 +1669,7 @@ func (x *SearchActorsResponse) String() string {
 func (*SearchActorsResponse) ProtoMessage() {}
 
 func (x *SearchActorsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[12]
+	mi := &file_goeland_v1_actor_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1433,7 +1682,7 @@ func (x *SearchActorsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchActorsResponse.ProtoReflect.Descriptor instead.
 func (*SearchActorsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{12}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *SearchActorsResponse) GetActors() []*Actor {
@@ -1470,7 +1719,7 @@ type DeleteActorRequest struct {
 
 func (x *DeleteActorRequest) Reset() {
 	*x = DeleteActorRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[13]
+	mi := &file_goeland_v1_actor_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1482,7 +1731,7 @@ func (x *DeleteActorRequest) String() string {
 func (*DeleteActorRequest) ProtoMessage() {}
 
 func (x *DeleteActorRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[13]
+	mi := &file_goeland_v1_actor_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1495,7 +1744,7 @@ func (x *DeleteActorRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteActorRequest.ProtoReflect.Descriptor instead.
 func (*DeleteActorRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{13}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteActorRequest) GetId() string {
@@ -1525,7 +1774,7 @@ type DeleteActorResponse struct {
 
 func (x *DeleteActorResponse) Reset() {
 	*x = DeleteActorResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[14]
+	mi := &file_goeland_v1_actor_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1537,7 +1786,7 @@ func (x *DeleteActorResponse) String() string {
 func (*DeleteActorResponse) ProtoMessage() {}
 
 func (x *DeleteActorResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[14]
+	mi := &file_goeland_v1_actor_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1550,7 +1799,7 @@ func (x *DeleteActorResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteActorResponse.ProtoReflect.Descriptor instead.
 func (*DeleteActorResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{14}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *DeleteActorResponse) GetDeletedActorId() string {
@@ -1578,7 +1827,7 @@ type ListOrganizationCategoriesRequest struct {
 
 func (x *ListOrganizationCategoriesRequest) Reset() {
 	*x = ListOrganizationCategoriesRequest{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[15]
+	mi := &file_goeland_v1_actor_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1590,7 +1839,7 @@ func (x *ListOrganizationCategoriesRequest) String() string {
 func (*ListOrganizationCategoriesRequest) ProtoMessage() {}
 
 func (x *ListOrganizationCategoriesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[15]
+	mi := &file_goeland_v1_actor_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1603,7 +1852,7 @@ func (x *ListOrganizationCategoriesRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use ListOrganizationCategoriesRequest.ProtoReflect.Descriptor instead.
 func (*ListOrganizationCategoriesRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{15}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListOrganizationCategoriesRequest) GetOnlyActive() bool {
@@ -1624,7 +1873,7 @@ type ListOrganizationCategoriesResponse struct {
 
 func (x *ListOrganizationCategoriesResponse) Reset() {
 	*x = ListOrganizationCategoriesResponse{}
-	mi := &file_goeland_v1_actor_proto_msgTypes[16]
+	mi := &file_goeland_v1_actor_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1636,7 +1885,7 @@ func (x *ListOrganizationCategoriesResponse) String() string {
 func (*ListOrganizationCategoriesResponse) ProtoMessage() {}
 
 func (x *ListOrganizationCategoriesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_actor_proto_msgTypes[16]
+	mi := &file_goeland_v1_actor_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1649,7 +1898,7 @@ func (x *ListOrganizationCategoriesResponse) ProtoReflect() protoreflect.Message
 
 // Deprecated: Use ListOrganizationCategoriesResponse.ProtoReflect.Descriptor instead.
 func (*ListOrganizationCategoriesResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{16}
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *ListOrganizationCategoriesResponse) GetCategories() []*OrganizationCategory {
@@ -1669,7 +1918,23 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12\x1b\n" +
-	"\tis_active\x18\x04 \x01(\bR\bisActive\"\xb9\x01\n" +
+	"\tis_active\x18\x04 \x01(\bR\bisActive\"\x84\x04\n" +
+	"\fActorAddress\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12F\n" +
+	"\faddress_type\x18\x02 \x01(\x0e2\x17.goeland.v1.AddressTypeB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vaddressType\x12!\n" +
+	"\fis_principal\x18\x03 \x01(\bR\visPrincipal\x12%\n" +
+	"\x06street\x18\x04 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x06street\x12*\n" +
+	"\fhouse_number\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\vhouseNumber\x12-\n" +
+	"\raddress_line2\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\faddressLine2\x12-\n" +
+	"\vpostal_code\x18\a \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18\x14R\n" +
+	"postalCode\x12(\n" +
+	"\blocality\x18\b \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\blocality\x12:\n" +
+	"\fcountry_code\x18\t \x01(\tB\x17\xbaH\x14r\x122\x10^$|^[A-Za-z]{2}$R\vcountryCode\x12\x1d\n" +
+	"\x05label\x18\n" +
+	" \x01(\tB\a\xbaH\x04r\x02\x18dR\x05label\x12>\n" +
+	"\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\"\xb9\x01\n" +
 	"\fActorContact\x12F\n" +
 	"\fcontact_type\x18\x01 \x01(\x0e2\x17.goeland.v1.ContactTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vcontactType\x12#\n" +
@@ -1692,7 +1957,7 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"salutation\x12$\n" +
 	"\tlast_name\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\blastName\x12&\n" +
 	"\n" +
-	"first_name\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\tfirstName\"\xd8\x05\n" +
+	"first_name\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\tfirstName\"\x90\x06\n" +
 	"\x05Actor\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x12>\n" +
@@ -1711,8 +1976,9 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"created_by\x18\x15 \x01(\tR\tcreatedBy\x12>\n" +
 	"\n" +
 	"updated_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
-	"\x0frecord_metadata\x18\x17 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadataB\x10\n" +
-	"\x0especialization\"\x98\x05\n" +
+	"\x0frecord_metadata\x18\x17 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\x126\n" +
+	"\taddresses\x18\x18 \x03(\v2\x18.goeland.v1.ActorAddressR\taddressesB\x10\n" +
+	"\x0especialization\"\xda\x05\n" +
 	"\x12CreateActorRequest\x12@\n" +
 	"\n" +
 	"actor_kind\x18\x01 \x01(\x0e2\x15.goeland.v1.ActorKindB\n" +
@@ -1722,7 +1988,8 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x06person\x18\x04 \x01(\v2\x19.goeland.v1.PersonDetailsH\x00R\x06person\x12E\n" +
 	"\forganization\x18\x05 \x01(\v2\x1f.goeland.v1.OrganizationDetailsH\x00R\forganization\x124\n" +
 	"\bcontacts\x18\x06 \x03(\v2\x18.goeland.v1.ActorContactR\bcontacts\x12I\n" +
-	"\x12initial_governance\x18\a \x01(\v2\x1a.goeland.v1.RecordMetadataR\x11initialGovernance:\xcf\x01\xbaH\xcb\x01\x1a\xc8\x01\n" +
+	"\x12initial_governance\x18\a \x01(\v2\x1a.goeland.v1.RecordMetadataR\x11initialGovernance\x12@\n" +
+	"\taddresses\x18\b \x03(\v2\x18.goeland.v1.ActorAddressB\b\xbaH\x05\x92\x01\x02\x10\x14R\taddresses:\xcf\x01\xbaH\xcb\x01\x1a\xc8\x01\n" +
 	"\x19create_actor.display_name\x12Sdisplay_name is required, except for a person with a last_name (it is then derived)\x1aVthis.display_name.size() > 0 || (has(this.person) && this.person.last_name.size() > 0)B\x10\n" +
 	"\x0especialization\"{\n" +
 	"\x13CreateActorResponse\x12'\n" +
@@ -1735,7 +2002,7 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x10GetActorResponse\x12'\n" +
 	"\x05actor\x18\x01 \x01(\v2\x11.goeland.v1.ActorR\x05actor\x12E\n" +
 	"\rrelationships\x18\x02 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x129\n" +
-	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xec\x03\n" +
+	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xdb\x04\n" +
 	"\x12UpdateActorRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
 	"\fdisplay_name\x18\x02 \x01(\tB\n" +
@@ -1746,7 +2013,10 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\forganization\x18\x06 \x01(\v2\x1f.goeland.v1.OrganizationDetailsH\x00R\forganization\x12)\n" +
 	"\x10replace_contacts\x18\a \x01(\bR\x0freplaceContacts\x124\n" +
 	"\bcontacts\x18\b \x03(\v2\x18.goeland.v1.ActorContactR\bcontacts\x12 \n" +
-	"\x06reason\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reasonB\x10\n" +
+	"\x06reason\x18\t \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12+\n" +
+	"\x11replace_addresses\x18\n" +
+	" \x01(\bR\x10replaceAddresses\x12@\n" +
+	"\taddresses\x18\v \x03(\v2\x18.goeland.v1.ActorAddressB\b\xbaH\x05\x92\x01\x02\x10\x14R\taddressesB\x10\n" +
 	"\x0especializationB\f\n" +
 	"\n" +
 	"_is_activeB\x13\n" +
@@ -1808,7 +2078,15 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x17CONTACT_TYPE_VAT_NUMBER\x10\x15\x12\x1e\n" +
 	"\x1aCONTACT_TYPE_ABACUS_DEBTOR\x10\x16\x12$\n" +
 	" CONTACT_TYPE_COMMERCIAL_REGISTER\x10\x17\x12\x16\n" +
-	"\x12CONTACT_TYPE_OTHER\x10c2\xc1\x05\n" +
+	"\x12CONTACT_TYPE_OTHER\x10c*\xd1\x01\n" +
+	"\vAddressType\x12\x1c\n" +
+	"\x18ADDRESS_TYPE_UNSPECIFIED\x10\x00\x12\x1c\n" +
+	"\x18ADDRESS_TYPE_HEAD_OFFICE\x10\x01\x12\x17\n" +
+	"\x13ADDRESS_TYPE_BRANCH\x10\x02\x12\x1f\n" +
+	"\x1bADDRESS_TYPE_CORRESPONDENCE\x10\x03\x12\x18\n" +
+	"\x14ADDRESS_TYPE_BILLING\x10\x04\x12\x1a\n" +
+	"\x16ADDRESS_TYPE_RESIDENCE\x10\x05\x12\x16\n" +
+	"\x12ADDRESS_TYPE_OTHER\x10\x062\xc1\x05\n" +
 	"\fActorService\x12f\n" +
 	"\vCreateActor\x12\x1e.goeland.v1.CreateActorRequest\x1a\x1f.goeland.v1.CreateActorResponse\"\x16\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/api/actors\x12_\n" +
 	"\bGetActor\x12\x1b.goeland.v1.GetActorRequest\x1a\x1c.goeland.v1.GetActorResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/actors/{id}\x12k\n" +
@@ -1833,82 +2111,89 @@ func file_goeland_v1_actor_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_actor_proto_rawDescData
 }
 
-var file_goeland_v1_actor_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
-var file_goeland_v1_actor_proto_msgTypes = make([]protoimpl.MessageInfo, 17)
+var file_goeland_v1_actor_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_goeland_v1_actor_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
 var file_goeland_v1_actor_proto_goTypes = []any{
 	(ActorKind)(0),                             // 0: goeland.v1.ActorKind
 	(Salutation)(0),                            // 1: goeland.v1.Salutation
 	(ContactType)(0),                           // 2: goeland.v1.ContactType
-	(*OrganizationCategory)(nil),               // 3: goeland.v1.OrganizationCategory
-	(*ActorContact)(nil),                       // 4: goeland.v1.ActorContact
-	(*OrganizationDetails)(nil),                // 5: goeland.v1.OrganizationDetails
-	(*PersonDetails)(nil),                      // 6: goeland.v1.PersonDetails
-	(*Actor)(nil),                              // 7: goeland.v1.Actor
-	(*CreateActorRequest)(nil),                 // 8: goeland.v1.CreateActorRequest
-	(*CreateActorResponse)(nil),                // 9: goeland.v1.CreateActorResponse
-	(*GetActorRequest)(nil),                    // 10: goeland.v1.GetActorRequest
-	(*GetActorResponse)(nil),                   // 11: goeland.v1.GetActorResponse
-	(*UpdateActorRequest)(nil),                 // 12: goeland.v1.UpdateActorRequest
-	(*UpdateActorResponse)(nil),                // 13: goeland.v1.UpdateActorResponse
-	(*SearchActorsRequest)(nil),                // 14: goeland.v1.SearchActorsRequest
-	(*SearchActorsResponse)(nil),               // 15: goeland.v1.SearchActorsResponse
-	(*DeleteActorRequest)(nil),                 // 16: goeland.v1.DeleteActorRequest
-	(*DeleteActorResponse)(nil),                // 17: goeland.v1.DeleteActorResponse
-	(*ListOrganizationCategoriesRequest)(nil),  // 18: goeland.v1.ListOrganizationCategoriesRequest
-	(*ListOrganizationCategoriesResponse)(nil), // 19: goeland.v1.ListOrganizationCategoriesResponse
-	(*SubjectRef)(nil),                         // 20: goeland.v1.SubjectRef
-	(*timestamppb.Timestamp)(nil),              // 21: google.protobuf.Timestamp
-	(*RecordMetadata)(nil),                     // 22: goeland.v1.RecordMetadata
-	(*AuditEvent)(nil),                         // 23: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),                // 24: goeland.v1.SubjectRelationship
+	(AddressType)(0),                           // 3: goeland.v1.AddressType
+	(*OrganizationCategory)(nil),               // 4: goeland.v1.OrganizationCategory
+	(*ActorAddress)(nil),                       // 5: goeland.v1.ActorAddress
+	(*ActorContact)(nil),                       // 6: goeland.v1.ActorContact
+	(*OrganizationDetails)(nil),                // 7: goeland.v1.OrganizationDetails
+	(*PersonDetails)(nil),                      // 8: goeland.v1.PersonDetails
+	(*Actor)(nil),                              // 9: goeland.v1.Actor
+	(*CreateActorRequest)(nil),                 // 10: goeland.v1.CreateActorRequest
+	(*CreateActorResponse)(nil),                // 11: goeland.v1.CreateActorResponse
+	(*GetActorRequest)(nil),                    // 12: goeland.v1.GetActorRequest
+	(*GetActorResponse)(nil),                   // 13: goeland.v1.GetActorResponse
+	(*UpdateActorRequest)(nil),                 // 14: goeland.v1.UpdateActorRequest
+	(*UpdateActorResponse)(nil),                // 15: goeland.v1.UpdateActorResponse
+	(*SearchActorsRequest)(nil),                // 16: goeland.v1.SearchActorsRequest
+	(*SearchActorsResponse)(nil),               // 17: goeland.v1.SearchActorsResponse
+	(*DeleteActorRequest)(nil),                 // 18: goeland.v1.DeleteActorRequest
+	(*DeleteActorResponse)(nil),                // 19: goeland.v1.DeleteActorResponse
+	(*ListOrganizationCategoriesRequest)(nil),  // 20: goeland.v1.ListOrganizationCategoriesRequest
+	(*ListOrganizationCategoriesResponse)(nil), // 21: goeland.v1.ListOrganizationCategoriesResponse
+	(*timestamppb.Timestamp)(nil),              // 22: google.protobuf.Timestamp
+	(*SubjectRef)(nil),                         // 23: goeland.v1.SubjectRef
+	(*RecordMetadata)(nil),                     // 24: goeland.v1.RecordMetadata
+	(*AuditEvent)(nil),                         // 25: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),                // 26: goeland.v1.SubjectRelationship
 }
 var file_goeland_v1_actor_proto_depIdxs = []int32{
-	2,  // 0: goeland.v1.ActorContact.contact_type:type_name -> goeland.v1.ContactType
-	1,  // 1: goeland.v1.PersonDetails.salutation:type_name -> goeland.v1.Salutation
-	20, // 2: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
-	0,  // 3: goeland.v1.Actor.actor_kind:type_name -> goeland.v1.ActorKind
-	6,  // 4: goeland.v1.Actor.person:type_name -> goeland.v1.PersonDetails
-	5,  // 5: goeland.v1.Actor.organization:type_name -> goeland.v1.OrganizationDetails
-	4,  // 6: goeland.v1.Actor.contacts:type_name -> goeland.v1.ActorContact
-	21, // 7: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
-	21, // 8: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
-	22, // 9: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
-	0,  // 10: goeland.v1.CreateActorRequest.actor_kind:type_name -> goeland.v1.ActorKind
-	6,  // 11: goeland.v1.CreateActorRequest.person:type_name -> goeland.v1.PersonDetails
-	5,  // 12: goeland.v1.CreateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
-	4,  // 13: goeland.v1.CreateActorRequest.contacts:type_name -> goeland.v1.ActorContact
-	22, // 14: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
-	7,  // 15: goeland.v1.CreateActorResponse.actor:type_name -> goeland.v1.Actor
-	23, // 16: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
-	7,  // 17: goeland.v1.GetActorResponse.actor:type_name -> goeland.v1.Actor
-	24, // 18: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	23, // 19: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	6,  // 20: goeland.v1.UpdateActorRequest.person:type_name -> goeland.v1.PersonDetails
-	5,  // 21: goeland.v1.UpdateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
-	4,  // 22: goeland.v1.UpdateActorRequest.contacts:type_name -> goeland.v1.ActorContact
-	7,  // 23: goeland.v1.UpdateActorResponse.actor:type_name -> goeland.v1.Actor
-	23, // 24: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
-	0,  // 25: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
-	7,  // 26: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
-	23, // 27: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	3,  // 28: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
-	8,  // 29: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
-	10, // 30: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
-	12, // 31: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
-	14, // 32: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
-	16, // 33: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
-	18, // 34: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
-	9,  // 35: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
-	11, // 36: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
-	13, // 37: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
-	15, // 38: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
-	17, // 39: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
-	19, // 40: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
-	35, // [35:41] is the sub-list for method output_type
-	29, // [29:35] is the sub-list for method input_type
-	29, // [29:29] is the sub-list for extension type_name
-	29, // [29:29] is the sub-list for extension extendee
-	0,  // [0:29] is the sub-list for field type_name
+	3,  // 0: goeland.v1.ActorAddress.address_type:type_name -> goeland.v1.AddressType
+	22, // 1: goeland.v1.ActorAddress.created_at:type_name -> google.protobuf.Timestamp
+	2,  // 2: goeland.v1.ActorContact.contact_type:type_name -> goeland.v1.ContactType
+	1,  // 3: goeland.v1.PersonDetails.salutation:type_name -> goeland.v1.Salutation
+	23, // 4: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
+	0,  // 5: goeland.v1.Actor.actor_kind:type_name -> goeland.v1.ActorKind
+	8,  // 6: goeland.v1.Actor.person:type_name -> goeland.v1.PersonDetails
+	7,  // 7: goeland.v1.Actor.organization:type_name -> goeland.v1.OrganizationDetails
+	6,  // 8: goeland.v1.Actor.contacts:type_name -> goeland.v1.ActorContact
+	22, // 9: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
+	22, // 10: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 11: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
+	5,  // 12: goeland.v1.Actor.addresses:type_name -> goeland.v1.ActorAddress
+	0,  // 13: goeland.v1.CreateActorRequest.actor_kind:type_name -> goeland.v1.ActorKind
+	8,  // 14: goeland.v1.CreateActorRequest.person:type_name -> goeland.v1.PersonDetails
+	7,  // 15: goeland.v1.CreateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
+	6,  // 16: goeland.v1.CreateActorRequest.contacts:type_name -> goeland.v1.ActorContact
+	24, // 17: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	5,  // 18: goeland.v1.CreateActorRequest.addresses:type_name -> goeland.v1.ActorAddress
+	9,  // 19: goeland.v1.CreateActorResponse.actor:type_name -> goeland.v1.Actor
+	25, // 20: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
+	9,  // 21: goeland.v1.GetActorResponse.actor:type_name -> goeland.v1.Actor
+	26, // 22: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	25, // 23: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	8,  // 24: goeland.v1.UpdateActorRequest.person:type_name -> goeland.v1.PersonDetails
+	7,  // 25: goeland.v1.UpdateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
+	6,  // 26: goeland.v1.UpdateActorRequest.contacts:type_name -> goeland.v1.ActorContact
+	5,  // 27: goeland.v1.UpdateActorRequest.addresses:type_name -> goeland.v1.ActorAddress
+	9,  // 28: goeland.v1.UpdateActorResponse.actor:type_name -> goeland.v1.Actor
+	25, // 29: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
+	0,  // 30: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
+	9,  // 31: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
+	25, // 32: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	4,  // 33: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
+	10, // 34: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
+	12, // 35: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
+	14, // 36: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
+	16, // 37: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
+	18, // 38: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
+	20, // 39: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
+	11, // 40: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
+	13, // 41: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
+	15, // 42: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
+	17, // 43: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
+	19, // 44: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
+	21, // 45: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
+	40, // [40:46] is the sub-list for method output_type
+	34, // [34:40] is the sub-list for method input_type
+	34, // [34:34] is the sub-list for extension type_name
+	34, // [34:34] is the sub-list for extension extendee
+	0,  // [0:34] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_actor_proto_init() }
@@ -1917,15 +2202,15 @@ func file_goeland_v1_actor_proto_init() {
 		return
 	}
 	file_goeland_v1_core_proto_init()
-	file_goeland_v1_actor_proto_msgTypes[4].OneofWrappers = []any{
+	file_goeland_v1_actor_proto_msgTypes[5].OneofWrappers = []any{
 		(*Actor_Person)(nil),
 		(*Actor_Organization)(nil),
 	}
-	file_goeland_v1_actor_proto_msgTypes[5].OneofWrappers = []any{
+	file_goeland_v1_actor_proto_msgTypes[6].OneofWrappers = []any{
 		(*CreateActorRequest_Person)(nil),
 		(*CreateActorRequest_Organization)(nil),
 	}
-	file_goeland_v1_actor_proto_msgTypes[9].OneofWrappers = []any{
+	file_goeland_v1_actor_proto_msgTypes[10].OneofWrappers = []any{
 		(*UpdateActorRequest_Person)(nil),
 		(*UpdateActorRequest_Organization)(nil),
 	}
@@ -1934,8 +2219,8 @@ func file_goeland_v1_actor_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_actor_proto_rawDesc), len(file_goeland_v1_actor_proto_rawDesc)),
-			NumEnums:      3,
-			NumMessages:   17,
+			NumEnums:      4,
+			NumMessages:   18,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

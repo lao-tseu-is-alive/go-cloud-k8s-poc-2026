@@ -151,8 +151,9 @@ paths:
           type: string
         - name: includeRelationships
           description: |-
-            include_relationships also returns the INCOMING relationships (actors are
-            the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
+            include_relationships also returns the relationships in both directions:
+            incoming roles (CASE_HAS_ACTOR_*, DOCUMENT_*_ACTOR) and actor-to-actor links
+            (ACTOR_BRANCH_OF_ACTOR, ACTOR_CONTACT_PERSON_OF_ACTOR).
           in: query
           required: false
           type: boolean
@@ -1303,6 +1304,17 @@ definitions:
       reason:
         type: string
         description: reason is the justification recorded on the audit event (at most 2000 characters).
+      replaceAddresses:
+        type: boolean
+        description: |-
+          replace_addresses, when true, makes addresses the new full set (previous
+          links are ended, not deleted); when false, addresses is ignored.
+      addresses:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorAddress'
+        description: addresses is the new address set (at most 20), used only with replace_addresses.
     description: |-
       UpdateActorRequest updates mutable fields. Blocked if the record is locked.
       contacts, when provided, replace the full set (managed as a whole for simplicity).
@@ -1530,9 +1542,66 @@ definitions:
       recordMetadata:
         $ref: '#/definitions/v1RecordMetadata'
         description: record_metadata is the governance record (confidentiality, lock, owner...).
+      addresses:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorAddress'
+        description: addresses are the actor's current postal addresses, principal first.
     description: Actor is an external person or organization, 1:1 with SubjectRef (id == subject id).
     required:
       - displayName
+  v1ActorAddress:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the server-assigned id of the actor-address link.
+        readOnly: true
+      addressType:
+        $ref: '#/definitions/v1AddressType'
+        description: address_type is the required role of the address for this actor.
+      isPrincipal:
+        type: boolean
+        description: |-
+          is_principal marks the actor's principal address; at most one per actor,
+          and the first address becomes principal when none is marked.
+      street:
+        type: string
+        description: street is the required street name (1-200 characters), e.g. "Place de la Palud".
+      houseNumber:
+        type: string
+        description: house_number is the optional number with its suffix (at most 20 characters), e.g. "2bis".
+      addressLine2:
+        type: string
+        description: 'address_line2 is an optional complement (at most 200 characters): c/o, building, floor.'
+      postalCode:
+        type: string
+        description: |-
+          postal_code is the required postal code (1-20 characters); a Swiss one has
+          four digits, 1000-9999 (INVALID_ARGUMENT otherwise).
+      locality:
+        type: string
+        description: locality is the required locality (1-100 characters), e.g. "Lausanne".
+      countryCode:
+        type: string
+        description: country_code is the ISO 3166-1 alpha-2 country; empty means CH.
+      label:
+        type: string
+        description: label is an optional free note (at most 100 characters); required for OTHER.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is when the address was linked to the actor.
+        readOnly: true
+    description: |-
+      ActorAddress is one postal address of an actor with its role. Addresses are
+      stored as their own rows linked to actors (M:N); replacing an actor's
+      addresses ends the previous links instead of deleting them.
+    required:
+      - street
+      - postalCode
+      - locality
   v1ActorContact:
     type: object
     properties:
@@ -1588,6 +1657,28 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the DOCUMENT_VERSION_ADDED audit event.
     description: AddDocumentVersionResponse returns the document with its new current version.
+  v1AddressType:
+    type: string
+    enum:
+      - ADDRESS_TYPE_UNSPECIFIED
+      - ADDRESS_TYPE_HEAD_OFFICE
+      - ADDRESS_TYPE_BRANCH
+      - ADDRESS_TYPE_CORRESPONDENCE
+      - ADDRESS_TYPE_BILLING
+      - ADDRESS_TYPE_RESIDENCE
+      - ADDRESS_TYPE_OTHER
+    default: ADDRESS_TYPE_UNSPECIFIED
+    description: |-
+      AddressType is the role an address plays for one actor (production
+      lien_acteur_adresse qualification).
+
+       - ADDRESS_TYPE_UNSPECIFIED: ADDRESS_TYPE_UNSPECIFIED is the zero value; rejected on input.
+       - ADDRESS_TYPE_HEAD_OFFICE: ADDRESS_TYPE_HEAD_OFFICE is an organization's registered office (siège).
+       - ADDRESS_TYPE_BRANCH: ADDRESS_TYPE_BRANCH is a branch or establishment (succursale) of the same actor.
+       - ADDRESS_TYPE_CORRESPONDENCE: ADDRESS_TYPE_CORRESPONDENCE is where mail is sent.
+       - ADDRESS_TYPE_BILLING: ADDRESS_TYPE_BILLING is where invoices are sent.
+       - ADDRESS_TYPE_RESIDENCE: ADDRESS_TYPE_RESIDENCE is a person's home (domicile).
+       - ADDRESS_TYPE_OTHER: ADDRESS_TYPE_OTHER is any other role; label should describe it.
   v1AssignBusinessRefResponse:
     type: object
     properties:
@@ -1894,6 +1985,12 @@ definitions:
 
           NOTE: the acting operator is derived server-side from the authenticated
           principal (never trusted from the client).
+      addresses:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ActorAddress'
+        description: addresses are the initial postal addresses (at most 20).
     description: |-
       CreateActorRequest registers an actor. SubjectRef + RecordMetadata are created
       via Core internally. The kind-specific block must match actor_kind.
@@ -2306,7 +2403,9 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1SubjectRelationship'
-        description: relationships are the incoming edges; empty unless include_relationships was set.
+        description: |-
+          relationships are the actor's edges in both directions (outgoing first);
+          empty unless include_relationships was set.
       recentAudit:
         type: array
         items:

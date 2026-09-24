@@ -6,8 +6,10 @@
  * matching the kind is sent). Enum codes travel untranslated.
  */
 import type {
+  ActorAddress,
   ActorContact,
   ActorKind,
+  AddressType,
   ContactType,
   CreateActorRequest,
   GoActor,
@@ -30,6 +32,7 @@ export interface ActorFormModel {
   isChRegister: boolean
   chRegisterRef: string
   contacts: ActorContact[]
+  addresses: ActorAddress[]
 }
 
 /** The persistable contact types offered in the editor (excludes UNSPECIFIED). */
@@ -50,6 +53,31 @@ export const CONTACT_TYPES: ContactType[] = [
 ]
 
 export const ACTOR_KINDS: ActorKind[] = ['ACTOR_KIND_PERSON', 'ACTOR_KIND_ORGANIZATION']
+
+/** The persistable address types offered in the editor (excludes UNSPECIFIED). */
+export const ADDRESS_TYPES: AddressType[] = [
+  'ADDRESS_TYPE_HEAD_OFFICE',
+  'ADDRESS_TYPE_BRANCH',
+  'ADDRESS_TYPE_CORRESPONDENCE',
+  'ADDRESS_TYPE_BILLING',
+  'ADDRESS_TYPE_RESIDENCE',
+  'ADDRESS_TYPE_OTHER',
+]
+
+/** A new, empty address row; a person's first address is a residence. */
+export function emptyAddress (actorKind: ActorKind): ActorAddress {
+  return {
+    addressType: actorKind === 'ACTOR_KIND_PERSON' ? 'ADDRESS_TYPE_RESIDENCE' : 'ADDRESS_TYPE_HEAD_OFFICE',
+    isPrincipal: false,
+    street: '',
+    houseNumber: '',
+    addressLine2: '',
+    postalCode: '',
+    locality: '',
+    countryCode: 'CH',
+    label: '',
+  }
+}
 
 export const SALUTATIONS: Salutation[] = ['SALUTATION_UNSPECIFIED', 'SALUTATION_MADAME', 'SALUTATION_MONSIEUR', 'SALUTATION_NEUTRAL']
 
@@ -72,6 +100,7 @@ export function emptyActorForm (): ActorFormModel {
     isChRegister: false,
     chRegisterRef: '',
     contacts: [],
+    addresses: [],
   }
 }
 
@@ -90,6 +119,7 @@ export function actorToForm (actor: GoActor): ActorFormModel {
     isChRegister: actor.person?.isChRegister ?? false,
     chRegisterRef: actor.person?.chRegisterRef ?? '',
     contacts: (actor.contacts ?? []).map(c => ({ ...c })),
+    addresses: (actor.addresses ?? []).map(a => ({ ...a, id: undefined, createdAt: undefined })),
   }
 }
 
@@ -110,6 +140,7 @@ export function buildCreateRequest (m: ActorFormModel): CreateActorRequest {
     displayName: m.displayName.trim(),
     publicationCode: m.publicationCode || undefined,
     contacts: cleanContacts(m.contacts),
+    addresses: cleanAddresses(m.addresses),
   }
   if (m.actorKind === 'ACTOR_KIND_ORGANIZATION') {
     req.organization = {
@@ -130,6 +161,8 @@ export function buildUpdateRequest (m: ActorFormModel, reason: string): UpdateAc
     publicationCode: m.publicationCode || undefined,
     replaceContacts: true,
     contacts: cleanContacts(m.contacts),
+    replaceAddresses: true,
+    addresses: cleanAddresses(m.addresses),
     reason: reason.trim() || undefined,
   }
   if (m.actorKind === 'ACTOR_KIND_ORGANIZATION') {
@@ -153,4 +186,22 @@ function personDetails (m: ActorFormModel) {
     isChRegister: m.isChRegister || undefined,
     chRegisterRef: m.chRegisterRef.trim() || undefined,
   }
+}
+
+/** Drops fully blank address rows and trims the others (the server validates). */
+function cleanAddresses (addresses: ActorAddress[]): ActorAddress[] {
+  const text = (v?: string) => v?.trim() ?? ''
+  return addresses
+    .filter(a => [a.street, a.postalCode, a.locality].some(v => text(v) !== ''))
+    .map(a => ({
+      addressType: a.addressType,
+      isPrincipal: a.isPrincipal || undefined,
+      street: text(a.street),
+      houseNumber: text(a.houseNumber) || undefined,
+      addressLine2: text(a.addressLine2) || undefined,
+      postalCode: text(a.postalCode),
+      locality: text(a.locality),
+      countryCode: text(a.countryCode).toUpperCase() || undefined,
+      label: text(a.label) || undefined,
+    }))
 }

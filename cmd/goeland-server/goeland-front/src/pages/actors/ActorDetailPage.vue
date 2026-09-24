@@ -4,15 +4,18 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteActor, getActor, updateActor } from '@/api/actorClient'
+  import ActorAddressesPanel from '@/components/actor/ActorAddressesPanel.vue'
   import ActorContactsPanel from '@/components/actor/ActorContactsPanel.vue'
   import { actorToForm, buildUpdateRequest, emptyActorForm } from '@/components/actor/actorForm'
   import ActorMainForm from '@/components/actor/ActorMainForm.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
+  import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
 
   const { t } = useI18n()
@@ -43,6 +46,7 @@
   const isDeleted = computed(() => !!actor.value?.recordMetadata?.deletedAt)
   const isActive = computed(() => !!actor.value?.isActive)
   const editable = computed(() => !isLocked.value && !isDeleted.value)
+  const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload)
   const isOrganization = computed(() => actor.value?.actorKind === 'ACTOR_KIND_ORGANIZATION')
   const isConfidential = computed(() => (actor.value?.recordMetadata?.confidentialityLevel ?? 0) > 0)
 
@@ -235,16 +239,40 @@
           </v-card>
 
           <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('sections.actor.addresses') }}</v-card-title>
+            <v-card-text><ActorAddressesPanel :addresses="actor.addresses" /></v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.actor.contacts') }}</v-card-title>
             <v-card-text><ActorContactsPanel :contacts="actor.contacts" /></v-card-text>
           </v-card>
 
           <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.actor.relationships') }}</v-card-title>
+            <v-card-title class="d-flex align-center text-subtitle-1">
+              {{ t('sections.actor.relationships') }}
+              <v-spacer />
+
+              <v-btn
+                v-if="editable"
+                prepend-icon="mdi-link-plus"
+                size="small"
+                variant="tonal"
+                @click="linkOpen = true"
+              >
+                {{ t('actions.document.link') }}
+              </v-btn>
+            </v-card-title>
 
             <v-card-text>
               <p class="text-caption text-medium-emphasis mb-2">{{ t('messages.actor.relationshipsHint') }}</p>
-              <RelationshipTable :relationships="relationships" />
+
+              <RelationshipTable
+                :can-unlink="editable"
+                :relationships="relationships"
+                @ended="reload"
+                @unlink="doUnlink"
+              />
             </v-card-text>
           </v-card>
         </v-col>
@@ -284,5 +312,13 @@
         </v-card>
       </v-dialog>
     </template>
+
+    <LinkSubjectDialog
+      v-model="linkOpen"
+      :busy="linkBusy"
+      :source-id="id"
+      source-kind="SUBJECT_KIND_ACTOR"
+      @submit="doLink"
+    />
   </v-container>
 </template>

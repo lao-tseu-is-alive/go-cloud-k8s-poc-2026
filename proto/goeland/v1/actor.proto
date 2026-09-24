@@ -112,6 +112,70 @@ message OrganizationCategory {
   bool is_active = 4;
 }
 
+// AddressType is the role an address plays for one actor (production
+// lien_acteur_adresse qualification).
+enum AddressType {
+  // ADDRESS_TYPE_UNSPECIFIED is the zero value; rejected on input.
+  ADDRESS_TYPE_UNSPECIFIED = 0;
+  // ADDRESS_TYPE_HEAD_OFFICE is an organization's registered office (siège).
+  ADDRESS_TYPE_HEAD_OFFICE = 1;
+  // ADDRESS_TYPE_BRANCH is a branch or establishment (succursale) of the same actor.
+  ADDRESS_TYPE_BRANCH = 2;
+  // ADDRESS_TYPE_CORRESPONDENCE is where mail is sent.
+  ADDRESS_TYPE_CORRESPONDENCE = 3;
+  // ADDRESS_TYPE_BILLING is where invoices are sent.
+  ADDRESS_TYPE_BILLING = 4;
+  // ADDRESS_TYPE_RESIDENCE is a person's home (domicile).
+  ADDRESS_TYPE_RESIDENCE = 5;
+  // ADDRESS_TYPE_OTHER is any other role; label should describe it.
+  ADDRESS_TYPE_OTHER = 6;
+}
+
+// ActorAddress is one postal address of an actor with its role. Addresses are
+// stored as their own rows linked to actors (M:N); replacing an actor's
+// addresses ends the previous links instead of deleting them.
+message ActorAddress {
+  // id is the server-assigned id of the actor-address link.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // address_type is the required role of the address for this actor.
+  AddressType address_type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // is_principal marks the actor's principal address; at most one per actor,
+  // and the first address becomes principal when none is marked.
+  bool is_principal = 3;
+  // street is the required street name (1-200 characters), e.g. "Place de la Palud".
+  string street = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // house_number is the optional number with its suffix (at most 20 characters), e.g. "2bis".
+  string house_number = 5 [(buf.validate.field).string.max_len = 20];
+  // address_line2 is an optional complement (at most 200 characters): c/o, building, floor.
+  string address_line2 = 6 [(buf.validate.field).string.max_len = 200];
+  // postal_code is the required postal code (1-20 characters); a Swiss one has
+  // four digits, 1000-9999 (INVALID_ARGUMENT otherwise).
+  string postal_code = 7 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 20
+  ];
+  // locality is the required locality (1-100 characters), e.g. "Lausanne".
+  string locality = 8 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // country_code is the ISO 3166-1 alpha-2 country; empty means CH.
+  string country_code = 9 [(buf.validate.field).string.pattern = "^$|^[A-Za-z]{2}$"];
+  // label is an optional free note (at most 100 characters); required for OTHER.
+  string label = 10 [(buf.validate.field).string.max_len = 100];
+  // created_at is when the address was linked to the actor.
+  google.protobuf.Timestamp created_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
 // ActorContact is one typed contact channel or business identifier attached to an
 // actor (production ActeurComplement row: IdTypeComplement + Complement).
 message ActorContact {
@@ -217,6 +281,8 @@ message Actor {
   google.protobuf.Timestamp updated_at = 22 [(google.api.field_behavior) = OUTPUT_ONLY];
   // record_metadata is the governance record (confidentiality, lock, owner...).
   RecordMetadata record_metadata = 23;
+  // addresses are the actor's current postal addresses, principal first.
+  repeated ActorAddress addresses = 24;
 }
 
 // =============================================
@@ -257,6 +323,8 @@ message CreateActorRequest {
   // NOTE: the acting operator is derived server-side from the authenticated
   // principal (never trusted from the client).
   RecordMetadata initial_governance = 7;
+  // addresses are the initial postal addresses (at most 20).
+  repeated ActorAddress addresses = 8 [(buf.validate.field).repeated.max_items = 20];
 }
 
 // CreateActorResponse returns the created actor.
@@ -271,8 +339,9 @@ message CreateActorResponse {
 message GetActorRequest {
   // id is the actor (subject_ref) UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
-  // include_relationships also returns the INCOMING relationships (actors are
-  // the target of CASE_HAS_ACTOR_* and DOCUMENT_*_ACTOR edges).
+  // include_relationships also returns the relationships in both directions:
+  // incoming roles (CASE_HAS_ACTOR_*, DOCUMENT_*_ACTOR) and actor-to-actor links
+  // (ACTOR_BRANCH_OF_ACTOR, ACTOR_CONTACT_PERSON_OF_ACTOR).
   bool include_relationships = 2;
   // include_audit also returns the 20 most recent audit events.
   bool include_audit = 3;
@@ -282,7 +351,8 @@ message GetActorRequest {
 message GetActorResponse {
   // actor is the actor with its contacts and governance.
   Actor actor = 1;
-  // relationships are the incoming edges; empty unless include_relationships was set.
+  // relationships are the actor's edges in both directions (outgoing first);
+  // empty unless include_relationships was set.
   repeated SubjectRelationship relationships = 2;
   // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
   repeated AuditEvent recent_audit = 3;
@@ -319,6 +389,11 @@ message UpdateActorRequest {
   repeated ActorContact contacts = 8;
   // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 9 [(buf.validate.field).string.max_len = 2000];
+  // replace_addresses, when true, makes addresses the new full set (previous
+  // links are ended, not deleted); when false, addresses is ignored.
+  bool replace_addresses = 10;
+  // addresses is the new address set (at most 20), used only with replace_addresses.
+  repeated ActorAddress addresses = 11 [(buf.validate.field).repeated.max_items = 20];
 }
 
 // UpdateActorResponse returns the updated actor.

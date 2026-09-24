@@ -2,6 +2,7 @@
   import type { ActorFormModel } from '@/components/actor/actorForm'
   import { computed, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import ActorAddressesEditor from '@/components/actor/ActorAddressesEditor.vue'
   import ActorContactsEditor from '@/components/actor/ActorContactsEditor.vue'
   import { personDisplayName, SALUTATIONS } from '@/components/actor/actorForm'
   import ActorKindSelect from '@/components/actor/ActorKindSelect.vue'
@@ -103,6 +104,10 @@
         persistent-hint
       />
     </template>
+
+    <v-divider class="my-4" />
+
+    <ActorAddressesEditor v-model="model.addresses" :actor-kind="model.actorKind" />
 
     <v-divider class="my-4" />
 

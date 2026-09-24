@@ -182,6 +182,31 @@ export interface PersonDetails {
   firstName?: string
 }
 
+/** Role of an address for one actor. */
+export type AddressType
+  = | 'ADDRESS_TYPE_UNSPECIFIED'
+    | 'ADDRESS_TYPE_HEAD_OFFICE'
+    | 'ADDRESS_TYPE_BRANCH'
+    | 'ADDRESS_TYPE_CORRESPONDENCE'
+    | 'ADDRESS_TYPE_BILLING'
+    | 'ADDRESS_TYPE_RESIDENCE'
+    | 'ADDRESS_TYPE_OTHER'
+
+/** A postal address of an actor (the link id is output-only). */
+export interface ActorAddress {
+  id?: string
+  addressType: AddressType
+  isPrincipal?: boolean
+  street: string
+  houseNumber?: string
+  addressLine2?: string
+  postalCode: string
+  locality: string
+  countryCode?: string
+  label?: string
+  createdAt?: string
+}
+
 export interface GoActor {
   subjectRef?: SubjectRef
   actorKind: ActorKind
@@ -192,6 +217,7 @@ export interface GoActor {
   person?: PersonDetails
   organization?: OrganizationDetails
   contacts?: ActorContact[]
+  addresses?: ActorAddress[]
   createdAt?: string
   createdBy?: string
   updatedAt?: string
@@ -227,6 +253,7 @@ export interface CreateActorRequest {
   person?: PersonDetails
   organization?: OrganizationDetails
   contacts?: ActorContact[]
+  addresses?: ActorAddress[]
 }
 
 export interface UpdateActorRequest {
@@ -237,6 +264,8 @@ export interface UpdateActorRequest {
   organization?: OrganizationDetails
   replaceContacts?: boolean
   contacts?: ActorContact[]
+  replaceAddresses?: boolean
+  addresses?: ActorAddress[]
   reason?: string
 }
 

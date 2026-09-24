@@ -188,6 +188,20 @@ func (s *Service) ListRelationships(ctx context.Context, filter RelationshipFilt
 	return s.repo.ListRelationships(ctx, filter)
 }
 
+// SubjectRelationships returns the non-unlinked relationships of a subject in
+// both directions (outgoing first), up to MaxPageSize each, for detail pages.
+func (s *Service) SubjectRelationships(ctx context.Context, subjectID uuid.UUID) ([]*SubjectRelationship, error) {
+	var all []*SubjectRelationship
+	for _, outgoing := range []bool{true, false} {
+		res, err := s.ListRelationships(ctx, RelationshipFilter{SubjectID: subjectID, Outgoing: outgoing, Limit: MaxPageSize})
+		if err != nil {
+			return nil, err
+		}
+		all = append(all, res.Relationships...)
+	}
+	return all, nil
+}
+
 // ListRelationshipTypes returns the catalogue of relationship types.
 func (s *Service) ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error) {
 	return s.repo.ListRelationshipTypes(ctx, onlyActive, sourceKind, targetKind)

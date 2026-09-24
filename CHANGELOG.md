@@ -47,6 +47,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   person form has salutation, first and last name, and proposes the usual name from them.
   No birth date, AVS number or civil-registry data is stored.
 
+- **GLD-014** — Actor addresses: `ActorAddress` in `Actor`, `CreateActorRequest.addresses` and
+  `UpdateActorRequest.replace_addresses` + `addresses` (migration `0014`: `address` rows linked M:N
+  by `actor_address` with a role — head office, branch, correspondence, billing, residence,
+  other — and at most one principal; the first becomes principal when none is; a Swiss postal
+  code has four digits). Replacing addresses ends the previous links instead of deleting them,
+  and is audited. New relationship types `ACTOR_BRANCH_OF_ACTOR` and
+  `ACTOR_CONTACT_PERSON_OF_ACTOR`; `GetActor` now returns relationships in both directions. The
+  SPA edits addresses (principal star, per-role fields, CH postal code check), shows them as
+  cards with a map.geo.admin.ch link, and the actor page can link, end and unlink subjects.
+
 ### Changed
 
 - The SPA opens on the case list (`/`) instead of the document list.

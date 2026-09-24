@@ -104,3 +104,28 @@ WHERE (@query = '' OR a.search_vector @@ plainto_tsquery('simple', immutable_una
   AND (@include_deleted OR rm.deleted_at IS NULL)
 ORDER BY a.display_name
 LIMIT @limit OFFSET @offset;`
+
+// --- address / actor_address ---------------------------------------------------
+
+const insertAddressSQL = `
+INSERT INTO address (street, house_number, address_line2, postal_code, locality, country_code, created_by)
+VALUES (@street, @house_number, @address_line2, @postal_code, @locality, @country_code, @created_by)
+RETURNING id;`
+
+const insertActorAddressSQL = `
+INSERT INTO actor_address (actor_id, address_id, address_type, is_principal, label, created_by)
+VALUES (@actor_id, @address_id, @address_type, @is_principal, @label, @created_by);`
+
+// endActorAddressesSQL ends the current links of an actor (non-destructive replace).
+const endActorAddressesSQL = `
+UPDATE actor_address
+SET ended_at = now(), ended_by = @operator_id
+WHERE actor_id = @actor_id AND ended_at IS NULL;`
+
+const listActorAddressesSQL = `
+SELECT aa.id, aa.actor_id, aa.address_id, aa.address_type, aa.is_principal, aa.label, aa.created_at,
+       ad.street, ad.house_number, ad.address_line2, ad.postal_code, ad.locality, ad.country_code
+FROM actor_address aa
+JOIN address ad ON ad.id = aa.address_id
+WHERE aa.actor_id = @actor_id AND aa.ended_at IS NULL
+ORDER BY aa.is_principal DESC, aa.created_at, aa.id;`

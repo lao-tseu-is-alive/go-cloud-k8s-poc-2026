@@ -203,6 +203,9 @@ type Actor struct {
 	Category *OrganizationCategory `db:"-"`
 	// Contacts are the hydrated contacts ordered by type then creation time.
 	Contacts []*Contact `db:"-"`
+	// Addresses are the current addresses, principal first; hydrated by the
+	// repository.
+	Addresses []*Address `db:"-"`
 }
 
 // ContactInput is a single contact carried on create/update.
@@ -253,6 +256,8 @@ type CreateInput struct {
 
 	// Contacts are the initial contacts.
 	Contacts []ContactInput
+	// Addresses are the initial addresses (see normalizeAddresses).
+	Addresses []AddressInput
 	// OperatorID is the authenticated caller, set server-side; it becomes
 	// created_by and the audit actor.
 	OperatorID string
@@ -297,6 +302,11 @@ type UpdateInput struct {
 	ReplaceContacts bool
 	// Contacts is the new contact list, used only with ReplaceContacts.
 	Contacts []ContactInput
+	// ReplaceAddresses, when true, replaces the current addresses by Addresses
+	// (previous links are ended, not deleted); when false, Addresses is ignored.
+	ReplaceAddresses bool
+	// Addresses is the new address set, used only with ReplaceAddresses.
+	Addresses []AddressInput
 
 	// OperatorID is the authenticated caller, set server-side.
 	OperatorID string

@@ -70,7 +70,8 @@
       "contacts": "Compléments (tél., e-mail, identifiants)",
       "relationships": "Relations",
       "governance": "Gouvernance",
-      "audit": "Audit"
+      "audit": "Audit",
+      "addresses": "Adresses"
     },
     "recordMetadata": {
       "lifecycle": "Cycle de vie",
@@ -192,7 +193,18 @@
       "after_state": "État après"
     },
     "search": { "query": "Recherche" },
-    "common": { "created_at": "Créé le", "actions": "Actions" }
+    "common": { "created_at": "Créé le", "actions": "Actions" },
+    "address": {
+      "type": "Rôle de l’adresse",
+      "label": "Précision (facultative)",
+      "principal": "Adresse principale",
+      "street": "Rue",
+      "house_number": "N°",
+      "address_line2": "Complément (c/o, bâtiment, étage)",
+      "postal_code": "NPA",
+      "locality": "Localité",
+      "country_code": "Pays"
+    }
   },
   "actions": {
     "relationship": {
@@ -221,7 +233,10 @@
       "activate": "Activer",
       "deactivate": "Désactiver",
       "addContact": "Ajouter un complément",
-      "removeContact": "Retirer ce complément"
+      "removeContact": "Retirer ce complément",
+      "addAddress": "Ajouter une adresse",
+      "removeAddress": "Retirer cette adresse",
+      "showOnMap": "Voir sur la carte (map.geo.admin.ch)"
     },
     "common": {
       "save": "Enregistrer",
@@ -344,6 +359,15 @@
       "SALUTATION_MADAME": "Madame",
       "SALUTATION_MONSIEUR": "Monsieur",
       "SALUTATION_NEUTRAL": "Neutre (prénom et nom)"
+    },
+    "AddressType": {
+      "ADDRESS_TYPE_UNSPECIFIED": "Non précisé",
+      "ADDRESS_TYPE_HEAD_OFFICE": "Siège",
+      "ADDRESS_TYPE_BRANCH": "Succursale",
+      "ADDRESS_TYPE_CORRESPONDENCE": "Correspondance",
+      "ADDRESS_TYPE_BILLING": "Facturation",
+      "ADDRESS_TYPE_RESIDENCE": "Domicile",
+      "ADDRESS_TYPE_OTHER": "Autre"
     }
   },
   "validation": {
@@ -363,7 +387,9 @@
       "abacus": "N° débiteur : 1 à 10 chiffres.",
       "register": "Identifiant RC ({example}) ou adresse web du registre attendu.",
       "other": "Valeur invalide."
-    }
+    },
+    "postalCodeCH": "Un NPA suisse a quatre chiffres (1000 à 9999).",
+    "countryCode": "Code pays à deux lettres (ISO), p. ex. CH, FR."
   },
   "errors": {
     "unauthenticated": "Authentification requise.",
@@ -377,7 +403,8 @@
     "relationship": {
       "ended": "Relation terminée ; elle reste dans l'historique.",
       "endHint": "Terminer indique que la relation a pris fin (par exemple un mandat échu) et la conserve dans l'historique. Déliez uniquement un lien créé par erreur.",
-      "endDateHint": "Vide signifie maintenant. Une date future planifie la fin."
+      "endDateHint": "Vide signifie maintenant. Une date future planifie la fin.",
+      "linked": "Relation créée."
     },
     "case": {
       "createSuccess": "Affaire ouverte {ref}.",
@@ -412,8 +439,9 @@
       "deleteConfirm": "L'acteur sera supprimé logiquement. Il restera conservé dans l'historique.",
       "lockedCannotEdit": "Cet acteur est verrouillé et ne peut plus être modifié.",
       "deletedReadOnly": "Cet acteur est supprimé logiquement (lecture seule).",
-      "relationshipsHint": "Relations où l'acteur est la cible (rôles depuis une affaire, un document ou un objet).",
-      "contactsHint": "Moyens de joindre l'acteur et identifiants officiels (IDE, TVA, RC…). Une personne de contact dans l'entreprise est un autre acteur, lié par une relation."
+      "relationshipsHint": "Rôles de l'acteur dans des affaires et documents, et liens avec d'autres acteurs (succursale, personne de contact).",
+      "contactsHint": "Moyens de joindre l'acteur et identifiants officiels (IDE, TVA, RC…). Une personne de contact dans l'entreprise est un autre acteur, lié par une relation.",
+      "addressesHint": "Adresses de l'acteur selon leur rôle ; l'étoile marque l'adresse principale. Une succursale qui agit comme partie distincte est un autre acteur, lié par « Succursale de »."
     },
     "common": {
       "loading": "Chargement…",

@@ -70,7 +70,8 @@
       "contacts": "Complements (phone, e-mail, identifiers)",
       "relationships": "Relationships",
       "governance": "Governance",
-      "audit": "Audit"
+      "audit": "Audit",
+      "addresses": "Addresses"
     },
     "recordMetadata": {
       "lifecycle": "Lifecycle",
@@ -192,7 +193,18 @@
       "after_state": "After state"
     },
     "search": { "query": "Search" },
-    "common": { "created_at": "Created at", "actions": "Actions" }
+    "common": { "created_at": "Created at", "actions": "Actions" },
+    "address": {
+      "type": "Address role",
+      "label": "Note (optional)",
+      "principal": "Principal address",
+      "street": "Street",
+      "house_number": "No.",
+      "address_line2": "Complement (c/o, building, floor)",
+      "postal_code": "Postal code",
+      "locality": "Locality",
+      "country_code": "Country"
+    }
   },
   "actions": {
     "relationship": {
@@ -221,7 +233,10 @@
       "activate": "Activate",
       "deactivate": "Deactivate",
       "addContact": "Add a complement",
-      "removeContact": "Remove this complement"
+      "removeContact": "Remove this complement",
+      "addAddress": "Add an address",
+      "removeAddress": "Remove this address",
+      "showOnMap": "Show on the map (map.geo.admin.ch)"
     },
     "common": {
       "save": "Save",
@@ -344,6 +359,15 @@
       "SALUTATION_MADAME": "Madame (Ms)",
       "SALUTATION_MONSIEUR": "Monsieur (Mr)",
       "SALUTATION_NEUTRAL": "Neutral (first and last name)"
+    },
+    "AddressType": {
+      "ADDRESS_TYPE_UNSPECIFIED": "Unspecified",
+      "ADDRESS_TYPE_HEAD_OFFICE": "Head office",
+      "ADDRESS_TYPE_BRANCH": "Branch",
+      "ADDRESS_TYPE_CORRESPONDENCE": "Correspondence",
+      "ADDRESS_TYPE_BILLING": "Billing",
+      "ADDRESS_TYPE_RESIDENCE": "Residence",
+      "ADDRESS_TYPE_OTHER": "Other"
     }
   },
   "validation": {
@@ -363,7 +387,9 @@
       "abacus": "Debtor number: 1 to 10 digits.",
       "register": "Register identifier ({example}) or register web address expected.",
       "other": "Invalid value."
-    }
+    },
+    "postalCodeCH": "A Swiss postal code has four digits (1000 to 9999).",
+    "countryCode": "Two-letter (ISO) country code, e.g. CH, FR."
   },
   "errors": {
     "unauthenticated": "Authentication required.",
@@ -377,7 +403,8 @@
     "relationship": {
       "ended": "Relationship ended; it stays in the history.",
       "endHint": "Ending records that the relationship stopped (for example an ended mandate) and keeps it as history. Use unlink only for a link created by mistake.",
-      "endDateHint": "Empty means now. A future date schedules the end."
+      "endDateHint": "Empty means now. A future date schedules the end.",
+      "linked": "Relationship created."
     },
     "case": {
       "createSuccess": "Case opened {ref}.",
@@ -412,8 +439,9 @@
       "deleteConfirm": "The actor will be soft-deleted. It stays preserved in history.",
       "lockedCannotEdit": "This actor is locked and can no longer be modified.",
       "deletedReadOnly": "This actor is soft-deleted (read only).",
-      "relationshipsHint": "Relationships where the actor is the target (roles from a case, document or thing).",
-      "contactsHint": "Ways to reach the actor and official identifiers (UID, VAT, register…). A contact person in the company is another actor, linked by a relationship."
+      "relationshipsHint": "Roles of the actor in cases and documents, and links with other actors (branch, contact person).",
+      "contactsHint": "Ways to reach the actor and official identifiers (UID, VAT, register…). A contact person in the company is another actor, linked by a relationship.",
+      "addressesHint": "Addresses of the actor by role; the star marks the principal address. A branch acting as a distinct party is another actor, linked by \"Branch of\"."
     },
     "common": {
       "loading": "Loading…",

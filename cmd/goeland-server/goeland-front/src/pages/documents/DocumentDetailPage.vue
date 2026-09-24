@@ -4,7 +4,6 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { unlinkSubjects } from '@/api/coreClient'
   import {
     deleteDocument,
     finalizeDocument,
@@ -23,6 +22,7 @@
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatBytes } from '@/utils/formatters'
 
@@ -45,8 +45,7 @@
 
   const finalizeOpen = ref(false)
   const finalizeBusy = ref(false)
-  const linkOpen = ref(false)
-  const linkBusy = ref(false)
+  const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload, linkDocument)
   const deleteOpen = ref(false)
   const deleteReason = ref('')
   const deleteBusy = ref(false)
@@ -119,29 +118,6 @@
       report(error)
     } finally {
       finalizeBusy.value = false
-    }
-  }
-
-  async function doLink (payload: { targetSubjectId: string, relationshipTypeCode: string, roleDetail: string }) {
-    linkBusy.value = true
-    try {
-      await linkDocument(id.value, payload.targetSubjectId, payload.relationshipTypeCode, payload.roleDetail || undefined)
-      ui.notify(t('messages.document.linked'), 'success')
-      linkOpen.value = false
-      await reload()
-    } catch (error) {
-      report(error)
-    } finally {
-      linkBusy.value = false
-    }
-  }
-
-  async function doUnlink (rel: SubjectRelationship) {
-    try {
-      await unlinkSubjects(rel.id, '')
-      await reload()
-    } catch (error) {
-      report(error)
     }
   }
 

@@ -31,6 +31,26 @@ func DomainContactToProto(c *Contact) *goelandv1.ActorContact {
 	}
 }
 
+// DomainAddressToProto converts an actor address to its proto representation.
+func DomainAddressToProto(a *Address) *goelandv1.ActorAddress {
+	if a == nil {
+		return nil
+	}
+	return &goelandv1.ActorAddress{
+		Id:           a.ID.String(),
+		AddressType:  goelandv1.AddressType(a.AddressType),
+		IsPrincipal:  a.IsPrincipal,
+		Street:       a.Street,
+		HouseNumber:  a.HouseNumber,
+		AddressLine2: a.AddressLine2,
+		PostalCode:   a.PostalCode,
+		Locality:     a.Locality,
+		CountryCode:  a.CountryCode,
+		Label:        a.Label,
+		CreatedAt:    core.TimestampOrNil(a.CreatedAt),
+	}
+}
+
 // DomainToProto converts a domain Actor (with hydrated associations) to its proto representation.
 func DomainToProto(act *Actor) *goelandv1.Actor {
 	if act == nil {
@@ -75,6 +95,9 @@ func DomainToProto(act *Actor) *goelandv1.Actor {
 	for _, c := range act.Contacts {
 		out.Contacts = append(out.Contacts, DomainContactToProto(c))
 	}
+	for _, a := range act.Addresses {
+		out.Addresses = append(out.Addresses, DomainAddressToProto(a))
+	}
 	return out
 }
 
@@ -99,6 +122,28 @@ func protoContactsToDomain(in []*goelandv1.ActorContact) []ContactInput {
 			Value:       c.Value,
 			IsPrimary:   c.IsPrimary,
 			Label:       c.Label,
+		})
+	}
+	return out
+}
+
+// protoAddressesToDomain converts request addresses to service inputs.
+func protoAddressesToDomain(in []*goelandv1.ActorAddress) []AddressInput {
+	out := make([]AddressInput, 0, len(in))
+	for _, a := range in {
+		if a == nil {
+			continue
+		}
+		out = append(out, AddressInput{
+			AddressType:  AddressType(a.AddressType),
+			IsPrincipal:  a.IsPrincipal,
+			Street:       a.Street,
+			HouseNumber:  a.HouseNumber,
+			AddressLine2: a.AddressLine2,
+			PostalCode:   a.PostalCode,
+			Locality:     a.Locality,
+			CountryCode:  a.CountryCode,
+			Label:        a.Label,
 		})
 	}
 	return out

@@ -60,6 +60,9 @@ func (s *Service) Create(ctx context.Context, in CreateInput) (*Actor, *core.Aud
 		return nil, nil, err
 	}
 	in.Contacts = contacts
+	if in.Addresses, err = normalizeAddresses(in.Addresses); err != nil {
+		return nil, nil, err
+	}
 
 	// Complete the governance/identity input consistently with the actor.
 	in.Governance.Kind = core.SubjectKindActor
@@ -85,16 +88,11 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Actor, error) {
 	return s.repo.Get(ctx, id)
 }
 
-// Relationships returns the relationships pointing at an actor (actors are the
-// target of CASE_HAS_ACTOR_* / DOCUMENT_*_ACTOR edges), so list the incoming ones.
+// Relationships returns the relationships of an actor in both directions:
+// incoming roles (CASE_HAS_ACTOR_*, DOCUMENT_*_ACTOR) and actor-to-actor links
+// such as ACTOR_BRANCH_OF_ACTOR or ACTOR_CONTACT_PERSON_OF_ACTOR.
 func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
-	res, err := s.coreSvc.ListRelationships(ctx, core.RelationshipFilter{
-		SubjectID: id, Outgoing: false, Limit: core.MaxPageSize,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.Relationships, nil
+	return s.coreSvc.SubjectRelationships(ctx, id)
 }
 
 // RecentAudit returns the most recent audit events for an actor subject.
@@ -120,6 +118,13 @@ func (s *Service) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Ac
 	}
 	if err := normalizePersonUpdate(&in); err != nil {
 		return nil, nil, err
+	}
+	if in.ReplaceAddresses {
+		addresses, err := normalizeAddresses(in.Addresses)
+		if err != nil {
+			return nil, nil, err
+		}
+		in.Addresses = addresses
 	}
 	if in.ReplaceContacts {
 		contacts, err := normalizeContacts(in.Contacts)
