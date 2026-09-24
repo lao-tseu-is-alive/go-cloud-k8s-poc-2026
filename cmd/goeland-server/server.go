@@ -19,9 +19,9 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs/pkg/goHttpEcho"
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
 )
@@ -89,11 +89,11 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("core module: %w", err)
 	}
 	docMod, err := documentmodule.New(ctx, documentmodule.Config{RequestTimeout: config.RequestTimeout}, documentmodule.Deps{
-		Pool:         pool,
-		Verifier:     verifier,
-		CoreService:  coreMod.Service(),
-		ContentStore: blobStore,
-		Logger:       log,
+		Pool:        pool,
+		Verifier:    verifier,
+		CoreService: coreMod.Service(),
+		BlobStore:   blobStore,
+		Logger:      log,
 	})
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)

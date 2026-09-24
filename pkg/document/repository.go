@@ -2,11 +2,9 @@ package document
 
 import (
 	"context"
-	"io"
 
 	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 )
 
 // Repository persists documents. It reuses the transversal core primitives
@@ -26,14 +24,4 @@ type Repository interface {
 	Link(ctx context.Context, in core.LinkInput) (*core.SubjectRelationship, *core.AuditEvent, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error)
 	ListTypes(ctx context.Context, onlyActive bool) ([]*DocumentType, error)
-}
-
-// ContentStore holds the bytes of content blobs. pkg/document/filestore is the
-// local implementation; roadmap GLD-024 generalizes it to a BlobStore interface.
-type ContentStore interface {
-	// Save streams r to new storage, returning its reference, SHA-256 and size.
-	Save(r io.Reader, originalName string) (filestore.Blob, error)
-	// Remove deletes bytes that were just saved but never registered (a
-	// duplicate of known content); it is never used on registered content.
-	Remove(storageRef string) error
 }

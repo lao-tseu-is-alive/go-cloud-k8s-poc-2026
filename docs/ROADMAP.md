@@ -25,8 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-GLD-024 (BlobStore interface), the last v2 Phase 0 task; GLD-022 and GLD-023
-are implemented and ship with the next release. Then the Case slice (GLD-011).
+Release v0.5.0 to close the v2 Phase 0 alignment (GLD-002, GLD-022, GLD-023,
+GLD-024 are implemented), then the Case slice (GLD-011).
 
 ## Cross-cutting quality
 
@@ -78,9 +78,11 @@ are implemented and ship with the next release. Then the Case slice (GLD-011).
   version listing), SPA migrated, obsolete `document` columns dropped after
   tests; v2 §49 tests (dedup, shared blob across versions, immutability,
   current version, one document linked to several cases).
-- [ ] **GLD-024 — BlobStore interface**: turn `pkg/document/filestore` into an
-  implementation of a `Put` / `Get` / `Delete` interface (v2 §23) so S3 or an
-  institutional GED can replace it without touching the document model.
+- [~] **GLD-024 — BlobStore interface**: domain-neutral `pkg/blobstore.Store`
+  (`Put` / `Get` / `Delete`, context-aware, v2 §23) with the local
+  `pkg/blobstore/filestore` implementation and a `blobstoretest` conformance
+  suite, so S3 or an institutional GED can replace it without touching the
+  document model.
 
 Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §0.
 
@@ -203,7 +205,7 @@ the legacy IDs as provenance. Profiling stays aggregates-only.
 ## Infrastructure
 
 - [ ] **GLD-020 — Object storage**: an S3-compatible (MinIO) implementation of
-  the GLD-024 BlobStore interface (no proto change).
+  the GLD-024 `blobstore.Store` that passes `blobstoretest.Run` (no proto change).
 - [ ] **GLD-021 — Probative integrity verification**: stream the stored bytes,
   recompute SHA-256, set `content_blob.verified_at` and write an audited
   verification event under the write scope (v2 §49 "streaming verification").

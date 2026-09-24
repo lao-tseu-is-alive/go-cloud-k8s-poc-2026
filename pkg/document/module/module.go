@@ -14,6 +14,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 )
@@ -43,9 +44,9 @@ type Deps struct {
 	// CoreService is the core domain service used to read relationships and
 	// audit; required.
 	CoreService *core.Service
-	// ContentStore holds uploaded document bytes; optional (nil disables
+	// BlobStore holds uploaded document bytes; optional (nil disables
 	// Service.IngestContent, e.g. for a read-only bundle).
-	ContentStore document.ContentStore
+	BlobStore blobstore.Store
 	// Logger receives module logs; nil falls back to slog.Default.
 	Logger *slog.Logger
 }
@@ -77,7 +78,7 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("document module: storage init: %w", err)
 	}
-	svc, err := document.NewService(repo, deps.CoreService, deps.ContentStore, deps.Logger)
+	svc, err := document.NewService(repo, deps.CoreService, deps.BlobStore, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("document module: service init: %w", err)
 	}

@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/google/uuid"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
@@ -24,12 +25,12 @@ const (
 type Service struct {
 	repo    Repository
 	coreSvc *core.Service
-	store   ContentStore
+	store   blobstore.Store
 	log     *slog.Logger
 }
 
 // ErrNoContentStore is returned by IngestContent when the service was built
-// without a ContentStore.
+// without a blob store.
 var ErrNoContentStore = errors.New("document service has no content store")
 
 // NewService constructs a Service backed by the document repository, the core
@@ -37,7 +38,7 @@ var ErrNoContentStore = errors.New("document service has no content store")
 // holding content bytes. store may be nil when the caller never ingests bytes
 // (IngestContent then fails with ErrNoContentStore). A nil logger falls back to
 // slog.Default.
-func NewService(repo Repository, coreSvc *core.Service, store ContentStore, log *slog.Logger) (*Service, error) {
+func NewService(repo Repository, coreSvc *core.Service, store blobstore.Store, log *slog.Logger) (*Service, error) {
 	if repo == nil {
 		return nil, fmt.Errorf("%w: repository is required", core.ErrInvalidInput)
 	}
@@ -58,21 +59,22 @@ func (s *Service) IngestContent(ctx context.Context, r io.Reader, filename, mime
 	if s.store == nil {
 		return IngestResult{}, ErrNoContentStore
 	}
-	saved, err := s.store.Save(r, filename)
+	saved, err := s.store.Put(ctx, r, blobstore.Metadata{Filename: filename, ContentType: mimeType})
 	if err != nil {
 		return IngestResult{}, fmt.Errorf("store content: %w", err)
 	}
 	blob, reused, err := s.repo.RegisterBlob(ctx, ContentBlob{
 		SHA256:        saved.SHA256,
-		StorageRef:    saved.StorageRef,
+		StorageRef:    saved.Ref,
 		MimeType:      mimeType,
-		FileSizeBytes: saved.FileSizeBytes,
+		FileSizeBytes: saved.Size,
 		CreatedBy:     operatorID,
 	})
 	if err != nil || reused {
-		// Unregistered bytes (failure or duplicate) must not linger in storage.
-		if rmErr := s.store.Remove(saved.StorageRef); rmErr != nil {
-			s.log.Error("remove unregistered content", "storage_ref", saved.StorageRef, "error", rmErr)
+		// Unregistered bytes (failure or duplicate) must not linger in storage;
+		// the cleanup must run even when the request context was cancelled.
+		if rmErr := s.store.Delete(context.WithoutCancel(ctx), saved.Ref); rmErr != nil {
+			s.log.Error("remove unregistered content", "storage_ref", saved.Ref, "error", rmErr)
 		}
 	}
 	if err != nil {

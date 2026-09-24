@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"errors"
+	"io"
 	"log/slog"
 	"mime"
 	"net/http"
@@ -10,9 +11,9 @@ import (
 	"strings"
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 )
 
 // uploadFormField is the multipart form field carrying the file bytes.
@@ -132,30 +133,33 @@ func uploadHandler(docs *document.Service, log *slog.Logger) http.HandlerFunc {
 	}
 }
 
-// downloadHandler streams a previously uploaded blob back by its internal://
-// storage_ref (passed as ?ref=). It exists for end-to-end verification of the
-// upload round-trip; access is gated by httpAuthMiddleware.
-func downloadHandler(store *filestore.Store, log *slog.Logger) http.HandlerFunc {
+// downloadHandler streams previously uploaded content back by its storage
+// reference (passed as ?ref=) through any blobstore.Store; access is gated by
+// httpAuthMiddleware. Seekable objects are served with http.ServeContent
+// (range requests, content-type sniffing by name); others are streamed.
+func downloadHandler(store blobstore.Store, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		ref := r.URL.Query().Get("ref")
-		f, err := store.Open(ref)
+		obj, err := store.Get(r.Context(), ref)
+		if errors.Is(err, blobstore.ErrInvalidRef) || errors.Is(err, blobstore.ErrNotFound) {
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "blob not found"})
+			return
+		}
 		if err != nil {
-			if errors.Is(err, filestore.ErrInvalidRef) {
-				writeJSON(w, http.StatusNotFound, map[string]string{"error": "blob not found"})
-				return
-			}
 			log.Error("download: open blob failed", "error", err, "ref", ref)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to read file"})
 			return
 		}
-		defer f.Close()
-		info, err := f.Stat()
-		if err != nil {
-			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to stat file"})
+		defer obj.Close()
+		info := obj.Info()
+		if seeker, ok := obj.(io.ReadSeeker); ok {
+			http.ServeContent(w, r, info.Name, info.ModTime, seeker)
 			return
 		}
-		// ServeContent handles Range requests and content-type sniffing by name.
-		http.ServeContent(w, r, filepath.Base(f.Name()), info.ModTime(), f)
+		w.Header().Set("Content-Type", "application/octet-stream")
+		if _, err := io.Copy(w, obj); err != nil {
+			log.Warn("download: stream interrupted", "error", err, "ref", ref)
+		}
 	}
 }
 

@@ -8,8 +8,8 @@ import (
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/filestore"
 )
 
 // fakeRepo is a minimal document.Repository capturing inputs for assertions.
@@ -52,16 +52,19 @@ type fakeStore struct {
 	removed []string
 }
 
-func (f *fakeStore) Save(r io.Reader, name string) (filestore.Blob, error) {
+func (f *fakeStore) Put(_ context.Context, r io.Reader, meta blobstore.Metadata) (blobstore.Stored, error) {
 	data, err := io.ReadAll(r)
 	if err != nil {
-		return filestore.Blob{}, err
+		return blobstore.Stored{}, err
 	}
-	ref := filestore.Scheme + uuid.NewString()
+	ref := "fake://" + uuid.NewString()
 	f.saved = append(f.saved, ref)
-	return filestore.Blob{StorageRef: ref, SHA256: strings.Repeat("a", 64), FileSizeBytes: int64(len(data)), Filename: name}, nil
+	return blobstore.Stored{Ref: ref, SHA256: strings.Repeat("a", 64), Size: int64(len(data)), Filename: meta.Filename}, nil
 }
-func (f *fakeStore) Remove(ref string) error {
+func (f *fakeStore) Get(context.Context, string) (blobstore.Object, error) {
+	return nil, blobstore.ErrNotFound
+}
+func (f *fakeStore) Delete(_ context.Context, ref string) error {
 	f.removed = append(f.removed, ref)
 	return nil
 }

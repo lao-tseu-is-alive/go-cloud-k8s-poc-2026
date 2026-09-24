@@ -10,6 +10,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- **GLD-024** — `pkg/blobstore`: domain-neutral, context-aware content-bytes contract (`Store`
+  with `Put` / `Get` / `Delete`, `ErrNotFound`, `ErrInvalidRef`; spec v2 §23). The local store
+  moves to `pkg/blobstore/filestore` and implements it (cancellation-aware writes, no partial
+  file on failure); `pkg/blobstore/blobstoretest` is the conformance suite any implementation
+  (e.g. the future S3 store, GLD-020) must pass. The document service and the download
+  endpoint depend only on the interface; downloads keep range support for seekable objects.
 - **GLD-023** — Document / DocumentVersion / ContentBlob split (spec v2 §15-22). Migration `0008`
   adds `content_blob` (SHA-256 unique: identical content stored once) and `document_version`
   (append-only, explicit `document.current_version_id`; final and record versions immutable and

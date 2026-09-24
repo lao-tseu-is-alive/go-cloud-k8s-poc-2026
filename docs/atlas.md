@@ -86,6 +86,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Shared Go packages
 
+- `pkg/blobstore/blobstore.go` — Domain-neutral content-bytes contract (`Store`: Put/Get/Delete) with its sentinel errors (spec v2 §23).
+- `pkg/blobstore/blobstoretest/blobstoretest.go` — Conformance suite of the `blobstore.Store` contract, run by every implementation.
+- `pkg/blobstore/filestore/filestore.go` — Local-filesystem `blobstore.Store` with `internal://` references and path-traversal guards.
+- `pkg/blobstore/filestore/filestore_test.go` — Runs the conformance suite plus extension, unsafe-reference and failed-write tests.
 - `pkg/version/version.go` — Release version constant (source of truth) and build provenance variables injected by ldflags.
 - `pkg/authadapter/composite_verifier.go` — Routes `pat_` tokens to introspection and other bearer tokens to the JWT verifier.
 - `pkg/authadapter/context.go` — Authenticated user model, context storage and scope checks.
@@ -142,8 +146,6 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation, hash matching, ingestion cleanup and version validation.
 - `pkg/document/sql.go` — Raw SQL and alias-prefixed column projections for document tables.
 - `pkg/document/storage_postgres.go` — pgx implementation: atomic create-or-reuse, versions, blob registration and hydration over core transaction helpers.
-- `pkg/document/filestore/filestore.go` — Local store for content bytes with `internal://` references (save, open, remove of unregistered duplicates).
-- `pkg/document/filestore/filestore_test.go` — Tests hashing, round trips and rejection of unsafe references.
 - `pkg/document/module/module.go` — Bundleable document module: dependency validation and lifecycle.
 - `pkg/document/module/routes.go` — Document interceptor chain, Vanguard services and standalone routes.
 

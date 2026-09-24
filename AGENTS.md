@@ -92,7 +92,9 @@ pkg/core/                    transversal domain
   │   └── db/migrations/     0001..0009 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
-  └── filestore/             local blob store for uploaded document bytes
+pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
+  ├── filestore/             local-filesystem implementation (internal:// refs)
+  └── blobstoretest/         conformance suite every implementation must pass
 pkg/actor/                   actor domain: persons & organizations (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
@@ -242,7 +244,8 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   that **bypass the Connect interceptor** and carry their own bearer + scope check
   (`httpAuthMiddleware`): `POST /api/documents/upload` (multipart, field `file`,
   `goeland:write`) calls `document.Service.IngestContent`, which stores the bytes via
-  `pkg/document/filestore`, computes SHA-256/size server-side and registers a globally
+  the configured `blobstore.Store` (`pkg/blobstore/filestore` today), computes SHA-256/size
+  server-side and registers a globally
   deduplicated `content_blob` (identical content → existing blob, new bytes removed); it
   returns a `contentBlobId` that the SPA passes to `CreateDocument` / `AddDocumentVersion`
   (so validation/governance/audit still flow through the proto path). Never accept a

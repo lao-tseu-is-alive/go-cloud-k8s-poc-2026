@@ -21,7 +21,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | `business_ref` exists | ✅ | GLD-022: migration `0007`, `CoreService.AssignBusinessRef` / `LookupSubjects`, allocation at creation, SPA identity card (ships with the next release) |
 | `content_blob` exists, SHA-256 UNIQUE on it | ✅ | GLD-023, migration `0008` |
 | `document_version` exists, current Document migrated without loss | ✅ | GLD-023: `0008` backfill (verified on representative rows, reversible), `0009` drops the superseded columns |
-| existing filestore still works | ✅ | `internal://` refs behind `document.ContentStore`; BlobStore interface in GLD-024 |
+| existing filestore still works | ✅ | `internal://` refs behind the `blobstore.Store` interface (GLD-024), with a conformance suite |
 | APIs compatible or cleanly versioned | ✅ | `goeland.v1` evolved in place (§3g): `AddDocumentVersion`, `ListDocumentVersions`, `Document.current_version`; removed fields reserved |
 | Document UI works | ✅ | migrated: versions panel, reuse notice, integrity on the current version |
 | Actor / Document tests green | ✅ | unit + `pkg/integration` |
@@ -42,7 +42,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10), document types (7) | ✅ `0004` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document module full slice in the browser; core panels read-only; Case/Thing/Actor UI pending their services |
-| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/document/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
+| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 `case_type` + `case_file` | ⬜ | ⬜ `CaseService` | ⬜ | next natural slice |
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
@@ -112,7 +112,7 @@ These are deliberate betterments beyond the spec — keep them:
 - 🚀 **Metadata-first file upload** kept **out of the proto contract**: binary bytes flow
   through `POST /api/documents/upload` → deduplicated `content_blob` → `contentBlobId` →
   `CreateDocument` / `AddDocumentVersion` (server computes sha256/size/mime;
-  `pkg/document/filestore`, path-traversal guarded). Preserves proto validation /
+  `pkg/blobstore/filestore` behind `blobstore.Store`, path-traversal guarded). Preserves proto validation /
   governance / audit while still supporting real file upload; swap the local blob store
   for MinIO later without touching the contract.
 

@@ -111,8 +111,9 @@ pkg/core/                transversal domain: model, sql, storage, service, mappe
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
       └── db/migrations/  0001..0009 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
-  ├── module/            bundleable module (schema owned by core)
-  └── filestore/         local blob store for uploaded document bytes
+  └── module/            bundleable module (schema owned by core)
+pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
+                         blobstoretest/ = conformance suite for any implementation (S3 later)
 pkg/actor/               actor domain: persons & organizations (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
