@@ -103,14 +103,14 @@ and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 ## Project structure
 
 ```
-proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto  (API contract)
+proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto, thing.proto  (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
 api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0015 (dbmate format)
+      └── db/migrations/  0001..0016 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -118,6 +118,8 @@ pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = l
 pkg/actor/               actor domain: persons & organizations (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/casefile/            case (affaire) domain: case types, status lifecycle, search
+  └── module/            bundleable module (schema owned by core)
+pkg/thing/               thing (objet) domain: parcels, buildings, LV95 PostGIS geometry
   └── module/            bundleable module (schema owned by core)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
@@ -188,12 +190,15 @@ Scopes: reads need `goeland:read`, mutations `goeland:write` (granted by the aut
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
-(`cmd/goeland-server/goeland-front`). It exposes vertical slices of three modules:
+(`cmd/goeland-server/goeland-front`). It exposes vertical slices of four modules plus administration:
 the **Case** module — search/list, open (reference allocated in the type namespace), detail,
 edit, status transitions with reasons, link/end/unlink subjects, soft-delete — the **Document** module — search/list, create (with file upload), detail, edit metadata,
 finalize, verify integrity, link/unlink subjects, soft-delete — and the **Actor** module
 — search/list, create (person/organization with typed contacts), detail, edit,
-activate/deactivate, soft-delete, plus read-only incoming relationships. All add
+activate/deactivate, soft-delete, addresses and relationships in both directions — and the
+**Thing** module — search/list, create (parcel, building or generic, with an LV95 GeoJSON
+geometry and SVG preview), detail with computed area and a map.geo.admin.ch link, edit,
+link/end/unlink, soft-delete. Administrators also get the reference data administration page. All add
 read-only governance and audit panels. Bilingual (fr-CH default, en).
 
 - The SPA reads `GET /config` → `{authMode, authBaseUrl}` and drives either `dev`
@@ -309,6 +314,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0013_person_identity.sql     person minimal identity (salutation, last and first name) + search over names
 0014_actor_address.sql       address + typed actor_address (one principal, ended links kept) + branch / contact-person types
 0015_reference_change.sql    reference_change: append-only log of reference data administration
+0016_thing.sql               thing_type + thing (EPSG:2056 geometry) + thing_parcel (EGRID) + thing_building (EGID) + land-rights roles
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -404,8 +410,7 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Out of scope for this slice
 
-Case timeline + circulation, Thing (parcelle/bâtiment with PostGIS
-geometry), a real permission/confidentiality engine, MinIO storage, Meilisearch, and
+Case timeline + circulation, a real permission/confidentiality engine, MinIO storage, Meilisearch, and
 workflow integration — all designed to sit on top of the same subject/relationship/
 audit foundation. (The **Actor** domain and its addresses/role-relationship wiring beyond
 this identity+contacts slice also continue on the same foundation.)

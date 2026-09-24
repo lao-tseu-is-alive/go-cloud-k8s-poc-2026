@@ -66,15 +66,18 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
+- `proto/goeland/v1/thing.proto` — Authoritative `ThingService` contract: things, types, parcel and building details, LV95 GeoJSON geometry, search by extent.
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
 - `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
+- `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/thing.connect.go` — ConnectRPC stubs generated for `ThingService`; never edit by hand.
 
 ## Go module and commands
 
@@ -145,6 +148,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
+- `pkg/core/module/db/migrations/0016_thing.sql` — Schema migration: `thing_type`, `thing` (EPSG:2056 geometry, GIST, validity check), `thing_parcel` (EGRID), `thing_building` (EGID), land-rights roles, thing types administrable.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
 - `pkg/core/module/db/migrations/0013_person_identity.sql` — Schema migration: person minimal identity (salutation, last and first name, person-only) and the actor search vector over the names.
@@ -201,6 +205,22 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/casefile/module/module.go` — Bundleable case module: dependency validation and lifecycle.
 - `pkg/casefile/module/routes.go` — Case interceptor chain, Vanguard services and standalone routes.
 
+## Thing domain (`pkg/thing`)
+
+- `pkg/thing/connect_server.go` — `ThingService` ConnectRPC adapter over the thing service.
+- `pkg/thing/doc.go` — Package documentation for the thing (objet) domain.
+- `pkg/thing/geometry.go` — Geometry rules: GeoJSON type per specialization, PostGIS validity, Swiss LV95 extent; bbox parsing.
+- `pkg/thing/mappers.go` — Thing domain ↔ proto mappers, parcel and building blocks.
+- `pkg/thing/model.go` — Thing, ThingType, Parcel and Building models with `db` tags, inputs, search filter and extent.
+- `pkg/thing/reference_admin.go` — Thing type administration (generic types; code and specialization immutable) over `core.MutateReference`.
+- `pkg/thing/repository.go` — Thing persistence interface.
+- `pkg/thing/service.go` — Thing business rules: texts, detail blocks (EGRID, EGID, years), derived names, search, soft delete.
+- `pkg/thing/service_test.go` — Tests geometry types, extents, bbox parsing, detail validation and derived names.
+- `pkg/thing/sql.go` — Raw SQL: GeoJSON in/out, computed area and anchor, detail upserts, extent-filtered search.
+- `pkg/thing/storage_postgres.go` — pgx/PostGIS implementation: atomic create and update with details and audit, hydration, search.
+- `pkg/thing/module/module.go` — Bundleable thing module: dependency validation and lifecycle.
+- `pkg/thing/module/routes.go` — Thing interceptor chain, Vanguard services and standalone routes.
+
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
@@ -209,6 +229,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
+- `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
 - `pkg/integration/document_versions_test.go` — DB test: deduplication (incl. concurrent), automatic reuse across cases, versions sharing a blob, immutability trigger, lock guard.
@@ -224,13 +245,14 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/bun.lock` — Pinned frontend dependency graph used by frozen installs.
 - `cmd/goeland-server/goeland-front/env.d.ts` — Vite client type references.
 - `cmd/goeland-server/goeland-front/eslint.config.js` — ESLint configuration (Vuetify preset, TypeScript).
-- `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point.
+- `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point; declares the Vuetify cascade layer order before any stylesheet.
 - `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
+- `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
@@ -263,6 +285,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
 - `cmd/goeland-server/goeland-front/src/components/core/UserLabel.vue` — Internal user shown by name (admin icon, e-mail and id in the tooltip) from an operator id.
+- `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
+- `cmd/goeland-server/goeland-front/src/components/thing/ThingMainForm.vue` — Thing fields: detail block per specialization, texts and geometry with live preview.
+- `cmd/goeland-server/goeland-front/src/components/thing/ThingTypeSelect.vue` — Thing type selector bound to the code, emitting the selected type.
+- `cmd/goeland-server/goeland-front/src/components/thing/thingForm.ts` — Thing form model and its mapping to create / update requests.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
@@ -293,11 +319,14 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/things/ThingCreatePage.vue` — Thing creation page (type, details, geometry).
+- `cmd/goeland-server/goeland-front/src/pages/things/ThingDetailPage.vue` — Thing detail: identifiers, geometry preview and map link, relationships (link, end, unlink), edit, soft delete, governance and audit.
+- `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing search and list page (text, type).
 - `cmd/goeland-server/goeland-front/src/plugins/README.md` — Scaffold note on the plugins folder.
 - `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
 - `cmd/goeland-server/goeland-front/src/plugins/index.ts` — Registers Vuetify, Pinia, router and i18n on the app.
 - `cmd/goeland-server/goeland-front/src/plugins/vuetify.ts` — Vuetify instance and theme configuration.
-- `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, actors and administration.
+- `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, things, actors and administration.
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token or silent JWT minting and re-mint, in-memory token.
@@ -309,6 +338,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
+- `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.
 - `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.

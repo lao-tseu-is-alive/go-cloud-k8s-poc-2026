@@ -8,6 +8,32 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-016** — Thing slice: `ThingService` (`goeland.v1`, REST under `/api/things` and
+  `/api/thing-types`) over migration `0016`: `thing_type` (generic, parcel or building
+  specialization; seeded PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT,
+  SPORT_ZONE; administrable), `thing` with an EPSG:2056 (LV95) geometry — GIST-indexed, checked
+  valid, inside Switzerland (WGS84 degrees are refused) and of a type fitting the
+  specialization — exchanged as GeoJSON with its computed area and an anchor point,
+  `thing_parcel` (commune OFS number + unique parcel number, EGRID) and `thing_building`
+  (unique EGID, ECA number, construction year, RegBL status). Search by text, parcel number,
+  EGRID, EGID, type and LV95 extent (`bbox`). Land-rights relationship types
+  `THING_HAS_ACTOR_OWNER`, `_TENANT`, `_SURFACE_RIGHT_HOLDER`, `_FARMER`, `_EASEMENT_HOLDER`.
+  SPA things list, creation and detail pages with an SVG geometry preview and a
+  map.geo.admin.ch link; the subject picker now finds things (e.g. "case concerns thing").
+
+### Changed
+
+- `core.ApplyInitialGovernance` replaces the governance-copy block of each Connect adapter, and
+  the server wires the actor, case and thing modules through one helper.
+
+### Fixed
+
+- SPA: small buttons in card titles (e.g. "Link to a subject") rendered at the title's size:
+  lazily loaded component CSS could precede the main stylesheet and invert the Vuetify cascade
+  layers; `index.html` now declares the layer order before any stylesheet.
+
 ## [0.7.0] - 2026-09-24
 
 This release completes Phase 1b, "usable Actor and Case", from the review of v0.6.0: local SSO

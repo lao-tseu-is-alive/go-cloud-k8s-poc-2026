@@ -26,6 +26,8 @@ const (
 	CatalogueOrganizationCategory = "organization_category"
 	// CatalogueDocumentType is the document_type catalogue.
 	CatalogueDocumentType = "document_type"
+	// CatalogueThingType is the thing_type catalogue.
+	CatalogueThingType = "thing_type"
 
 	// ReferenceCreated is the event type of a new catalogue entry.
 	ReferenceCreated = "REFERENCE_CREATED"

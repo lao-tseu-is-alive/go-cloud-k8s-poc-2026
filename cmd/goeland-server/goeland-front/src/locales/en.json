@@ -11,7 +11,9 @@
     "createDocument": "New document",
     "actors": "Actors",
     "createActor": "New actor",
-    "admin": "Administration"
+    "admin": "Administration",
+    "things": "Things",
+    "createThing": "New thing"
   },
   "auth": {
     "notConnected": "Not connected",
@@ -53,6 +55,18 @@
     },
     "admin": {
       "title": "Reference data administration"
+    },
+    "things": {
+      "list": {
+        "title": "Things (parcels, buildings…)",
+        "queryHint": "Name, description, parcel number, EGRID or EGID"
+      },
+      "create": {
+        "title": "New thing"
+      },
+      "detail": {
+        "title": "Thing detail"
+      }
     }
   },
   "sections": {
@@ -88,7 +102,13 @@
       "relationship_type": "Relationship types",
       "organization_category": "Organization categories",
       "document_type": "Document types",
-      "log": "Change log"
+      "log": "Change log",
+      "thing_type": "Thing types"
+    },
+    "thing": {
+      "identity": "Identification",
+      "geometry": "Geometry",
+      "relationships": "Linked cases, documents, actors and things"
     }
   },
   "fields": {
@@ -233,6 +253,29 @@
       "occurredAt": "Date",
       "catalogue": "Catalogue",
       "event": "Event"
+    },
+    "thing": {
+      "thing_type": "Thing type",
+      "name": "Name",
+      "name_hint": "Left empty, it is derived (\"Parcelle 1234\", \"Bâtiment EGID …\").",
+      "description": "Description",
+      "external_ref": "External reference (GIS…)",
+      "geometry": "Geometry (GeoJSON, LV95 / EPSG:2056)",
+      "geometry_hint": "Swiss LV95 coordinates in metres, e.g. [2538000, 1152000]; a polygon for a parcel, a point or polygon for a building.",
+      "extent": "extent {m} m",
+      "area": "Computed area",
+      "anchor": "LV95 point (E / N)",
+      "identifiers": "Identifiers",
+      "created_at": "Created at",
+      "commune_ofs": "Commune OFS number",
+      "commune_ofs_hint": "Lausanne: 5586",
+      "parcel_number": "Parcel number",
+      "egrid": "EGRID",
+      "surface_m2": "Registered surface (m²)",
+      "egid": "EGID",
+      "eca_number": "ECA number",
+      "construction_year": "Construction year",
+      "building_status": "Status (RegBL)"
     }
   },
   "actions": {
@@ -282,6 +325,13 @@
     "reference": {
       "create": "New entry",
       "edit": "Edit entry"
+    },
+    "thing": {
+      "create": "Create thing",
+      "edit": "Edit thing",
+      "delete": "Delete thing",
+      "showOnMap": "Show on map.geo.admin.ch",
+      "sampleGeometry": "Insert a sample"
     }
   },
   "upload": {
@@ -402,6 +452,16 @@
       "ADDRESS_TYPE_BILLING": "Billing",
       "ADDRESS_TYPE_RESIDENCE": "Residence",
       "ADDRESS_TYPE_OTHER": "Other"
+    },
+    "BuildingStatus": {
+      "BUILDING_STATUS_UNSPECIFIED": "Unspecified",
+      "BUILDING_STATUS_PLANNED": "Planned",
+      "BUILDING_STATUS_AUTHORIZED": "Authorized",
+      "BUILDING_STATUS_UNDER_CONSTRUCTION": "Under construction",
+      "BUILDING_STATUS_EXISTING": "Existing",
+      "BUILDING_STATUS_UNUSABLE": "Unusable",
+      "BUILDING_STATUS_DEMOLISHED": "Demolished",
+      "BUILDING_STATUS_NOT_REALIZED": "Not realized"
     }
   },
   "validation": {
@@ -424,7 +484,14 @@
     },
     "postalCodeCH": "A Swiss postal code has four digits (1000 to 9999).",
     "countryCode": "Two-letter (ISO) country code, e.g. CH, FR.",
-    "referenceCode": "Code: upper-case letters, digits and _, starting with a letter (2 to 100)."
+    "referenceCode": "Code: upper-case letters, digits and _, starting with a letter (2 to 100).",
+    "geometry": {
+      "json": "Not a valid GeoJSON geometry.",
+      "type": "Geometry type not allowed here (allowed: {allowed}).",
+      "extent": "Coordinates outside Switzerland: use LV95 metres (EPSG:2056), not WGS84 degrees."
+    },
+    "egrid": "EGRID: CH followed by 12 letters or digits.",
+    "communeOfs": "OFS number between 1 and 9999."
   },
   "errors": {
     "unauthenticated": "Authentication required.",
@@ -489,8 +556,23 @@
       "adminOnly": "This page is for administrators (goeland:admin right).",
       "codeHint": "Upper-case letters, digits and _ (e.g. OPC_DEMANDE_PC); cannot change afterwards.",
       "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
-      "hint": {"case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).", "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.", "organization_category": "Classification of organizations.", "document_type": "Document types offered at creation."},
+      "hint": {
+        "case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).",
+        "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.",
+        "organization_category": "Classification of organizations.",
+        "document_type": "Document types offered at creation.",
+        "thing_type": "Thing types; new types are generic (parcels and buildings are predefined)."
+      },
       "event": {"REFERENCE_CREATED": "Created", "REFERENCE_UPDATED": "Updated"}
+    },
+    "thing": {
+      "createSuccess": "Thing created.",
+      "updateSuccess": "Thing updated.",
+      "deleted": "Thing deleted (logically).",
+      "deleteConfirm": "The thing will be deleted logically; it stays in the history.",
+      "deletedReadOnly": "This thing is deleted (read-only).",
+      "noGeometry": "No geometry.",
+      "relationshipsHint": "Cases concerning this thing, documents representing it, actors (owner, tenant, surface-right holder…) and contained things."
     }
   }
 }

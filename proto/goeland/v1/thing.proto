@@ -1,0 +1,444 @@
+// Goéland POC - Thing component (objets, spec v1 §6.3, spec v2 §25).
+//
+// Proto-first definition for ThingService + supporting messages. A thing is a
+// business object, often territorial: a parcel, a building, a street, a tree...
+// It is a first-class subject (kind = THING) with a type, an optional geometry
+// in the Swiss national frame (EPSG:2056, LV95) exchanged as GeoJSON, and, for
+// parcels and buildings, their official identifiers. Cases, documents and
+// actors attach through typed relationships (CASE_CONCERNS_THING,
+// DOCUMENT_REPRESENTS_THING, THING_HAS_ACTOR_*, THING_CONTAINS_THING).
+// Every mutation is audited in the same transaction; deletion is logical.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// THING ENUMS / MESSAGES
+// =============================================
+
+// ThingSpecialization selects the detail block of a thing type.
+enum ThingSpecialization {
+  // THING_SPECIALIZATION_UNSPECIFIED is a generic type without detail block
+  // (street, tree, ...).
+  THING_SPECIALIZATION_UNSPECIFIED = 0;
+  // THING_SPECIALIZATION_PARCEL carries ParcelDetails; the geometry is polygonal.
+  THING_SPECIALIZATION_PARCEL = 1;
+  // THING_SPECIALIZATION_BUILDING carries BuildingDetails; the geometry is a point or polygonal.
+  THING_SPECIALIZATION_BUILDING = 2;
+}
+
+// BuildingStatus is the building status of the federal register of buildings
+// (RegBL / GWR, codes 1001-1008).
+enum BuildingStatus {
+  // BUILDING_STATUS_UNSPECIFIED means unknown.
+  BUILDING_STATUS_UNSPECIFIED = 0;
+  // BUILDING_STATUS_PLANNED is a planned building (1001, projeté).
+  BUILDING_STATUS_PLANNED = 1;
+  // BUILDING_STATUS_AUTHORIZED is an authorized building (1002, autorisé).
+  BUILDING_STATUS_AUTHORIZED = 2;
+  // BUILDING_STATUS_UNDER_CONSTRUCTION is being built (1003, en construction).
+  BUILDING_STATUS_UNDER_CONSTRUCTION = 3;
+  // BUILDING_STATUS_EXISTING is an existing building (1004, existant).
+  BUILDING_STATUS_EXISTING = 4;
+  // BUILDING_STATUS_UNUSABLE is an unusable building (1005, non utilisable).
+  BUILDING_STATUS_UNUSABLE = 5;
+  // BUILDING_STATUS_DEMOLISHED is a demolished building (1007, démoli).
+  BUILDING_STATUS_DEMOLISHED = 6;
+  // BUILDING_STATUS_NOT_REALIZED is a building that was not built (1008, non réalisé).
+  BUILDING_STATUS_NOT_REALIZED = 7;
+}
+
+// ThingType is a controlled classification of things (PARCEL, BUILDING, STREET, ...).
+message ThingType {
+  // id is the catalogue row UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key (1-100 characters).
+  string code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label is the human label (at most 200 characters).
+  string label = 3 [(buf.validate.field).string.max_len = 200];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 2000];
+  // specialization selects the detail block and constrains the geometry type.
+  ThingSpecialization specialization = 5;
+  // is_active reports whether new things of this type may be created.
+  bool is_active = 6;
+}
+
+// ParcelDetails are the land-register identifiers of a parcel (bien-fonds).
+message ParcelDetails {
+  // commune_ofs is the federal (OFS) number of the commune, 1-9999 (Lausanne: 5586).
+  int32 commune_ofs = 1 [(buf.validate.field).int32 = {
+    gte: 1
+    lte: 9999
+  }];
+  // parcel_number is the parcel number in the commune (1-20 characters); unique
+  // per commune (ALREADY_EXISTS otherwise).
+  string parcel_number = 2 [
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 20
+  ];
+  // egrid is the federal parcel identifier, "CH" + 12 characters; empty when unknown.
+  string egrid = 3 [(buf.validate.field).string.pattern = "^$|^CH[0-9A-Z]{12}$"];
+  // surface_m2 is the registered surface in square metres; 0 when unknown.
+  double surface_m2 = 4 [(buf.validate.field).double.gte = 0];
+}
+
+// BuildingDetails are the register identifiers of a building.
+message BuildingDetails {
+  // egid is the federal building identifier (RegBL/GWR); 0 when unknown; unique.
+  int32 egid = 1 [(buf.validate.field).int32.gte = 0];
+  // eca_number is the cantonal insurance (ECA) number (at most 20 characters).
+  string eca_number = 2 [(buf.validate.field).string.max_len = 20];
+  // construction_year is 1000-2100; 0 when unknown.
+  int32 construction_year = 3 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 2100
+  }];
+  // building_status is the RegBL status; UNSPECIFIED when unknown.
+  BuildingStatus building_status = 4 [(buf.validate.field).enum.defined_only = true];
+}
+
+// Thing is a business object, 1:1 with SubjectRef (id == subject id).
+message Thing {
+  // subject_ref is the embedded canonical identity (kind = THING); its id is the thing id.
+  SubjectRef subject_ref = 1;
+  // thing_type is the classification chosen at creation.
+  ThingType thing_type = 2;
+  // name is the thing's name (1-300 characters), mirrored into the subject label.
+  string name = 3;
+  // description is free text (at most 4000 characters).
+  string description = 4;
+  // external_ref is the identifier in a source system (at most 200 characters).
+  string external_ref = 5;
+  // geometry_geojson is the geometry as a GeoJSON geometry object in EPSG:2056
+  // (LV95) coordinates; empty when the thing is not georeferenced.
+  string geometry_geojson = 6;
+  // area_m2 is the computed area of a polygonal geometry; 0 otherwise.
+  double area_m2 = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // anchor_e is the LV95 east coordinate of a point on the geometry (for maps); 0 without geometry.
+  double anchor_e = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // anchor_n is the LV95 north coordinate of that point; 0 without geometry.
+  double anchor_n = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // specialization carries the detail block matching the type's specialization.
+  oneof specialization {
+    // parcel is set for a PARCEL-specialized type.
+    ParcelDetails parcel = 10;
+    // building is set for a BUILDING-specialized type.
+    BuildingDetails building = 11;
+  }
+  // metadata holds secondary data about the thing.
+  google.protobuf.Struct metadata = 12;
+  // created_at is the server creation time.
+  google.protobuf.Timestamp created_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the thing.
+  string created_by = 14;
+  // updated_at is the last modification time, maintained by the database.
+  google.protobuf.Timestamp updated_at = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // record_metadata is the governance record (confidentiality, lock, owner...).
+  RecordMetadata record_metadata = 16;
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// CreateThingRequest registers a thing. The specialization block must match the
+// type's specialization (INVALID_ARGUMENT otherwise).
+message CreateThingRequest {
+  // thing_type_code is the required code of an active thing type.
+  string thing_type_code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // name is the thing's name (at most 300 characters); when empty it is derived
+  // for a parcel ("Parcelle <number>") or a building with an EGID ("Bâtiment EGID <egid>").
+  string name = 2 [(buf.validate.field).string.max_len = 300];
+  // description is optional free text (at most 4000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // external_ref is an optional source-system identifier (at most 200 characters).
+  string external_ref = 4 [(buf.validate.field).string.max_len = 200];
+  // geometry_geojson is an optional GeoJSON geometry in EPSG:2056 (LV95)
+  // coordinates (at most 1 000 000 characters). It must be valid, lie in
+  // Switzerland (which also rejects WGS84 degrees sent by mistake) and match the
+  // type: polygonal for a parcel, a point or polygonal for a building.
+  string geometry_geojson = 5 [(buf.validate.field).string.max_len = 1000000];
+  // specialization carries the detail block of a parcel or building type.
+  oneof specialization {
+    // parcel is required for a PARCEL-specialized type.
+    ParcelDetails parcel = 6;
+    // building is optional for a BUILDING-specialized type.
+    BuildingDetails building = 7;
+  }
+  // metadata holds secondary data about the thing.
+  google.protobuf.Struct metadata = 8;
+  // initial_governance optionally sets the owner, confidentiality and records
+  // fields; the owner defaults to the operator.
+  //
+  // NOTE: the acting operator is derived server-side from the authenticated
+  // principal (never trusted from the client).
+  RecordMetadata initial_governance = 9;
+}
+
+// CreateThingResponse returns the created thing.
+message CreateThingResponse {
+  // thing is the created thing with its governance.
+  Thing thing = 1;
+  // created_event is the THING_CREATED audit event.
+  AuditEvent created_event = 2;
+}
+
+// GetThingRequest reads one thing with optional context.
+message GetThingRequest {
+  // id is the thing (subject_ref) UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_relationships also returns the relationships in both directions.
+  bool include_relationships = 2;
+  // include_audit also returns the 20 most recent audit events.
+  bool include_audit = 3;
+}
+
+// GetThingResponse returns a thing and the requested context.
+message GetThingResponse {
+  // thing is the thing with its governance.
+  Thing thing = 1;
+  // relationships are the outgoing then incoming edges; empty unless include_relationships was set.
+  repeated SubjectRelationship relationships = 2;
+  // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+  repeated AuditEvent recent_audit = 3;
+}
+
+// UpdateThingRequest replaces the editable fields of an unlocked, live thing;
+// the type is fixed at creation.
+message UpdateThingRequest {
+  // id is the thing UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // name is the new name (1-300 characters).
+  string name = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 300
+  ];
+  // description replaces the description (at most 4000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 4000];
+  // external_ref replaces the source-system identifier (at most 200 characters).
+  string external_ref = 4 [(buf.validate.field).string.max_len = 200];
+  // geometry_geojson replaces the geometry (same rules as on create); empty
+  // removes it.
+  string geometry_geojson = 5 [(buf.validate.field).string.max_len = 1000000];
+  // specialization replaces the detail block of a parcel or building.
+  oneof specialization {
+    // parcel replaces the parcel identifiers.
+    ParcelDetails parcel = 6;
+    // building replaces the building identifiers.
+    BuildingDetails building = 7;
+  }
+  // metadata replaces the secondary data.
+  google.protobuf.Struct metadata = 8;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 9 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateThingResponse returns the updated thing.
+message UpdateThingResponse {
+  // thing is the updated thing.
+  Thing thing = 1;
+  // update_event is the THING_UPDATED audit event.
+  AuditEvent update_event = 2;
+}
+
+// SearchThingsRequest filters things by text, type and map extent.
+message SearchThingsRequest {
+  // query is plain text matched accent-insensitively against name, description
+  // and external reference, or exactly against a parcel number, EGRID or EGID
+  // (at most 200 characters); empty matches every thing.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // thing_type_code restricts results to one type; empty means any.
+  string thing_type_code = 2 [(buf.validate.field).string.max_len = 100];
+  // bbox restricts results to things whose geometry intersects the LV95
+  // extent "e_min,n_min,e_max,n_max" (EPSG:2056); empty means anywhere.
+  string bbox = 3 [(buf.validate.field).string.max_len = 100];
+  // include_deleted also returns soft-deleted things.
+  bool include_deleted = 4;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 5 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 6 [(buf.validate.field).string.max_len = 1024];
+}
+
+// SearchThingsResponse is one page of search results.
+message SearchThingsResponse {
+  // things is the requested page, newest first.
+  repeated Thing things = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matches across all pages.
+  int32 total_size = 3;
+}
+
+// DeleteThingRequest soft-deletes a thing (non-destructive).
+message DeleteThingRequest {
+  // id is the thing UUID; an already deleted thing is rejected, a locked one is not.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// DeleteThingResponse confirms a soft delete.
+message DeleteThingResponse {
+  // deleted_thing_id is the soft-deleted thing.
+  string deleted_thing_id = 1;
+  // delete_event is the THING_DELETED audit event.
+  AuditEvent delete_event = 2;
+}
+
+// ListThingTypesRequest lists the thing type catalogue.
+message ListThingTypesRequest {
+  // only_active restricts the list to types offered for new things.
+  bool only_active = 1;
+}
+
+// ListThingTypesResponse returns the thing types ordered by code.
+message ListThingTypesResponse {
+  // thing_types are the catalogue entries.
+  repeated ThingType thing_types = 1;
+}
+
+// CreateThingTypeRequest adds a generic thing type (administrators only);
+// parcel and building types are seeded.
+message CreateThingTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateThingTypeResponse returns the new thing type and its log entry.
+message CreateThingTypeResponse {
+  // thing_type is the created entry, active and generic.
+  ThingType thing_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateThingTypeRequest changes a thing type (administrators only); absent
+// fields are kept, and the code and specialization never change.
+message UpdateThingTypeRequest {
+  // code selects the entry to update.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // is_active activates or deactivates the entry when present.
+  optional bool is_active = 4;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateThingTypeResponse returns the updated thing type and its log entry.
+message UpdateThingTypeResponse {
+  // thing_type is the updated entry.
+  ThingType thing_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// =============================================
+// SERVICE DEFINITION
+// =============================================
+
+// ThingService manages business objects (parcels, buildings, ...) and their geometry.
+service ThingService {
+  // Register a thing (identity + governance + detail block + geometry) atomically.
+  // Requires goeland:write; writes a THING_CREATED audit event. Fails with
+  // INVALID_ARGUMENT (bad geometry or detail block) or ALREADY_EXISTS (parcel
+  // number, EGRID or EGID taken).
+  rpc CreateThing(CreateThingRequest) returns (CreateThingResponse) {
+    option (google.api.http) = {
+      post: "/api/things"
+      body: "*"
+    };
+  }
+
+  // Get a thing with optional relationships + audit. Requires goeland:read.
+  rpc GetThing(GetThingRequest) returns (GetThingResponse) {
+    option (google.api.http) = {get: "/api/things/{id}"};
+  }
+
+  // Update the editable fields of a thing. Requires goeland:write; writes a
+  // THING_UPDATED audit event; FAILED_PRECONDITION for a locked or deleted thing.
+  rpc UpdateThing(UpdateThingRequest) returns (UpdateThingResponse) {
+    option (google.api.http) = {
+      patch: "/api/things/{id}"
+      body: "*"
+    };
+  }
+
+  // Search things by text, type and LV95 extent. Requires goeland:read.
+  rpc SearchThings(SearchThingsRequest) returns (SearchThingsResponse) {
+    option (google.api.http) = {get: "/api/things/search"};
+  }
+
+  // Soft-delete a thing (non-destructive). Requires goeland:write; writes THING_DELETED.
+  rpc DeleteThing(DeleteThingRequest) returns (DeleteThingResponse) {
+    option (google.api.http) = {delete: "/api/things/{id}"};
+  }
+
+  // List the thing type catalogue. Requires goeland:read.
+  rpc ListThingTypes(ListThingTypesRequest) returns (ListThingTypesResponse) {
+    option (google.api.http) = {get: "/api/thing-types"};
+  }
+
+  // Add a generic thing type. Requires goeland:admin; logs REFERENCE_CREATED.
+  rpc CreateThingType(CreateThingTypeRequest) returns (CreateThingTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/thing-types"
+      body: "*"
+    };
+  }
+
+  // Change a thing type. Requires goeland:admin; logs REFERENCE_UPDATED.
+  rpc UpdateThingType(UpdateThingTypeRequest) returns (UpdateThingTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/thing-types/{code}"
+      body: "*"
+    };
+  }
+}

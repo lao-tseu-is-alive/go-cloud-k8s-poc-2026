@@ -48,6 +48,16 @@
       <v-btn
         v-if="isAuthenticated"
         class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-map-marker-outline"
+        to="/things"
+        variant="text"
+      >
+        {{ t('nav.things') }}
+      </v-btn>
+
+      <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
         prepend-icon="mdi-account-multiple"
         to="/actors"
         variant="text"

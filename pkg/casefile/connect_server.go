@@ -44,14 +44,7 @@ func (s *ConnectServer) CreateCase(ctx context.Context, req *connect.Request[goe
 		BusinessRef:  core.BusinessRefRequestFromProto(msg.BusinessRef),
 		OperatorID:   core.OperatorID(user),
 	}
-	if gov := msg.InitialGovernance; gov != nil {
-		in.Governance.OwnerUserID = gov.OwnerUserId
-		in.Governance.OwnerOrgID = gov.OwnerOrgId
-		in.Governance.ConfidentialityLevel = gov.ConfidentialityLevel
-		in.Governance.RetentionUntil = gov.RetentionUntil
-		in.Governance.SortFinal = gov.SortFinal
-		in.Governance.Metadata = gov.Metadata
-	}
+	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
 	c, ev, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

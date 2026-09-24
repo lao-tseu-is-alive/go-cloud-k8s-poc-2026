@@ -8,6 +8,7 @@ import { listOrganizationCategories } from '@/api/actorClient'
 import { listCaseTypes } from '@/api/caseClient'
 import { listRelationshipTypes } from '@/api/coreClient'
 import { listDocumentTypes } from '@/api/documentClient'
+import { listThingTypes } from '@/api/thingClient'
 
 export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean'
 
@@ -66,6 +67,12 @@ export const CATALOGUES: CatalogueConfig[] = [
     catalogue: 'document_type',
     fields: [LABEL, { key: 'category', kind: 'text', max: 100, column: true }, DESCRIPTION],
     list: async () => (await listDocumentTypes(false)) as unknown as CatalogueEntry[],
+  },
+  {
+    // New thing types are generic; parcel and building types are seeded.
+    catalogue: 'thing_type',
+    fields: [LABEL, DESCRIPTION],
+    list: async () => (await listThingTypes(false)) as unknown as CatalogueEntry[],
   },
 ]
 

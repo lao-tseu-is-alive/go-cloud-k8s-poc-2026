@@ -506,7 +506,7 @@ export interface BatchGetUsersResponse {
 // --- Reference data administration (GLD-040) ----------------------------------
 
 /** A catalogue administered through the API. */
-export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type'
+export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type'
 
 /** One entry of the append-only reference change log. */
 export interface ReferenceChange {
@@ -523,6 +523,109 @@ export interface ReferenceChange {
 
 export interface ListReferenceChangesResponse {
   changes?: ReferenceChange[]
+  nextPageToken?: string
+  totalSize?: number
+}
+
+// --- Things (ThingService, GLD-016) -------------------------------------------
+
+export type ThingSpecialization
+  = | 'THING_SPECIALIZATION_UNSPECIFIED'
+    | 'THING_SPECIALIZATION_PARCEL'
+    | 'THING_SPECIALIZATION_BUILDING'
+
+/** RegBL / GWR building status. */
+export type BuildingStatus
+  = | 'BUILDING_STATUS_UNSPECIFIED'
+    | 'BUILDING_STATUS_PLANNED'
+    | 'BUILDING_STATUS_AUTHORIZED'
+    | 'BUILDING_STATUS_UNDER_CONSTRUCTION'
+    | 'BUILDING_STATUS_EXISTING'
+    | 'BUILDING_STATUS_UNUSABLE'
+    | 'BUILDING_STATUS_DEMOLISHED'
+    | 'BUILDING_STATUS_NOT_REALIZED'
+
+export interface ThingType {
+  id: string
+  code: string
+  label: string
+  description?: string
+  /** Absent means generic (proto3 JSON omits the zero value). */
+  specialization?: ThingSpecialization
+  isActive?: boolean
+}
+
+export interface ParcelDetails {
+  communeOfs: number
+  parcelNumber: string
+  egrid?: string
+  surfaceM2?: number
+}
+
+export interface BuildingDetails {
+  egid?: number
+  ecaNumber?: string
+  constructionYear?: number
+  buildingStatus?: BuildingStatus
+}
+
+export interface GoThing {
+  subjectRef?: SubjectRef
+  thingType?: ThingType
+  name: string
+  description?: string
+  externalRef?: string
+  /** GeoJSON geometry in EPSG:2056 (LV95); absent when not georeferenced. */
+  geometryGeojson?: string
+  areaM2?: number
+  anchorE?: number
+  anchorN?: number
+  parcel?: ParcelDetails
+  building?: BuildingDetails
+  metadata?: Record<string, unknown>
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  recordMetadata?: RecordMetadata
+}
+
+export interface CreateThingRequest {
+  thingTypeCode: string
+  name?: string
+  description?: string
+  externalRef?: string
+  geometryGeojson?: string
+  parcel?: ParcelDetails
+  building?: BuildingDetails
+}
+
+export interface UpdateThingRequest {
+  name: string
+  description?: string
+  externalRef?: string
+  geometryGeojson?: string
+  parcel?: ParcelDetails
+  building?: BuildingDetails
+  reason?: string
+}
+
+export interface GetThingResponse {
+  thing?: GoThing
+  relationships?: SubjectRelationship[]
+  recentAudit?: AuditEvent[]
+}
+
+export interface SearchThingsParams {
+  query?: string
+  thingTypeCode?: string
+  bbox?: string
+  includeDeleted?: boolean
+  pageSize?: number
+  pageToken?: string
+}
+
+export interface SearchThingsResponse {
+  things?: GoThing[]
   nextPageToken?: string
   totalSize?: number
 }

@@ -25,6 +25,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
+	thingmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
 )
 
@@ -100,37 +101,23 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)
 	}
-	actorMod, err := actormodule.New(ctx, actormodule.Config{RequestTimeout: config.RequestTimeout}, actormodule.Deps{
-		Pool:        pool,
-		Verifier:    verifier,
-		CoreService: coreMod.Service(),
-		Logger:      log,
-	})
+	domainMods, err := buildDomainModules(ctx, config, pool, verifier, coreMod.Service(), log)
 	if err != nil {
-		return nil, fmt.Errorf("actor module: %w", err)
-	}
-	caseMod, err := casemodule.New(ctx, casemodule.Config{RequestTimeout: config.RequestTimeout}, casemodule.Deps{
-		Pool:        pool,
-		Verifier:    verifier,
-		CoreService: coreMod.Service(),
-		Logger:      log,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("case module: %w", err)
+		return nil, err
 	}
 
 	// Bundle mode: aggregate every module's Vanguard services into ONE transcoder.
-	services := append(coreMod.VanguardServices(), docMod.VanguardServices()...)
-	services = append(services, actorMod.VanguardServices()...)
-	services = append(services, caseMod.VanguardServices()...)
+	modules := append([]bundledModule{coreMod, docMod}, domainMods...)
+	var services []*vanguard.Service
+	var serviceNames []string
+	for _, m := range modules {
+		services = append(services, m.VanguardServices()...)
+		serviceNames = append(serviceNames, m.ServiceNames()...)
+	}
 	transcoder, err := vanguard.NewTranscoder(services)
 	if err != nil {
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
 	}
-
-	serviceNames := append(coreMod.ServiceNames(), docMod.ServiceNames()...)
-	serviceNames = append(serviceNames, actorMod.ServiceNames()...)
-	serviceNames = append(serviceNames, caseMod.ServiceNames()...)
 
 	mux := http.NewServeMux()
 	mux.Handle("GET /health", healthHandler(pool))
@@ -195,6 +182,32 @@ func spaHandler(fileServer http.Handler, frontendFS fs.FS) http.HandlerFunc {
 		r.URL.Path = "/"
 		fileServer.ServeHTTP(w, r)
 	}
+}
+
+// bundledModule is what the server needs from a domain module to mount it on
+// the shared transcoder.
+type bundledModule interface {
+	VanguardServices() []*vanguard.Service
+	ServiceNames() []string
+}
+
+// buildDomainModules wires the subject domains that share the same
+// dependencies (pool, verifier, core service, logger): actor, case and thing.
+func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.Pool, verifier authadapter.TokenVerifier, coreSvc *core.Service, log *slog.Logger) ([]bundledModule, error) {
+	timeout := config.RequestTimeout
+	actorMod, err := actormodule.New(ctx, actormodule.Config{RequestTimeout: timeout}, actormodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("actor module: %w", err)
+	}
+	caseMod, err := casemodule.New(ctx, casemodule.Config{RequestTimeout: timeout}, casemodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("case module: %w", err)
+	}
+	thingMod, err := thingmodule.New(ctx, thingmodule.Config{RequestTimeout: timeout}, thingmodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("thing module: %w", err)
+	}
+	return []bundledModule{actorMod, caseMod, thingMod}, nil
 }
 
 // buildRecordingVerifier wraps the auth-mode verifier so every verified caller

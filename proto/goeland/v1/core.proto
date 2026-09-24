@@ -548,7 +548,7 @@ message ListRelationshipTypesResponse {
 message ReferenceChange {
   // id is the server-assigned entry UUID.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // catalogue is case_type, relationship_type, organization_category or document_type.
+  // catalogue is case_type, relationship_type, organization_category, document_type or thing_type.
   string catalogue = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   // code is the changed entry's code.
   string code = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -575,7 +575,8 @@ message ListReferenceChangesRequest {
       "case_type",
       "relationship_type",
       "organization_category",
-      "document_type"
+      "document_type",
+      "thing_type"
     ]
   }];
   // page_size is the page length; 0 means the default (25), at most 200.

@@ -27,6 +27,8 @@ tags:
       exposes it as REST/JSON (and the generated OpenAPI documents that surface).
       REST paths follow the spec (§13.3) with sensible additions for the extra RPCs.
       The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
+  - name: ThingService
+    description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
 consumes:
   - application/json
 produces:
@@ -1482,6 +1484,239 @@ paths:
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
+  /api/thing-types:
+    get:
+      summary: List the thing type catalogue. Requires goeland:read.
+      operationId: ListThingTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListThingTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          description: only_active restricts the list to types offered for new things.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - ThingService
+    post:
+      summary: Add a generic thing type. Requires goeland:admin; logs REFERENCE_CREATED.
+      operationId: CreateThingType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateThingTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: |-
+            CreateThingTypeRequest adds a generic thing type (administrators only);
+            parcel and building types are seeded.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateThingTypeRequest'
+      tags:
+        - ThingService
+  /api/thing-types/{code}:
+    patch:
+      summary: Change a thing type. Requires goeland:admin; logs REFERENCE_UPDATED.
+      operationId: UpdateThingType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateThingTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ThingServiceUpdateThingTypeBody'
+      tags:
+        - ThingService
+  /api/things:
+    post:
+      summary: |-
+        Register a thing (identity + governance + detail block + geometry) atomically.
+        Requires goeland:write; writes a THING_CREATED audit event. Fails with
+        INVALID_ARGUMENT (bad geometry or detail block) or ALREADY_EXISTS (parcel
+        number, EGRID or EGID taken).
+      operationId: CreateThing
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateThingResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: |-
+            CreateThingRequest registers a thing. The specialization block must match the
+            type's specialization (INVALID_ARGUMENT otherwise).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateThingRequest'
+      tags:
+        - ThingService
+  /api/things/search:
+    get:
+      summary: Search things by text, type and LV95 extent. Requires goeland:read.
+      operationId: SearchThings
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchThingsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: |-
+            query is plain text matched accent-insensitively against name, description
+            and external reference, or exactly against a parcel number, EGRID or EGID
+            (at most 200 characters); empty matches every thing.
+          in: query
+          required: false
+          type: string
+        - name: thingTypeCode
+          description: thing_type_code restricts results to one type; empty means any.
+          in: query
+          required: false
+          type: string
+        - name: bbox
+          description: |-
+            bbox restricts results to things whose geometry intersects the LV95
+            extent "e_min,n_min,e_max,n_max" (EPSG:2056); empty means anywhere.
+          in: query
+          required: false
+          type: string
+        - name: includeDeleted
+          description: include_deleted also returns soft-deleted things.
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - ThingService
+  /api/things/{id}:
+    get:
+      summary: Get a thing with optional relationships + audit. Requires goeland:read.
+      operationId: GetThing
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetThingResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the thing (subject_ref) UUID.
+          in: path
+          required: true
+          type: string
+        - name: includeRelationships
+          description: include_relationships also returns the relationships in both directions.
+          in: query
+          required: false
+          type: boolean
+        - name: includeAudit
+          description: include_audit also returns the 20 most recent audit events.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - ThingService
+    delete:
+      summary: Soft-delete a thing (non-destructive). Requires goeland:write; writes THING_DELETED.
+      operationId: DeleteThing
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DeleteThingResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the thing UUID; an already deleted thing is rejected, a locked one is not.
+          in: path
+          required: true
+          type: string
+        - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
+          in: query
+          required: false
+          type: string
+      tags:
+        - ThingService
+    patch:
+      summary: |-
+        Update the editable fields of a thing. Requires goeland:write; writes a
+        THING_UPDATED audit event; FAILED_PRECONDITION for a locked or deleted thing.
+      operationId: UpdateThing
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateThingResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the thing UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ThingServiceUpdateThingBody'
+      tags:
+        - ThingService
   /api/users:batchGet:
     get:
       summary: |-
@@ -1783,6 +2018,58 @@ definitions:
     description: |-
       UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  ThingServiceUpdateThingBody:
+    type: object
+    properties:
+      name:
+        type: string
+        description: name is the new name (1-300 characters).
+      description:
+        type: string
+        description: description replaces the description (at most 4000 characters).
+      externalRef:
+        type: string
+        description: external_ref replaces the source-system identifier (at most 200 characters).
+      geometryGeojson:
+        type: string
+        description: |-
+          geometry_geojson replaces the geometry (same rules as on create); empty
+          removes it.
+      parcel:
+        $ref: '#/definitions/v1ParcelDetails'
+        description: parcel replaces the parcel identifiers.
+      building:
+        $ref: '#/definitions/v1BuildingDetails'
+        description: building replaces the building identifiers.
+      metadata:
+        type: object
+        description: metadata replaces the secondary data.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      UpdateThingRequest replaces the editable fields of an unlocked, live thing;
+      the type is fixed at creation.
+    required:
+      - name
+  ThingServiceUpdateThingTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      isActive:
+        type: boolean
+        description: is_active activates or deactivates the entry when present.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateThingTypeRequest changes a thing type (administrators only); absent
+      fields are kept, and the code and specialization never change.
   protobufAny:
     type: object
     properties:
@@ -2078,6 +2365,48 @@ definitions:
           $ref: '#/definitions/v1User'
         description: users are the resolved users, ordered by id.
     description: BatchGetUsersResponse returns the known users; unknown ids are absent.
+  v1BuildingDetails:
+    type: object
+    properties:
+      egid:
+        type: integer
+        format: int32
+        description: egid is the federal building identifier (RegBL/GWR); 0 when unknown; unique.
+      ecaNumber:
+        type: string
+        description: eca_number is the cantonal insurance (ECA) number (at most 20 characters).
+      constructionYear:
+        type: integer
+        format: int32
+        description: construction_year is 1000-2100; 0 when unknown.
+      buildingStatus:
+        $ref: '#/definitions/v1BuildingStatus'
+        description: building_status is the RegBL status; UNSPECIFIED when unknown.
+    description: BuildingDetails are the register identifiers of a building.
+  v1BuildingStatus:
+    type: string
+    enum:
+      - BUILDING_STATUS_UNSPECIFIED
+      - BUILDING_STATUS_PLANNED
+      - BUILDING_STATUS_AUTHORIZED
+      - BUILDING_STATUS_UNDER_CONSTRUCTION
+      - BUILDING_STATUS_EXISTING
+      - BUILDING_STATUS_UNUSABLE
+      - BUILDING_STATUS_DEMOLISHED
+      - BUILDING_STATUS_NOT_REALIZED
+    default: BUILDING_STATUS_UNSPECIFIED
+    description: |-
+      BuildingStatus is the building status of the federal register of buildings
+      (RegBL / GWR, codes 1001-1008).
+
+       - BUILDING_STATUS_UNSPECIFIED: BUILDING_STATUS_UNSPECIFIED means unknown.
+       - BUILDING_STATUS_PLANNED: BUILDING_STATUS_PLANNED is a planned building (1001, projeté).
+       - BUILDING_STATUS_AUTHORIZED: BUILDING_STATUS_AUTHORIZED is an authorized building (1002, autorisé).
+       - BUILDING_STATUS_UNDER_CONSTRUCTION: BUILDING_STATUS_UNDER_CONSTRUCTION is being built (1003, en construction).
+       - BUILDING_STATUS_EXISTING: BUILDING_STATUS_EXISTING is an existing building (1004, existant).
+       - BUILDING_STATUS_UNUSABLE: BUILDING_STATUS_UNUSABLE is an unusable building (1005, non utilisable).
+       - BUILDING_STATUS_DEMOLISHED: BUILDING_STATUS_DEMOLISHED is a demolished building (1007, démoli).
+       - BUILDING_STATUS_NOT_REALIZED: BUILDING_STATUS_NOT_REALIZED is a building that was not built (1008, non réalisé).
   v1BusinessRefRequest:
     type: object
     properties:
@@ -2646,6 +2975,95 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the SUBJECT_CREATED audit event.
     description: CreateSubjectRefResponse returns the created identity, governance and audit event.
+  v1CreateThingRequest:
+    type: object
+    properties:
+      thingTypeCode:
+        type: string
+        description: thing_type_code is the required code of an active thing type.
+      name:
+        type: string
+        description: |-
+          name is the thing's name (at most 300 characters); when empty it is derived
+          for a parcel ("Parcelle <number>") or a building with an EGID ("Bâtiment EGID <egid>").
+      description:
+        type: string
+        description: description is optional free text (at most 4000 characters).
+      externalRef:
+        type: string
+        description: external_ref is an optional source-system identifier (at most 200 characters).
+      geometryGeojson:
+        type: string
+        description: |-
+          geometry_geojson is an optional GeoJSON geometry in EPSG:2056 (LV95)
+          coordinates (at most 1 000 000 characters). It must be valid, lie in
+          Switzerland (which also rejects WGS84 degrees sent by mistake) and match the
+          type: polygonal for a parcel, a point or polygonal for a building.
+      parcel:
+        $ref: '#/definitions/v1ParcelDetails'
+        description: parcel is required for a PARCEL-specialized type.
+      building:
+        $ref: '#/definitions/v1BuildingDetails'
+        description: building is optional for a BUILDING-specialized type.
+      metadata:
+        type: object
+        description: metadata holds secondary data about the thing.
+      initialGovernance:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: |-
+          initial_governance optionally sets the owner, confidentiality and records
+          fields; the owner defaults to the operator.
+
+          NOTE: the acting operator is derived server-side from the authenticated
+          principal (never trusted from the client).
+    description: |-
+      CreateThingRequest registers a thing. The specialization block must match the
+      type's specialization (INVALID_ARGUMENT otherwise).
+    required:
+      - thingTypeCode
+  v1CreateThingResponse:
+    type: object
+    properties:
+      thing:
+        $ref: '#/definitions/v1Thing'
+        description: thing is the created thing with its governance.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the THING_CREATED audit event.
+    description: CreateThingResponse returns the created thing.
+  v1CreateThingTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      CreateThingTypeRequest adds a generic thing type (administrators only);
+      parcel and building types are seeded.
+    required:
+      - code
+      - label
+  v1CreateThingTypeResponse:
+    type: object
+    properties:
+      thingType:
+        $ref: '#/definitions/v1ThingType'
+        description: thing_type is the created entry, active and generic.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateThingTypeResponse returns the new thing type and its log entry.
   v1DeleteActorResponse:
     type: object
     properties:
@@ -2676,6 +3094,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: delete_event is the DOCUMENT_DELETED audit event.
     description: DeleteDocumentResponse confirms a soft delete.
+  v1DeleteThingResponse:
+    type: object
+    properties:
+      deletedThingId:
+        type: string
+        description: deleted_thing_id is the soft-deleted thing.
+      deleteEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: delete_event is the THING_DELETED audit event.
+    description: DeleteThingResponse confirms a soft delete.
   v1Document:
     type: object
     properties:
@@ -2948,6 +3376,25 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events; empty unless include_audit_summary was set.
     description: GetSubjectRefResponse returns a subject and the requested optional parts.
+  v1GetThingResponse:
+    type: object
+    properties:
+      thing:
+        $ref: '#/definitions/v1Thing'
+        description: thing is the thing with its governance.
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are the outgoing then incoming edges; empty unless include_relationships was set.
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
+    description: GetThingResponse returns a thing and the requested context.
   v1LinkDocumentResponse:
     type: object
     properties:
@@ -3093,6 +3540,16 @@ definitions:
         format: int32
         description: total_size is the number of matching edges across all pages.
     description: ListRelationshipsResponse is one page of edges.
+  v1ListThingTypesResponse:
+    type: object
+    properties:
+      thingTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ThingType'
+        description: thing_types are the catalogue entries.
+    description: ListThingTypesResponse returns the thing types ordered by code.
   v1LookupSubjectsResponse:
     type: object
     properties:
@@ -3146,6 +3603,26 @@ definitions:
     description: OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
     required:
       - legalName
+  v1ParcelDetails:
+    type: object
+    properties:
+      communeOfs:
+        type: integer
+        format: int32
+        description: 'commune_ofs is the federal (OFS) number of the commune, 1-9999 (Lausanne: 5586).'
+      parcelNumber:
+        type: string
+        description: |-
+          parcel_number is the parcel number in the commune (1-20 characters); unique
+          per commune (ALREADY_EXISTS otherwise).
+      egrid:
+        type: string
+        description: egrid is the federal parcel identifier, "CH" + 12 characters; empty when unknown.
+      surfaceM2:
+        type: number
+        format: double
+        description: surface_m2 is the registered surface in square metres; 0 when unknown.
+    description: ParcelDetails are the land-register identifiers of a parcel (bien-fonds).
   v1PersonDetails:
     type: object
     properties:
@@ -3264,7 +3741,7 @@ definitions:
         readOnly: true
       catalogue:
         type: string
-        description: catalogue is case_type, relationship_type, organization_category or document_type.
+        description: catalogue is case_type, relationship_type, organization_category, document_type or thing_type.
         readOnly: true
       code:
         type: string
@@ -3402,6 +3879,23 @@ definitions:
         format: int32
         description: total_size is the number of matching documents across all pages.
     description: SearchDocumentsResponse is one page of matching documents.
+  v1SearchThingsResponse:
+    type: object
+    properties:
+      things:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Thing'
+        description: things is the requested page, newest first.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matches across all pages.
+    description: SearchThingsResponse is one page of search results.
   v1SubjectKind:
     type: string
     enum:
@@ -3513,6 +4007,108 @@ definitions:
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
       an ended edge stays as history.
+  v1Thing:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the embedded canonical identity (kind = THING); its id is the thing id.
+      thingType:
+        $ref: '#/definitions/v1ThingType'
+        description: thing_type is the classification chosen at creation.
+      name:
+        type: string
+        description: name is the thing's name (1-300 characters), mirrored into the subject label.
+      description:
+        type: string
+        description: description is free text (at most 4000 characters).
+      externalRef:
+        type: string
+        description: external_ref is the identifier in a source system (at most 200 characters).
+      geometryGeojson:
+        type: string
+        description: |-
+          geometry_geojson is the geometry as a GeoJSON geometry object in EPSG:2056
+          (LV95) coordinates; empty when the thing is not georeferenced.
+      areaM2:
+        type: number
+        format: double
+        description: area_m2 is the computed area of a polygonal geometry; 0 otherwise.
+        readOnly: true
+      anchorE:
+        type: number
+        format: double
+        description: anchor_e is the LV95 east coordinate of a point on the geometry (for maps); 0 without geometry.
+        readOnly: true
+      anchorN:
+        type: number
+        format: double
+        description: anchor_n is the LV95 north coordinate of that point; 0 without geometry.
+        readOnly: true
+      parcel:
+        $ref: '#/definitions/v1ParcelDetails'
+        description: parcel is set for a PARCEL-specialized type.
+      building:
+        $ref: '#/definitions/v1BuildingDetails'
+        description: building is set for a BUILDING-specialized type.
+      metadata:
+        type: object
+        description: metadata holds secondary data about the thing.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the server creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who created the thing.
+      updatedAt:
+        type: string
+        format: date-time
+        description: updated_at is the last modification time, maintained by the database.
+        readOnly: true
+      recordMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: record_metadata is the governance record (confidentiality, lock, owner...).
+    description: Thing is a business object, 1:1 with SubjectRef (id == subject id).
+  v1ThingSpecialization:
+    type: string
+    enum:
+      - THING_SPECIALIZATION_UNSPECIFIED
+      - THING_SPECIALIZATION_PARCEL
+      - THING_SPECIALIZATION_BUILDING
+    default: THING_SPECIALIZATION_UNSPECIFIED
+    description: |-
+      ThingSpecialization selects the detail block of a thing type.
+
+       - THING_SPECIALIZATION_UNSPECIFIED: THING_SPECIALIZATION_UNSPECIFIED is a generic type without detail block
+      (street, tree, ...).
+       - THING_SPECIALIZATION_PARCEL: THING_SPECIALIZATION_PARCEL carries ParcelDetails; the geometry is polygonal.
+       - THING_SPECIALIZATION_BUILDING: THING_SPECIALIZATION_BUILDING carries BuildingDetails; the geometry is a point or polygonal.
+  v1ThingType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the catalogue row UUID.
+      code:
+        type: string
+        description: code is the unique stable key (1-100 characters).
+      label:
+        type: string
+        description: label is the human label (at most 200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      specialization:
+        $ref: '#/definitions/v1ThingSpecialization'
+        description: specialization selects the detail block and constrains the geometry type.
+      isActive:
+        type: boolean
+        description: is_active reports whether new things of this type may be created.
+    description: ThingType is a controlled classification of things (PARCEL, BUILDING, STREET, ...).
+    required:
+      - code
   v1TransitionCaseResponse:
     type: object
     properties:
@@ -3603,6 +4199,26 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
+  v1UpdateThingResponse:
+    type: object
+    properties:
+      thing:
+        $ref: '#/definitions/v1Thing'
+        description: thing is the updated thing.
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the THING_UPDATED audit event.
+    description: UpdateThingResponse returns the updated thing.
+  v1UpdateThingTypeResponse:
+    type: object
+    properties:
+      thingType:
+        $ref: '#/definitions/v1ThingType'
+        description: thing_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateThingTypeResponse returns the updated thing type and its log entry.
   v1User:
     type: object
     properties:

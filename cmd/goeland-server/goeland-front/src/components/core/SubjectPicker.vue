@@ -5,6 +5,7 @@
   import { searchActors } from '@/api/actorClient'
   import { searchCases } from '@/api/caseClient'
   import { searchDocuments } from '@/api/documentClient'
+  import { searchThings } from '@/api/thingClient'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { kindIcon } from '@/utils/subjects'
 
@@ -24,6 +25,8 @@
       ((await searchActors({ query, onlyActive: true, pageSize: PAGE_SIZE }, signal)).actors ?? []).map(a => a.subjectRef),
     SUBJECT_KIND_CASE: async (query, signal) =>
       ((await searchCases({ query, pageSize: PAGE_SIZE }, signal)).cases ?? []).map(c => c.subjectRef),
+    SUBJECT_KIND_THING: async (query, signal) =>
+      ((await searchThings({ query, pageSize: PAGE_SIZE }, signal)).things ?? []).map(th => th.subjectRef),
     SUBJECT_KIND_DOCUMENT: async (query, signal) =>
       ((await searchDocuments({ query, pageSize: PAGE_SIZE }, signal)).documents ?? []).map(d => d.subjectRef),
   }
@@ -98,7 +101,7 @@
     </template>
   </v-autocomplete>
 
-  <!-- Kinds without a search endpoint yet (THING, USER, ORG_UNIT): id entry. -->
+  <!-- Kinds without a search endpoint yet (USER, ORG_UNIT): id entry. -->
   <v-text-field
     v-else
     v-model="model"

@@ -26,7 +26,8 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0; next is the Thing slice (GLD-016).
+v0.7.0. The Thing slice (GLD-016) is implemented and awaits its release; next is the
+Timeline (GLD-012).
 
 ## Cross-cutting quality
 
@@ -132,7 +133,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 2 — Thing (v2 §25)
 
-- [ ] **GLD-016 — Thing slice**: `thing` + `thing_type` with `thing_parcel`
+- [~] **GLD-016 — Thing slice**: `thing` + `thing_type` with `thing_parcel`
   and `thing_building` specializations and PostGIS geometry (EPSG:2056, typed,
   GIST-indexed); `CASE_CONCERNS_THING`, `DOCUMENT_REPRESENTS_THING` and the
   land-rights actor roles (propriétaire, locataire, superficiaire, fermier,

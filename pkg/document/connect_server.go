@@ -65,14 +65,7 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		OperatorID:       core.OperatorID(user),
 		LinkToCaseID:     linkCase,
 	}
-	if gov := msg.InitialGovernance; gov != nil {
-		in.Governance.OwnerUserID = gov.OwnerUserId
-		in.Governance.OwnerOrgID = gov.OwnerOrgId
-		in.Governance.ConfidentialityLevel = gov.ConfidentialityLevel
-		in.Governance.RetentionUntil = gov.RetentionUntil
-		in.Governance.SortFinal = gov.SortFinal
-		in.Governance.Metadata = gov.Metadata
-	}
+	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
 	res, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

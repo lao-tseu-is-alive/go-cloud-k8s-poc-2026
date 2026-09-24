@@ -46,21 +46,21 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
-| §6.3 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ⬜ | ⬜ `ThingService` | ⬜ | PostGIS geometry (extension already enabled in `0001`) |
+| §6.3 / v2 §25 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ✅ `0016` | ✅ `ThingService.*` (8 RPCs) | ✅ | GLD-016: EPSG:2056 geometry (GIST, validity, Swiss extent, type per specialization) as GeoJSON with computed area; EGRID / EGID unique; bbox search; land-rights roles `THING_HAS_ACTOR_*`; SPA list / create / detail with SVG preview |
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
 | Reference data administration (case types, relationship types, organization categories, document types) | ✅ `0015` | ✅ `Create*/Update*` per catalogue + `CoreService.ListReferenceChanges` | ✅ | GLD-040: `goeland:admin` only; immutable codes, deactivation instead of deletion; every change in the append-only `reference_change` log; SPA administration page |
 | v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
-| §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010` (case types) | — | 🟡 | `OPC_DEMANDE_PC` (namespace OPC), `GENERIC_REQUEST` (GEN); users, org units, thing types pending |
+| §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; users are recorded from tokens; org units pending (GLD-041) |
 
 ---
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo still needs Thing + Timeline + Circulation, so it is
-partly pending — but **Actor and Case are now done** (persons/organizations creatable and
+The 16-step demo still needs Timeline + Circulation, so it is
+partly pending — but **Actor, Case and Thing are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
 lifecycle → edit blocked when locked → audit):
@@ -71,7 +71,9 @@ lifecycle → edit blocked when locked → audit):
 - ✅ (16) consult the audit — `GetDocument{includeAudit}` / `GetActor{includeAudit}` / `CoreService.ListAuditEvents`
 - ✅ (1) create an `OPC_DEMANDE_PC` case — `CreateCase` (reference `YYYY-NNNNNN` allocated in namespace `OPC`)
 - ✅ (4–5) create an actor and link it as requester/mandatee — `CreateActor` + `LinkSubjects(CASE_HAS_ACTOR_*)`
-- ⬜ (2–3, 6, 9 target, 10–15) thing, timeline add + validate + immutability, circulation + response — pending their services
+- ✅ (2–3) create a parcel and a building as THING — `CreateThing` (with LV95 geometry, EGRID / EGID)
+- ✅ (6) link the case to the parcel — `LinkSubjects(CASE_CONCERNS_THING)`; (9) `DOCUMENT_REPRESENTS_THING` now has THING targets
+- ⬜ (10–15) timeline add + validate + immutability, circulation + response — pending their services
 
 ---
 

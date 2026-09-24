@@ -6,6 +6,7 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"google.golang.org/protobuf/types/known/structpb"
 )
 
@@ -68,4 +69,19 @@ func ToConnectError(log *slog.Logger, domain string, err error) *connect.Error {
 	}
 	log.Error(domain+" request failed", "error", err)
 	return connect.NewError(connect.CodeInternal, errors.New("internal error"))
+}
+
+// ApplyInitialGovernance copies the governance fields a create request may set
+// (owner, confidentiality, retention, metadata) into dst; nil leaves dst as is.
+// The operator is never taken from the request.
+func ApplyInitialGovernance(dst *CreateSubjectInput, gov *goelandv1.RecordMetadata) {
+	if gov == nil {
+		return
+	}
+	dst.OwnerUserID = gov.OwnerUserId
+	dst.OwnerOrgID = gov.OwnerOrgId
+	dst.ConfidentialityLevel = gov.ConfidentialityLevel
+	dst.RetentionUntil = gov.RetentionUntil
+	dst.SortFinal = gov.SortFinal
+	dst.Metadata = gov.Metadata
 }

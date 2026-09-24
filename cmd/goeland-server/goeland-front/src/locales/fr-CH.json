@@ -11,7 +11,9 @@
     "createDocument": "Nouveau document",
     "actors": "Acteurs",
     "createActor": "Nouvel acteur",
-    "admin": "Administration"
+    "admin": "Administration",
+    "things": "Objets",
+    "createThing": "Nouvel objet"
   },
   "auth": {
     "notConnected": "Non connecté",
@@ -53,6 +55,18 @@
     },
     "admin": {
       "title": "Administration des référentiels"
+    },
+    "things": {
+      "list": {
+        "title": "Objets (parcelles, bâtiments…)",
+        "queryHint": "Nom, description, n° de parcelle, EGRID ou EGID"
+      },
+      "create": {
+        "title": "Nouvel objet"
+      },
+      "detail": {
+        "title": "Détail de l'objet"
+      }
     }
   },
   "sections": {
@@ -88,7 +102,13 @@
       "relationship_type": "Types de relation",
       "organization_category": "Catégories d'organisation",
       "document_type": "Types de document",
-      "log": "Journal des modifications"
+      "log": "Journal des modifications",
+      "thing_type": "Types d'objet"
+    },
+    "thing": {
+      "identity": "Identification",
+      "geometry": "Géométrie",
+      "relationships": "Affaires, documents, acteurs et objets liés"
     }
   },
   "fields": {
@@ -233,6 +253,29 @@
       "occurredAt": "Date",
       "catalogue": "Référentiel",
       "event": "Événement"
+    },
+    "thing": {
+      "thing_type": "Type d'objet",
+      "name": "Nom",
+      "name_hint": "Laissé vide, il est déduit (« Parcelle 1234 », « Bâtiment EGID … »).",
+      "description": "Description",
+      "external_ref": "Référence externe (SIG…)",
+      "geometry": "Géométrie (GeoJSON, MN95 / EPSG:2056)",
+      "geometry_hint": "Coordonnées suisses MN95 en mètres, p. ex. [2538000, 1152000] ; un polygone pour une parcelle, un point ou un polygone pour un bâtiment.",
+      "extent": "étendue {m} m",
+      "area": "Surface calculée",
+      "anchor": "Point MN95 (E / N)",
+      "identifiers": "Identifiants",
+      "created_at": "Créé le",
+      "commune_ofs": "N° OFS de la commune",
+      "commune_ofs_hint": "Lausanne : 5586",
+      "parcel_number": "N° de parcelle",
+      "egrid": "EGRID",
+      "surface_m2": "Surface RF (m²)",
+      "egid": "EGID",
+      "eca_number": "N° ECA",
+      "construction_year": "Année de construction",
+      "building_status": "Statut (RegBL)"
     }
   },
   "actions": {
@@ -282,6 +325,13 @@
     "reference": {
       "create": "Nouvelle entrée",
       "edit": "Modifier l'entrée"
+    },
+    "thing": {
+      "create": "Créer l'objet",
+      "edit": "Modifier l'objet",
+      "delete": "Supprimer l'objet",
+      "showOnMap": "Voir sur map.geo.admin.ch",
+      "sampleGeometry": "Insérer un exemple"
     }
   },
   "upload": {
@@ -402,6 +452,16 @@
       "ADDRESS_TYPE_BILLING": "Facturation",
       "ADDRESS_TYPE_RESIDENCE": "Domicile",
       "ADDRESS_TYPE_OTHER": "Autre"
+    },
+    "BuildingStatus": {
+      "BUILDING_STATUS_UNSPECIFIED": "Non précisé",
+      "BUILDING_STATUS_PLANNED": "Projeté",
+      "BUILDING_STATUS_AUTHORIZED": "Autorisé",
+      "BUILDING_STATUS_UNDER_CONSTRUCTION": "En construction",
+      "BUILDING_STATUS_EXISTING": "Existant",
+      "BUILDING_STATUS_UNUSABLE": "Non utilisable",
+      "BUILDING_STATUS_DEMOLISHED": "Démoli",
+      "BUILDING_STATUS_NOT_REALIZED": "Non réalisé"
     }
   },
   "validation": {
@@ -424,7 +484,14 @@
     },
     "postalCodeCH": "Un NPA suisse a quatre chiffres (1000 à 9999).",
     "countryCode": "Code pays à deux lettres (ISO), p. ex. CH, FR.",
-    "referenceCode": "Code : majuscules, chiffres et _, commençant par une lettre (2 à 100)."
+    "referenceCode": "Code : majuscules, chiffres et _, commençant par une lettre (2 à 100).",
+    "geometry": {
+      "json": "Ce n'est pas une géométrie GeoJSON valide.",
+      "type": "Type de géométrie non admis ici (admis : {allowed}).",
+      "extent": "Coordonnées hors de Suisse : utilisez des mètres MN95 (EPSG:2056), pas des degrés WGS84."
+    },
+    "egrid": "EGRID : CH suivi de 12 lettres ou chiffres.",
+    "communeOfs": "N° OFS entre 1 et 9999."
   },
   "errors": {
     "unauthenticated": "Authentification requise.",
@@ -489,8 +556,23 @@
       "adminOnly": "Cette page est réservée aux administrateurs (droit goeland:admin).",
       "codeHint": "Majuscules, chiffres et _ (p. ex. OPC_DEMANDE_PC) ; ne peut plus changer ensuite.",
       "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
-      "hint": {"case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).", "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.", "organization_category": "Classification des personnes morales.", "document_type": "Types de document proposés à la création."},
+      "hint": {
+        "case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).",
+        "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.",
+        "organization_category": "Classification des personnes morales.",
+        "document_type": "Types de document proposés à la création.",
+        "thing_type": "Types d'objet ; les nouveaux types sont génériques (les parcelles et bâtiments sont prédéfinis)."
+      },
       "event": {"REFERENCE_CREATED": "Création", "REFERENCE_UPDATED": "Modification"}
+    },
+    "thing": {
+      "createSuccess": "Objet créé.",
+      "updateSuccess": "Objet mis à jour.",
+      "deleted": "Objet supprimé (logiquement).",
+      "deleteConfirm": "L'objet sera supprimé logiquement ; il reste dans l'historique.",
+      "deletedReadOnly": "Cet objet est supprimé (lecture seule).",
+      "noGeometry": "Aucune géométrie.",
+      "relationshipsHint": "Affaires qui concernent cet objet, documents qui le représentent, acteurs (propriétaire, locataire, superficiaire…) et objets contenus."
     }
   }
 }

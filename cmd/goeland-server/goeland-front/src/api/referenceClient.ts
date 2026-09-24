@@ -12,6 +12,7 @@ export const CATALOGUE_PATHS: Record<ReferenceCatalogue, string> = {
   relationship_type: '/api/relationship-types',
   organization_category: '/api/organization-categories',
   document_type: '/api/document-types',
+  thing_type: '/api/thing-types',
 }
 
 /** Response field holding the entry, per catalogue. */
@@ -20,6 +21,7 @@ const ENTRY_KEYS: Record<ReferenceCatalogue, string> = {
   relationship_type: 'relationshipType',
   organization_category: 'organizationCategory',
   document_type: 'documentType',
+  thing_type: 'thingType',
 }
 
 type EntryResponse = Record<string, unknown> & { change?: ReferenceChange }

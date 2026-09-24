@@ -5,6 +5,14 @@
     <link rel="icon" href="/favicon.ico">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Goéland — POC</title>
+    <!--
+      Vuetify 4 cascade layer order, declared before any stylesheet: Vite loads the
+      component CSS of lazy routes in chunks whose <link> can precede the main
+      stylesheet, and the first declaration of a layer fixes its rank. Without this,
+      the reset layer (button { font: inherit }) beat component sizes such as
+      v-btn size="small".
+    -->
+    <style>@layer vuetify-core, vuetify-components, vuetify-overrides, vuetify-utilities, vuetify-final;</style>
   </head>
   <body>
     <div id="app"></div>

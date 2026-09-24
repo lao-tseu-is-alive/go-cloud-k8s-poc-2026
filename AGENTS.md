@@ -79,6 +79,12 @@ whenever a task starts, completes, changes scope or order.
   closed case is frozen → `core.ErrInvalidState` = FAILED_PRECONDITION), independent of
   any workflow. The reference is allocated in the type namespace by default
   (`2026-000123` in namespace `OPC`). Participants, documents and related cases are typed relationships.
+- **thing** (`pkg/thing`) — business objects (parcel, building, street, tree...) →
+  `ThingService`. Geometry is `geometry(Geometry, 2056)` (LV95) with a GIST index, exchanged
+  as GeoJSON; it must be valid, inside Switzerland (rejects WGS84 degrees) and of a type
+  fitting the thing type (polygonal parcel; point or polygonal building). Parcels carry commune
+  OFS number + parcel number (unique) and EGRID, buildings EGID (unique), ECA number and RegBL
+  status in 1:1 tables; land-rights roles are `THING_HAS_ACTOR_*` relationships.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete) and the Case module
@@ -88,8 +94,7 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-Case timeline + circulation, Thing (parcelle/bâtiment with
-PostGIS geometry), a real permission/confidentiality engine, storage (MinIO),
+Case timeline + circulation, a real permission/confidentiality engine, storage (MinIO),
 search (Meilisearch), workflow. The Actor domain continues too (addresses, and the
 full production role vocabulary mapped onto `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
@@ -97,7 +102,7 @@ Design new domains as first-class subjects that reuse the core primitives.
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto  (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -105,7 +110,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0015 (dbmate format)
+  │   └── db/migrations/     0001..0016 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -114,6 +119,8 @@ pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §2
 pkg/actor/                   actor domain: persons & organizations (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/casefile/                case (affaire) domain: types, status lifecycle (reuses core primitives)
+  └── module/                bundleable module (NO migrations; core owns schema)
+pkg/thing/                   thing (objet) domain: parcels, buildings, LV95 PostGIS geometry
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
 cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
@@ -254,7 +261,8 @@ bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship
 `/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
-`/api/cases/search`, `/api/case-types`).
+`/api/cases/search`, `/api/case-types`; ThingService: `/api/things`, `/api/things/{id}`,
+`/api/things/search` (text, type, `bbox=e_min,n_min,e_max,n_max` in LV95), `/api/thing-types`).
 
 ## Frontend (embedded SPA)
 

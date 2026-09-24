@@ -9,11 +9,12 @@ const KIND_ICONS: Partial<Record<SubjectKind, string>> = {
   SUBJECT_KIND_THING: 'mdi-map-marker-outline',
 }
 
-// SPA pages per subject kind; kinds without a page (THING, USER, ORG_UNIT) yet have none.
+// SPA pages per subject kind; kinds without a page (USER, ORG_UNIT) have none yet.
 const KIND_ROUTES: Partial<Record<SubjectKind, string>> = {
   SUBJECT_KIND_CASE: '/cases',
   SUBJECT_KIND_DOCUMENT: '/documents',
   SUBJECT_KIND_ACTOR: '/actors',
+  SUBJECT_KIND_THING: '/things',
 }
 
 export function kindIcon (kind?: SubjectKind): string {

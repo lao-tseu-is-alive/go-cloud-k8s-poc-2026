@@ -8,6 +8,21 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/cases' },
     {
+      path: '/things',
+      name: 'things',
+      component: () => import('@/pages/things/ThingListPage.vue'),
+    },
+    {
+      path: '/things/new',
+      name: 'thing-create',
+      component: () => import('@/pages/things/ThingCreatePage.vue'),
+    },
+    {
+      path: '/things/:id',
+      name: 'thing-detail',
+      component: () => import('@/pages/things/ThingDetailPage.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/pages/admin/AdminPage.vue'),
