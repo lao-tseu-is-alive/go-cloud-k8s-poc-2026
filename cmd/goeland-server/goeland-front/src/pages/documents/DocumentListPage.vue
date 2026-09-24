@@ -73,12 +73,12 @@
       <v-table hover>
         <thead>
           <tr>
-            <th>{{ t('fields.document.title') }}</th>
-            <th>{{ t('fields.document.document_type') }}</th>
-            <th>{{ t('fields.document.status') }}</th>
-            <th>{{ t('fields.document.official_date') }}</th>
-            <th>{{ t('fields.document.is_final') }}</th>
-            <th>{{ t('fields.common.created_at') }}</th>
+            <th scope="col">{{ t('fields.document.title') }}</th>
+            <th scope="col">{{ t('fields.document.document_type') }}</th>
+            <th scope="col">{{ t('fields.document.status') }}</th>
+            <th scope="col">{{ t('fields.document.official_date') }}</th>
+            <th scope="col">{{ t('fields.document.is_final') }}</th>
+            <th scope="col">{{ t('fields.common.created_at') }}</th>
           </tr>
         </thead>
 

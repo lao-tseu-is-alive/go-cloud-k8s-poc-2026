@@ -231,7 +231,9 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 		}
 		return err
 	case <-ctx.Done():
-		shutdownCtx, cancel := context.WithTimeout(context.Background(), shutdownPeriod)
+		// ctx is already cancelled here: keep its values but not its cancellation,
+		// otherwise the graceful shutdown would expire immediately.
+		shutdownCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), shutdownPeriod)
 		defer cancel()
 		if err := server.Shutdown(shutdownCtx); err != nil {
 			_ = server.Close()

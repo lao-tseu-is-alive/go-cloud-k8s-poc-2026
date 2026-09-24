@@ -77,11 +77,11 @@
       <v-table hover>
         <thead>
           <tr>
-            <th>{{ t('fields.actor.display_name') }}</th>
-            <th>{{ t('fields.actor.actor_kind') }}</th>
-            <th>{{ t('fields.actor.category') }}</th>
-            <th>{{ t('fields.actor.is_active') }}</th>
-            <th>{{ t('fields.common.created_at') }}</th>
+            <th scope="col">{{ t('fields.actor.display_name') }}</th>
+            <th scope="col">{{ t('fields.actor.actor_kind') }}</th>
+            <th scope="col">{{ t('fields.actor.category') }}</th>
+            <th scope="col">{{ t('fields.actor.is_active') }}</th>
+            <th scope="col">{{ t('fields.common.created_at') }}</th>
           </tr>
         </thead>
 

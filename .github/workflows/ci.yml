@@ -38,8 +38,14 @@ jobs:
         with:
           bun-version: '1'
 
-      - name: Install Buf
-        run: go install github.com/bufbuild/buf/cmd/buf@v1.70.0
+      - name: Setup Buf
+        # v1.6.0 - pinned to commit SHA; the downloaded buf binary is verified
+        # against its published sha256 (lock-file equivalent, Sonar S8545).
+        uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7
+        with:
+          version: 1.70.0
+          checksum: e2bbcdd324da09c16a15963dc2dae0525c955c05dc118223cf732f4f7509c5e6
+          setup_only: true
 
       # release-check = check (frontend, format, lint, race tests, docs-check)
       # + version/changelog/scripts consistency + binary build.

@@ -65,10 +65,10 @@
     <v-table v-if="versions.length > 0" density="compact">
       <thead>
         <tr>
-          <th>{{ t('versions.number') }}</th>
-          <th>{{ t('versions.content') }}</th>
-          <th />
-          <th>{{ t('fields.common.created_at') }}</th>
+          <th scope="col">{{ t('versions.number') }}</th>
+          <th scope="col">{{ t('versions.content') }}</th>
+          <th scope="col" />
+          <th scope="col">{{ t('fields.common.created_at') }}</th>
         </tr>
       </thead>
 

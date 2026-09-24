@@ -38,6 +38,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `previous_version_id`, `is_final`, `is_record`, `page_count` (now on `current_version` /
   its `content`); `CreateDocumentRequest` loses the file fields and `previous_version_id` in
   favour of `content_blob_id`. Removed field numbers and names are reserved.
+- SonarQube findings: table headers carry `scope="col"` (21 × Web:TableHeaderHasIdOrScopeCheck);
+  CI/release/docker-publish install buf through `bufbuild/buf-action` pinned by SHA with the
+  binary's sha256 verified instead of `go install` (githubactions:S8545); the graceful shutdown
+  derives its timeout from `context.WithoutCancel(ctx)` (godre:S8239).
 - `POST /api/documents/upload` now requires `goeland:write` and `GET /api/documents/download`
   `goeland:read` (previously any valid token).
 - Helper scripts (`buf_generate.sh`, `create_k8s_configmap_from_env.sh`, `execWithEnv.sh`,

@@ -21,12 +21,12 @@
     <v-table v-else density="comfortable">
       <thead>
         <tr>
-          <th>{{ t('fields.relationship.source') }}</th>
-          <th>{{ t('fields.relationship.type') }}</th>
-          <th>{{ t('fields.relationship.target') }}</th>
-          <th>{{ t('fields.relationship.role_detail') }}</th>
-          <th>{{ t('fields.relationship.created_at') }}</th>
-          <th v-if="canUnlink" />
+          <th scope="col">{{ t('fields.relationship.source') }}</th>
+          <th scope="col">{{ t('fields.relationship.type') }}</th>
+          <th scope="col">{{ t('fields.relationship.target') }}</th>
+          <th scope="col">{{ t('fields.relationship.role_detail') }}</th>
+          <th scope="col">{{ t('fields.relationship.created_at') }}</th>
+          <th scope="col" v-if="canUnlink" />
         </tr>
       </thead>
 
