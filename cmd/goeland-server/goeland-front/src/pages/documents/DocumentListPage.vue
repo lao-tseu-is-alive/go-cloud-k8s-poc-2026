@@ -87,8 +87,12 @@
             v-for="doc in documents"
             :key="doc.subjectRef?.id"
             :class="{ 'text-disabled': doc.recordMetadata?.deletedAt }"
+            role="link"
             style="cursor: pointer"
+            tabindex="0"
             @click="openDocument(doc)"
+            @keydown.enter="openDocument(doc)"
+            @keydown.space.prevent="openDocument(doc)"
           >
             <td>
               {{ doc.title }}

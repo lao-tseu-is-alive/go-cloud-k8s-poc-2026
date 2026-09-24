@@ -44,26 +44,33 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	var blob *ContentBlob
+	var existing *Document
 	if in.ContentBlobID != nil {
 		if blob, err = getBlob(ctx, tx, *in.ContentBlobID); err != nil {
 			return CreateResult{}, fmt.Errorf("content blob: %w", err)
 		}
-		existing, err := findReusableDocument(ctx, tx, blob.ID)
-		if err != nil {
+		if existing, err = findReusableDocument(ctx, tx, blob.ID); err != nil {
 			return CreateResult{}, err
 		}
-		if existing != nil {
-			res, err := r.reuse(ctx, tx, existing, blob, in)
-			if err != nil {
-				return CreateResult{}, err
-			}
-			if err := tx.Commit(ctx); err != nil {
-				return CreateResult{}, fmt.Errorf("commit reuse document: %w", err)
-			}
-			return res, r.hydrate(ctx, res.Document)
-		}
 	}
+	var res CreateResult
+	if existing != nil {
+		res, err = r.reuse(ctx, tx, existing, blob, in)
+	} else {
+		res, err = createNew(ctx, tx, in, blob)
+	}
+	if err != nil {
+		return CreateResult{}, err
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return CreateResult{}, fmt.Errorf("commit create document: %w", err)
+	}
+	return res, r.hydrate(ctx, res.Document)
+}
 
+// createNew inserts a new document with version 1 (backed by blob when set),
+// its DOCUMENT_CREATED audit event and the optional case link.
+func createNew(ctx context.Context, tx pgx.Tx, in CreateInput, blob *ContentBlob) (CreateResult, error) {
 	ref, err := core.InsertSubjectRefTx(ctx, tx, core.SubjectKindDocument, in.Title, in.ExternalURL)
 	if err != nil {
 		return CreateResult{}, fmt.Errorf("insert subject_ref: %w", err)
@@ -78,25 +85,8 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 	if !docType.IsActive {
 		return CreateResult{}, fmt.Errorf("%w: document type %q is inactive", core.ErrInvalidInput, in.DocumentTypeCode)
 	}
-	rows, err := tx.Query(ctx, insertDocumentSQL, pgx.NamedArgs{
-		"id":               ref.ID,
-		"document_type_id": docType.ID,
-		"title":            in.Title,
-		"description":      in.Description,
-		"official_date":    in.OfficialDate,
-		"external_system":  in.ExternalSystem,
-		"external_id":      in.ExternalID,
-		"external_url":     in.ExternalURL,
-		"language":         in.Language,
-		"status":           int16(StatusDraft),
-		"metadata":         jsonMap(in.Metadata),
-		"created_by":       in.OperatorID,
-	})
-	if err != nil {
-		return CreateResult{}, mapDBError(err)
-	}
-	if _, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Document]); err != nil {
-		return CreateResult{}, fmt.Errorf("insert document: %w", err)
+	if err := insertDocument(ctx, tx, ref.ID, docType.ID, in); err != nil {
+		return CreateResult{}, err
 	}
 	doc, version, err := addVersion(ctx, tx, ref.ID, VersionInput{
 		ContentBlobID: in.ContentBlobID,
@@ -108,7 +98,6 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 	if err != nil {
 		return CreateResult{}, err
 	}
-
 	after := map[string]any{"title": doc.Title, "document_type": docType.Code, "version_no": version.VersionNo}
 	if blob != nil {
 		after["content_blob_id"] = blob.ID.String()
@@ -127,11 +116,32 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 	if err != nil {
 		return CreateResult{}, err
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return CreateResult{}, fmt.Errorf("commit create document: %w", err)
+	return CreateResult{Document: doc, Event: ev, Relationship: rel}, nil
+}
+
+// insertDocument inserts the document row (DRAFT, without version yet).
+func insertDocument(ctx context.Context, tx pgx.Tx, id, documentTypeID uuid.UUID, in CreateInput) error {
+	rows, err := tx.Query(ctx, insertDocumentSQL, pgx.NamedArgs{
+		"id":               id,
+		"document_type_id": documentTypeID,
+		"title":            in.Title,
+		"description":      in.Description,
+		"official_date":    in.OfficialDate,
+		"external_system":  in.ExternalSystem,
+		"external_id":      in.ExternalID,
+		"external_url":     in.ExternalURL,
+		"language":         in.Language,
+		"status":           int16(StatusDraft),
+		"metadata":         jsonMap(in.Metadata),
+		"created_by":       in.OperatorID,
+	})
+	if err != nil {
+		return mapDBError(err)
 	}
-	res := CreateResult{Document: doc, Event: ev, Relationship: rel}
-	return res, r.hydrate(ctx, doc)
+	if _, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Document]); err != nil {
+		return fmt.Errorf("insert document: %w", err)
+	}
+	return nil
 }
 
 // reuse records the reuse of an existing document for identical content: no new

@@ -54,7 +54,8 @@ if [[ ! "$DB_NAME" =~ ^[a-z][a-z0-9_]*$ ]]; then
 fi
 
 run_as_postgres() {
-    su -c "$1" postgres
+    local command="$1"
+    su -c "$command" postgres
 }
 
 postgres_value_exists() {

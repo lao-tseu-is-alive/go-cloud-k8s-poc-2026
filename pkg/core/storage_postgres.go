@@ -351,8 +351,7 @@ func mapNotFound(err error) error {
 
 // mapConflict translates a unique-violation into ErrConflict and a foreign-key violation into ErrNotFound.
 func mapConflict(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgErr.Code {
 		case "23505": // unique_violation
 			return fmt.Errorf("%w: an active relationship already exists", ErrConflict)

@@ -87,8 +87,7 @@ func uploadHandler(docs *document.Service, log *slog.Logger) http.HandlerFunc {
 				return
 			}
 			// http.MaxBytesReader surfaces oversize bodies here.
-			var maxErr *http.MaxBytesError
-			if errors.As(err, &maxErr) {
+			if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 				writeJSON(w, http.StatusRequestEntityTooLarge, map[string]string{"error": "uploaded file is too large"})
 				return
 			}

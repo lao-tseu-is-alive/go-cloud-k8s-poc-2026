@@ -132,14 +132,49 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 		return nil, nil, err
 	}
 
-	var categoryID *uuid.UUID
-	if in.CategoryCode != nil {
-		categoryID, err = resolveCategoryID(ctx, tx, *in.CategoryCode)
-		if err != nil {
+	act, err := updateActorRow(ctx, tx, id, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	// Keep the canonical subject label in sync with the display name.
+	if in.DisplayName != nil {
+		if err := core.UpdateSubjectLabelTx(ctx, tx, id, act.DisplayName); err != nil {
+			return nil, nil, fmt.Errorf("sync subject label: %w", err)
+		}
+	}
+	if in.ReplaceContacts {
+		if err := replaceContacts(ctx, tx, id, in.Contacts); err != nil {
 			return nil, nil, err
 		}
 	}
+	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
+		SubjectID:   id,
+		EventType:   "ACTOR_UPDATED",
+		ActorUserID: in.OperatorID,
+		Reason:      in.Reason,
+		AfterState:  map[string]any{"display_name": act.DisplayName},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit update actor: %w", err)
+	}
+	if err := r.hydrate(ctx, act); err != nil {
+		return nil, nil, err
+	}
+	return act, ev, nil
+}
 
+// updateActorRow applies the non-nil fields of in to the actor row.
+func updateActorRow(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateInput) (*Actor, error) {
+	var categoryID *uuid.UUID
+	if in.CategoryCode != nil {
+		var err error
+		if categoryID, err = resolveCategoryID(ctx, tx, *in.CategoryCode); err != nil {
+			return nil, err
+		}
+	}
 	displayName := deref(in.DisplayName)
 	rows, err := tx.Query(ctx, updateActorSQL, pgx.NamedArgs{
 		"id":                       id,
@@ -162,43 +197,22 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 		"ch_register_ref":          deref(in.CHRegisterRef),
 	})
 	if err != nil {
-		return nil, nil, fmt.Errorf("update actor: %w", err)
+		return nil, fmt.Errorf("update actor: %w", err)
 	}
 	act, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Actor])
 	if err != nil {
-		return nil, nil, mapDBError(err)
+		return nil, mapDBError(err)
 	}
-	// Keep the canonical subject label in sync with the display name.
-	if in.DisplayName != nil {
-		if err := core.UpdateSubjectLabelTx(ctx, tx, id, act.DisplayName); err != nil {
-			return nil, nil, fmt.Errorf("sync subject label: %w", err)
-		}
+	return act, nil
+}
+
+// replaceContacts swaps the whole contact list of an actor (see GLD-007 about
+// keeping the replaced contacts).
+func replaceContacts(ctx context.Context, tx pgx.Tx, id uuid.UUID, contacts []ContactInput) error {
+	if _, err := tx.Exec(ctx, deleteContactsSQL, pgx.NamedArgs{"actor_id": id}); err != nil {
+		return fmt.Errorf("clear contacts: %w", err)
 	}
-	if in.ReplaceContacts {
-		if _, err := tx.Exec(ctx, deleteContactsSQL, pgx.NamedArgs{"actor_id": id}); err != nil {
-			return nil, nil, fmt.Errorf("clear contacts: %w", err)
-		}
-		if err := insertContacts(ctx, tx, id, in.Contacts); err != nil {
-			return nil, nil, err
-		}
-	}
-	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
-		SubjectID:   id,
-		EventType:   "ACTOR_UPDATED",
-		ActorUserID: in.OperatorID,
-		Reason:      in.Reason,
-		AfterState:  map[string]any{"display_name": act.DisplayName},
-	})
-	if err != nil {
-		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, nil, fmt.Errorf("commit update actor: %w", err)
-	}
-	if err := r.hydrate(ctx, act); err != nil {
-		return nil, nil, err
-	}
-	return act, ev, nil
+	return insertContacts(ctx, tx, id, contacts)
 }
 
 // actorListRow adds the window total to the actor columns for search scanning.

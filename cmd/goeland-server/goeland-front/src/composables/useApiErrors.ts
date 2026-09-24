@@ -20,24 +20,29 @@ export function useApiErrors () {
   const { t, te } = useI18n()
   const ui = useUiStore()
 
+  /** Translated message of the first validation violation, if any. */
+  function violationMessage (err: ApiError): string | undefined {
+    const first = err.violations[0]
+    if (!first) {
+      return undefined
+    }
+    const key = first.constraint ? CONSTRAINT_KEYS[first.constraint] : undefined
+    if (key && te(key)) {
+      return t(key, { min: '', max: '' })
+    }
+    return first.message || undefined
+  }
+
+  /** Translated message mapped from the Connect code (errors.<code>), if any. */
+  function codeMessage (err: ApiError): string | undefined {
+    const codeKey = err.code ? `errors.${err.code}` : ''
+    return codeKey && te(codeKey) ? t(codeKey) : undefined
+  }
+
   function toMessage (err: unknown): string {
     if (err instanceof ApiError) {
-      if (err.violations.length > 0) {
-        const first = err.violations[0]
-        const key = first.constraint ? CONSTRAINT_KEYS[first.constraint] : undefined
-        if (key && te(key)) {
-          return t(key, { min: '', max: '' })
-        }
-        if (first.message) {
-          return first.message
-        }
-      }
-      // Business errors: prefer a mapped message by Connect code when we have one.
-      const codeKey = err.code ? `errors.${err.code}` : ''
-      if (codeKey && te(codeKey)) {
-        return t(codeKey)
-      }
-      return err.message || t('messages.common.error')
+      // Validation first, then business errors by Connect code, then the raw message.
+      return violationMessage(err) ?? codeMessage(err) ?? (err.message || t('messages.common.error'))
     }
     if (err instanceof Error) {
       return err.message

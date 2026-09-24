@@ -69,9 +69,7 @@ func TestContentDeduplication(t *testing.T) {
 		ids = map[uuid.UUID]bool{}
 	)
 	for range 8 {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			res, err := env.docSvc.IngestContent(env.ctx, strings.NewReader(concurrent), "same.pdf", "application/pdf", testOperator)
 			mu.Lock()
 			defer mu.Unlock()
@@ -80,7 +78,7 @@ func TestContentDeduplication(t *testing.T) {
 				return
 			}
 			ids[res.Blob.ID] = true
-		}()
+		})
 	}
 	wg.Wait()
 	if len(ids) != 1 {

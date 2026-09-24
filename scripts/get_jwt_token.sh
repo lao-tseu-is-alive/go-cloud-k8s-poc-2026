@@ -28,6 +28,26 @@ ADMIN_PASSWORD="${ADMIN_PASSWORD:-}"
 AUTH_PORT="${PORT:-9090}"
 AUTH_HOST="${AUTH_HOST:-localhost}"
 
+# The login carries credentials: plain HTTP is only acceptable on the loopback
+# interface (local dev auth server); any other host must use HTTPS unless the
+# operator explicitly opts out with AUTH_ALLOW_INSECURE=1.
+case "$AUTH_HOST" in
+  localhost|127.0.0.1|::1) AUTH_SCHEME="${AUTH_SCHEME:-http}" ;;
+  *) AUTH_SCHEME="${AUTH_SCHEME:-https}" ;;
+esac
+if [[ "$AUTH_SCHEME" != "https" ]]; then
+  case "$AUTH_HOST" in
+    localhost|127.0.0.1|::1) ;;
+    *)
+      if [[ "${AUTH_ALLOW_INSECURE:-0}" != "1" ]]; then
+        echo "Error: refusing to send credentials over clear text to '$AUTH_HOST' (set AUTH_SCHEME=https)." >&2
+        exit 1
+      fi
+      ;;
+  esac
+fi
+AUTH_URL="${AUTH_SCHEME}://${AUTH_HOST}:${AUTH_PORT}/login"
+
 if [[ -z "$ADMIN_USER" ]] || [[ -z "$ADMIN_PASSWORD" ]]; then
   echo "Error: ADMIN_USER and ADMIN_PASSWORD must be defined in '$ENV_FILE'." >&2
   exit 1
@@ -41,7 +61,7 @@ PASSWORD_HASH=$(printf '%s' "$ADMIN_PASSWORD" | sha256sum | awk '{print $1}')
 RESPONSE=$(curl -s -X POST \
   -H "Content-Type: application/json" \
   -d "{\"username\": \"$ADMIN_USER\", \"password_hash\": \"$PASSWORD_HASH\"}" \
-  "http://$AUTH_HOST:$AUTH_PORT/login")
+  "$AUTH_URL")
 
 TOKEN=$(echo "$RESPONSE" | jq -r '.token // empty')
 if [[ -z "$TOKEN" ]] || [[ "$TOKEN" == "null" ]]; then

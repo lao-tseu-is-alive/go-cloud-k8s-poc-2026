@@ -126,7 +126,7 @@ docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.m
 
 ## Prerequisites
 
-- Go 1.26+
+- Go 1.27+
 - PostgreSQL 14+ with **PostGIS**, **pgcrypto**, **pg_trgm** and **unaccent** available
   (e.g. the `postgis/postgis` image, or `apt install postgresql-16-postgis-3`)
 - [`buf`](https://buf.build) (regenerate code), [`dbmate`](https://github.com/amacneil/dbmate) (optional, for CLI migrations)

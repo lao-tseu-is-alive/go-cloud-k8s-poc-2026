@@ -364,6 +364,29 @@ Rules:
   audit are created in one tx.
 - Dependency flow is one-way: `cmd` → `pkg`. Never import `cmd` from `pkg`.
 
+## Code quality rules (SonarQube parity)
+
+SonarCloud analyses `main` (settings in `.sonarcloud.properties`). Its recurring findings are
+enforced locally so they fail `make check` instead of reappearing on the dashboard:
+
+- **Cognitive complexity <= 15** for production Go functions (`make cognitive-check`,
+  `gocognit` pinned as a `go.mod` tool) and for SPA functions (`sonarjs/cognitive-complexity`).
+  Split long functions into named helpers rather than raising the threshold.
+- **Accessible SPA markup:** every `<th>` has `scope="col"` (or `scope="row"`); a clickable
+  element or table row also has `tabindex="0"` and `@keydown.enter` (ESLint
+  `vuejs-accessibility/*` + a clickable-`<tr>` rule). No deprecated CSS keywords
+  (e.g. use `overflow-wrap: anywhere`, not `word-break: break-word`).
+- **No implicit object stringification:** never `String(v)` on `unknown`; narrow the type first.
+- **Shell scripts:** errors go to stderr (`>&2`), positional parameters are copied into named
+  `local` variables in functions, repeated literals become a function or variable, and
+  credentials are never sent over plain HTTP except to the loopback interface.
+- **CI actions** are pinned by commit SHA; downloaded tools are verified by checksum (e.g.
+  `bufbuild/buf-action` with `checksum`), never `go install tool@version` in a workflow.
+- **Contexts:** never replace an available `ctx` by `context.Background()`; to outlive a
+  cancelled context keep its values with `context.WithoutCancel(ctx)`.
+- A genuine false positive is fixed at the source (`.sonarcloud.properties`) or, for one line,
+  annotated `// NOSONAR <rule>` with a one-line justification — never silenced without a reason.
+
 ## Testing & change discipline
 
 - Keep changes scoped; follow existing package boundaries and patterns.

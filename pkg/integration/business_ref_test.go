@@ -160,9 +160,7 @@ func TestBusinessRefConcurrentAllocation(t *testing.T) {
 		errs []error
 	)
 	for i := range workers {
-		wg.Add(1)
-		go func() {
-			defer wg.Done()
+		wg.Go(func() {
 			ref, _, err := createCase(t, env, fmt.Sprintf("Parallel %d", i), core.BusinessRefRequest{Namespace: ns, Allocate: true})
 			mu.Lock()
 			defer mu.Unlock()
@@ -171,7 +169,7 @@ func TestBusinessRefConcurrentAllocation(t *testing.T) {
 				return
 			}
 			refs = append(refs, ref.BusinessRef)
-		}()
+		})
 	}
 	wg.Wait()
 	if len(errs) != 0 {

@@ -31,7 +31,7 @@ echo "## APP: ${APP_NAME}, version: ${APP_VERSION}, image: ${IMAGE}:${APP_VERSIO
 
 # Refuse to silently overwrite an already-built image:tag.
 if $DOCKER_BIN images --format '{{.Repository}}:{{.Tag}}' | grep -qx "${IMAGE}:${APP_VERSION}"; then
-  echo "## 💥 ERROR: ${IMAGE}:${APP_VERSION} already exists."
+  echo "## 💥 ERROR: ${IMAGE}:${APP_VERSION} already exists." >&2
   echo "##    Bump Version in pkg/version/version.go, or remove it: ${DOCKER_BIN} rmi ${IMAGE}:${APP_VERSION}" >&2
   exit 1
 fi

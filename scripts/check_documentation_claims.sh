@@ -52,7 +52,7 @@ require_literal AGENTS.md "under a PG advisory lock keyed to \`'go-cloud-k8s-poc
 require_literal AGENTS.md '`docs/DOCUMENTATION.md` is the normative documentation contract' 'agent documentation contract'
 require_literal README.md '[documentation quality contract](docs/DOCUMENTATION.md)' 'contributor documentation contract'
 require_literal Makefile 'docs-check: godoc-check atlas-check docs-assert' 'documentation gate composition'
-require_literal Makefile 'check: front-check fmt-check lint test docs-check' 'quality gate includes documentation'
+require_literal Makefile 'check: front-check fmt-check lint cognitive-check test docs-check' 'quality gate includes documentation'
 require_literal Makefile 'release-check: check version-check changelog-check scripts-check roadmap-check release-traceability-check binary' 'release gate includes normal checks'
 require_literal Makefile './scripts/02_tag_new_release_github.sh' 'make release uses the guarded script'
 require_literal scripts/02_tag_new_release_github.sh 'git push --atomic origin main' 'release pushes main and tag atomically'

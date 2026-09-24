@@ -53,7 +53,7 @@
 .audit-json {
   font-size: 0.75rem;
   white-space: pre-wrap;
-  word-break: break-word;
+  overflow-wrap: anywhere;
   overflow-x: auto;
 }
 </style>

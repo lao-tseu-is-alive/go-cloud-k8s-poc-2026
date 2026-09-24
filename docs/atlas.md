@@ -13,6 +13,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
 - `.env_sample` — Secret-free example of the supported `GOELAND_*`, `DB_*` and JWT environment variables.
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
+- `.sonarcloud.properties` — SonarCloud automatic-analysis settings: tests declared as tests; generated code and PostgreSQL migrations excluded.
 - `.trivyignore` — Documented Trivy suppressions for advisories proven not to apply to the binary.
 - `AGENTS.md` — Durable instructions for coding agents: conventions, layers to keep in sync, gotchas.
 - `CHANGELOG.md` — Versioned history of delivered changes (Keep a Changelog); authoritative for what a release shipped.

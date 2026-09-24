@@ -59,42 +59,47 @@ function buildUrl (path: string, query?: Record<string, unknown>): string {
   return qs ? `${path}?${qs}` : path
 }
 
+/** Maps one buf.validate violation of a Connect error detail. */
+function toViolation (raw: unknown): ApiViolation {
+  const v = raw as Record<string, unknown>
+  return {
+    field: typeof v.fieldPath === 'string' ? v.fieldPath : (v.field as string | undefined),
+    constraint: v.constraintId as string | undefined,
+    message: v.message as string | undefined,
+  }
+}
+
+/** Collects the buf.validate violations of Connect / google.rpc.Status details. */
+function collectViolations (details: unknown): ApiViolation[] {
+  if (!Array.isArray(details)) {
+    return []
+  }
+  return details.flatMap(d => {
+    const nested = (d as Record<string, unknown>).violations
+    return Array.isArray(nested) ? nested.map(v => toViolation(v)) : []
+  })
+}
+
+/** Picks the first string among the candidate error message fields. */
+function firstString (...candidates: unknown[]): string | undefined {
+  return candidates.find((c): c is string => typeof c === 'string')
+}
+
 async function toApiError (res: Response): Promise<ApiError> {
-  let message = res.statusText || `HTTP ${res.status}`
-  let code: string | undefined
-  const violations: ApiViolation[] = []
+  const fallback = res.statusText || `HTTP ${res.status}`
+  let data: Record<string, unknown>
   try {
-    const data = await res.json() as Record<string, unknown>
-    if (typeof data.message === 'string') {
-      message = data.message
-    } else if (typeof data.error === 'string') {
-      message = data.error
-    }
-    if (typeof data.code === 'string') {
-      code = data.code
-    }
-    // Connect / google.rpc.Status detail bags may carry buf.validate violations.
-    const details = data.details as unknown
-    if (Array.isArray(details)) {
-      for (const d of details) {
-        const rec = d as Record<string, unknown>
-        const nested = rec.violations
-        if (Array.isArray(nested)) {
-          for (const v of nested) {
-            const vr = v as Record<string, unknown>
-            violations.push({
-              field: typeof vr.fieldPath === 'string' ? vr.fieldPath : (vr.field as string | undefined),
-              constraint: vr.constraintId as string | undefined,
-              message: vr.message as string | undefined,
-            })
-          }
-        }
-      }
-    }
+    data = await res.json() as Record<string, unknown>
   } catch {
     // non-JSON body; keep the status-derived message
+    return new ApiError(fallback, res.status, undefined, [])
   }
-  return new ApiError(message, res.status, code, violations)
+  return new ApiError(
+    firstString(data.message, data.error) ?? fallback,
+    res.status,
+    firstString(data.code),
+    collectViolations(data.details),
+  )
 }
 
 export async function apiFetch<T> (path: string, opts: RequestOptions = {}): Promise<T> {

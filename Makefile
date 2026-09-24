@@ -94,6 +94,11 @@ fmt-check:
 		test -z "$$unformatted" || { echo "fmt-check: run gofmt -w on:"; echo "$$unformatted"; exit 1; }
 	buf format -d --exit-code
 
+.PHONY: cognitive-check
+## cognitive-check:	production Go functions stay at cognitive complexity <= 15 (Sonar go:S3776)
+cognitive-check:
+	go tool gocognit -over 15 $$(git ls-files --cached --others --exclude-standard '*.go' | grep -v '_test\.go$$' | grep -v '^gen/')
+
 .PHONY: front-check
 ## front-check:	frozen bun install + vue-tsc type-check + eslint + vite build (dist/)
 front-check:
@@ -125,7 +130,7 @@ docs-check: godoc-check atlas-check docs-assert
 
 .PHONY: check
 ## check:	full local quality gate (frontend, format, lint, tests, documentation)
-check: front-check fmt-check lint test docs-check
+check: front-check fmt-check lint cognitive-check test docs-check
 	git diff --check
 
 .PHONY: version-check

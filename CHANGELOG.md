@@ -38,6 +38,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `previous_version_id`, `is_final`, `is_record`, `page_count` (now on `current_version` /
   its `content`); `CreateDocumentRequest` loses the file fields and `previous_version_id` in
   favour of `content_blob_id`. Removed field numbers and names are reserved.
+- **Go 1.27.1** (`go.mod`, `golang:1.27-alpine` builder, README); `go fix` modernizers applied
+  (`errors.AsType`, `sync.WaitGroup.Go`).
+- SonarQube maintainability/reliability/security findings of the full dashboard: production Go
+  functions refactored to cognitive complexity <= 15 (doccheck, document create, config, migrator,
+  actor update), SPA error mapping and API client split, clickable list rows keyboard-accessible,
+  `String(unknown)` removed from validation rules, deprecated `word-break: break-word`, error
+  output to stderr and positional-parameter locals in scripts, `get_jwt_token.sh` refuses to send
+  credentials in clear text to a non-loopback host. False positives are handled at the source:
+  `.sonarcloud.properties` declares the tests as tests and excludes generated code and the
+  PostgreSQL migrations (analysed by Sonar's Oracle PL/SQL rules).
+- Local Sonar-parity gates so these findings do not come back: `make cognitive-check`
+  (`gocognit`, pinned as a `go.mod` tool) inside `make check`; the SPA ESLint config enables
+  `sonarjs/cognitive-complexity`, `vuejs-accessibility` keyboard rules and a clickable-`<tr>` rule.
 - SonarQube findings: table headers carry `scope="col"` (21 × Web:TableHeaderHasIdOrScopeCheck);
   CI/release/docker-publish install buf through `bufbuild/buf-action` pinned by SHA with the
   binary's sha256 verified instead of `go install` (githubactions:S8545); the graceful shutdown

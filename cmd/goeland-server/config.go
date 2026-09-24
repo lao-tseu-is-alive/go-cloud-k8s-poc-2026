@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"log/slog"
+	"math"
 	"net"
 	"net/url"
 	"os"
@@ -80,34 +81,33 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, fmt.Errorf("GOELAND_AUTH_MODE must be jwt or dev")
 	}
 
-	authServerURL := strings.TrimRight(envOrDefault("AUTH_SERVER_URL", defaultAuthServerURL), "/")
-	if parsed, err := url.Parse(authServerURL); err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
-		return serverConfig{}, fmt.Errorf("AUTH_SERVER_URL must be a valid http(s) URL")
+	authServerURL, err := authServerURLFromEnv()
+	if err != nil {
+		return serverConfig{}, err
 	}
-
 	devUserID, err := envInt64("GOELAND_DEV_USER_ID", 1)
 	if err != nil {
 		return serverConfig{}, err
 	}
-	maxConnections, err := envInt64("GOELAND_DB_MAX_CONNECTIONS", defaultMaxConnections)
-	if err != nil || maxConnections < 1 || maxConnections > 1000 {
-		return serverConfig{}, fmt.Errorf("GOELAND_DB_MAX_CONNECTIONS must be between 1 and 1000")
+	maxConnections, err := envInt64InRange("GOELAND_DB_MAX_CONNECTIONS", defaultMaxConnections, 1, 1000)
+	if err != nil {
+		return serverConfig{}, err
 	}
-	shutdownSeconds, err := envInt64("GOELAND_SHUTDOWN_TIMEOUT_SECONDS", int64(defaultShutdownPeriod/time.Second))
-	if err != nil || shutdownSeconds < 1 || shutdownSeconds > 300 {
-		return serverConfig{}, fmt.Errorf("GOELAND_SHUTDOWN_TIMEOUT_SECONDS must be between 1 and 300")
+	shutdownSeconds, err := envInt64InRange("GOELAND_SHUTDOWN_TIMEOUT_SECONDS", int64(defaultShutdownPeriod/time.Second), 1, 300)
+	if err != nil {
+		return serverConfig{}, err
 	}
-	requestTimeoutSeconds, err := envInt64("GOELAND_REQUEST_TIMEOUT_SECONDS", int64(defaultRequestTimeout/time.Second))
-	if err != nil || requestTimeoutSeconds < 1 || requestTimeoutSeconds > 300 {
-		return serverConfig{}, fmt.Errorf("GOELAND_REQUEST_TIMEOUT_SECONDS must be between 1 and 300")
+	requestTimeoutSeconds, err := envInt64InRange("GOELAND_REQUEST_TIMEOUT_SECONDS", int64(defaultRequestTimeout/time.Second), 1, 300)
+	if err != nil {
+		return serverConfig{}, err
 	}
 	logLevel, err := parseLogLevel(envOrDefault("LOG_LEVEL", "info"))
 	if err != nil {
 		return serverConfig{}, err
 	}
-	maxUploadBytes, err := envInt64("GOELAND_MAX_UPLOAD_BYTES", defaultMaxUploadBytes)
-	if err != nil || maxUploadBytes < 1 {
-		return serverConfig{}, fmt.Errorf("GOELAND_MAX_UPLOAD_BYTES must be a positive integer")
+	maxUploadBytes, err := envInt64InRange("GOELAND_MAX_UPLOAD_BYTES", defaultMaxUploadBytes, 1, math.MaxInt64)
+	if err != nil {
+		return serverConfig{}, err
 	}
 
 	config := serverConfig{
@@ -130,6 +130,30 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
 	}
 	return config, nil
+}
+
+// authServerURLFromEnv reads AUTH_SERVER_URL, which must be an http(s) URL; a
+// trailing slash is removed.
+func authServerURLFromEnv() (string, error) {
+	authServerURL := strings.TrimRight(envOrDefault("AUTH_SERVER_URL", defaultAuthServerURL), "/")
+	parsed, err := url.Parse(authServerURL)
+	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
+		return "", fmt.Errorf("AUTH_SERVER_URL must be a valid http(s) URL")
+	}
+	return authServerURL, nil
+}
+
+// envInt64InRange reads an integer environment variable (fallback when unset)
+// and requires minimum <= value <= maximum.
+func envInt64InRange(name string, fallback, minimum, maximum int64) (int64, error) {
+	value, err := envInt64(name, fallback)
+	if err != nil || value < minimum || value > maximum {
+		if maximum == math.MaxInt64 {
+			return 0, fmt.Errorf("%s must be an integer of at least %d", name, minimum)
+		}
+		return 0, fmt.Errorf("%s must be between %d and %d", name, minimum, maximum)
+	}
+	return value, nil
 }
 
 // databaseURLFromEnv builds a PostgreSQL connection string from DATABASE_URL or from individual DB_* variables.

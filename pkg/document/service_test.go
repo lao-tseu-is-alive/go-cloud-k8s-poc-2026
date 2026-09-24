@@ -273,7 +273,7 @@ func TestIngestContent(t *testing.T) {
 			if !tt.wantErr && (res.Reused != tt.wantReused || res.Blob.FileSizeBytes != 9 || res.Blob.MimeType != "application/pdf" || res.Blob.CreatedBy != "42") {
 				t.Fatalf("unexpected result %+v / %+v", res, res.Blob)
 			}
-			if removed := len(store.removed) == 1 && store.removed[0] == store.saved[0]; removed != tt.wantRemoved {
+			if (len(store.removed) == 1 && store.removed[0] == store.saved[0]) != tt.wantRemoved {
 				t.Fatalf("saved %v, removed %v, want removed=%v", store.saved, store.removed, tt.wantRemoved)
 			}
 		})

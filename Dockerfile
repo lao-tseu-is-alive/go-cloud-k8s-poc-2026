@@ -15,7 +15,7 @@ RUN bun run build-only
 # Stage 2 – Go binary
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
 # Pin the builder to the module's Go minor version for reproducibility.
-FROM golang:1.26-alpine AS builder
+FROM golang:1.27-alpine AS builder
 LABEL maintainer="cgil"
 # git: for module VCS metadata; ca-certificates: copied into the scratch runtime.
 RUN apk add --no-cache git ca-certificates

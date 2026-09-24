@@ -60,31 +60,36 @@ CREATE TABLE IF NOT EXISTS schema_migrations (
 )`); err != nil {
 		return fmt.Errorf("core module: create schema_migrations table: %w", err)
 	}
-
 	for _, path := range paths {
-		version := migrationVersion(path)
-		var applied bool
-		if err := conn.QueryRow(ctx,
-			"SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1)", version,
-		).Scan(&applied); err != nil {
-			return fmt.Errorf("core module: check migration %s: %w", version, err)
-		}
-		if applied {
-			continue
-		}
-		content, err := Migrations.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("core module: read migration %s: %w", version, err)
-		}
-		statements, err := ParseDBMateUp(string(content))
-		if err != nil {
-			return fmt.Errorf("core module: parse migration %s: %w", version, err)
-		}
-		if err := applyMigration(ctx, conn.Conn(), version, statements); err != nil {
+		if err := migrateOne(ctx, conn.Conn(), path); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+// migrateOne applies the embedded migration at path unless its version is
+// already recorded in schema_migrations.
+func migrateOne(ctx context.Context, conn *pgx.Conn, path string) error {
+	version := migrationVersion(path)
+	var applied bool
+	if err := conn.QueryRow(ctx,
+		"SELECT EXISTS (SELECT 1 FROM schema_migrations WHERE version = $1)", version,
+	).Scan(&applied); err != nil {
+		return fmt.Errorf("core module: check migration %s: %w", version, err)
+	}
+	if applied {
+		return nil
+	}
+	content, err := Migrations.ReadFile(path)
+	if err != nil {
+		return fmt.Errorf("core module: read migration %s: %w", version, err)
+	}
+	statements, err := ParseDBMateUp(string(content))
+	if err != nil {
+		return fmt.Errorf("core module: parse migration %s: %w", version, err)
+	}
+	return applyMigration(ctx, conn, version, statements)
 }
 
 // migrationVersion extracts the version prefix (before the first underscore) from a migration filename.
@@ -118,68 +123,82 @@ func applyMigration(ctx context.Context, conn *pgx.Conn, version string, stateme
 	return nil
 }
 
+// DBMate section and block markers understood by ParseDBMateUp.
+const (
+	upMarker             = "-- migrate:up"
+	downMarker           = "-- migrate:down"
+	statementBeginMarker = "-- migrate:statementbegin"
+	statementEndMarker   = "-- migrate:statementend"
+)
+
 // ParseDBMateUp extracts the SQL statements from the "-- migrate:up" section of a
 // DBMate migration file. Blocks delimited by "-- migrate:statementbegin/end"
 // (e.g. PL/pgSQL functions) are emitted as a single statement.
 func ParseDBMateUp(content string) ([]string, error) {
-	const (
-		upMarker             = "-- migrate:up"
-		downMarker           = "-- migrate:down"
-		statementBeginMarker = "-- migrate:statementbegin"
-		statementEndMarker   = "-- migrate:statementend"
-	)
 	_, rest, found := strings.Cut(content, upMarker)
 	if !found {
 		return nil, fmt.Errorf("missing %s marker", upMarker)
 	}
-	section := rest
-	if before, _, cut := strings.Cut(section, downMarker); cut {
-		section = before
-	}
+	section, _, _ := strings.Cut(rest, downMarker)
 
-	var statements []string
-	var current strings.Builder
-	inStatementBlock := false
-	flush := func() {
-		statement := strings.TrimSpace(current.String())
-		current.Reset()
-		if containsSQL(statement) {
-			statements = append(statements, statement)
-		}
-	}
-
+	var p statementParser
 	for line := range strings.SplitSeq(section, "\n") {
-		trimmed := strings.TrimSpace(line)
-		switch trimmed {
-		case statementBeginMarker:
-			if inStatementBlock {
-				return nil, fmt.Errorf("nested statement block")
-			}
-			flush()
-			inStatementBlock = true
-			continue
-		case statementEndMarker:
-			if !inStatementBlock {
-				return nil, fmt.Errorf("statement end without begin")
-			}
-			flush()
-			inStatementBlock = false
-			continue
-		}
-		current.WriteString(line)
-		current.WriteByte('\n')
-		if !inStatementBlock && strings.HasSuffix(trimmed, ";") {
-			flush()
+		if err := p.feed(line); err != nil {
+			return nil, err
 		}
 	}
-	if inStatementBlock {
+	if p.inBlock {
 		return nil, fmt.Errorf("unterminated statement block")
 	}
-	flush()
-	if len(statements) == 0 {
+	p.flush()
+	if len(p.statements) == 0 {
 		return nil, fmt.Errorf("migration has no up statements")
 	}
-	return statements, nil
+	return p.statements, nil
+}
+
+// statementParser accumulates lines into statements: a statement ends with a
+// line ending in ";" outside a block, or with the end of a statement block.
+type statementParser struct {
+	statements []string
+	current    strings.Builder
+	inBlock    bool
+}
+
+// feed consumes one line of the up section.
+func (p *statementParser) feed(line string) error {
+	trimmed := strings.TrimSpace(line)
+	switch trimmed {
+	case statementBeginMarker:
+		if p.inBlock {
+			return fmt.Errorf("nested statement block")
+		}
+		p.flush()
+		p.inBlock = true
+		return nil
+	case statementEndMarker:
+		if !p.inBlock {
+			return fmt.Errorf("statement end without begin")
+		}
+		p.flush()
+		p.inBlock = false
+		return nil
+	}
+	p.current.WriteString(line)
+	p.current.WriteByte('\n')
+	if !p.inBlock && strings.HasSuffix(trimmed, ";") {
+		p.flush()
+	}
+	return nil
+}
+
+// flush emits the accumulated statement when it contains SQL.
+func (p *statementParser) flush() {
+	statement := strings.TrimSpace(p.current.String())
+	p.current.Reset()
+	if containsSQL(statement) {
+		p.statements = append(p.statements, statement)
+	}
 }
 
 // containsSQL reports whether the statement has at least one non-blank, non-comment line.

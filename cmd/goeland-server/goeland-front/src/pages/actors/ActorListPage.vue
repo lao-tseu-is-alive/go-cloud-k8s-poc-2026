@@ -90,8 +90,12 @@
             v-for="actor in actors"
             :key="actor.subjectRef?.id"
             :class="{ 'text-disabled': actor.recordMetadata?.deletedAt }"
+            role="link"
             style="cursor: pointer"
+            tabindex="0"
             @click="openActor(actor)"
+            @keydown.enter="openActor(actor)"
+            @keydown.space.prevent="openActor(actor)"
           >
             <td>
               {{ actor.displayName }}
