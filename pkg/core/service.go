@@ -152,6 +152,23 @@ func (s *Service) UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, 
 	return rel, ev, nil
 }
 
+// EndRelationship records the business end of an open relationship; the edge
+// stays listed as history. It fails with ErrNotFound for an unknown or unlinked
+// edge, ErrInvalidState when the edge already has an end, and ErrInvalidInput
+// when the end precedes the start of validity.
+func (s *Service) EndRelationship(ctx context.Context, in EndInput) (*SubjectRelationship, *AuditEvent, error) {
+	if in.RelationshipID == uuid.Nil {
+		return nil, nil, fmt.Errorf("%w: relationship id is required", ErrInvalidInput)
+	}
+	in.Reason = strings.TrimSpace(in.Reason)
+	rel, ev, err := s.repo.EndRelationship(ctx, in)
+	if err != nil {
+		return nil, nil, fmt.Errorf("end relationship: %w", err)
+	}
+	s.log.Info("ended relationship", "relationship_id", in.RelationshipID)
+	return rel, ev, nil
+}
+
 // ListRelationships returns a page of relationships for a subject.
 func (s *Service) ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error) {
 	if filter.SubjectID == uuid.Nil {

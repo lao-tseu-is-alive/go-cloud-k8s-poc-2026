@@ -96,7 +96,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0010 (dbmate format)
+  │   └── db/migrations/     0001..0011 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -229,7 +229,7 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 `CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
-`/api/subjects:lookup`; ActorService:
+`/api/subjects:lookup`, `/api/relationships/{id}/end`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`).
@@ -328,7 +328,10 @@ only the struct + SQL projection.
   `record_metadata.deleted_at` / soft-delete relationships. Every mutation must
   write an `audit_event` (in the same transaction as the mutation).
 - Relationships are typed and validated: source/target kinds must match the
-  `relationship_type`; an active-edge partial unique index enforces uniqueness.
+  `relationship_type`; a partial unique index allows one *open* edge (not unlinked,
+  no `valid_to`) per (source, target, type). Two distinct operations: `EndRelationship`
+  sets `valid_to` (the relationship ended; kept as history, `RELATIONSHIP_ENDED`) and
+  `UnlinkSubjects` soft-deletes a mistaken edge (`RELATIONSHIP_UNLINKED`).
 - `document.search_vector` is a Postgres **`GENERATED ALWAYS AS (...) STORED`**
   column — the app must NOT insert/scan it; Postgres computes it on every
   write. It is accent-folded via `immutable_unaccent()` (migration 0005), an

@@ -158,7 +158,11 @@
       "created_at": "Créé le",
       "created_by": "Créé par",
       "deleted_at": "Supprimé le",
-      "target_subject_id": "Identifiant du sujet cible"
+      "target_subject_id": "Identifiant du sujet cible",
+      "validity": "Validité",
+      "ended": "Terminée",
+      "ending": "Fin prévue",
+      "end_reason": "Motif"
     },
     "audit": {
       "occurred_at": "Survenu le",
@@ -174,6 +178,10 @@
     "common": { "created_at": "Créé le", "actions": "Actions" }
   },
   "actions": {
+    "relationship": {
+      "end": "Terminer la relation",
+      "unlink": "Délier (créée par erreur)"
+    },
     "case": {
       "create": "Ouvrir l’affaire",
       "edit": "Modifier l’affaire",
@@ -327,6 +335,11 @@
     "invalid_argument": "Données invalides."
   },
   "messages": {
+    "relationship": {
+      "ended": "Relation terminée ; elle reste dans l'historique.",
+      "endHint": "Terminer indique que la relation a pris fin (par exemple un mandat échu) et la conserve dans l'historique. Déliez uniquement un lien créé par erreur.",
+      "endDateHint": "Vide signifie maintenant. Une date future planifie la fin."
+    },
     "case": {
       "createSuccess": "Affaire ouverte {ref}.",
       "updateSuccess": "Affaire mise à jour.",

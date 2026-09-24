@@ -175,6 +175,31 @@ func (s *ConnectServer) UnlinkSubjects(ctx context.Context, req *connect.Request
 	}), nil
 }
 
+// EndRelationship records the business end of an open relationship.
+func (s *ConnectServer) EndRelationship(ctx context.Context, req *connect.Request[goelandv1.EndRelationshipRequest]) (*connect.Response[goelandv1.EndRelationshipResponse], error) {
+	user, err := RequireCaller(ctx, ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	id, err := ParseUUID(req.Msg.RelationshipId)
+	if err != nil {
+		return nil, err
+	}
+	rel, ev, err := s.service.EndRelationship(ctx, EndInput{
+		RelationshipID: id,
+		ValidTo:        TimePtrFromProto(req.Msg.ValidTo),
+		OperatorID:     OperatorID(user),
+		Reason:         req.Msg.Reason,
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.EndRelationshipResponse{
+		Relationship: DomainRelationshipToProto(rel),
+		AuditEvent:   DomainAuditEventToProto(ev),
+	}), nil
+}
+
 // ListRelationships lists outgoing or incoming relationships for a subject.
 func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Request[goelandv1.ListRelationshipsRequest]) (*connect.Response[goelandv1.ListRelationshipsResponse], error) {
 	if _, err := RequireCaller(ctx, ScopeRead); err != nil {

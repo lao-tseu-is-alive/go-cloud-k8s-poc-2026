@@ -3,9 +3,10 @@
   import { useI18n } from 'vue-i18n'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
 
-  // Presentational: the parent owns loading + the link/unlink API calls.
+  // Presentational: the parent owns loading + the link/unlink API calls (ending is
+  // handled by the table's own dialog, which emits `ended`).
   defineProps<{ relationships?: SubjectRelationship[], canManage?: boolean }>()
-  const emit = defineEmits<{ 'add-link': [], 'unlink': [rel: SubjectRelationship] }>()
+  const emit = defineEmits<{ 'add-link': [], 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship] }>()
   const { t } = useI18n()
 </script>
 
@@ -26,6 +27,7 @@
     <RelationshipTable
       :can-unlink="canManage"
       :relationships="relationships"
+      @ended="emit('ended', $event)"
       @unlink="emit('unlink', $event)"
     />
   </div>

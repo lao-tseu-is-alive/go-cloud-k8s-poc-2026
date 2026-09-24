@@ -81,6 +81,9 @@ const (
 	// CoreServiceUnlinkSubjectsProcedure is the fully-qualified name of the CoreService's
 	// UnlinkSubjects RPC.
 	CoreServiceUnlinkSubjectsProcedure = "/goeland.v1.CoreService/UnlinkSubjects"
+	// CoreServiceEndRelationshipProcedure is the fully-qualified name of the CoreService's
+	// EndRelationship RPC.
+	CoreServiceEndRelationshipProcedure = "/goeland.v1.CoreService/EndRelationship"
 	// CoreServiceListRelationshipsProcedure is the fully-qualified name of the CoreService's
 	// ListRelationships RPC.
 	CoreServiceListRelationshipsProcedure = "/goeland.v1.CoreService/ListRelationships"
@@ -112,11 +115,17 @@ type CoreServiceClient interface {
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
-	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
+	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
+	// (an open edge of the same type already links the two subjects).
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
 	// Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
+	// End an open relationship in the business sense by setting its valid_to; the
+	// edge stays listed as history and a new open edge of the same type may then be
+	// created. Distinct from UnlinkSubjects, which removes a mistaken edge.
+	// Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+	EndRelationship(context.Context, *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error)
 	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	// Requires goeland:read.
@@ -176,6 +185,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("UnlinkSubjects")),
 			connect.WithClientOptions(opts...),
 		),
+		endRelationship: connect.NewClient[v1.EndRelationshipRequest, v1.EndRelationshipResponse](
+			httpClient,
+			baseURL+CoreServiceEndRelationshipProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("EndRelationship")),
+			connect.WithClientOptions(opts...),
+		),
 		listRelationships: connect.NewClient[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse](
 			httpClient,
 			baseURL+CoreServiceListRelationshipsProcedure,
@@ -205,6 +220,7 @@ type coreServiceClient struct {
 	lookupSubjects        *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
 	linkSubjects          *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
 	unlinkSubjects        *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
+	endRelationship       *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
 	listRelationships     *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
 	listRelationshipTypes *connect.Client[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse]
 	listAuditEvents       *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
@@ -238,6 +254,11 @@ func (c *coreServiceClient) LinkSubjects(ctx context.Context, req *connect.Reque
 // UnlinkSubjects calls goeland.v1.CoreService.UnlinkSubjects.
 func (c *coreServiceClient) UnlinkSubjects(ctx context.Context, req *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error) {
 	return c.unlinkSubjects.CallUnary(ctx, req)
+}
+
+// EndRelationship calls goeland.v1.CoreService.EndRelationship.
+func (c *coreServiceClient) EndRelationship(ctx context.Context, req *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error) {
+	return c.endRelationship.CallUnary(ctx, req)
 }
 
 // ListRelationships calls goeland.v1.CoreService.ListRelationships.
@@ -275,11 +296,17 @@ type CoreServiceHandler interface {
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
-	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
+	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
+	// (an open edge of the same type already links the two subjects).
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
 	// Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
+	// End an open relationship in the business sense by setting its valid_to; the
+	// edge stays listed as history and a new open edge of the same type may then be
+	// created. Distinct from UnlinkSubjects, which removes a mistaken edge.
+	// Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+	EndRelationship(context.Context, *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error)
 	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	// Requires goeland:read.
@@ -335,6 +362,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("UnlinkSubjects")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceEndRelationshipHandler := connect.NewUnaryHandler(
+		CoreServiceEndRelationshipProcedure,
+		svc.EndRelationship,
+		connect.WithSchema(coreServiceMethods.ByName("EndRelationship")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceListRelationshipsHandler := connect.NewUnaryHandler(
 		CoreServiceListRelationshipsProcedure,
 		svc.ListRelationships,
@@ -367,6 +400,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceLinkSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceUnlinkSubjectsProcedure:
 			coreServiceUnlinkSubjectsHandler.ServeHTTP(w, r)
+		case CoreServiceEndRelationshipProcedure:
+			coreServiceEndRelationshipHandler.ServeHTTP(w, r)
 		case CoreServiceListRelationshipsProcedure:
 			coreServiceListRelationshipsHandler.ServeHTTP(w, r)
 		case CoreServiceListRelationshipTypesProcedure:
@@ -404,6 +439,10 @@ func (UnimplementedCoreServiceHandler) LinkSubjects(context.Context, *connect.Re
 
 func (UnimplementedCoreServiceHandler) UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.UnlinkSubjects is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) EndRelationship(context.Context, *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.EndRelationship is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error) {

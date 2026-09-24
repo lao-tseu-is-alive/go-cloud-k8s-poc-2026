@@ -25,8 +25,8 @@ Phases follow v2 §48; "v2 §N" cites
 
 ## Next action
 
-The Case slice (GLD-011) is implemented and awaits its release; next is ending a
-relationship (GLD-034), then the Thing slice (GLD-016).
+The Case slice (GLD-011) and ending a relationship (GLD-034) are implemented and
+await their release; next is the Thing slice (GLD-016).
 
 ## Cross-cutting quality
 
@@ -92,7 +92,7 @@ Exit criteria: every item of v2 §57 is checked in `IMPLEMENTATION_STATUS.md` §
   lifecycle independent of any workflow, the first `CASE`-source relationship
   types including expanded `CASE_HAS_ACTOR_*` roles, a Vue panel and a
   `pkg/integration` lifecycle test.
-- [ ] **GLD-034 — End a relationship**: an operation that sets `valid_to`
+- [~] **GLD-034 — End a relationship**: an operation that sets `valid_to`
   ("the relationship ended"), distinct from `UnlinkSubjects` ("the edge was a
   mistake"), each with its own audit event (§3g).
 

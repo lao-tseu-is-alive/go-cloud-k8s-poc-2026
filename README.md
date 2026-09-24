@@ -109,7 +109,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0010 (dbmate format)
+      └── db/migrations/  0001..0011 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -280,6 +280,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0008_document_versions.sql   content_blob (unique SHA-256) + document_version (immutable when final/record) + lossless backfill
 0009_drop_document_file_columns.sql  drop the file/version columns superseded by 0008
 0010_case.sql                case_type (reference namespace) + case_file (status lifecycle) + expanded case roles
+0011_relationship_end.sql    uniqueness on open edges only (ended edges kept as history) + validity order check
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

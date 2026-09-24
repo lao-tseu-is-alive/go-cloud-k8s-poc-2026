@@ -158,7 +158,11 @@
       "created_at": "Created at",
       "created_by": "Created by",
       "deleted_at": "Deleted at",
-      "target_subject_id": "Target subject id"
+      "target_subject_id": "Target subject id",
+      "validity": "Validity",
+      "ended": "Ended",
+      "ending": "Scheduled end",
+      "end_reason": "Reason"
     },
     "audit": {
       "occurred_at": "Occurred at",
@@ -174,6 +178,10 @@
     "common": { "created_at": "Created at", "actions": "Actions" }
   },
   "actions": {
+    "relationship": {
+      "end": "End relationship",
+      "unlink": "Unlink (created by mistake)"
+    },
     "case": {
       "create": "Open case",
       "edit": "Edit case",
@@ -327,6 +335,11 @@
     "invalid_argument": "Invalid data."
   },
   "messages": {
+    "relationship": {
+      "ended": "Relationship ended; it stays in the history.",
+      "endHint": "Ending records that the relationship stopped (for example an ended mandate) and keeps it as history. Use unlink only for a link created by mistake.",
+      "endDateHint": "Empty means now. A future date schedules the end."
+    },
     "case": {
       "createSuccess": "Case opened {ref}.",
       "updateSuccess": "Case updated.",

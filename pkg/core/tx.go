@@ -265,12 +265,13 @@ func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.U
 }
 
 // LinkSubjectsTx validates kind compatibility and inserts a typed relationship using q.
-// It enforces (via the DB partial unique index) that no identical active edge exists.
+// It enforces (via the DB partial unique index) that no identical open edge exists;
+// an ended edge (valid_to set) does not block a new one.
 //
 // It fails with ErrNotFound for an unknown subject or type code, ErrInvalidInput
 // for an inactive type, ErrKindMismatch when the subject kinds differ from the
 // type's, ErrDeleted when either end is soft-deleted (locked subjects may still
-// be linked) and ErrConflict for a duplicate active edge. It writes no audit
+// be linked) and ErrConflict for a duplicate open edge. It writes no audit
 // event: the caller records RELATIONSHIP_LINKED in the same transaction.
 func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelationship, error) {
 	source, err := GetSubjectRefTx(ctx, q, in.SourceSubjectID)

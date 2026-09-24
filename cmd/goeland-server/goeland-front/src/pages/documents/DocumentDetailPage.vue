@@ -314,6 +314,7 @@
                 :can-manage="editable"
                 :relationships="relationships"
                 @add-link="linkOpen = true"
+                @ended="reload"
                 @unlink="doUnlink"
               />
             </v-card-text>

@@ -60,3 +60,16 @@ export function unlinkSubjects (relationshipId: string, reason: string): Promise
     query: { reason },
   })
 }
+
+/** Ends an open relationship (business end of validity); validTo defaults to now server-side. */
+export async function endRelationship (
+  relationshipId: string,
+  reason: string,
+  validTo?: string,
+): Promise<SubjectRelationship> {
+  const res = await apiFetch<{ relationship?: SubjectRelationship }>(
+    `/api/relationships/${encodeURIComponent(relationshipId)}/end`,
+    { method: 'POST', body: { reason, validTo } },
+  )
+  return res.relationship as SubjectRelationship
+}

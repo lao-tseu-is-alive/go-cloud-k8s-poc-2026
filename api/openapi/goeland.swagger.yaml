@@ -906,7 +906,8 @@ paths:
         Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
         Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
         NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
-        soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
+        soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
+        (an open edge of the same type already links the two subjects).
       operationId: LinkSubjects
       responses:
         "200":
@@ -952,6 +953,38 @@ paths:
           in: query
           required: false
           type: string
+      tags:
+        - CoreService
+  /api/relationships/{relationshipId}/end:
+    post:
+      summary: |-
+        End an open relationship in the business sense by setting its valid_to; the
+        edge stays listed as history and a new open edge of the same type may then be
+        created. Distinct from UnlinkSubjects, which removes a mistaken edge.
+        Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+      operationId: EndRelationship
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1EndRelationshipResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: relationshipId
+          description: |-
+            relationship_id is the open edge to end; NOT_FOUND when unknown or unlinked,
+            FAILED_PRECONDITION when it already has an end of validity.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CoreServiceEndRelationshipBody'
       tags:
         - CoreService
   /api/subjects:
@@ -1272,6 +1305,23 @@ definitions:
         type: string
         description: reason is the justification recorded on the audit event (at most 2000 characters).
     description: AssignBusinessRefRequest gives an existing subject its business reference.
+  CoreServiceEndRelationshipBody:
+    type: object
+    properties:
+      validTo:
+        type: string
+        format: date-time
+        description: |-
+          valid_to is the business end of validity; the server time when absent. It
+          may lie in the future (a scheduled end) but not before valid_from
+          (INVALID_ARGUMENT).
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      EndRelationshipRequest records that an open edge ended in the business sense
+      ("the mandate ended"), keeping it in the graph as history. Use UnlinkSubjects
+      instead when the edge was a mistake.
   DocumentServiceAddDocumentVersionBody:
     type: object
     properties:
@@ -2164,6 +2214,16 @@ definitions:
     description: |-
       DocumentVersion is a dated, append-only state of a document (spec v2 §18). A
       final or record version is immutable; versions are never deleted.
+  v1EndRelationshipResponse:
+    type: object
+    properties:
+      relationship:
+        $ref: '#/definitions/v1SubjectRelationship'
+        description: relationship is the ended edge, hydrated with both subjects and the type.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_ENDED audit event.
+    description: EndRelationshipResponse returns the ended edge and its audit event.
   v1FinalizeDocumentResponse:
     type: object
     properties:
@@ -2699,7 +2759,9 @@ definitions:
       validTo:
         type: string
         format: date-time
-        description: valid_to is the optional business end of validity.
+        description: |-
+          valid_to is the business end of validity, set by EndRelationship; absent
+          while the edge is open.
       createdAt:
         type: string
         format: date-time
@@ -2715,7 +2777,8 @@ definitions:
         readOnly: true
     description: |-
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
-      At most one active edge exists per (source, target, type).
+      At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
+      an ended edge stays as history.
   v1TransitionCaseResponse:
     type: object
     properties:

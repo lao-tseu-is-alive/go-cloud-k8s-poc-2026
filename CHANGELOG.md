@@ -18,6 +18,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   case rejects edits until reopened. New relationship types `CASE_HAS_ACTOR_OWNER`,
   `_ARCHITECT`, `_CONTRACTOR` and `CASE_RELATED_TO_CASE`. SPA case list, creation and detail
   pages (edit, transitions, links, audit), and a `pkg/integration` lifecycle test.
+- **GLD-034** — `CoreService.EndRelationship` (`POST /api/relationships/{id}/end`): records
+  that a relationship ended by setting `valid_to` (server time by default, a future date
+  schedules the end, never before `valid_from`) with a `RELATIONSHIP_ENDED` audit event; the
+  edge stays listed as history, distinct from `UnlinkSubjects` for a mistaken edge. Migration
+  `0011` limits uniqueness to open edges, so an ended role can be given again, and adds a
+  validity-order check. The SPA relationship tables show validity and an "end" action.
 
 ### Changed
 

@@ -38,7 +38,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §5.2–5.3 `subject_kind`, `subject_ref` | ✅ `0001` | ✅ `CoreService.CreateSubjectRef/GetSubjectRef` | ✅ | canonical identity, composite `(id,kind)` FK used to pin document kind |
 | §5.4 `record_metadata` (governance) | ✅ `0001` | ✅ via Core (create/lock/soft-delete helpers) | ✅ | ownership/confidentiality/locking/versioning; non-destructive |
 | §5.5 `audit_event` (append-only) | ✅ `0001` | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx |
-| §7 `relationship_type` + `subject_relationship` | ✅ `0002` | ✅ `CoreService.LinkSubjects/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; active-edge partial unique index; soft-delete |
+| §7 `relationship_type` + `subject_relationship` | ✅ `0002` (+ `0011`) | ✅ `CoreService.LinkSubjects/EndRelationship/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; one open edge per (source, target, type); ended edges kept as history (GLD-034); unlink = soft delete of a mistake |
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document, Actor and Case modules as full slices in the browser; core panels read-only; Thing UI pending its service |
@@ -238,7 +238,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   counter plus a partial unique index on `(namespace, business_ref)`.
 - **Thing geometry** — explicit SRID (EPSG:2056, Swiss LV95), geometry type and GIST index.
 - **End vs undo a relationship** — "ended" sets `valid_to`; "unlinked" (soft delete) means the
-  edge was a mistake. Two operations, two audit events.
+  edge was a mistake. Two operations, two audit events. Implemented by GLD-034:
+  `EndRelationship` (`RELATIONSHIP_ENDED`, default end = server time, a future end is a
+  scheduled end, never before `valid_from`); uniqueness applies to open edges only (`0011`),
+  so an ended role can be given again, and ended edges stay listed as history.
 - **Document split details (GLD-023)** — a version may have no content (metadata-only
   document or external reference) and a blob may be digest-only (empty storage ref: bytes
   held elsewhere) so the backfill is lossless; declaring a record makes the version final;

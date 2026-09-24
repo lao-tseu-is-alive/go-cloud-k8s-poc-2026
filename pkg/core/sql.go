@@ -172,6 +172,23 @@ SET deleted_at = now(), deleted_by = @operator_id
 WHERE id = @id AND deleted_at IS NULL
 RETURNING ` + subjectRelationshipColumns + `;`
 
+// getRelationshipForUpdateSQL locks one edge so EndRelationship checks its state
+// and updates it atomically against a concurrent end or unlink.
+const getRelationshipForUpdateSQL = `
+SELECT ` + subjectRelationshipColumns + `
+FROM subject_relationship
+WHERE id = @id
+FOR UPDATE;`
+
+// endRelationshipSQL sets the business end of validity, defaulting to the
+// database time; the validity-order CHECK (migration 0011) rejects an end before
+// valid_from.
+const endRelationshipSQL = `
+UPDATE subject_relationship
+SET valid_to = coalesce(@valid_to::timestamptz, now())
+WHERE id = @id
+RETURNING ` + subjectRelationshipColumns + `;`
+
 // subjectRelationshipListColumns qualifies each column with the sr alias because
 // listRelationshipsSQL joins relationship_type (which also has id/... columns);
 // an unqualified projection would be ambiguous. Output column names are unchanged,
@@ -183,7 +200,7 @@ sr.valid_from, sr.valid_to, sr.created_at, sr.created_by, sr.deleted_at`
 const listRelationshipsColumns = subjectRelationshipListColumns + `,
 COUNT(*) OVER() AS total_count`
 
-// listRelationshipsSQL lists active edges either outgoing from (@outgoing = true) or
+// listRelationshipsSQL lists non-unlinked edges (open and ended) either outgoing from (@outgoing = true) or
 // incoming to (@outgoing = false) the given subject, optionally filtered by type code.
 const listRelationshipsSQL = `
 SELECT ` + listRelationshipsColumns + `

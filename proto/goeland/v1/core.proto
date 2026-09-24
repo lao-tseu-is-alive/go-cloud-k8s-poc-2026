@@ -258,7 +258,8 @@ message RelationshipType {
 }
 
 // SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
-// At most one active edge exists per (source, target, type).
+// At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
+// an ended edge stays as history.
 message SubjectRelationship {
   // id is the server-assigned edge UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
@@ -273,7 +274,8 @@ message SubjectRelationship {
   string role_detail = 5 [(buf.validate.field).string.max_len = 500];
   // valid_from is the optional business start of validity.
   google.protobuf.Timestamp valid_from = 6;
-  // valid_to is the optional business end of validity.
+  // valid_to is the business end of validity, set by EndRelationship; absent
+  // while the edge is open.
   google.protobuf.Timestamp valid_to = 7;
   // created_at is the server creation time.
   google.protobuf.Timestamp created_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -423,7 +425,30 @@ message UnlinkSubjectsResponse {
   AuditEvent audit_event = 2;
 }
 
-// ListRelationshipsRequest lists the active edges of one subject in one direction.
+// EndRelationshipRequest records that an open edge ended in the business sense
+// ("the mandate ended"), keeping it in the graph as history. Use UnlinkSubjects
+// instead when the edge was a mistake.
+message EndRelationshipRequest {
+  // relationship_id is the open edge to end; NOT_FOUND when unknown or unlinked,
+  // FAILED_PRECONDITION when it already has an end of validity.
+  string relationship_id = 1 [(buf.validate.field).string.uuid = true];
+  // valid_to is the business end of validity; the server time when absent. It
+  // may lie in the future (a scheduled end) but not before valid_from
+  // (INVALID_ARGUMENT).
+  google.protobuf.Timestamp valid_to = 2;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// EndRelationshipResponse returns the ended edge and its audit event.
+message EndRelationshipResponse {
+  // relationship is the ended edge, hydrated with both subjects and the type.
+  SubjectRelationship relationship = 1;
+  // audit_event is the RELATIONSHIP_ENDED audit event.
+  AuditEvent audit_event = 2;
+}
+
+// ListRelationshipsRequest lists the non-unlinked edges (open and ended) of one subject in one direction.
 message ListRelationshipsRequest {
   // subject_id is the subject whose edges are listed.
   string subject_id = 1 [(buf.validate.field).string.uuid = true];
@@ -540,7 +565,8 @@ service CoreService {
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
   // Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
   // NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
-  // soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS.
+  // soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
+  // (an open edge of the same type already links the two subjects).
   rpc LinkSubjects(LinkSubjectsRequest) returns (LinkSubjectsResponse) {
     option (google.api.http) = {
       post: "/api/relationships"
@@ -552,6 +578,17 @@ service CoreService {
   // Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
   rpc UnlinkSubjects(UnlinkSubjectsRequest) returns (UnlinkSubjectsResponse) {
     option (google.api.http) = {delete: "/api/relationships/{relationship_id}"};
+  }
+
+  // End an open relationship in the business sense by setting its valid_to; the
+  // edge stays listed as history and a new open edge of the same type may then be
+  // created. Distinct from UnlinkSubjects, which removes a mistaken edge.
+  // Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+  rpc EndRelationship(EndRelationshipRequest) returns (EndRelationshipResponse) {
+    option (google.api.http) = {
+      post: "/api/relationships/{relationship_id}/end"
+      body: "*"
+    };
   }
 
   // List relationships for a subject (graph traversal primitive). Use the `outgoing`

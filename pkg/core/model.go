@@ -190,7 +190,7 @@ type SubjectRelationship struct {
 	RoleDetail string `db:"role_detail"`
 	// ValidFrom is the optional business start of validity; nil when open.
 	ValidFrom *time.Time `db:"valid_from"`
-	// ValidTo is the optional business end of validity; nil when open.
+	// ValidTo is the business end of validity set by EndRelationship; nil while open.
 	ValidTo *time.Time `db:"valid_to"`
 	// CreatedAt is the database insertion time.
 	CreatedAt time.Time `db:"created_at"`
@@ -254,8 +254,22 @@ type LinkInput struct {
 	ValidFrom *time.Time
 }
 
+// EndInput ends an open relationship in the business sense.
+type EndInput struct {
+	// RelationshipID is the open edge to end.
+	RelationshipID uuid.UUID
+	// ValidTo is the business end of validity; nil means the database time.
+	// It may lie in the future but not before the edge's ValidFrom.
+	ValidTo *time.Time
+	// OperatorID is the authenticated caller, set server-side; it becomes the
+	// audit actor.
+	OperatorID string
+	// Reason is the justification recorded on the audit event.
+	Reason string
+}
+
 // RelationshipFilter controls relationship listing for one subject.
-// Only active (non-deleted) edges are returned.
+// Unlinked (soft-deleted) edges are excluded; ended edges are returned as history.
 type RelationshipFilter struct {
 	// SubjectID is the subject whose edges are listed.
 	SubjectID uuid.UUID

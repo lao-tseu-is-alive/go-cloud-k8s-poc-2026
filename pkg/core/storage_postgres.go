@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -205,6 +206,84 @@ func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID 
 	return rel, ev, nil
 }
 
+// EndRelationship sets valid_to on an open relationship and writes a
+// RELATIONSHIP_ENDED audit event in the same transaction; the returned edge is
+// hydrated with its subjects and type.
+func (r *PostgresRepository) EndRelationship(ctx context.Context, in EndInput) (*SubjectRelationship, *AuditEvent, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin end relationship: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+
+	current, err := lockOpenRelationshipTx(ctx, tx, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	rows, err := tx.Query(ctx, endRelationshipSQL, pgx.NamedArgs{"id": in.RelationshipID, "valid_to": in.ValidTo})
+	if err != nil {
+		return nil, nil, mapValidityOrder(err)
+	}
+	rel, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[SubjectRelationship])
+	if err != nil {
+		return nil, nil, mapValidityOrder(err)
+	}
+	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
+		SubjectID:   rel.SourceSubjectID,
+		EventType:   "RELATIONSHIP_ENDED",
+		ActorUserID: in.OperatorID,
+		Reason:      in.Reason,
+		BeforeState: map[string]any{"relationship_id": current.ID.String(), "valid_to": nil},
+		AfterState: map[string]any{
+			"relationship_id": rel.ID.String(),
+			"target":          rel.TargetSubjectID.String(),
+			"valid_to":        rel.ValidTo.UTC().Format(time.RFC3339Nano),
+		},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit end relationship: %w", err)
+	}
+	if err := r.hydrateRelationships(ctx, []*SubjectRelationship{rel}); err != nil {
+		return nil, nil, err
+	}
+	return rel, ev, nil
+}
+
+// lockOpenRelationshipTx locks the edge and checks it can be ended: it must
+// exist, not be unlinked (ErrNotFound) and have no end yet (ErrInvalidState).
+// An explicit end before the start of validity is ErrInvalidInput.
+func lockOpenRelationshipTx(ctx context.Context, q Querier, in EndInput) (*SubjectRelationship, error) {
+	rows, err := q.Query(ctx, getRelationshipForUpdateSQL, pgx.NamedArgs{"id": in.RelationshipID})
+	if err != nil {
+		return nil, fmt.Errorf("lock relationship: %w", err)
+	}
+	rel, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[SubjectRelationship])
+	if err != nil {
+		return nil, mapNotFound(err)
+	}
+	switch {
+	case rel.DeletedAt != nil:
+		return nil, ErrNotFound
+	case rel.ValidTo != nil:
+		return nil, fmt.Errorf("%w: the relationship already ended at %s", ErrInvalidState, rel.ValidTo.UTC().Format(time.RFC3339))
+	case in.ValidTo != nil && rel.ValidFrom != nil && in.ValidTo.Before(*rel.ValidFrom):
+		return nil, fmt.Errorf("%w: valid_to precedes valid_from", ErrInvalidInput)
+	}
+	return rel, nil
+}
+
+// mapValidityOrder translates the validity-order CHECK violation (the default
+// end, now, precedes a future valid_from) into ErrInvalidInput.
+func mapValidityOrder(err error) error {
+	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23514" { // check_violation
+		return fmt.Errorf("%w: valid_to precedes valid_from", ErrInvalidInput)
+	}
+	return fmt.Errorf("end relationship: %w", err)
+}
+
 // AppendAuditEvent writes a standalone audit event outside any domain transaction.
 func (r *PostgresRepository) AppendAuditEvent(ctx context.Context, ev AuditEvent) (*AuditEvent, error) {
 	return InsertAuditEventTx(ctx, r.pool, ev)
@@ -354,7 +433,7 @@ func mapConflict(err error) error {
 	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgErr.Code {
 		case "23505": // unique_violation
-			return fmt.Errorf("%w: an active relationship already exists", ErrConflict)
+			return fmt.Errorf("%w: an open relationship of this type already links the subjects", ErrConflict)
 		case "23503": // foreign_key_violation
 			return fmt.Errorf("%w: referenced subject or type does not exist", ErrNotFound)
 		}

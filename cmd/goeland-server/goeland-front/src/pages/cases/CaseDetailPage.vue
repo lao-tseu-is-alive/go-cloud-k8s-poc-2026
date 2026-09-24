@@ -283,7 +283,13 @@
 
             <v-card-text>
               <p class="text-caption text-medium-emphasis mb-2">{{ t('messages.case.relationshipsHint') }}</p>
-              <RelationshipTable :can-unlink="mutable" :relationships="relationships" @unlink="doUnlink" />
+
+              <RelationshipTable
+                :can-unlink="mutable"
+                :relationships="relationships"
+                @ended="reload"
+                @unlink="doUnlink"
+              />
             </v-card-text>
           </v-card>
         </v-col>
