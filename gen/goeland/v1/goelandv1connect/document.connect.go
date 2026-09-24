@@ -94,6 +94,12 @@ const (
 	// DocumentServiceListDocumentTypesProcedure is the fully-qualified name of the DocumentService's
 	// ListDocumentTypes RPC.
 	DocumentServiceListDocumentTypesProcedure = "/goeland.v1.DocumentService/ListDocumentTypes"
+	// DocumentServiceCreateDocumentTypeProcedure is the fully-qualified name of the DocumentService's
+	// CreateDocumentType RPC.
+	DocumentServiceCreateDocumentTypeProcedure = "/goeland.v1.DocumentService/CreateDocumentType"
+	// DocumentServiceUpdateDocumentTypeProcedure is the fully-qualified name of the DocumentService's
+	// UpdateDocumentType RPC.
+	DocumentServiceUpdateDocumentTypeProcedure = "/goeland.v1.DocumentService/UpdateDocumentType"
 )
 
 // DocumentServiceClient is a client for the goeland.v1.DocumentService service.
@@ -134,6 +140,13 @@ type DocumentServiceClient interface {
 	// List the controlled document types (classification catalogue).
 	// Requires goeland:read.
 	ListDocumentTypes(context.Context, *connect.Request[v1.ListDocumentTypesRequest]) (*connect.Response[v1.ListDocumentTypesResponse], error)
+	// Add a document type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateDocumentType(context.Context, *connect.Request[v1.CreateDocumentTypeRequest]) (*connect.Response[v1.CreateDocumentTypeResponse], error)
+	// Change a document type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateDocumentType(context.Context, *connect.Request[v1.UpdateDocumentTypeRequest]) (*connect.Response[v1.UpdateDocumentTypeResponse], error)
 }
 
 // NewDocumentServiceClient constructs a client for the goeland.v1.DocumentService service. By
@@ -213,6 +226,18 @@ func NewDocumentServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(documentServiceMethods.ByName("ListDocumentTypes")),
 			connect.WithClientOptions(opts...),
 		),
+		createDocumentType: connect.NewClient[v1.CreateDocumentTypeRequest, v1.CreateDocumentTypeResponse](
+			httpClient,
+			baseURL+DocumentServiceCreateDocumentTypeProcedure,
+			connect.WithSchema(documentServiceMethods.ByName("CreateDocumentType")),
+			connect.WithClientOptions(opts...),
+		),
+		updateDocumentType: connect.NewClient[v1.UpdateDocumentTypeRequest, v1.UpdateDocumentTypeResponse](
+			httpClient,
+			baseURL+DocumentServiceUpdateDocumentTypeProcedure,
+			connect.WithSchema(documentServiceMethods.ByName("UpdateDocumentType")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -229,6 +254,8 @@ type documentServiceClient struct {
 	linkDocument            *connect.Client[v1.LinkDocumentRequest, v1.LinkDocumentResponse]
 	deleteDocument          *connect.Client[v1.DeleteDocumentRequest, v1.DeleteDocumentResponse]
 	listDocumentTypes       *connect.Client[v1.ListDocumentTypesRequest, v1.ListDocumentTypesResponse]
+	createDocumentType      *connect.Client[v1.CreateDocumentTypeRequest, v1.CreateDocumentTypeResponse]
+	updateDocumentType      *connect.Client[v1.UpdateDocumentTypeRequest, v1.UpdateDocumentTypeResponse]
 }
 
 // CreateDocument calls goeland.v1.DocumentService.CreateDocument.
@@ -286,6 +313,16 @@ func (c *documentServiceClient) ListDocumentTypes(ctx context.Context, req *conn
 	return c.listDocumentTypes.CallUnary(ctx, req)
 }
 
+// CreateDocumentType calls goeland.v1.DocumentService.CreateDocumentType.
+func (c *documentServiceClient) CreateDocumentType(ctx context.Context, req *connect.Request[v1.CreateDocumentTypeRequest]) (*connect.Response[v1.CreateDocumentTypeResponse], error) {
+	return c.createDocumentType.CallUnary(ctx, req)
+}
+
+// UpdateDocumentType calls goeland.v1.DocumentService.UpdateDocumentType.
+func (c *documentServiceClient) UpdateDocumentType(ctx context.Context, req *connect.Request[v1.UpdateDocumentTypeRequest]) (*connect.Response[v1.UpdateDocumentTypeResponse], error) {
+	return c.updateDocumentType.CallUnary(ctx, req)
+}
+
 // DocumentServiceHandler is an implementation of the goeland.v1.DocumentService service.
 type DocumentServiceHandler interface {
 	// Create / register document metadata. SubjectRef + RecordMetadata are created via Core internally.
@@ -324,6 +361,13 @@ type DocumentServiceHandler interface {
 	// List the controlled document types (classification catalogue).
 	// Requires goeland:read.
 	ListDocumentTypes(context.Context, *connect.Request[v1.ListDocumentTypesRequest]) (*connect.Response[v1.ListDocumentTypesResponse], error)
+	// Add a document type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateDocumentType(context.Context, *connect.Request[v1.CreateDocumentTypeRequest]) (*connect.Response[v1.CreateDocumentTypeResponse], error)
+	// Change a document type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateDocumentType(context.Context, *connect.Request[v1.UpdateDocumentTypeRequest]) (*connect.Response[v1.UpdateDocumentTypeResponse], error)
 }
 
 // NewDocumentServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -399,6 +443,18 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 		connect.WithSchema(documentServiceMethods.ByName("ListDocumentTypes")),
 		connect.WithHandlerOptions(opts...),
 	)
+	documentServiceCreateDocumentTypeHandler := connect.NewUnaryHandler(
+		DocumentServiceCreateDocumentTypeProcedure,
+		svc.CreateDocumentType,
+		connect.WithSchema(documentServiceMethods.ByName("CreateDocumentType")),
+		connect.WithHandlerOptions(opts...),
+	)
+	documentServiceUpdateDocumentTypeHandler := connect.NewUnaryHandler(
+		DocumentServiceUpdateDocumentTypeProcedure,
+		svc.UpdateDocumentType,
+		connect.WithSchema(documentServiceMethods.ByName("UpdateDocumentType")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.DocumentService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case DocumentServiceCreateDocumentProcedure:
@@ -423,6 +479,10 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 			documentServiceDeleteDocumentHandler.ServeHTTP(w, r)
 		case DocumentServiceListDocumentTypesProcedure:
 			documentServiceListDocumentTypesHandler.ServeHTTP(w, r)
+		case DocumentServiceCreateDocumentTypeProcedure:
+			documentServiceCreateDocumentTypeHandler.ServeHTTP(w, r)
+		case DocumentServiceUpdateDocumentTypeProcedure:
+			documentServiceUpdateDocumentTypeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -474,4 +534,12 @@ func (UnimplementedDocumentServiceHandler) DeleteDocument(context.Context, *conn
 
 func (UnimplementedDocumentServiceHandler) ListDocumentTypes(context.Context, *connect.Request[v1.ListDocumentTypesRequest]) (*connect.Response[v1.ListDocumentTypesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.ListDocumentTypes is not implemented"))
+}
+
+func (UnimplementedDocumentServiceHandler) CreateDocumentType(context.Context, *connect.Request[v1.CreateDocumentTypeRequest]) (*connect.Response[v1.CreateDocumentTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.CreateDocumentType is not implemented"))
+}
+
+func (UnimplementedDocumentServiceHandler) UpdateDocumentType(context.Context, *connect.Request[v1.UpdateDocumentTypeRequest]) (*connect.Response[v1.UpdateDocumentTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.UpdateDocumentType is not implemented"))
 }

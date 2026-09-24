@@ -18,4 +18,6 @@ type Repository interface {
 	Search(ctx context.Context, filter SearchFilter) (SearchResult, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error)
 	ListTypes(ctx context.Context, onlyActive bool) ([]*CaseType, error)
+	CreateCaseType(ctx context.Context, in CaseTypeInput) (*CaseType, *core.ReferenceChange, error)
+	UpdateCaseType(ctx context.Context, code string, in CaseTypeUpdate) (*CaseType, *core.ReferenceChange, error)
 }

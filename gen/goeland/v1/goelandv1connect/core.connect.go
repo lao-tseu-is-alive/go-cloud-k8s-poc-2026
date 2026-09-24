@@ -99,6 +99,15 @@ const (
 	// CoreServiceListAuditEventsProcedure is the fully-qualified name of the CoreService's
 	// ListAuditEvents RPC.
 	CoreServiceListAuditEventsProcedure = "/goeland.v1.CoreService/ListAuditEvents"
+	// CoreServiceCreateRelationshipTypeProcedure is the fully-qualified name of the CoreService's
+	// CreateRelationshipType RPC.
+	CoreServiceCreateRelationshipTypeProcedure = "/goeland.v1.CoreService/CreateRelationshipType"
+	// CoreServiceUpdateRelationshipTypeProcedure is the fully-qualified name of the CoreService's
+	// UpdateRelationshipType RPC.
+	CoreServiceUpdateRelationshipTypeProcedure = "/goeland.v1.CoreService/UpdateRelationshipType"
+	// CoreServiceListReferenceChangesProcedure is the fully-qualified name of the CoreService's
+	// ListReferenceChanges RPC.
+	CoreServiceListReferenceChangesProcedure = "/goeland.v1.CoreService/ListReferenceChanges"
 )
 
 // CoreServiceClient is a client for the goeland.v1.CoreService service.
@@ -148,6 +157,15 @@ type CoreServiceClient interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
+	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error)
+	// Change a relationship type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateRelationshipType(context.Context, *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error)
+	// Page the reference data change log, newest first. Requires goeland:admin.
+	ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error)
 }
 
 // NewCoreServiceClient constructs a client for the goeland.v1.CoreService service. By default, it
@@ -233,23 +251,44 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("ListAuditEvents")),
 			connect.WithClientOptions(opts...),
 		),
+		createRelationshipType: connect.NewClient[v1.CreateRelationshipTypeRequest, v1.CreateRelationshipTypeResponse](
+			httpClient,
+			baseURL+CoreServiceCreateRelationshipTypeProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("CreateRelationshipType")),
+			connect.WithClientOptions(opts...),
+		),
+		updateRelationshipType: connect.NewClient[v1.UpdateRelationshipTypeRequest, v1.UpdateRelationshipTypeResponse](
+			httpClient,
+			baseURL+CoreServiceUpdateRelationshipTypeProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("UpdateRelationshipType")),
+			connect.WithClientOptions(opts...),
+		),
+		listReferenceChanges: connect.NewClient[v1.ListReferenceChangesRequest, v1.ListReferenceChangesResponse](
+			httpClient,
+			baseURL+CoreServiceListReferenceChangesProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ListReferenceChanges")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // coreServiceClient implements CoreServiceClient.
 type coreServiceClient struct {
-	createSubjectRef      *connect.Client[v1.CreateSubjectRefRequest, v1.CreateSubjectRefResponse]
-	getSubjectRef         *connect.Client[v1.GetSubjectRefRequest, v1.GetSubjectRefResponse]
-	assignBusinessRef     *connect.Client[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse]
-	lookupSubjects        *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
-	getCurrentUser        *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
-	batchGetUsers         *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
-	linkSubjects          *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
-	unlinkSubjects        *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
-	endRelationship       *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
-	listRelationships     *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
-	listRelationshipTypes *connect.Client[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse]
-	listAuditEvents       *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
+	createSubjectRef       *connect.Client[v1.CreateSubjectRefRequest, v1.CreateSubjectRefResponse]
+	getSubjectRef          *connect.Client[v1.GetSubjectRefRequest, v1.GetSubjectRefResponse]
+	assignBusinessRef      *connect.Client[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse]
+	lookupSubjects         *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
+	getCurrentUser         *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
+	batchGetUsers          *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
+	linkSubjects           *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
+	unlinkSubjects         *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
+	endRelationship        *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
+	listRelationships      *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
+	listRelationshipTypes  *connect.Client[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse]
+	listAuditEvents        *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
+	createRelationshipType *connect.Client[v1.CreateRelationshipTypeRequest, v1.CreateRelationshipTypeResponse]
+	updateRelationshipType *connect.Client[v1.UpdateRelationshipTypeRequest, v1.UpdateRelationshipTypeResponse]
+	listReferenceChanges   *connect.Client[v1.ListReferenceChangesRequest, v1.ListReferenceChangesResponse]
 }
 
 // CreateSubjectRef calls goeland.v1.CoreService.CreateSubjectRef.
@@ -312,6 +351,21 @@ func (c *coreServiceClient) ListAuditEvents(ctx context.Context, req *connect.Re
 	return c.listAuditEvents.CallUnary(ctx, req)
 }
 
+// CreateRelationshipType calls goeland.v1.CoreService.CreateRelationshipType.
+func (c *coreServiceClient) CreateRelationshipType(ctx context.Context, req *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error) {
+	return c.createRelationshipType.CallUnary(ctx, req)
+}
+
+// UpdateRelationshipType calls goeland.v1.CoreService.UpdateRelationshipType.
+func (c *coreServiceClient) UpdateRelationshipType(ctx context.Context, req *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error) {
+	return c.updateRelationshipType.CallUnary(ctx, req)
+}
+
+// ListReferenceChanges calls goeland.v1.CoreService.ListReferenceChanges.
+func (c *coreServiceClient) ListReferenceChanges(ctx context.Context, req *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error) {
+	return c.listReferenceChanges.CallUnary(ctx, req)
+}
+
 // CoreServiceHandler is an implementation of the goeland.v1.CoreService service.
 type CoreServiceHandler interface {
 	// Create a canonical subject identity + its record_metadata in one transaction.
@@ -359,6 +413,15 @@ type CoreServiceHandler interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
+	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error)
+	// Change a relationship type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateRelationshipType(context.Context, *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error)
+	// Page the reference data change log, newest first. Requires goeland:admin.
+	ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error)
 }
 
 // NewCoreServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -440,6 +503,24 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("ListAuditEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceCreateRelationshipTypeHandler := connect.NewUnaryHandler(
+		CoreServiceCreateRelationshipTypeProcedure,
+		svc.CreateRelationshipType,
+		connect.WithSchema(coreServiceMethods.ByName("CreateRelationshipType")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceUpdateRelationshipTypeHandler := connect.NewUnaryHandler(
+		CoreServiceUpdateRelationshipTypeProcedure,
+		svc.UpdateRelationshipType,
+		connect.WithSchema(coreServiceMethods.ByName("UpdateRelationshipType")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceListReferenceChangesHandler := connect.NewUnaryHandler(
+		CoreServiceListReferenceChangesProcedure,
+		svc.ListReferenceChanges,
+		connect.WithSchema(coreServiceMethods.ByName("ListReferenceChanges")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.CoreService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CoreServiceCreateSubjectRefProcedure:
@@ -466,6 +547,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceListRelationshipTypesHandler.ServeHTTP(w, r)
 		case CoreServiceListAuditEventsProcedure:
 			coreServiceListAuditEventsHandler.ServeHTTP(w, r)
+		case CoreServiceCreateRelationshipTypeProcedure:
+			coreServiceCreateRelationshipTypeHandler.ServeHTTP(w, r)
+		case CoreServiceUpdateRelationshipTypeProcedure:
+			coreServiceUpdateRelationshipTypeHandler.ServeHTTP(w, r)
+		case CoreServiceListReferenceChangesProcedure:
+			coreServiceListReferenceChangesHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -521,4 +608,16 @@ func (UnimplementedCoreServiceHandler) ListRelationshipTypes(context.Context, *c
 
 func (UnimplementedCoreServiceHandler) ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListAuditEvents is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.CreateRelationshipType is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) UpdateRelationshipType(context.Context, *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.UpdateRelationshipType is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListReferenceChanges is not implemented"))
 }

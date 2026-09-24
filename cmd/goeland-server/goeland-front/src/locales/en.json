@@ -10,7 +10,8 @@
     "documents": "Documents",
     "createDocument": "New document",
     "actors": "Actors",
-    "createActor": "New actor"
+    "createActor": "New actor",
+    "admin": "Administration"
   },
   "auth": {
     "notConnected": "Not connected",
@@ -49,6 +50,9 @@
       "list": { "title": "Actors" },
       "detail": { "title": "Actor details" },
       "create": { "title": "Create actor" }
+    },
+    "admin": {
+      "title": "Reference data administration"
     }
   },
   "sections": {
@@ -78,6 +82,13 @@
       "ownership": "Ownership",
       "locking": "Locking",
       "retention": "Retention"
+    },
+    "reference": {
+      "case_type": "Case types",
+      "relationship_type": "Relationship types",
+      "organization_category": "Organization categories",
+      "document_type": "Document types",
+      "log": "Change log"
     }
   },
   "fields": {
@@ -204,6 +215,24 @@
       "postal_code": "Postal code",
       "locality": "Locality",
       "country_code": "Country"
+    },
+    "reference": {
+      "code": "Code",
+      "label": "Label",
+      "description": "Description",
+      "businessRefNamespace": "Reference namespace",
+      "category": "Category",
+      "sourceKind": "Source kind",
+      "targetKind": "Target kind",
+      "isDirected": "Directed",
+      "inverseLabel": "Inverse label",
+      "isActive": "Active",
+      "active": "Active",
+      "inactive": "Inactive",
+      "reason": "Reason (log)",
+      "occurredAt": "Date",
+      "catalogue": "Catalogue",
+      "event": "Event"
     }
   },
   "actions": {
@@ -247,7 +276,12 @@
       "reset": "Reset",
       "confirm": "Confirm",
       "back": "Back",
-      "refresh": "Refresh"
+      "refresh": "Refresh",
+      "loadMore": "Load more"
+    },
+    "reference": {
+      "create": "New entry",
+      "edit": "Edit entry"
     }
   },
   "upload": {
@@ -389,7 +423,8 @@
       "other": "Invalid value."
     },
     "postalCodeCH": "A Swiss postal code has four digits (1000 to 9999).",
-    "countryCode": "Two-letter (ISO) country code, e.g. CH, FR."
+    "countryCode": "Two-letter (ISO) country code, e.g. CH, FR.",
+    "referenceCode": "Code: upper-case letters, digits and _, starting with a letter (2 to 100)."
   },
   "errors": {
     "unauthenticated": "Authentication required.",
@@ -448,6 +483,14 @@
       "error": "An error occurred.",
       "noData": "No data to display.",
       "signInRequired": "Sign in to access the application."
+    },
+    "reference": {
+      "saved": "Reference data saved.",
+      "adminOnly": "This page is for administrators (goeland:admin right).",
+      "codeHint": "Upper-case letters, digits and _ (e.g. OPC_DEMANDE_PC); cannot change afterwards.",
+      "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
+      "hint": {"case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).", "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.", "organization_category": "Classification of organizations.", "document_type": "Document types offered at creation."},
+      "event": {"REFERENCE_CREATED": "Created", "REFERENCE_UPDATED": "Updated"}
     }
   }
 }

@@ -543,6 +543,135 @@ message ListRelationshipTypesResponse {
   repeated RelationshipType relationship_types = 1;
 }
 
+// ReferenceChange is one entry of the append-only log of reference data changes
+// (case types, relationship types, organization categories, document types).
+message ReferenceChange {
+  // id is the server-assigned entry UUID.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // catalogue is case_type, relationship_type, organization_category or document_type.
+  string catalogue = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // code is the changed entry's code.
+  string code = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // event_type is REFERENCE_CREATED or REFERENCE_UPDATED.
+  string event_type = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // actor_user_id is the administrator (operator id) who made the change.
+  string actor_user_id = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // occurred_at is when the change was made.
+  google.protobuf.Timestamp occurred_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // before_state is the entry before an update; absent for a creation.
+  google.protobuf.Struct before_state = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // after_state is the entry after the change.
+  google.protobuf.Struct after_state = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // reason is the administrator's justification; empty when none was given.
+  string reason = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ListReferenceChangesRequest pages the reference change log, newest first.
+message ListReferenceChangesRequest {
+  // catalogue restricts the log to one catalogue; empty means all.
+  string catalogue = 1 [(buf.validate.field).string = {
+    in: [
+      "",
+      "case_type",
+      "relationship_type",
+      "organization_category",
+      "document_type"
+    ]
+  }];
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  // page_token is the opaque cursor returned as next_page_token.
+  string page_token = 3;
+}
+
+// ListReferenceChangesResponse is a page of the reference change log.
+message ListReferenceChangesResponse {
+  // changes are the log entries, newest first.
+  repeated ReferenceChange changes = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching entries across all pages.
+  int32 total_size = 3;
+}
+
+// CreateRelationshipTypeRequest adds a relationship type (administrators only).
+message CreateRelationshipTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // source_kind is the required kind of the source subject (immutable).
+  SubjectKind source_kind = 3 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // target_kind is the required kind of the target subject (immutable).
+  SubjectKind target_kind = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // is_directed reports whether the edge reads one way only (immutable).
+  bool is_directed = 5;
+  // inverse_label is the label read from target to source (at most 200 characters).
+  string inverse_label = 6 [(buf.validate.field).string.max_len = 200];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 7 [(buf.validate.field).string.max_len = 2000];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 8 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateRelationshipTypeResponse returns the new relationship type and its log entry.
+message CreateRelationshipTypeResponse {
+  // relationship_type is the created entry, active.
+  RelationshipType relationship_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateRelationshipTypeRequest changes a relationship type (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateRelationshipTypeRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // inverse_label replaces the inverse label when present (at most 200 characters).
+  optional string inverse_label = 3 [(buf.validate.field).string.max_len = 200];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 4 [(buf.validate.field).string.max_len = 2000];
+  // is_active activates or deactivates the entry when present; an inactive
+  // entry stays valid for existing data but is no longer offered.
+  optional bool is_active = 5;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 6 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
+message UpdateRelationshipTypeResponse {
+  // relationship_type is the updated entry.
+  RelationshipType relationship_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
 // ListAuditEventsRequest reads the history of one subject, newest first.
 message ListAuditEventsRequest {
   // subject_id is the subject whose history is listed.
@@ -672,5 +801,29 @@ service CoreService {
   // Requires goeland:read.
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/audit"};
+  }
+
+  // Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+  // ALREADY_EXISTS for a taken code.
+  rpc CreateRelationshipType(CreateRelationshipTypeRequest) returns (CreateRelationshipTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/relationship-types"
+      body: "*"
+    };
+  }
+
+  // Change a relationship type (label, description, activation, ...); the code is
+  // immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+  // unknown code.
+  rpc UpdateRelationshipType(UpdateRelationshipTypeRequest) returns (UpdateRelationshipTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/relationship-types/{code}"
+      body: "*"
+    };
+  }
+
+  // Page the reference data change log, newest first. Requires goeland:admin.
+  rpc ListReferenceChanges(ListReferenceChangesRequest) returns (ListReferenceChangesResponse) {
+    option (google.api.http) = {get: "/api/reference-changes"};
   }
 }

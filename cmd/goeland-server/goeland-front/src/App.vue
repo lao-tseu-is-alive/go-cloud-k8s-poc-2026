@@ -11,7 +11,7 @@
   const { t, locale } = useI18n()
   const auth = useAuthStore()
   const ui = useUiStore()
-  const { isAuthenticated, ready } = storeToRefs(auth)
+  const { isAuthenticated, isAdmin, ready } = storeToRefs(auth)
   const { snackbar } = storeToRefs(ui)
 
   onMounted(() => auth.bootstrap())
@@ -53,6 +53,16 @@
         variant="text"
       >
         {{ t('nav.actors') }}
+      </v-btn>
+
+      <v-btn
+        v-if="isAdmin"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-cog-outline"
+        to="/admin"
+        variant="text"
+      >
+        {{ t('nav.admin') }}
       </v-btn>
 
       <v-menu location="bottom end">

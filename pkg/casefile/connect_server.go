@@ -198,3 +198,31 @@ func (s *ConnectServer) ListCaseTypes(ctx context.Context, req *connect.Request[
 func (s *ConnectServer) mapError(err error) *connect.Error {
 	return core.ToConnectError(s.log, "case", err)
 }
+
+// CreateCaseType adds a case type (administrators only).
+func (s *ConnectServer) CreateCaseType(ctx context.Context, req *connect.Request[goelandv1.CreateCaseTypeRequest]) (*connect.Response[goelandv1.CreateCaseTypeResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.CreateCaseType(ctx, CaseTypeInput{Code: m.Code, Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.CreateCaseTypeResponse{CaseType: TypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}
+
+// UpdateCaseType changes a case type (administrators only).
+func (s *ConnectServer) UpdateCaseType(ctx context.Context, req *connect.Request[goelandv1.UpdateCaseTypeRequest]) (*connect.Response[goelandv1.UpdateCaseTypeResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.UpdateCaseType(ctx, m.Code, CaseTypeUpdate{Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, IsActive: m.IsActive, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.UpdateCaseTypeResponse{CaseType: TypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}

@@ -119,6 +119,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/model.go` — Core domain model with `db` tags: subjects, record metadata, audit events, relationships.
 - `pkg/core/pagination.go` — Page token encoding and page size normalization.
 - `pkg/core/pagination_test.go` — Tests pagination helpers and subject kind validation.
+- `pkg/core/reference.go` — Reference catalogues, the change log model, code and text validation, and `MutateReference` (change + log in one transaction).
+- `pkg/core/reference_admin_test.go` — Tests that reference administration needs `goeland:admin` and the code rule.
+- `pkg/core/reference_relationship.go` — Relationship type administration (create, update, kinds immutable) and the change log listing.
 - `pkg/core/repository.go` — Core persistence interface.
 - `pkg/core/requestctx.go` — Request ID propagation through the context.
 - `pkg/core/service.go` — Core business rules: subject creation, typed linking, audit listing.
@@ -142,6 +145,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0006_actor.sql` — Schema migration: `actor`, `actor_contact` and seeded `organization_category`.
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
+- `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
 - `pkg/core/module/db/migrations/0013_person_identity.sql` — Schema migration: person minimal identity (salutation, last and first name, person-only) and the actor search vector over the names.
 - `pkg/core/module/db/migrations/0012_app_user.sql` — Schema migration: `app_user`, the internal users recorded from verified tokens, each a USER subject.
@@ -155,6 +159,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/document/doc.go` — Package documentation for the GED document domain.
 - `pkg/document/mappers.go` — Document domain ↔ proto mappers.
 - `pkg/document/model.go` — Document, Version and ContentBlob models with `db` tags, create/version/ingest inputs and results, search filter.
+- `pkg/document/reference_admin.go` — Document type administration (label, description, category, activation) over `core.MutateReference`.
 - `pkg/document/repository.go` — Document persistence interface and the `ContentStore` contract for content bytes.
 - `pkg/document/service.go` — Document business rules: content ingestion with deduplication, creation or reuse, versions, finalize, verify, link, soft delete.
 - `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation, hash matching, ingestion cleanup and version validation.
@@ -173,6 +178,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/actor/doc.go` — Package documentation for the external persons and organizations domain.
 - `pkg/actor/mappers.go` — Actor domain ↔ proto mappers.
 - `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contact types and their names, categories, inputs, filter.
+- `pkg/actor/reference_admin.go` — Organization category administration (create, update, deactivate) over `core.MutateReference`.
 - `pkg/actor/repository.go` — Actor persistence interface.
 - `pkg/actor/service.go` — Actor business rules: validation, per-type contact normalization, search, soft delete.
 - `pkg/actor/sql.go` — Raw SQL and alias-prefixed column projections for actor tables.
@@ -186,6 +192,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/casefile/doc.go` — Package documentation for the case (affaire) domain.
 - `pkg/casefile/mappers.go` — Case domain ↔ proto mappers, status enum conversion.
 - `pkg/casefile/model.go` — Case and CaseType models with `db` tags, status transition table, inputs and search filter.
+- `pkg/casefile/reference_admin.go` — Case type administration (label, description, reference namespace, activation) over `core.MutateReference`.
 - `pkg/casefile/repository.go` — Case persistence interface.
 - `pkg/casefile/service.go` — Case business rules: validation, lifecycle transitions with reasons, search, relationships, soft delete.
 - `pkg/casefile/service_test.go` — Tests the transition table, reason requirements and input validation.
@@ -200,6 +207,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
+- `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
@@ -222,6 +230,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
@@ -232,6 +241,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/DevTokenForm.vue` — Dev-mode static token entry shared by the app bar and the sign-in panel.
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
+- `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
+- `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
+- `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesPanel.vue` — Read-only address cards (role, principal, formatted lines, map.geo.admin.ch link).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed complements (type, value checked against its type, note, primary).
@@ -271,6 +283,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
+- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Reference data administration page (one tab per catalogue plus the change log), for administrators.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.
@@ -284,7 +297,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
 - `cmd/goeland-server/goeland-front/src/plugins/index.ts` — Registers Vuetify, Pinia, router and i18n on the app.
 - `cmd/goeland-server/goeland-front/src/plugins/vuetify.ts` — Vuetify instance and theme configuration.
-- `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes for the document and actor pages.
+- `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, actors and administration.
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token or silent JWT minting and re-mint, in-memory token.

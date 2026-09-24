@@ -1908,6 +1908,256 @@ func (x *ListOrganizationCategoriesResponse) GetCategories() []*OrganizationCate
 	return nil
 }
 
+// CreateOrganizationCategoryRequest adds a organization category (administrators only).
+type CreateOrganizationCategoryRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// code is the immutable key: upper-case letters, digits and underscores
+	// (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// label is the required human label (1-200 characters).
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// reason is the justification recorded in the reference change log (at most 2000 characters).
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOrganizationCategoryRequest) Reset() {
+	*x = CreateOrganizationCategoryRequest{}
+	mi := &file_goeland_v1_actor_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOrganizationCategoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOrganizationCategoryRequest) ProtoMessage() {}
+
+func (x *CreateOrganizationCategoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_actor_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOrganizationCategoryRequest.ProtoReflect.Descriptor instead.
+func (*CreateOrganizationCategoryRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *CreateOrganizationCategoryRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateOrganizationCategoryRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *CreateOrganizationCategoryRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// CreateOrganizationCategoryResponse returns the new organization category and its log entry.
+type CreateOrganizationCategoryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// organization_category is the created entry, active.
+	OrganizationCategory *OrganizationCategory `protobuf:"bytes,1,opt,name=organization_category,json=organizationCategory,proto3" json:"organization_category,omitempty"`
+	// change is the REFERENCE_CREATED entry of the reference change log.
+	Change        *ReferenceChange `protobuf:"bytes,2,opt,name=change,proto3" json:"change,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateOrganizationCategoryResponse) Reset() {
+	*x = CreateOrganizationCategoryResponse{}
+	mi := &file_goeland_v1_actor_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateOrganizationCategoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateOrganizationCategoryResponse) ProtoMessage() {}
+
+func (x *CreateOrganizationCategoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_actor_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateOrganizationCategoryResponse.ProtoReflect.Descriptor instead.
+func (*CreateOrganizationCategoryResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *CreateOrganizationCategoryResponse) GetOrganizationCategory() *OrganizationCategory {
+	if x != nil {
+		return x.OrganizationCategory
+	}
+	return nil
+}
+
+func (x *CreateOrganizationCategoryResponse) GetChange() *ReferenceChange {
+	if x != nil {
+		return x.Change
+	}
+	return nil
+}
+
+// UpdateOrganizationCategoryRequest changes a organization category (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+type UpdateOrganizationCategoryRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// code selects the entry to update (its code never changes).
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// label replaces the label when present (1-200 characters).
+	Label *string `protobuf:"bytes,2,opt,name=label,proto3,oneof" json:"label,omitempty"`
+	// is_active activates or deactivates the entry when present; an inactive
+	// entry stays valid for existing data but is no longer offered.
+	IsActive *bool `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// reason is the justification recorded in the reference change log (at most 2000 characters).
+	Reason        string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrganizationCategoryRequest) Reset() {
+	*x = UpdateOrganizationCategoryRequest{}
+	mi := &file_goeland_v1_actor_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrganizationCategoryRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrganizationCategoryRequest) ProtoMessage() {}
+
+func (x *UpdateOrganizationCategoryRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_actor_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOrganizationCategoryRequest.ProtoReflect.Descriptor instead.
+func (*UpdateOrganizationCategoryRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *UpdateOrganizationCategoryRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *UpdateOrganizationCategoryRequest) GetLabel() string {
+	if x != nil && x.Label != nil {
+		return *x.Label
+	}
+	return ""
+}
+
+func (x *UpdateOrganizationCategoryRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+func (x *UpdateOrganizationCategoryRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// UpdateOrganizationCategoryResponse returns the updated organization category and its log entry.
+type UpdateOrganizationCategoryResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// organization_category is the updated entry.
+	OrganizationCategory *OrganizationCategory `protobuf:"bytes,1,opt,name=organization_category,json=organizationCategory,proto3" json:"organization_category,omitempty"`
+	// change is the REFERENCE_UPDATED entry of the reference change log.
+	Change        *ReferenceChange `protobuf:"bytes,2,opt,name=change,proto3" json:"change,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateOrganizationCategoryResponse) Reset() {
+	*x = UpdateOrganizationCategoryResponse{}
+	mi := &file_goeland_v1_actor_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateOrganizationCategoryResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateOrganizationCategoryResponse) ProtoMessage() {}
+
+func (x *UpdateOrganizationCategoryResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_actor_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateOrganizationCategoryResponse.ProtoReflect.Descriptor instead.
+func (*UpdateOrganizationCategoryResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_actor_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *UpdateOrganizationCategoryResponse) GetOrganizationCategory() *OrganizationCategory {
+	if x != nil {
+		return x.OrganizationCategory
+	}
+	return nil
+}
+
+func (x *UpdateOrganizationCategoryResponse) GetChange() *ReferenceChange {
+	if x != nil {
+		return x.Change
+	}
+	return nil
+}
+
 var File_goeland_v1_actor_proto protoreflect.FileDescriptor
 
 const file_goeland_v1_actor_proto_rawDesc = "" +
@@ -2053,7 +2303,26 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\"ListOrganizationCategoriesResponse\x12@\n" +
 	"\n" +
 	"categories\x18\x01 \x03(\v2 .goeland.v1.OrganizationCategoryR\n" +
-	"categories*[\n" +
+	"categories\"\xa0\x01\n" +
+	"!CreateOrganizationCategoryRequest\x124\n" +
+	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
+	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12 \n" +
+	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\xb0\x01\n" +
+	"\"CreateOrganizationCategoryResponse\x12U\n" +
+	"\x15organization_category\x18\x01 \x01(\v2 .goeland.v1.OrganizationCategoryR\x14organizationCategory\x123\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xc8\x01\n" +
+	"!UpdateOrganizationCategoryRequest\x12 \n" +
+	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x05label\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x03 \x01(\bH\x01R\bisActive\x88\x01\x01\x12 \n" +
+	"\x06reason\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reasonB\b\n" +
+	"\x06_labelB\f\n" +
+	"\n" +
+	"_is_active\"\xb0\x01\n" +
+	"\"UpdateOrganizationCategoryResponse\x12U\n" +
+	"\x15organization_category\x18\x01 \x01(\v2 .goeland.v1.OrganizationCategoryR\x14organizationCategory\x123\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change*[\n" +
 	"\tActorKind\x12\x1a\n" +
 	"\x16ACTOR_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11ACTOR_KIND_PERSON\x10\x01\x12\x1b\n" +
@@ -2086,14 +2355,16 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x1bADDRESS_TYPE_CORRESPONDENCE\x10\x03\x12\x18\n" +
 	"\x14ADDRESS_TYPE_BILLING\x10\x04\x12\x1a\n" +
 	"\x16ADDRESS_TYPE_RESIDENCE\x10\x05\x12\x16\n" +
-	"\x12ADDRESS_TYPE_OTHER\x10\x062\xc1\x05\n" +
+	"\x12ADDRESS_TYPE_OTHER\x10\x062\x96\b\n" +
 	"\fActorService\x12f\n" +
 	"\vCreateActor\x12\x1e.goeland.v1.CreateActorRequest\x1a\x1f.goeland.v1.CreateActorResponse\"\x16\x82\xd3\xe4\x93\x02\x10:\x01*\"\v/api/actors\x12_\n" +
 	"\bGetActor\x12\x1b.goeland.v1.GetActorRequest\x1a\x1c.goeland.v1.GetActorResponse\"\x18\x82\xd3\xe4\x93\x02\x12\x12\x10/api/actors/{id}\x12k\n" +
 	"\vUpdateActor\x12\x1e.goeland.v1.UpdateActorRequest\x1a\x1f.goeland.v1.UpdateActorResponse\"\x1b\x82\xd3\xe4\x93\x02\x15:\x01*2\x10/api/actors/{id}\x12m\n" +
 	"\fSearchActors\x12\x1f.goeland.v1.SearchActorsRequest\x1a .goeland.v1.SearchActorsResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/actors/search\x12h\n" +
 	"\vDeleteActor\x12\x1e.goeland.v1.DeleteActorRequest\x1a\x1f.goeland.v1.DeleteActorResponse\"\x18\x82\xd3\xe4\x93\x02\x12*\x10/api/actors/{id}\x12\xa1\x01\n" +
-	"\x1aListOrganizationCategories\x12-.goeland.v1.ListOrganizationCategoriesRequest\x1a..goeland.v1.ListOrganizationCategoriesResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/organization-categoriesB\xb2\x01\n" +
+	"\x1aListOrganizationCategories\x12-.goeland.v1.ListOrganizationCategoriesRequest\x1a..goeland.v1.ListOrganizationCategoriesResponse\"$\x82\xd3\xe4\x93\x02\x1e\x12\x1c/api/organization-categories\x12\xa4\x01\n" +
+	"\x1aCreateOrganizationCategory\x12-.goeland.v1.CreateOrganizationCategoryRequest\x1a..goeland.v1.CreateOrganizationCategoryResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/organization-categories\x12\xab\x01\n" +
+	"\x1aUpdateOrganizationCategory\x12-.goeland.v1.UpdateOrganizationCategoryRequest\x1a..goeland.v1.UpdateOrganizationCategoryResponse\".\x82\xd3\xe4\x93\x02(:\x01*2#/api/organization-categories/{code}B\xb2\x01\n" +
 	"\x0ecom.goeland.v1B\n" +
 	"ActorProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
@@ -2112,7 +2383,7 @@ func file_goeland_v1_actor_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_actor_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_goeland_v1_actor_proto_msgTypes = make([]protoimpl.MessageInfo, 18)
+var file_goeland_v1_actor_proto_msgTypes = make([]protoimpl.MessageInfo, 22)
 var file_goeland_v1_actor_proto_goTypes = []any{
 	(ActorKind)(0),                             // 0: goeland.v1.ActorKind
 	(Salutation)(0),                            // 1: goeland.v1.Salutation
@@ -2136,64 +2407,77 @@ var file_goeland_v1_actor_proto_goTypes = []any{
 	(*DeleteActorResponse)(nil),                // 19: goeland.v1.DeleteActorResponse
 	(*ListOrganizationCategoriesRequest)(nil),  // 20: goeland.v1.ListOrganizationCategoriesRequest
 	(*ListOrganizationCategoriesResponse)(nil), // 21: goeland.v1.ListOrganizationCategoriesResponse
-	(*timestamppb.Timestamp)(nil),              // 22: google.protobuf.Timestamp
-	(*SubjectRef)(nil),                         // 23: goeland.v1.SubjectRef
-	(*RecordMetadata)(nil),                     // 24: goeland.v1.RecordMetadata
-	(*AuditEvent)(nil),                         // 25: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),                // 26: goeland.v1.SubjectRelationship
+	(*CreateOrganizationCategoryRequest)(nil),  // 22: goeland.v1.CreateOrganizationCategoryRequest
+	(*CreateOrganizationCategoryResponse)(nil), // 23: goeland.v1.CreateOrganizationCategoryResponse
+	(*UpdateOrganizationCategoryRequest)(nil),  // 24: goeland.v1.UpdateOrganizationCategoryRequest
+	(*UpdateOrganizationCategoryResponse)(nil), // 25: goeland.v1.UpdateOrganizationCategoryResponse
+	(*timestamppb.Timestamp)(nil),              // 26: google.protobuf.Timestamp
+	(*SubjectRef)(nil),                         // 27: goeland.v1.SubjectRef
+	(*RecordMetadata)(nil),                     // 28: goeland.v1.RecordMetadata
+	(*AuditEvent)(nil),                         // 29: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),                // 30: goeland.v1.SubjectRelationship
+	(*ReferenceChange)(nil),                    // 31: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_actor_proto_depIdxs = []int32{
 	3,  // 0: goeland.v1.ActorAddress.address_type:type_name -> goeland.v1.AddressType
-	22, // 1: goeland.v1.ActorAddress.created_at:type_name -> google.protobuf.Timestamp
+	26, // 1: goeland.v1.ActorAddress.created_at:type_name -> google.protobuf.Timestamp
 	2,  // 2: goeland.v1.ActorContact.contact_type:type_name -> goeland.v1.ContactType
 	1,  // 3: goeland.v1.PersonDetails.salutation:type_name -> goeland.v1.Salutation
-	23, // 4: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
+	27, // 4: goeland.v1.Actor.subject_ref:type_name -> goeland.v1.SubjectRef
 	0,  // 5: goeland.v1.Actor.actor_kind:type_name -> goeland.v1.ActorKind
 	8,  // 6: goeland.v1.Actor.person:type_name -> goeland.v1.PersonDetails
 	7,  // 7: goeland.v1.Actor.organization:type_name -> goeland.v1.OrganizationDetails
 	6,  // 8: goeland.v1.Actor.contacts:type_name -> goeland.v1.ActorContact
-	22, // 9: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
-	22, // 10: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
-	24, // 11: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
+	26, // 9: goeland.v1.Actor.created_at:type_name -> google.protobuf.Timestamp
+	26, // 10: goeland.v1.Actor.updated_at:type_name -> google.protobuf.Timestamp
+	28, // 11: goeland.v1.Actor.record_metadata:type_name -> goeland.v1.RecordMetadata
 	5,  // 12: goeland.v1.Actor.addresses:type_name -> goeland.v1.ActorAddress
 	0,  // 13: goeland.v1.CreateActorRequest.actor_kind:type_name -> goeland.v1.ActorKind
 	8,  // 14: goeland.v1.CreateActorRequest.person:type_name -> goeland.v1.PersonDetails
 	7,  // 15: goeland.v1.CreateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
 	6,  // 16: goeland.v1.CreateActorRequest.contacts:type_name -> goeland.v1.ActorContact
-	24, // 17: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	28, // 17: goeland.v1.CreateActorRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
 	5,  // 18: goeland.v1.CreateActorRequest.addresses:type_name -> goeland.v1.ActorAddress
 	9,  // 19: goeland.v1.CreateActorResponse.actor:type_name -> goeland.v1.Actor
-	25, // 20: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
+	29, // 20: goeland.v1.CreateActorResponse.created_event:type_name -> goeland.v1.AuditEvent
 	9,  // 21: goeland.v1.GetActorResponse.actor:type_name -> goeland.v1.Actor
-	26, // 22: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	25, // 23: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	30, // 22: goeland.v1.GetActorResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	29, // 23: goeland.v1.GetActorResponse.recent_audit:type_name -> goeland.v1.AuditEvent
 	8,  // 24: goeland.v1.UpdateActorRequest.person:type_name -> goeland.v1.PersonDetails
 	7,  // 25: goeland.v1.UpdateActorRequest.organization:type_name -> goeland.v1.OrganizationDetails
 	6,  // 26: goeland.v1.UpdateActorRequest.contacts:type_name -> goeland.v1.ActorContact
 	5,  // 27: goeland.v1.UpdateActorRequest.addresses:type_name -> goeland.v1.ActorAddress
 	9,  // 28: goeland.v1.UpdateActorResponse.actor:type_name -> goeland.v1.Actor
-	25, // 29: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
+	29, // 29: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
 	0,  // 30: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
 	9,  // 31: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
-	25, // 32: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	29, // 32: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
 	4,  // 33: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
-	10, // 34: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
-	12, // 35: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
-	14, // 36: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
-	16, // 37: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
-	18, // 38: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
-	20, // 39: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
-	11, // 40: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
-	13, // 41: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
-	15, // 42: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
-	17, // 43: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
-	19, // 44: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
-	21, // 45: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
-	40, // [40:46] is the sub-list for method output_type
-	34, // [34:40] is the sub-list for method input_type
-	34, // [34:34] is the sub-list for extension type_name
-	34, // [34:34] is the sub-list for extension extendee
-	0,  // [0:34] is the sub-list for field type_name
+	4,  // 34: goeland.v1.CreateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
+	31, // 35: goeland.v1.CreateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 36: goeland.v1.UpdateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
+	31, // 37: goeland.v1.UpdateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
+	10, // 38: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
+	12, // 39: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
+	14, // 40: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
+	16, // 41: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
+	18, // 42: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
+	20, // 43: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
+	22, // 44: goeland.v1.ActorService.CreateOrganizationCategory:input_type -> goeland.v1.CreateOrganizationCategoryRequest
+	24, // 45: goeland.v1.ActorService.UpdateOrganizationCategory:input_type -> goeland.v1.UpdateOrganizationCategoryRequest
+	11, // 46: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
+	13, // 47: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
+	15, // 48: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
+	17, // 49: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
+	19, // 50: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
+	21, // 51: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
+	23, // 52: goeland.v1.ActorService.CreateOrganizationCategory:output_type -> goeland.v1.CreateOrganizationCategoryResponse
+	25, // 53: goeland.v1.ActorService.UpdateOrganizationCategory:output_type -> goeland.v1.UpdateOrganizationCategoryResponse
+	46, // [46:54] is the sub-list for method output_type
+	38, // [38:46] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_actor_proto_init() }
@@ -2214,13 +2498,14 @@ func file_goeland_v1_actor_proto_init() {
 		(*UpdateActorRequest_Person)(nil),
 		(*UpdateActorRequest_Organization)(nil),
 	}
+	file_goeland_v1_actor_proto_msgTypes[20].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_actor_proto_rawDesc), len(file_goeland_v1_actor_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   18,
+			NumMessages:   22,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

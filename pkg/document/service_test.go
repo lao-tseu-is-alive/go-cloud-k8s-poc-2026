@@ -92,6 +92,12 @@ func (f *fakeRepo) SoftDelete(context.Context, uuid.UUID, string, string) (*core
 	return &core.AuditEvent{}, nil
 }
 func (f *fakeRepo) ListTypes(context.Context, bool) ([]*DocumentType, error) { return nil, nil }
+func (f *fakeRepo) CreateDocumentType(context.Context, DocumentTypeInput) (*DocumentType, *core.ReferenceChange, error) {
+	return nil, nil, nil
+}
+func (f *fakeRepo) UpdateDocumentType(context.Context, string, DocumentTypeUpdate) (*DocumentType, *core.ReferenceChange, error) {
+	return nil, nil, nil
+}
 
 func newTestService(t *testing.T, repo Repository) *Service {
 	t.Helper()

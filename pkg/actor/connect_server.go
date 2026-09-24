@@ -219,3 +219,31 @@ func (s *ConnectServer) ListOrganizationCategories(ctx context.Context, req *con
 func (s *ConnectServer) mapError(err error) *connect.Error {
 	return core.ToConnectError(s.log, "actor", err)
 }
+
+// CreateOrganizationCategory adds a organization category (administrators only).
+func (s *ConnectServer) CreateOrganizationCategory(ctx context.Context, req *connect.Request[goelandv1.CreateOrganizationCategoryRequest]) (*connect.Response[goelandv1.CreateOrganizationCategoryResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.CreateOrganizationCategory(ctx, OrganizationCategoryInput{Code: m.Code, Label: m.Label, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.CreateOrganizationCategoryResponse{OrganizationCategory: DomainCategoryToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}
+
+// UpdateOrganizationCategory changes a organization category (administrators only).
+func (s *ConnectServer) UpdateOrganizationCategory(ctx context.Context, req *connect.Request[goelandv1.UpdateOrganizationCategoryRequest]) (*connect.Response[goelandv1.UpdateOrganizationCategoryResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.UpdateOrganizationCategory(ctx, m.Code, OrganizationCategoryUpdate{Label: m.Label, IsActive: m.IsActive, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.UpdateOrganizationCategoryResponse{OrganizationCategory: DomainCategoryToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}

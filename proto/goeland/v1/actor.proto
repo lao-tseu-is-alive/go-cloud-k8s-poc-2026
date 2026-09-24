@@ -466,6 +466,61 @@ message ListOrganizationCategoriesResponse {
   repeated OrganizationCategory categories = 1;
 }
 
+// CreateOrganizationCategoryRequest adds a organization category (administrators only).
+message CreateOrganizationCategoryRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateOrganizationCategoryResponse returns the new organization category and its log entry.
+message CreateOrganizationCategoryResponse {
+  // organization_category is the created entry, active.
+  OrganizationCategory organization_category = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateOrganizationCategoryRequest changes a organization category (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateOrganizationCategoryRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // is_active activates or deactivates the entry when present; an inactive
+  // entry stays valid for existing data but is no longer offered.
+  optional bool is_active = 3;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateOrganizationCategoryResponse returns the updated organization category and its log entry.
+message UpdateOrganizationCategoryResponse {
+  // organization_category is the updated entry.
+  OrganizationCategory organization_category = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
 // =============================================
 // ACTOR SERVICE
 // =============================================
@@ -515,5 +570,24 @@ service ActorService {
   // Requires goeland:read.
   rpc ListOrganizationCategories(ListOrganizationCategoriesRequest) returns (ListOrganizationCategoriesResponse) {
     option (google.api.http) = {get: "/api/organization-categories"};
+  }
+
+  // Add a organization category. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+  // ALREADY_EXISTS for a taken code.
+  rpc CreateOrganizationCategory(CreateOrganizationCategoryRequest) returns (CreateOrganizationCategoryResponse) {
+    option (google.api.http) = {
+      post: "/api/organization-categories"
+      body: "*"
+    };
+  }
+
+  // Change a organization category (label, description, activation, ...); the code is
+  // immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+  // unknown code.
+  rpc UpdateOrganizationCategory(UpdateOrganizationCategoryRequest) returns (UpdateOrganizationCategoryResponse) {
+    option (google.api.http) = {
+      patch: "/api/organization-categories/{code}"
+      body: "*"
+    };
   }
 }

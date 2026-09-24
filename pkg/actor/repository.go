@@ -17,4 +17,6 @@ type Repository interface {
 	Search(ctx context.Context, filter SearchFilter) (SearchResult, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error)
 	ListCategories(ctx context.Context, onlyActive bool) ([]*OrganizationCategory, error)
+	CreateOrganizationCategory(ctx context.Context, in OrganizationCategoryInput) (*OrganizationCategory, *core.ReferenceChange, error)
+	UpdateOrganizationCategory(ctx context.Context, code string, in OrganizationCategoryUpdate) (*OrganizationCategory, *core.ReferenceChange, error)
 }

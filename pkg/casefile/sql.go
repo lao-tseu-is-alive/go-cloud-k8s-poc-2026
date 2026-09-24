@@ -80,3 +80,27 @@ WHERE (@query = ''
   AND (@include_deleted OR rm.deleted_at IS NULL)
 ORDER BY c.created_at DESC
 LIMIT @limit OFFSET @offset;`
+
+// --- case_type administration (GLD-040) ---------------------------------------------
+
+const insertCaseTypeSQL = `
+INSERT INTO case_type (code, label, description, business_ref_namespace)
+VALUES (@code, @label, @description, @business_ref_namespace)
+RETURNING ` + caseTypeColumns + `;`
+
+const getCaseTypeForUpdateSQL = `
+SELECT ` + caseTypeColumns + `
+FROM case_type
+WHERE code = @code
+FOR UPDATE;`
+
+// updateCaseTypeSQL replaces the fields given (NULL keeps the current value); the
+// code is immutable.
+const updateCaseTypeSQL = `
+UPDATE case_type
+SET label = coalesce(@label::text, label),
+    description = coalesce(@description::text, description),
+    business_ref_namespace = coalesce(@business_ref_namespace::text, business_ref_namespace),
+    is_active = coalesce(@is_active::boolean, is_active)
+WHERE code = @code
+RETURNING ` + caseTypeColumns + `;`

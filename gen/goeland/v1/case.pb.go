@@ -1258,6 +1258,294 @@ func (x *ListCaseTypesResponse) GetCaseTypes() []*CaseType {
 	return nil
 }
 
+// CreateCaseTypeRequest adds a case type (administrators only).
+type CreateCaseTypeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// code is the immutable key: upper-case letters, digits and underscores
+	// (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// label is the required human label (1-200 characters).
+	Label string `protobuf:"bytes,2,opt,name=label,proto3" json:"label,omitempty"`
+	// description documents the business meaning (at most 2000 characters).
+	Description string `protobuf:"bytes,3,opt,name=description,proto3" json:"description,omitempty"`
+	// business_ref_namespace is the namespace in which cases of this type get
+	// their reference (empty: none allocated), e.g. OPC.
+	BusinessRefNamespace string `protobuf:"bytes,4,opt,name=business_ref_namespace,json=businessRefNamespace,proto3" json:"business_ref_namespace,omitempty"`
+	// reason is the justification recorded in the reference change log (at most 2000 characters).
+	Reason        string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCaseTypeRequest) Reset() {
+	*x = CreateCaseTypeRequest{}
+	mi := &file_goeland_v1_case_proto_msgTypes[16]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCaseTypeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCaseTypeRequest) ProtoMessage() {}
+
+func (x *CreateCaseTypeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[16]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCaseTypeRequest.ProtoReflect.Descriptor instead.
+func (*CreateCaseTypeRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{16}
+}
+
+func (x *CreateCaseTypeRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *CreateCaseTypeRequest) GetLabel() string {
+	if x != nil {
+		return x.Label
+	}
+	return ""
+}
+
+func (x *CreateCaseTypeRequest) GetDescription() string {
+	if x != nil {
+		return x.Description
+	}
+	return ""
+}
+
+func (x *CreateCaseTypeRequest) GetBusinessRefNamespace() string {
+	if x != nil {
+		return x.BusinessRefNamespace
+	}
+	return ""
+}
+
+func (x *CreateCaseTypeRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// CreateCaseTypeResponse returns the new case type and its log entry.
+type CreateCaseTypeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// case_type is the created entry, active.
+	CaseType *CaseType `protobuf:"bytes,1,opt,name=case_type,json=caseType,proto3" json:"case_type,omitempty"`
+	// change is the REFERENCE_CREATED entry of the reference change log.
+	Change        *ReferenceChange `protobuf:"bytes,2,opt,name=change,proto3" json:"change,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateCaseTypeResponse) Reset() {
+	*x = CreateCaseTypeResponse{}
+	mi := &file_goeland_v1_case_proto_msgTypes[17]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateCaseTypeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateCaseTypeResponse) ProtoMessage() {}
+
+func (x *CreateCaseTypeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[17]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateCaseTypeResponse.ProtoReflect.Descriptor instead.
+func (*CreateCaseTypeResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{17}
+}
+
+func (x *CreateCaseTypeResponse) GetCaseType() *CaseType {
+	if x != nil {
+		return x.CaseType
+	}
+	return nil
+}
+
+func (x *CreateCaseTypeResponse) GetChange() *ReferenceChange {
+	if x != nil {
+		return x.Change
+	}
+	return nil
+}
+
+// UpdateCaseTypeRequest changes a case type (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+type UpdateCaseTypeRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// code selects the entry to update (its code never changes).
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// label replaces the label when present (1-200 characters).
+	Label *string `protobuf:"bytes,2,opt,name=label,proto3,oneof" json:"label,omitempty"`
+	// description replaces the description when present (at most 2000 characters).
+	Description *string `protobuf:"bytes,3,opt,name=description,proto3,oneof" json:"description,omitempty"`
+	// business_ref_namespace replaces the allocation namespace when present
+	// (affects future cases only; empty stops allocation).
+	BusinessRefNamespace *string `protobuf:"bytes,4,opt,name=business_ref_namespace,json=businessRefNamespace,proto3,oneof" json:"business_ref_namespace,omitempty"`
+	// is_active activates or deactivates the entry when present; an inactive
+	// entry stays valid for existing data but is no longer offered.
+	IsActive *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
+	// reason is the justification recorded in the reference change log (at most 2000 characters).
+	Reason        string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCaseTypeRequest) Reset() {
+	*x = UpdateCaseTypeRequest{}
+	mi := &file_goeland_v1_case_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCaseTypeRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCaseTypeRequest) ProtoMessage() {}
+
+func (x *UpdateCaseTypeRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCaseTypeRequest.ProtoReflect.Descriptor instead.
+func (*UpdateCaseTypeRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *UpdateCaseTypeRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *UpdateCaseTypeRequest) GetLabel() string {
+	if x != nil && x.Label != nil {
+		return *x.Label
+	}
+	return ""
+}
+
+func (x *UpdateCaseTypeRequest) GetDescription() string {
+	if x != nil && x.Description != nil {
+		return *x.Description
+	}
+	return ""
+}
+
+func (x *UpdateCaseTypeRequest) GetBusinessRefNamespace() string {
+	if x != nil && x.BusinessRefNamespace != nil {
+		return *x.BusinessRefNamespace
+	}
+	return ""
+}
+
+func (x *UpdateCaseTypeRequest) GetIsActive() bool {
+	if x != nil && x.IsActive != nil {
+		return *x.IsActive
+	}
+	return false
+}
+
+func (x *UpdateCaseTypeRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// UpdateCaseTypeResponse returns the updated case type and its log entry.
+type UpdateCaseTypeResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// case_type is the updated entry.
+	CaseType *CaseType `protobuf:"bytes,1,opt,name=case_type,json=caseType,proto3" json:"case_type,omitempty"`
+	// change is the REFERENCE_UPDATED entry of the reference change log.
+	Change        *ReferenceChange `protobuf:"bytes,2,opt,name=change,proto3" json:"change,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *UpdateCaseTypeResponse) Reset() {
+	*x = UpdateCaseTypeResponse{}
+	mi := &file_goeland_v1_case_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *UpdateCaseTypeResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*UpdateCaseTypeResponse) ProtoMessage() {}
+
+func (x *UpdateCaseTypeResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use UpdateCaseTypeResponse.ProtoReflect.Descriptor instead.
+func (*UpdateCaseTypeResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *UpdateCaseTypeResponse) GetCaseType() *CaseType {
+	if x != nil {
+		return x.CaseType
+	}
+	return nil
+}
+
+func (x *UpdateCaseTypeResponse) GetChange() *ReferenceChange {
+	if x != nil {
+		return x.Change
+	}
+	return nil
+}
+
 var File_goeland_v1_case_proto protoreflect.FileDescriptor
 
 const file_goeland_v1_case_proto_rawDesc = "" +
@@ -1352,14 +1640,39 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"onlyActive\"L\n" +
 	"\x15ListCaseTypesResponse\x123\n" +
 	"\n" +
-	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes*\x8f\x01\n" +
+	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\x98\x02\n" +
+	"\x15CreateCaseTypeRequest\x124\n" +
+	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
+	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12V\n" +
+	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\x14businessRefNamespace\x12 \n" +
+	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x80\x01\n" +
+	"\x16CreateCaseTypeResponse\x121\n" +
+	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xf5\x02\n" +
+	"\x15UpdateCaseTypeRequest\x12 \n" +
+	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x05label\x18\x02 \x01(\tB\n" +
+	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12/\n" +
+	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12[\n" +
+	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$H\x02R\x14businessRefNamespace\x88\x01\x01\x12 \n" +
+	"\tis_active\x18\x05 \x01(\bH\x03R\bisActive\x88\x01\x01\x12 \n" +
+	"\x06reason\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reasonB\b\n" +
+	"\x06_labelB\x0e\n" +
+	"\f_descriptionB\x19\n" +
+	"\x17_business_ref_namespaceB\f\n" +
+	"\n" +
+	"_is_active\"\x80\x01\n" +
+	"\x16UpdateCaseTypeResponse\x121\n" +
+	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change*\x8f\x01\n" +
 	"\n" +
 	"CaseStatus\x12\x1b\n" +
 	"\x17CASE_STATUS_UNSPECIFIED\x10\x00\x12\x14\n" +
 	"\x10CASE_STATUS_OPEN\x10\x01\x12\x1b\n" +
 	"\x17CASE_STATUS_IN_PROGRESS\x10\x02\x12\x19\n" +
 	"\x15CASE_STATUS_SUSPENDED\x10\x03\x12\x16\n" +
-	"\x12CASE_STATUS_CLOSED\x10\x042\xf7\x05\n" +
+	"\x12CASE_STATUS_CLOSED\x10\x042\xe8\a\n" +
 	"\vCaseService\x12b\n" +
 	"\n" +
 	"CreateCase\x12\x1d.goeland.v1.CreateCaseRequest\x1a\x1e.goeland.v1.CreateCaseResponse\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
@@ -1371,7 +1684,9 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\vSearchCases\x12\x1e.goeland.v1.SearchCasesRequest\x1a\x1f.goeland.v1.SearchCasesResponse\"\x19\x82\xd3\xe4\x93\x02\x13\x12\x11/api/cases/search\x12d\n" +
 	"\n" +
 	"DeleteCase\x12\x1d.goeland.v1.DeleteCaseRequest\x1a\x1e.goeland.v1.DeleteCaseResponse\"\x17\x82\xd3\xe4\x93\x02\x11*\x0f/api/cases/{id}\x12m\n" +
-	"\rListCaseTypes\x12 .goeland.v1.ListCaseTypesRequest\x1a!.goeland.v1.ListCaseTypesResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/api/case-typesB\xb1\x01\n" +
+	"\rListCaseTypes\x12 .goeland.v1.ListCaseTypesRequest\x1a!.goeland.v1.ListCaseTypesResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/api/case-types\x12s\n" +
+	"\x0eCreateCaseType\x12!.goeland.v1.CreateCaseTypeRequest\x1a\".goeland.v1.CreateCaseTypeResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/api/case-types\x12z\n" +
+	"\x0eUpdateCaseType\x12!.goeland.v1.UpdateCaseTypeRequest\x1a\".goeland.v1.UpdateCaseTypeResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*2\x16/api/case-types/{code}B\xb1\x01\n" +
 	"\x0ecom.goeland.v1B\tCaseProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"
@@ -1389,7 +1704,7 @@ func file_goeland_v1_case_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_case_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_goeland_v1_case_proto_msgTypes = make([]protoimpl.MessageInfo, 16)
+var file_goeland_v1_case_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
 var file_goeland_v1_case_proto_goTypes = []any{
 	(CaseStatus)(0),                // 0: goeland.v1.CaseStatus
 	(*CaseType)(nil),               // 1: goeland.v1.CaseType
@@ -1408,61 +1723,74 @@ var file_goeland_v1_case_proto_goTypes = []any{
 	(*DeleteCaseResponse)(nil),     // 14: goeland.v1.DeleteCaseResponse
 	(*ListCaseTypesRequest)(nil),   // 15: goeland.v1.ListCaseTypesRequest
 	(*ListCaseTypesResponse)(nil),  // 16: goeland.v1.ListCaseTypesResponse
-	(*SubjectRef)(nil),             // 17: goeland.v1.SubjectRef
-	(*timestamppb.Timestamp)(nil),  // 18: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),        // 19: google.protobuf.Struct
-	(*RecordMetadata)(nil),         // 20: goeland.v1.RecordMetadata
-	(*BusinessRefRequest)(nil),     // 21: goeland.v1.BusinessRefRequest
-	(*AuditEvent)(nil),             // 22: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),    // 23: goeland.v1.SubjectRelationship
+	(*CreateCaseTypeRequest)(nil),  // 17: goeland.v1.CreateCaseTypeRequest
+	(*CreateCaseTypeResponse)(nil), // 18: goeland.v1.CreateCaseTypeResponse
+	(*UpdateCaseTypeRequest)(nil),  // 19: goeland.v1.UpdateCaseTypeRequest
+	(*UpdateCaseTypeResponse)(nil), // 20: goeland.v1.UpdateCaseTypeResponse
+	(*SubjectRef)(nil),             // 21: goeland.v1.SubjectRef
+	(*timestamppb.Timestamp)(nil),  // 22: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),        // 23: google.protobuf.Struct
+	(*RecordMetadata)(nil),         // 24: goeland.v1.RecordMetadata
+	(*BusinessRefRequest)(nil),     // 25: goeland.v1.BusinessRefRequest
+	(*AuditEvent)(nil),             // 26: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),    // 27: goeland.v1.SubjectRelationship
+	(*ReferenceChange)(nil),        // 28: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_case_proto_depIdxs = []int32{
-	17, // 0: goeland.v1.Case.subject_ref:type_name -> goeland.v1.SubjectRef
+	21, // 0: goeland.v1.Case.subject_ref:type_name -> goeland.v1.SubjectRef
 	1,  // 1: goeland.v1.Case.case_type:type_name -> goeland.v1.CaseType
 	0,  // 2: goeland.v1.Case.status:type_name -> goeland.v1.CaseStatus
-	18, // 3: goeland.v1.Case.opened_at:type_name -> google.protobuf.Timestamp
-	18, // 4: goeland.v1.Case.closed_at:type_name -> google.protobuf.Timestamp
-	19, // 5: goeland.v1.Case.metadata:type_name -> google.protobuf.Struct
-	18, // 6: goeland.v1.Case.created_at:type_name -> google.protobuf.Timestamp
-	18, // 7: goeland.v1.Case.updated_at:type_name -> google.protobuf.Timestamp
-	20, // 8: goeland.v1.Case.record_metadata:type_name -> goeland.v1.RecordMetadata
-	19, // 9: goeland.v1.CreateCaseRequest.metadata:type_name -> google.protobuf.Struct
-	21, // 10: goeland.v1.CreateCaseRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
-	20, // 11: goeland.v1.CreateCaseRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	22, // 3: goeland.v1.Case.opened_at:type_name -> google.protobuf.Timestamp
+	22, // 4: goeland.v1.Case.closed_at:type_name -> google.protobuf.Timestamp
+	23, // 5: goeland.v1.Case.metadata:type_name -> google.protobuf.Struct
+	22, // 6: goeland.v1.Case.created_at:type_name -> google.protobuf.Timestamp
+	22, // 7: goeland.v1.Case.updated_at:type_name -> google.protobuf.Timestamp
+	24, // 8: goeland.v1.Case.record_metadata:type_name -> goeland.v1.RecordMetadata
+	23, // 9: goeland.v1.CreateCaseRequest.metadata:type_name -> google.protobuf.Struct
+	25, // 10: goeland.v1.CreateCaseRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
+	24, // 11: goeland.v1.CreateCaseRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
 	2,  // 12: goeland.v1.CreateCaseResponse.case:type_name -> goeland.v1.Case
-	22, // 13: goeland.v1.CreateCaseResponse.created_event:type_name -> goeland.v1.AuditEvent
+	26, // 13: goeland.v1.CreateCaseResponse.created_event:type_name -> goeland.v1.AuditEvent
 	2,  // 14: goeland.v1.GetCaseResponse.case:type_name -> goeland.v1.Case
-	23, // 15: goeland.v1.GetCaseResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	22, // 16: goeland.v1.GetCaseResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	19, // 17: goeland.v1.UpdateCaseRequest.metadata:type_name -> google.protobuf.Struct
+	27, // 15: goeland.v1.GetCaseResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	26, // 16: goeland.v1.GetCaseResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	23, // 17: goeland.v1.UpdateCaseRequest.metadata:type_name -> google.protobuf.Struct
 	2,  // 18: goeland.v1.UpdateCaseResponse.case:type_name -> goeland.v1.Case
-	22, // 19: goeland.v1.UpdateCaseResponse.update_event:type_name -> goeland.v1.AuditEvent
+	26, // 19: goeland.v1.UpdateCaseResponse.update_event:type_name -> goeland.v1.AuditEvent
 	0,  // 20: goeland.v1.TransitionCaseRequest.target_status:type_name -> goeland.v1.CaseStatus
 	2,  // 21: goeland.v1.TransitionCaseResponse.case:type_name -> goeland.v1.Case
-	22, // 22: goeland.v1.TransitionCaseResponse.transition_event:type_name -> goeland.v1.AuditEvent
+	26, // 22: goeland.v1.TransitionCaseResponse.transition_event:type_name -> goeland.v1.AuditEvent
 	0,  // 23: goeland.v1.SearchCasesRequest.status:type_name -> goeland.v1.CaseStatus
 	2,  // 24: goeland.v1.SearchCasesResponse.cases:type_name -> goeland.v1.Case
-	22, // 25: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	26, // 25: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
 	1,  // 26: goeland.v1.ListCaseTypesResponse.case_types:type_name -> goeland.v1.CaseType
-	3,  // 27: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
-	5,  // 28: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
-	7,  // 29: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
-	9,  // 30: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
-	11, // 31: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
-	13, // 32: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
-	15, // 33: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
-	4,  // 34: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
-	6,  // 35: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
-	8,  // 36: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
-	10, // 37: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
-	12, // 38: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
-	14, // 39: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
-	16, // 40: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
-	34, // [34:41] is the sub-list for method output_type
-	27, // [27:34] is the sub-list for method input_type
-	27, // [27:27] is the sub-list for extension type_name
-	27, // [27:27] is the sub-list for extension extendee
-	0,  // [0:27] is the sub-list for field type_name
+	1,  // 27: goeland.v1.CreateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	28, // 28: goeland.v1.CreateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	1,  // 29: goeland.v1.UpdateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	28, // 30: goeland.v1.UpdateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	3,  // 31: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
+	5,  // 32: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
+	7,  // 33: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
+	9,  // 34: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
+	11, // 35: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
+	13, // 36: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
+	15, // 37: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
+	17, // 38: goeland.v1.CaseService.CreateCaseType:input_type -> goeland.v1.CreateCaseTypeRequest
+	19, // 39: goeland.v1.CaseService.UpdateCaseType:input_type -> goeland.v1.UpdateCaseTypeRequest
+	4,  // 40: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
+	6,  // 41: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
+	8,  // 42: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
+	10, // 43: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
+	12, // 44: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
+	14, // 45: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
+	16, // 46: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
+	18, // 47: goeland.v1.CaseService.CreateCaseType:output_type -> goeland.v1.CreateCaseTypeResponse
+	20, // 48: goeland.v1.CaseService.UpdateCaseType:output_type -> goeland.v1.UpdateCaseTypeResponse
+	40, // [40:49] is the sub-list for method output_type
+	31, // [31:40] is the sub-list for method input_type
+	31, // [31:31] is the sub-list for extension type_name
+	31, // [31:31] is the sub-list for extension extendee
+	0,  // [0:31] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_case_proto_init() }
@@ -1471,13 +1799,14 @@ func file_goeland_v1_case_proto_init() {
 		return
 	}
 	file_goeland_v1_core_proto_init()
+	file_goeland_v1_case_proto_msgTypes[18].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_case_proto_rawDesc), len(file_goeland_v1_case_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   16,
+			NumMessages:   20,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

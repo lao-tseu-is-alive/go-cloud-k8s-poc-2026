@@ -105,7 +105,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0014 (dbmate format)
+  │   └── db/migrations/     0001..0015 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -185,6 +185,12 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
   (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` adds `goeland:admin`).
 
+**Reference data administration (GLD-040):** each domain administers its catalogue with
+`Create*` / `Update*` RPCs that require `goeland:admin` (case types, relationship types,
+organization categories, document types). Codes are immutable, entries are never deleted
+(deactivate them), and every change is logged in `reference_change` (catalogues are not
+subjects, so not in `audit_event`) through `core.MutateReference` in the same transaction.
+
 **Internal users (GLD-025):** `server.go` wraps the verifier in `core.RecordingVerifier`, so
 every verified caller is recorded in `app_user` (a USER subject; created on first sight,
 `USER_PROFILE_UPDATED` on change, otherwise at most one `last_seen_at` write per 15 min;
@@ -245,7 +251,7 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 `CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
-`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`; ActorService:
+`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`).

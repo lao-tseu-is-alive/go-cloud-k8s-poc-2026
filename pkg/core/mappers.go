@@ -212,3 +212,21 @@ func DomainUserToProto(u *AppUser) *goelandv1.User {
 		LastSeenAt:  TimestampOrNil(u.LastSeenAt),
 	}
 }
+
+// DomainReferenceChangeToProto converts a reference change log entry to its proto representation.
+func DomainReferenceChangeToProto(c *ReferenceChange) *goelandv1.ReferenceChange {
+	if c == nil {
+		return nil
+	}
+	return &goelandv1.ReferenceChange{
+		Id:          c.ID.String(),
+		Catalogue:   c.Catalogue,
+		Code:        c.Code,
+		EventType:   c.EventType,
+		ActorUserId: c.ActorUserID,
+		OccurredAt:  TimestampOrNil(c.OccurredAt),
+		BeforeState: StructFromMap(c.BeforeState),
+		AfterState:  StructFromMap(c.AfterState),
+		Reason:      c.Reason,
+	}
+}

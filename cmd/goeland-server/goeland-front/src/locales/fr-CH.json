@@ -10,7 +10,8 @@
     "documents": "Documents",
     "createDocument": "Nouveau document",
     "actors": "Acteurs",
-    "createActor": "Nouvel acteur"
+    "createActor": "Nouvel acteur",
+    "admin": "Administration"
   },
   "auth": {
     "notConnected": "Non connecté",
@@ -49,6 +50,9 @@
       "list": { "title": "Acteurs" },
       "detail": { "title": "Détail de l'acteur" },
       "create": { "title": "Créer un acteur" }
+    },
+    "admin": {
+      "title": "Administration des référentiels"
     }
   },
   "sections": {
@@ -78,6 +82,13 @@
       "ownership": "Propriété",
       "locking": "Verrouillage",
       "retention": "Conservation"
+    },
+    "reference": {
+      "case_type": "Types d'affaire",
+      "relationship_type": "Types de relation",
+      "organization_category": "Catégories d'organisation",
+      "document_type": "Types de document",
+      "log": "Journal des modifications"
     }
   },
   "fields": {
@@ -204,6 +215,24 @@
       "postal_code": "NPA",
       "locality": "Localité",
       "country_code": "Pays"
+    },
+    "reference": {
+      "code": "Code",
+      "label": "Libellé",
+      "description": "Description",
+      "businessRefNamespace": "Espace de référence",
+      "category": "Catégorie",
+      "sourceKind": "Type de la source",
+      "targetKind": "Type de la cible",
+      "isDirected": "Relation orientée",
+      "inverseLabel": "Libellé inverse",
+      "isActive": "Active",
+      "active": "Active",
+      "inactive": "Inactive",
+      "reason": "Motif (journal)",
+      "occurredAt": "Date",
+      "catalogue": "Référentiel",
+      "event": "Événement"
     }
   },
   "actions": {
@@ -247,7 +276,12 @@
       "reset": "Réinitialiser",
       "confirm": "Confirmer",
       "back": "Retour",
-      "refresh": "Actualiser"
+      "refresh": "Actualiser",
+      "loadMore": "Charger plus"
+    },
+    "reference": {
+      "create": "Nouvelle entrée",
+      "edit": "Modifier l'entrée"
     }
   },
   "upload": {
@@ -389,7 +423,8 @@
       "other": "Valeur invalide."
     },
     "postalCodeCH": "Un NPA suisse a quatre chiffres (1000 à 9999).",
-    "countryCode": "Code pays à deux lettres (ISO), p. ex. CH, FR."
+    "countryCode": "Code pays à deux lettres (ISO), p. ex. CH, FR.",
+    "referenceCode": "Code : majuscules, chiffres et _, commençant par une lettre (2 à 100)."
   },
   "errors": {
     "unauthenticated": "Authentification requise.",
@@ -448,6 +483,14 @@
       "error": "Une erreur est survenue.",
       "noData": "Aucune donnée à afficher.",
       "signInRequired": "Connectez-vous pour accéder à l'application."
+    },
+    "reference": {
+      "saved": "Référentiel enregistré.",
+      "adminOnly": "Cette page est réservée aux administrateurs (droit goeland:admin).",
+      "codeHint": "Majuscules, chiffres et _ (p. ex. OPC_DEMANDE_PC) ; ne peut plus changer ensuite.",
+      "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
+      "hint": {"case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).", "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.", "organization_category": "Classification des personnes morales.", "document_type": "Types de document proposés à la création."},
+      "event": {"REFERENCE_CREATED": "Création", "REFERENCE_UPDATED": "Modification"}
     }
   }
 }

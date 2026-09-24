@@ -72,6 +72,12 @@ const (
 	// ActorServiceListOrganizationCategoriesProcedure is the fully-qualified name of the ActorService's
 	// ListOrganizationCategories RPC.
 	ActorServiceListOrganizationCategoriesProcedure = "/goeland.v1.ActorService/ListOrganizationCategories"
+	// ActorServiceCreateOrganizationCategoryProcedure is the fully-qualified name of the ActorService's
+	// CreateOrganizationCategory RPC.
+	ActorServiceCreateOrganizationCategoryProcedure = "/goeland.v1.ActorService/CreateOrganizationCategory"
+	// ActorServiceUpdateOrganizationCategoryProcedure is the fully-qualified name of the ActorService's
+	// UpdateOrganizationCategory RPC.
+	ActorServiceUpdateOrganizationCategoryProcedure = "/goeland.v1.ActorService/UpdateOrganizationCategory"
 )
 
 // ActorServiceClient is a client for the goeland.v1.ActorService service.
@@ -95,6 +101,13 @@ type ActorServiceClient interface {
 	// List the controlled organization categories (classification catalogue).
 	// Requires goeland:read.
 	ListOrganizationCategories(context.Context, *connect.Request[v1.ListOrganizationCategoriesRequest]) (*connect.Response[v1.ListOrganizationCategoriesResponse], error)
+	// Add a organization category. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateOrganizationCategory(context.Context, *connect.Request[v1.CreateOrganizationCategoryRequest]) (*connect.Response[v1.CreateOrganizationCategoryResponse], error)
+	// Change a organization category (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateOrganizationCategory(context.Context, *connect.Request[v1.UpdateOrganizationCategoryRequest]) (*connect.Response[v1.UpdateOrganizationCategoryResponse], error)
 }
 
 // NewActorServiceClient constructs a client for the goeland.v1.ActorService service. By default, it
@@ -144,6 +157,18 @@ func NewActorServiceClient(httpClient connect.HTTPClient, baseURL string, opts .
 			connect.WithSchema(actorServiceMethods.ByName("ListOrganizationCategories")),
 			connect.WithClientOptions(opts...),
 		),
+		createOrganizationCategory: connect.NewClient[v1.CreateOrganizationCategoryRequest, v1.CreateOrganizationCategoryResponse](
+			httpClient,
+			baseURL+ActorServiceCreateOrganizationCategoryProcedure,
+			connect.WithSchema(actorServiceMethods.ByName("CreateOrganizationCategory")),
+			connect.WithClientOptions(opts...),
+		),
+		updateOrganizationCategory: connect.NewClient[v1.UpdateOrganizationCategoryRequest, v1.UpdateOrganizationCategoryResponse](
+			httpClient,
+			baseURL+ActorServiceUpdateOrganizationCategoryProcedure,
+			connect.WithSchema(actorServiceMethods.ByName("UpdateOrganizationCategory")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -155,6 +180,8 @@ type actorServiceClient struct {
 	searchActors               *connect.Client[v1.SearchActorsRequest, v1.SearchActorsResponse]
 	deleteActor                *connect.Client[v1.DeleteActorRequest, v1.DeleteActorResponse]
 	listOrganizationCategories *connect.Client[v1.ListOrganizationCategoriesRequest, v1.ListOrganizationCategoriesResponse]
+	createOrganizationCategory *connect.Client[v1.CreateOrganizationCategoryRequest, v1.CreateOrganizationCategoryResponse]
+	updateOrganizationCategory *connect.Client[v1.UpdateOrganizationCategoryRequest, v1.UpdateOrganizationCategoryResponse]
 }
 
 // CreateActor calls goeland.v1.ActorService.CreateActor.
@@ -187,6 +214,16 @@ func (c *actorServiceClient) ListOrganizationCategories(ctx context.Context, req
 	return c.listOrganizationCategories.CallUnary(ctx, req)
 }
 
+// CreateOrganizationCategory calls goeland.v1.ActorService.CreateOrganizationCategory.
+func (c *actorServiceClient) CreateOrganizationCategory(ctx context.Context, req *connect.Request[v1.CreateOrganizationCategoryRequest]) (*connect.Response[v1.CreateOrganizationCategoryResponse], error) {
+	return c.createOrganizationCategory.CallUnary(ctx, req)
+}
+
+// UpdateOrganizationCategory calls goeland.v1.ActorService.UpdateOrganizationCategory.
+func (c *actorServiceClient) UpdateOrganizationCategory(ctx context.Context, req *connect.Request[v1.UpdateOrganizationCategoryRequest]) (*connect.Response[v1.UpdateOrganizationCategoryResponse], error) {
+	return c.updateOrganizationCategory.CallUnary(ctx, req)
+}
+
 // ActorServiceHandler is an implementation of the goeland.v1.ActorService service.
 type ActorServiceHandler interface {
 	// Create a person or organization actor. SubjectRef + RecordMetadata via Core.
@@ -208,6 +245,13 @@ type ActorServiceHandler interface {
 	// List the controlled organization categories (classification catalogue).
 	// Requires goeland:read.
 	ListOrganizationCategories(context.Context, *connect.Request[v1.ListOrganizationCategoriesRequest]) (*connect.Response[v1.ListOrganizationCategoriesResponse], error)
+	// Add a organization category. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateOrganizationCategory(context.Context, *connect.Request[v1.CreateOrganizationCategoryRequest]) (*connect.Response[v1.CreateOrganizationCategoryResponse], error)
+	// Change a organization category (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateOrganizationCategory(context.Context, *connect.Request[v1.UpdateOrganizationCategoryRequest]) (*connect.Response[v1.UpdateOrganizationCategoryResponse], error)
 }
 
 // NewActorServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -253,6 +297,18 @@ func NewActorServiceHandler(svc ActorServiceHandler, opts ...connect.HandlerOpti
 		connect.WithSchema(actorServiceMethods.ByName("ListOrganizationCategories")),
 		connect.WithHandlerOptions(opts...),
 	)
+	actorServiceCreateOrganizationCategoryHandler := connect.NewUnaryHandler(
+		ActorServiceCreateOrganizationCategoryProcedure,
+		svc.CreateOrganizationCategory,
+		connect.WithSchema(actorServiceMethods.ByName("CreateOrganizationCategory")),
+		connect.WithHandlerOptions(opts...),
+	)
+	actorServiceUpdateOrganizationCategoryHandler := connect.NewUnaryHandler(
+		ActorServiceUpdateOrganizationCategoryProcedure,
+		svc.UpdateOrganizationCategory,
+		connect.WithSchema(actorServiceMethods.ByName("UpdateOrganizationCategory")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.ActorService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case ActorServiceCreateActorProcedure:
@@ -267,6 +323,10 @@ func NewActorServiceHandler(svc ActorServiceHandler, opts ...connect.HandlerOpti
 			actorServiceDeleteActorHandler.ServeHTTP(w, r)
 		case ActorServiceListOrganizationCategoriesProcedure:
 			actorServiceListOrganizationCategoriesHandler.ServeHTTP(w, r)
+		case ActorServiceCreateOrganizationCategoryProcedure:
+			actorServiceCreateOrganizationCategoryHandler.ServeHTTP(w, r)
+		case ActorServiceUpdateOrganizationCategoryProcedure:
+			actorServiceUpdateOrganizationCategoryHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -298,4 +358,12 @@ func (UnimplementedActorServiceHandler) DeleteActor(context.Context, *connect.Re
 
 func (UnimplementedActorServiceHandler) ListOrganizationCategories(context.Context, *connect.Request[v1.ListOrganizationCategoriesRequest]) (*connect.Response[v1.ListOrganizationCategoriesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.ActorService.ListOrganizationCategories is not implemented"))
+}
+
+func (UnimplementedActorServiceHandler) CreateOrganizationCategory(context.Context, *connect.Request[v1.CreateOrganizationCategoryRequest]) (*connect.Response[v1.CreateOrganizationCategoryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.ActorService.CreateOrganizationCategory is not implemented"))
+}
+
+func (UnimplementedActorServiceHandler) UpdateOrganizationCategory(context.Context, *connect.Request[v1.UpdateOrganizationCategoryRequest]) (*connect.Response[v1.UpdateOrganizationCategoryResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.ActorService.UpdateOrganizationCategory is not implemented"))
 }

@@ -315,3 +315,64 @@ func (s *ConnectServer) BatchGetUsers(ctx context.Context, req *connect.Request[
 	}
 	return connect.NewResponse(&goelandv1.BatchGetUsersResponse{Users: out}), nil
 }
+
+// CreateRelationshipType adds a relationship type (administrators only).
+func (s *ConnectServer) CreateRelationshipType(ctx context.Context, req *connect.Request[goelandv1.CreateRelationshipTypeRequest]) (*connect.Response[goelandv1.CreateRelationshipTypeResponse], error) {
+	user, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	rt, change, err := s.service.CreateRelationshipType(ctx, RelationshipTypeInput{
+		Code: m.Code, Label: m.Label, SourceKind: SubjectKindFromProto(m.SourceKind), TargetKind: SubjectKindFromProto(m.TargetKind),
+		IsDirected: m.IsDirected, InverseLabel: m.InverseLabel, Description: m.Description,
+		OperatorID: OperatorID(user), Reason: m.Reason,
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.CreateRelationshipTypeResponse{
+		RelationshipType: DomainRelationshipTypeToProto(rt), Change: DomainReferenceChangeToProto(change),
+	}), nil
+}
+
+// UpdateRelationshipType changes a relationship type (administrators only).
+func (s *ConnectServer) UpdateRelationshipType(ctx context.Context, req *connect.Request[goelandv1.UpdateRelationshipTypeRequest]) (*connect.Response[goelandv1.UpdateRelationshipTypeResponse], error) {
+	user, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	rt, change, err := s.service.UpdateRelationshipType(ctx, m.Code, RelationshipTypeUpdate{
+		Label: m.Label, InverseLabel: m.InverseLabel, Description: m.Description, IsActive: m.IsActive,
+		OperatorID: OperatorID(user), Reason: m.Reason,
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.UpdateRelationshipTypeResponse{
+		RelationshipType: DomainRelationshipTypeToProto(rt), Change: DomainReferenceChangeToProto(change),
+	}), nil
+}
+
+// ListReferenceChanges pages the reference change log (administrators only).
+func (s *ConnectServer) ListReferenceChanges(ctx context.Context, req *connect.Request[goelandv1.ListReferenceChangesRequest]) (*connect.Response[goelandv1.ListReferenceChangesResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeAdmin); err != nil {
+		return nil, err
+	}
+	offset, err := ParsePageToken(req.Msg.PageToken)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	result, err := s.service.ListReferenceChanges(ctx, ReferenceFilter{Catalogue: req.Msg.Catalogue, Limit: int(req.Msg.PageSize), Offset: offset})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.ReferenceChange, len(result.Changes))
+	for i, c := range result.Changes {
+		out[i] = DomainReferenceChangeToProto(c)
+	}
+	return connect.NewResponse(&goelandv1.ListReferenceChangesResponse{
+		Changes: out, NextPageToken: NextPageToken(offset, len(out), result.TotalSize), TotalSize: result.TotalSize,
+	}), nil
+}

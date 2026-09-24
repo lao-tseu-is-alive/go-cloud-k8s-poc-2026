@@ -129,3 +129,25 @@ FROM actor_address aa
 JOIN address ad ON ad.id = aa.address_id
 WHERE aa.actor_id = @actor_id AND aa.ended_at IS NULL
 ORDER BY aa.is_principal DESC, aa.created_at, aa.id;`
+
+// --- organization_category administration (GLD-040) ---------------------------------------------
+
+const insertOrganizationCategorySQL = `
+INSERT INTO organization_category (code, label)
+VALUES (@code, @label)
+RETURNING ` + categoryColumns + `;`
+
+const getOrganizationCategoryForUpdateSQL = `
+SELECT ` + categoryColumns + `
+FROM organization_category
+WHERE code = @code
+FOR UPDATE;`
+
+// updateOrganizationCategorySQL replaces the fields given (NULL keeps the current value); the
+// code is immutable.
+const updateOrganizationCategorySQL = `
+UPDATE organization_category
+SET label = coalesce(@label::text, label),
+    is_active = coalesce(@is_active::boolean, is_active)
+WHERE code = @code
+RETURNING ` + categoryColumns + `;`

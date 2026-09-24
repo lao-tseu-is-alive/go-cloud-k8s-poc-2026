@@ -487,6 +487,69 @@ message ListDocumentTypesResponse {
   repeated DocumentType document_types = 1;
 }
 
+// CreateDocumentTypeRequest adds a document type (administrators only).
+message CreateDocumentTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // category groups the type (at most 100 characters), e.g. ENTREE, PLAN, DECISION.
+  string category = 4 [(buf.validate.field).string.max_len = 100];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateDocumentTypeResponse returns the new document type and its log entry.
+message CreateDocumentTypeResponse {
+  // document_type is the created entry, active.
+  DocumentType document_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateDocumentTypeRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // category replaces the category when present (at most 100 characters).
+  optional string category = 4 [(buf.validate.field).string.max_len = 100];
+  // is_active activates or deactivates the entry when present; an inactive
+  // entry stays valid for existing data but is no longer offered.
+  optional bool is_active = 5;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 6 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateDocumentTypeResponse returns the updated document type and its log entry.
+message UpdateDocumentTypeResponse {
+  // document_type is the updated entry.
+  DocumentType document_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
 // =============================================
 // DOCUMENT SERVICE
 // =============================================
@@ -580,5 +643,24 @@ service DocumentService {
   // Requires goeland:read.
   rpc ListDocumentTypes(ListDocumentTypesRequest) returns (ListDocumentTypesResponse) {
     option (google.api.http) = {get: "/api/document-types"};
+  }
+
+  // Add a document type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+  // ALREADY_EXISTS for a taken code.
+  rpc CreateDocumentType(CreateDocumentTypeRequest) returns (CreateDocumentTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/document-types"
+      body: "*"
+    };
+  }
+
+  // Change a document type (label, description, activation, ...); the code is
+  // immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+  // unknown code.
+  rpc UpdateDocumentType(UpdateDocumentTypeRequest) returns (UpdateDocumentTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/document-types/{code}"
+      body: "*"
+    };
   }
 }

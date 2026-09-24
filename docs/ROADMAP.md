@@ -129,7 +129,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
   one principal address (production `acteur_adresse` + `lien_acteur_adresse`),
   and an `ACTOR_BRANCH_OF_ACTOR` relationship for a branch acting as a distinct
   party, in the API and the Actor UI.
-- [ ] **GLD-040 — Reference data administration**: admin-scoped screens for
+- [~] **GLD-040 — Reference data administration**: admin-scoped screens for
   case types, relationship types, organization categories and document types.
 
 ## Phase 2 — Thing (v2 §25)

@@ -24,4 +24,6 @@ type Repository interface {
 	Link(ctx context.Context, in core.LinkInput) (*core.SubjectRelationship, *core.AuditEvent, error)
 	SoftDelete(ctx context.Context, id uuid.UUID, operatorID, reason string) (*core.AuditEvent, error)
 	ListTypes(ctx context.Context, onlyActive bool) ([]*DocumentType, error)
+	CreateDocumentType(ctx context.Context, in DocumentTypeInput) (*DocumentType, *core.ReferenceChange, error)
+	UpdateDocumentType(ctx context.Context, code string, in DocumentTypeUpdate) (*DocumentType, *core.ReferenceChange, error)
 }

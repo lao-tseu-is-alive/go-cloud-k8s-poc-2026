@@ -62,6 +62,12 @@ const (
 	// CaseServiceListCaseTypesProcedure is the fully-qualified name of the CaseService's ListCaseTypes
 	// RPC.
 	CaseServiceListCaseTypesProcedure = "/goeland.v1.CaseService/ListCaseTypes"
+	// CaseServiceCreateCaseTypeProcedure is the fully-qualified name of the CaseService's
+	// CreateCaseType RPC.
+	CaseServiceCreateCaseTypeProcedure = "/goeland.v1.CaseService/CreateCaseType"
+	// CaseServiceUpdateCaseTypeProcedure is the fully-qualified name of the CaseService's
+	// UpdateCaseType RPC.
+	CaseServiceUpdateCaseTypeProcedure = "/goeland.v1.CaseService/UpdateCaseType"
 )
 
 // CaseServiceClient is a client for the goeland.v1.CaseService service.
@@ -88,6 +94,13 @@ type CaseServiceClient interface {
 	// List the controlled case types (classification catalogue).
 	// Requires goeland:read.
 	ListCaseTypes(context.Context, *connect.Request[v1.ListCaseTypesRequest]) (*connect.Response[v1.ListCaseTypesResponse], error)
+	// Add a case type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateCaseType(context.Context, *connect.Request[v1.CreateCaseTypeRequest]) (*connect.Response[v1.CreateCaseTypeResponse], error)
+	// Change a case type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error)
 }
 
 // NewCaseServiceClient constructs a client for the goeland.v1.CaseService service. By default, it
@@ -143,6 +156,18 @@ func NewCaseServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(caseServiceMethods.ByName("ListCaseTypes")),
 			connect.WithClientOptions(opts...),
 		),
+		createCaseType: connect.NewClient[v1.CreateCaseTypeRequest, v1.CreateCaseTypeResponse](
+			httpClient,
+			baseURL+CaseServiceCreateCaseTypeProcedure,
+			connect.WithSchema(caseServiceMethods.ByName("CreateCaseType")),
+			connect.WithClientOptions(opts...),
+		),
+		updateCaseType: connect.NewClient[v1.UpdateCaseTypeRequest, v1.UpdateCaseTypeResponse](
+			httpClient,
+			baseURL+CaseServiceUpdateCaseTypeProcedure,
+			connect.WithSchema(caseServiceMethods.ByName("UpdateCaseType")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -155,6 +180,8 @@ type caseServiceClient struct {
 	searchCases    *connect.Client[v1.SearchCasesRequest, v1.SearchCasesResponse]
 	deleteCase     *connect.Client[v1.DeleteCaseRequest, v1.DeleteCaseResponse]
 	listCaseTypes  *connect.Client[v1.ListCaseTypesRequest, v1.ListCaseTypesResponse]
+	createCaseType *connect.Client[v1.CreateCaseTypeRequest, v1.CreateCaseTypeResponse]
+	updateCaseType *connect.Client[v1.UpdateCaseTypeRequest, v1.UpdateCaseTypeResponse]
 }
 
 // CreateCase calls goeland.v1.CaseService.CreateCase.
@@ -192,6 +219,16 @@ func (c *caseServiceClient) ListCaseTypes(ctx context.Context, req *connect.Requ
 	return c.listCaseTypes.CallUnary(ctx, req)
 }
 
+// CreateCaseType calls goeland.v1.CaseService.CreateCaseType.
+func (c *caseServiceClient) CreateCaseType(ctx context.Context, req *connect.Request[v1.CreateCaseTypeRequest]) (*connect.Response[v1.CreateCaseTypeResponse], error) {
+	return c.createCaseType.CallUnary(ctx, req)
+}
+
+// UpdateCaseType calls goeland.v1.CaseService.UpdateCaseType.
+func (c *caseServiceClient) UpdateCaseType(ctx context.Context, req *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error) {
+	return c.updateCaseType.CallUnary(ctx, req)
+}
+
 // CaseServiceHandler is an implementation of the goeland.v1.CaseService service.
 type CaseServiceHandler interface {
 	// Open a case. SubjectRef + RecordMetadata via Core, business reference
@@ -216,6 +253,13 @@ type CaseServiceHandler interface {
 	// List the controlled case types (classification catalogue).
 	// Requires goeland:read.
 	ListCaseTypes(context.Context, *connect.Request[v1.ListCaseTypesRequest]) (*connect.Response[v1.ListCaseTypesResponse], error)
+	// Add a case type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+	// ALREADY_EXISTS for a taken code.
+	CreateCaseType(context.Context, *connect.Request[v1.CreateCaseTypeRequest]) (*connect.Response[v1.CreateCaseTypeResponse], error)
+	// Change a case type (label, description, activation, ...); the code is
+	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+	// unknown code.
+	UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error)
 }
 
 // NewCaseServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -267,6 +311,18 @@ func NewCaseServiceHandler(svc CaseServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(caseServiceMethods.ByName("ListCaseTypes")),
 		connect.WithHandlerOptions(opts...),
 	)
+	caseServiceCreateCaseTypeHandler := connect.NewUnaryHandler(
+		CaseServiceCreateCaseTypeProcedure,
+		svc.CreateCaseType,
+		connect.WithSchema(caseServiceMethods.ByName("CreateCaseType")),
+		connect.WithHandlerOptions(opts...),
+	)
+	caseServiceUpdateCaseTypeHandler := connect.NewUnaryHandler(
+		CaseServiceUpdateCaseTypeProcedure,
+		svc.UpdateCaseType,
+		connect.WithSchema(caseServiceMethods.ByName("UpdateCaseType")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.CaseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CaseServiceCreateCaseProcedure:
@@ -283,6 +339,10 @@ func NewCaseServiceHandler(svc CaseServiceHandler, opts ...connect.HandlerOption
 			caseServiceDeleteCaseHandler.ServeHTTP(w, r)
 		case CaseServiceListCaseTypesProcedure:
 			caseServiceListCaseTypesHandler.ServeHTTP(w, r)
+		case CaseServiceCreateCaseTypeProcedure:
+			caseServiceCreateCaseTypeHandler.ServeHTTP(w, r)
+		case CaseServiceUpdateCaseTypeProcedure:
+			caseServiceUpdateCaseTypeHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -318,4 +378,12 @@ func (UnimplementedCaseServiceHandler) DeleteCase(context.Context, *connect.Requ
 
 func (UnimplementedCaseServiceHandler) ListCaseTypes(context.Context, *connect.Request[v1.ListCaseTypesRequest]) (*connect.Response[v1.ListCaseTypesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CaseService.ListCaseTypes is not implemented"))
+}
+
+func (UnimplementedCaseServiceHandler) CreateCaseType(context.Context, *connect.Request[v1.CreateCaseTypeRequest]) (*connect.Response[v1.CreateCaseTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CaseService.CreateCaseType is not implemented"))
+}
+
+func (UnimplementedCaseServiceHandler) UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CaseService.UpdateCaseType is not implemented"))
 }

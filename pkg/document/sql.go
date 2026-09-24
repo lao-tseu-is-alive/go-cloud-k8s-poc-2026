@@ -178,3 +178,27 @@ WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_una
           AND sr.target_subject_id = @thing_id))
 ORDER BY d.created_at DESC
 LIMIT @limit OFFSET @offset;`
+
+// --- document_type administration (GLD-040) ---------------------------------------------
+
+const insertDocumentTypeSQL = `
+INSERT INTO document_type (code, label, description, category)
+VALUES (@code, @label, @description, @category)
+RETURNING ` + documentTypeColumns + `;`
+
+const getDocumentTypeForUpdateSQL = `
+SELECT ` + documentTypeColumns + `
+FROM document_type
+WHERE code = @code
+FOR UPDATE;`
+
+// updateDocumentTypeSQL replaces the fields given (NULL keeps the current value); the
+// code is immutable.
+const updateDocumentTypeSQL = `
+UPDATE document_type
+SET label = coalesce(@label::text, label),
+    description = coalesce(@description::text, description),
+    category = coalesce(@category::text, category),
+    is_active = coalesce(@is_active::boolean, is_active)
+WHERE code = @code
+RETURNING ` + documentTypeColumns + `;`

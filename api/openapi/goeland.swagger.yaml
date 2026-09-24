@@ -241,6 +241,58 @@ paths:
           type: boolean
       tags:
         - CaseService
+    post:
+      summary: |-
+        Add a case type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+        ALREADY_EXISTS for a taken code.
+      operationId: CreateCaseType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateCaseTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateCaseTypeRequest adds a case type (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateCaseTypeRequest'
+      tags:
+        - CaseService
+  /api/case-types/{code}:
+    patch:
+      summary: |-
+        Change a case type (label, description, activation, ...); the code is
+        immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+        unknown code.
+      operationId: UpdateCaseType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateCaseTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CaseServiceUpdateCaseTypeBody'
+      tags:
+        - CaseService
   /api/cases:
     post:
       summary: |-
@@ -473,6 +525,58 @@ paths:
           in: query
           required: false
           type: boolean
+      tags:
+        - DocumentService
+    post:
+      summary: |-
+        Add a document type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+        ALREADY_EXISTS for a taken code.
+      operationId: CreateDocumentType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateDocumentTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateDocumentTypeRequest adds a document type (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateDocumentTypeRequest'
+      tags:
+        - DocumentService
+  /api/document-types/{code}:
+    patch:
+      summary: |-
+        Change a document type (label, description, activation, ...); the code is
+        immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+        unknown code.
+      operationId: UpdateDocumentType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateDocumentTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceUpdateDocumentTypeBody'
       tags:
         - DocumentService
   /api/documents:
@@ -845,6 +949,90 @@ paths:
           type: boolean
       tags:
         - ActorService
+    post:
+      summary: |-
+        Add a organization category. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+        ALREADY_EXISTS for a taken code.
+      operationId: CreateOrganizationCategory
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateOrganizationCategoryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateOrganizationCategoryRequest adds a organization category (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateOrganizationCategoryRequest'
+      tags:
+        - ActorService
+  /api/organization-categories/{code}:
+    patch:
+      summary: |-
+        Change a organization category (label, description, activation, ...); the code is
+        immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+        unknown code.
+      operationId: UpdateOrganizationCategory
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateOrganizationCategoryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/ActorServiceUpdateOrganizationCategoryBody'
+      tags:
+        - ActorService
+  /api/reference-changes:
+    get:
+      summary: Page the reference data change log, newest first. Requires goeland:admin.
+      operationId: ListReferenceChanges
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListReferenceChangesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: catalogue
+          description: catalogue restricts the log to one catalogue; empty means all.
+          in: query
+          required: false
+          type: string
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the opaque cursor returned as next_page_token.
+          in: query
+          required: false
+          type: string
+      tags:
+        - CoreService
   /api/relationship-types:
     get:
       summary: |-
@@ -916,6 +1104,58 @@ paths:
             - SUBJECT_KIND_USER
             - SUBJECT_KIND_ORG_UNIT
           default: SUBJECT_KIND_UNSPECIFIED
+      tags:
+        - CoreService
+    post:
+      summary: |-
+        Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+        ALREADY_EXISTS for a taken code.
+      operationId: CreateRelationshipType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateRelationshipTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateRelationshipTypeRequest adds a relationship type (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateRelationshipTypeRequest'
+      tags:
+        - CoreService
+  /api/relationship-types/{code}:
+    patch:
+      summary: |-
+        Change a relationship type (label, description, activation, ...); the code is
+        immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+        unknown code.
+      operationId: UpdateRelationshipType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateRelationshipTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CoreServiceUpdateRelationshipTypeBody'
       tags:
         - CoreService
   /api/relationships:
@@ -1318,6 +1558,23 @@ definitions:
     description: |-
       UpdateActorRequest updates mutable fields. Blocked if the record is locked.
       contacts, when provided, replace the full set (managed as a whole for simplicity).
+  ActorServiceUpdateOrganizationCategoryBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      isActive:
+        type: boolean
+        description: |-
+          is_active activates or deactivates the entry when present; an inactive
+          entry stays valid for existing data but is no longer offered.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateOrganizationCategoryRequest changes a organization category (administrators only); absent fields
+      are kept. Entries are never deleted: deactivate them with is_active = false.
   CaseServiceTransitionCaseBody:
     type: object
     properties:
@@ -1350,6 +1607,31 @@ definitions:
     description: |-
       UpdateCaseRequest replaces the editable metadata of a case (no partial merge).
       A closed, locked or deleted case is rejected.
+  CaseServiceUpdateCaseTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      businessRefNamespace:
+        type: string
+        description: |-
+          business_ref_namespace replaces the allocation namespace when present
+          (affects future cases only; empty stops allocation).
+      isActive:
+        type: boolean
+        description: |-
+          is_active activates or deactivates the entry when present; an inactive
+          entry stays valid for existing data but is no longer offered.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateCaseTypeRequest changes a case type (administrators only); absent fields
+      are kept. Entries are never deleted: deactivate them with is_active = false.
   CoreServiceAssignBusinessRefBody:
     type: object
     properties:
@@ -1377,6 +1659,29 @@ definitions:
       EndRelationshipRequest records that an open edge ended in the business sense
       ("the mandate ended"), keeping it in the graph as history. Use UnlinkSubjects
       instead when the edge was a mistake.
+  CoreServiceUpdateRelationshipTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      inverseLabel:
+        type: string
+        description: inverse_label replaces the inverse label when present (at most 200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      isActive:
+        type: boolean
+        description: |-
+          is_active activates or deactivates the entry when present; an inactive
+          entry stays valid for existing data but is no longer offered.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateRelationshipTypeRequest changes a relationship type (administrators only); absent fields
+      are kept. Entries are never deleted: deactivate them with is_active = false.
   DocumentServiceAddDocumentVersionBody:
     type: object
     properties:
@@ -1455,6 +1760,29 @@ definitions:
     description: |-
       UpdateDocumentMetadataRequest updates only mutable metadata. Blocked if the record is locked.
       Every field replaces the stored value (no partial merge).
+  DocumentServiceUpdateDocumentTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      category:
+        type: string
+        description: category replaces the category when present (at most 100 characters).
+      isActive:
+        type: boolean
+        description: |-
+          is_active activates or deactivates the entry when present; an inactive
+          entry stays valid for existing data but is no longer offered.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
+      are kept. Entries are never deleted: deactivate them with is_active = false.
   protobufAny:
     type: object
     properties:
@@ -2048,6 +2376,42 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the CASE_CREATED audit event.
     description: CreateCaseResponse returns the opened case.
+  v1CreateCaseTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      businessRefNamespace:
+        type: string
+        description: |-
+          business_ref_namespace is the namespace in which cases of this type get
+          their reference (empty: none allocated), e.g. OPC.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateCaseTypeRequest adds a case type (administrators only).
+    required:
+      - code
+      - label
+  v1CreateCaseTypeResponse:
+    type: object
+    properties:
+      caseType:
+        $ref: '#/definitions/v1CaseType'
+        description: case_type is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateCaseTypeResponse returns the new case type and its log entry.
   v1CreateDocumentRequest:
     type: object
     properties:
@@ -2136,6 +2500,111 @@ definitions:
           reused is true when the content was already held by a live document, which
           was reused (no new document; the request's title and metadata are ignored).
     description: CreateDocumentResponse returns the created (or reused) document and its side effects.
+  v1CreateDocumentTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      category:
+        type: string
+        description: category groups the type (at most 100 characters), e.g. ENTREE, PLAN, DECISION.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateDocumentTypeRequest adds a document type (administrators only).
+    required:
+      - code
+      - label
+  v1CreateDocumentTypeResponse:
+    type: object
+    properties:
+      documentType:
+        $ref: '#/definitions/v1DocumentType'
+        description: document_type is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateDocumentTypeResponse returns the new document type and its log entry.
+  v1CreateOrganizationCategoryRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateOrganizationCategoryRequest adds a organization category (administrators only).
+    required:
+      - code
+      - label
+  v1CreateOrganizationCategoryResponse:
+    type: object
+    properties:
+      organizationCategory:
+        $ref: '#/definitions/v1OrganizationCategory'
+        description: organization_category is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateOrganizationCategoryResponse returns the new organization category and its log entry.
+  v1CreateRelationshipTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      sourceKind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: source_kind is the required kind of the source subject (immutable).
+      targetKind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: target_kind is the required kind of the target subject (immutable).
+      isDirected:
+        type: boolean
+        description: is_directed reports whether the edge reads one way only (immutable).
+      inverseLabel:
+        type: string
+        description: inverse_label is the label read from target to source (at most 200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateRelationshipTypeRequest adds a relationship type (administrators only).
+    required:
+      - code
+      - label
+  v1CreateRelationshipTypeResponse:
+    type: object
+    properties:
+      relationshipType:
+        $ref: '#/definitions/v1RelationshipType'
+        description: relationship_type is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateRelationshipTypeResponse returns the new relationship type and its log entry.
   v1CreateSubjectRefRequest:
     type: object
     properties:
@@ -2580,6 +3049,23 @@ definitions:
           $ref: '#/definitions/v1OrganizationCategory'
         description: categories are the matching categories, ordered by label.
     description: ListOrganizationCategoriesResponse returns the matching categories.
+  v1ListReferenceChangesResponse:
+    type: object
+    properties:
+      changes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1ReferenceChange'
+        description: changes are the log entries, newest first.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching entries across all pages.
+    description: ListReferenceChangesResponse is a page of the reference change log.
   v1ListRelationshipTypesResponse:
     type: object
     properties:
@@ -2769,6 +3255,49 @@ definitions:
       It implements non-destructive lifecycle, ownership, confidentiality and locking.
       As an input (initial governance) only the owner, confidentiality, retention,
       sort_final and metadata fields are read; the rest is server-managed.
+  v1ReferenceChange:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the server-assigned entry UUID.
+        readOnly: true
+      catalogue:
+        type: string
+        description: catalogue is case_type, relationship_type, organization_category or document_type.
+        readOnly: true
+      code:
+        type: string
+        description: code is the changed entry's code.
+        readOnly: true
+      eventType:
+        type: string
+        description: event_type is REFERENCE_CREATED or REFERENCE_UPDATED.
+        readOnly: true
+      actorUserId:
+        type: string
+        description: actor_user_id is the administrator (operator id) who made the change.
+        readOnly: true
+      occurredAt:
+        type: string
+        format: date-time
+        description: occurred_at is when the change was made.
+        readOnly: true
+      beforeState:
+        type: object
+        description: before_state is the entry before an update; absent for a creation.
+        readOnly: true
+      afterState:
+        type: object
+        description: after_state is the entry after the change.
+        readOnly: true
+      reason:
+        type: string
+        description: reason is the administrator's justification; empty when none was given.
+        readOnly: true
+    description: |-
+      ReferenceChange is one entry of the append-only log of reference data changes
+      (case types, relationship types, organization categories, document types).
   v1RelationshipType:
     type: object
     properties:
@@ -3024,6 +3553,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: update_event is the CASE_UPDATED audit event.
     description: UpdateCaseResponse returns the updated case.
+  v1UpdateCaseTypeResponse:
+    type: object
+    properties:
+      caseType:
+        $ref: '#/definitions/v1CaseType'
+        description: case_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateCaseTypeResponse returns the updated case type and its log entry.
   v1UpdateDocumentMetadataResponse:
     type: object
     properties:
@@ -3034,6 +3573,36 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: update_event is the DOCUMENT_METADATA_UPDATED audit event.
     description: UpdateDocumentMetadataResponse returns the updated document.
+  v1UpdateDocumentTypeResponse:
+    type: object
+    properties:
+      documentType:
+        $ref: '#/definitions/v1DocumentType'
+        description: document_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateDocumentTypeResponse returns the updated document type and its log entry.
+  v1UpdateOrganizationCategoryResponse:
+    type: object
+    properties:
+      organizationCategory:
+        $ref: '#/definitions/v1OrganizationCategory'
+        description: organization_category is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateOrganizationCategoryResponse returns the updated organization category and its log entry.
+  v1UpdateRelationshipTypeResponse:
+    type: object
+    properties:
+      relationshipType:
+        $ref: '#/definitions/v1RelationshipType'
+        description: relationship_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
   v1User:
     type: object
     properties:

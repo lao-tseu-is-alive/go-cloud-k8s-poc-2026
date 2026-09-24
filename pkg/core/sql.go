@@ -243,3 +243,42 @@ SELECT ` + appUserColumns + `
 FROM app_user
 WHERE user_id = ANY(@user_ids::text[])
 ORDER BY user_id;`
+
+// --- reference_change ------------------------------------------------------------
+
+const referenceChangeColumns = `
+id, catalogue, code, event_type, actor_user_id, occurred_at, before_state, after_state, reason`
+
+const insertReferenceChangeSQL = `
+INSERT INTO reference_change (catalogue, code, event_type, actor_user_id, before_state, after_state, reason)
+VALUES (@catalogue, @code, @event_type, @actor_user_id, @before_state, @after_state, @reason)
+RETURNING ` + referenceChangeColumns + `;`
+
+const listReferenceChangesSQL = `
+SELECT ` + referenceChangeColumns + `, count(*) OVER () AS total_size
+FROM reference_change
+WHERE (@catalogue = '' OR catalogue = @catalogue)
+ORDER BY occurred_at DESC, id
+LIMIT @limit OFFSET @offset;`
+
+const insertRelationshipTypeSQL = `
+INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description)
+VALUES (@code, @label, @source_kind, @target_kind, @is_directed, @inverse_label, @description)
+RETURNING ` + relationshipTypeColumns + `;`
+
+const getRelationshipTypeForUpdateSQL = `
+SELECT ` + relationshipTypeColumns + `
+FROM relationship_type
+WHERE code = @code
+FOR UPDATE;`
+
+// updateRelationshipTypeSQL replaces the mutable fields given (NULL keeps the
+// current value); code, kinds and direction are immutable.
+const updateRelationshipTypeSQL = `
+UPDATE relationship_type
+SET label         = coalesce(@label::text, label),
+    inverse_label = coalesce(@inverse_label::text, inverse_label),
+    description   = coalesce(@description::text, description),
+    is_active     = coalesce(@is_active::boolean, is_active)
+WHERE code = @code
+RETURNING ` + relationshipTypeColumns + `;`

@@ -81,3 +81,9 @@ type LookupFilter struct {
 // maxLookupResults bounds LookupSubjects; a reference without namespace is not
 // unique, but a lookup is not a search endpoint.
 const maxLookupResults = 50
+
+// ValidBusinessRefNamespace reports whether ns is empty or a valid namespace
+// such as OPC (the rule of BusinessRefRequest.Namespace).
+func ValidBusinessRefNamespace(ns string) bool {
+	return ns == "" || businessRefNamespacePattern.MatchString(ns)
+}

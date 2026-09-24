@@ -275,6 +275,71 @@ message ListCaseTypesResponse {
   repeated CaseType case_types = 1;
 }
 
+// CreateCaseTypeRequest adds a case type (administrators only).
+message CreateCaseTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter, e.g. OPC_DEMANDE_PC; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // business_ref_namespace is the namespace in which cases of this type get
+  // their reference (empty: none allocated), e.g. OPC.
+  string business_ref_namespace = 4 [(buf.validate.field).string.pattern = "^$|^[A-Z][A-Z0-9_]{0,31}$"];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateCaseTypeResponse returns the new case type and its log entry.
+message CreateCaseTypeResponse {
+  // case_type is the created entry, active.
+  CaseType case_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateCaseTypeRequest changes a case type (administrators only); absent fields
+// are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateCaseTypeRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // business_ref_namespace replaces the allocation namespace when present
+  // (affects future cases only; empty stops allocation).
+  optional string business_ref_namespace = 4 [(buf.validate.field).string.pattern = "^$|^[A-Z][A-Z0-9_]{0,31}$"];
+  // is_active activates or deactivates the entry when present; an inactive
+  // entry stays valid for existing data but is no longer offered.
+  optional bool is_active = 5;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 6 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateCaseTypeResponse returns the updated case type and its log entry.
+message UpdateCaseTypeResponse {
+  // case_type is the updated entry.
+  CaseType case_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
 // =============================================
 // CASE SERVICE
 // =============================================
@@ -333,5 +398,24 @@ service CaseService {
   // Requires goeland:read.
   rpc ListCaseTypes(ListCaseTypesRequest) returns (ListCaseTypesResponse) {
     option (google.api.http) = {get: "/api/case-types"};
+  }
+
+  // Add a case type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
+  // ALREADY_EXISTS for a taken code.
+  rpc CreateCaseType(CreateCaseTypeRequest) returns (CreateCaseTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/case-types"
+      body: "*"
+    };
+  }
+
+  // Change a case type (label, description, activation, ...); the code is
+  // immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
+  // unknown code.
+  rpc UpdateCaseType(UpdateCaseTypeRequest) returns (UpdateCaseTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/case-types/{code}"
+      body: "*"
+    };
   }
 }

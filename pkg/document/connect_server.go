@@ -357,3 +357,31 @@ func (s *ConnectServer) ListDocumentTypes(ctx context.Context, req *connect.Requ
 func (s *ConnectServer) mapError(err error) *connect.Error {
 	return core.ToConnectError(s.log, "document", err)
 }
+
+// CreateDocumentType adds a document type (administrators only).
+func (s *ConnectServer) CreateDocumentType(ctx context.Context, req *connect.Request[goelandv1.CreateDocumentTypeRequest]) (*connect.Response[goelandv1.CreateDocumentTypeResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.CreateDocumentType(ctx, DocumentTypeInput{Code: m.Code, Label: m.Label, Description: m.Description, Category: m.Category, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.CreateDocumentTypeResponse{DocumentType: DomainTypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}
+
+// UpdateDocumentType changes a document type (administrators only).
+func (s *ConnectServer) UpdateDocumentType(ctx context.Context, req *connect.Request[goelandv1.UpdateDocumentTypeRequest]) (*connect.Response[goelandv1.UpdateDocumentTypeResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	entry, change, err := s.service.UpdateDocumentType(ctx, m.Code, DocumentTypeUpdate{Label: m.Label, Description: m.Description, Category: m.Category, IsActive: m.IsActive, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.UpdateDocumentTypeResponse{DocumentType: DomainTypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}

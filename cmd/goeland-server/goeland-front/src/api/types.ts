@@ -277,6 +277,7 @@ export interface RelationshipType {
   targetKind?: SubjectKind
   isDirected?: boolean
   inverseLabel?: string
+  description?: string
   isActive?: boolean
 }
 
@@ -500,4 +501,28 @@ export interface GetCurrentUserResponse {
 
 export interface BatchGetUsersResponse {
   users?: User[]
+}
+
+// --- Reference data administration (GLD-040) ----------------------------------
+
+/** A catalogue administered through the API. */
+export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type'
+
+/** One entry of the append-only reference change log. */
+export interface ReferenceChange {
+  id: string
+  catalogue: ReferenceCatalogue
+  code: string
+  eventType: 'REFERENCE_CREATED' | 'REFERENCE_UPDATED'
+  actorUserId?: string
+  occurredAt?: string
+  beforeState?: Record<string, unknown>
+  afterState?: Record<string, unknown>
+  reason?: string
+}
+
+export interface ListReferenceChangesResponse {
+  changes?: ReferenceChange[]
+  nextPageToken?: string
+  totalSize?: number
 }

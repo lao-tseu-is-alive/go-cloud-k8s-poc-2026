@@ -57,6 +57,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   SPA edits addresses (principal star, per-role fields, CH postal code check), shows them as
   cards with a map.geo.admin.ch link, and the actor page can link, end and unlink subjects.
 
+- **GLD-040** — Reference data administration for `goeland:admin` users: `CreateCaseType` /
+  `UpdateCaseType`, `CreateRelationshipType` / `UpdateRelationshipType`,
+  `CreateOrganizationCategory` / `UpdateOrganizationCategory`, `CreateDocumentType` /
+  `UpdateDocumentType` (REST `POST` / `PATCH` on the existing collections) and
+  `CoreService.ListReferenceChanges` (`GET /api/reference-changes`). Codes are immutable
+  (`^[A-Z][A-Z0-9_]{1,99}$`), relationship kinds and direction too, entries are deactivated
+  rather than deleted, and every change is written with its before/after state, operator and
+  reason to the append-only `reference_change` log (migration `0015`) in the same transaction.
+  The SPA has an Administration page (admins only) with one tab per catalogue and the log.
+
 ### Changed
 
 - The SPA opens on the case list (`/`) instead of the document list.

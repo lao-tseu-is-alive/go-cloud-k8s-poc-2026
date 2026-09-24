@@ -110,7 +110,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0014 (dbmate format)
+      └── db/migrations/  0001..0015 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -308,6 +308,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0012_app_user.sql            app_user: internal users recorded from verified tokens (each a USER subject)
 0013_person_identity.sql     person minimal identity (salutation, last and first name) + search over names
 0014_actor_address.sql       address + typed actor_address (one principal, ended links kept) + branch / contact-person types
+0015_reference_change.sql    reference_change: append-only log of reference data administration
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

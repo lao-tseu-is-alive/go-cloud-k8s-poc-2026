@@ -63,6 +63,21 @@ func (StubRepository) UnlinkSubjects(context.Context, uuid.UUID, string, string)
 	return nil, nil, nil
 }
 
+// CreateRelationshipType returns zero values.
+func (StubRepository) CreateRelationshipType(context.Context, core.RelationshipTypeInput) (*core.RelationshipType, *core.ReferenceChange, error) {
+	return nil, nil, nil
+}
+
+// UpdateRelationshipType returns zero values.
+func (StubRepository) UpdateRelationshipType(context.Context, string, core.RelationshipTypeUpdate) (*core.RelationshipType, *core.ReferenceChange, error) {
+	return nil, nil, nil
+}
+
+// ListReferenceChanges returns an empty page.
+func (StubRepository) ListReferenceChanges(context.Context, core.ReferenceFilter) (core.ReferenceResult, error) {
+	return core.ReferenceResult{}, nil
+}
+
 // RecordUser returns zero values.
 func (StubRepository) RecordUser(context.Context, core.UserProfile) (*core.AppUser, error) {
 	return nil, nil
