@@ -14,7 +14,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `.env_sample` — Secret-free example of the supported `GOELAND_*`, `DB_*` and JWT environment variables.
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
 - `.sonarcloud.properties` — SonarCloud automatic-analysis settings: tests declared as tests; generated code and PostgreSQL migrations excluded.
-- `.trivyignore` — Documented Trivy suppressions for advisories proven not to apply to the binary.
+- `.trivyignore` — Documented, expiring (`exp:`) Trivy suppressions for advisories proven not to apply to the binary.
 - `AGENTS.md` — Durable instructions for coding agents: conventions, layers to keep in sync, gotchas.
 - `CHANGELOG.md` — Versioned history of delivered changes (Keep a Changelog); authoritative for what a release shipped.
 - `Dockerfile` — Self-contained multi-stage image: bun frontend stage, Go build with provenance ldflags, `scratch` runtime.

@@ -119,7 +119,8 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   (`scripts/check_documentation_claims.sh`). See `docs/DOCUMENTATION.md`.
 - `make check` — the full local gate: `front-check` (frozen bun install, type-check,
   ESLint, build) + `fmt-check` + `lint` + `test` + `docs-check` + `git diff --check`.
-- `make release-check` — `check` + version/changelog/scripts consistency + roadmap and
+- `make release-check` — `check` + `vuln-check` (govulncheck: reachable vulnerabilities fail) +
+  version/changelog/scripts consistency + roadmap and
   bidirectional roadmap↔changelog traceability + binary build whose `--version` must report
   `Version`. This is exactly what CI (`ci.yml`) runs on every push and PR, and what the
   `release` / `docker-publish` workflows run (after checking tag = `v` + `Version`) before
@@ -383,6 +384,8 @@ enforced locally so they fail `make check` instead of reappearing on the dashboa
 - **Shell scripts:** errors go to stderr (`>&2`), positional parameters are copied into named
   `local` variables in functions, repeated literals become a function or variable, and
   credentials are never sent over plain HTTP except to the loopback interface.
+- **Trivy suppressions** (`.trivyignore`) document why the advisory does not apply (with the
+  `govulncheck` evidence) and carry an `exp:YYYY-MM-DD` date so they lapse and get re-reviewed.
 - **CI actions** are pinned by commit SHA; downloaded tools are verified by checksum (e.g.
   `bufbuild/buf-action` with `checksum`), never `go install tool@version` in a workflow.
 - **Contexts:** never replace an available `ctx` by `context.Background()`; to outlive a

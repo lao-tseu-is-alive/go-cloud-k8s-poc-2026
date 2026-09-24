@@ -8,6 +8,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- `make vuln-check` (govulncheck, pinned as a `go.mod` tool) joins `make release-check`: a
+  vulnerability the code can actually reach now fails CI and the release, before the image scan.
+- `.trivyignore`: `GO-2026-5932` re-verified against x/crypto v0.57.0 (not linked, not reachable
+  per govulncheck) and given an `exp:2026-12-31` date so the suppression lapses and must be
+  re-reviewed; every entry now needs an expiry.
+
 ## [0.5.0] - 2026-09-24
 
 This release closes the spec v2 Phase 0 alignment: spec v2 adopted (**GLD-002**), a business

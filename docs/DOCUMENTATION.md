@@ -237,6 +237,7 @@ make check
 
 make release-check
   ├─ make check
+  ├─ make vuln-check                  (govulncheck, reachable vulnerabilities)
   ├─ make version-check               (README banner = Version)
   ├─ make changelog-check             (one dated section for Version)
   ├─ make scripts-check               (bash -n + checker self-tests)

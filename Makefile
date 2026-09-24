@@ -99,6 +99,11 @@ fmt-check:
 cognitive-check:
 	go tool gocognit -over 15 $$(git ls-files --cached --others --exclude-standard '*.go' | grep -v '_test\.go$$' | grep -v '^gen/')
 
+.PHONY: vuln-check
+## vuln-check:	govulncheck (pinned go.mod tool): fail on any vulnerability the code can reach
+vuln-check:
+	go tool govulncheck $(PACKAGES)
+
 .PHONY: front-check
 ## front-check:	frozen bun install + vue-tsc type-check + eslint + vite build (dist/)
 front-check:
@@ -172,7 +177,7 @@ release-traceability-check:
 
 .PHONY: release-check
 ## release-check:	check + version/changelog/roadmap/traceability + binary reporting the version (CI runs this)
-release-check: check version-check changelog-check scripts-check roadmap-check release-traceability-check binary
+release-check: check vuln-check version-check changelog-check scripts-check roadmap-check release-traceability-check binary
 	@./bin/$(APP_EXECUTABLE) --version | grep -qF '$(version_prefix)' || { echo "release-check: binary does not report $(version_prefix)"; exit 1; }
 	@echo "release-check: v$(APP_VERSION) OK"
 

@@ -302,7 +302,8 @@ make lint         go vet + buf lint
 make fmt          gofmt -w .
 make docs-check   GoDoc coverage + atlas inventory + executable doc claims
 make check        front-check + fmt-check + lint + test + docs-check (run before handoff)
-make release-check  check + version/changelog/roadmap traceability + binary --version (what CI runs)
+make vuln-check   govulncheck: fail on vulnerabilities the code can reach
+make release-check  check + vuln-check + version/changelog/roadmap traceability + binary --version (what CI runs)
 make release      CONFIRM_RELEASE=vX.Y.Z: guarded annotated tag + atomic push of main and tag
 make db-up        apply migrations (dbmate)
 ```
