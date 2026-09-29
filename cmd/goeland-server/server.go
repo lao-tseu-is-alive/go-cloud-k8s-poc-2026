@@ -66,8 +66,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 			pool.Close()
 		}
 	}()
-	if err := pool.Ping(ctx); err != nil {
-		return nil, fmt.Errorf("ping database: %w", err)
+	if err := waitForDatabase(ctx, pool.Ping, config.DBConnectTimeout, log); err != nil {
+		return nil, err
 	}
 	// The core module owns the full schema bootstrap (core + document tables + seed).
 	if err := coremodule.Migrate(ctx, pool); err != nil {
@@ -166,6 +166,31 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, mux))),
 		log:     log,
 	}, nil
+}
+
+// waitForDatabase pings the database until it answers, retrying with a growing
+// delay (0.5s doubling up to 5s) for at most timeout: in Kubernetes a pod often
+// starts before its database accepts connections. A zero timeout makes a single
+// attempt. It stops early when ctx is cancelled.
+func waitForDatabase(ctx context.Context, ping func(context.Context) error, timeout time.Duration, log *slog.Logger) error {
+	deadline := time.Now().Add(timeout)
+	delay := 500 * time.Millisecond
+	for attempt := 1; ; attempt++ {
+		err := ping(ctx)
+		if err == nil {
+			return nil
+		}
+		if time.Now().Add(delay).After(deadline) {
+			return fmt.Errorf("ping database: %w", err)
+		}
+		log.Warn("database not reachable yet, retrying", "attempt", attempt, "retry_in", delay.String(), "error", err)
+		select {
+		case <-ctx.Done():
+			return fmt.Errorf("ping database: %w", ctx.Err())
+		case <-time.After(delay):
+		}
+		delay = min(delay*2, 5*time.Second)
+	}
 }
 
 // spaHandler serves static assets from the embedded frontend FS and falls back to

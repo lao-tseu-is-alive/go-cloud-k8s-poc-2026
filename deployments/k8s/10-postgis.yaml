@@ -1,0 +1,69 @@
+# Disposable PostGIS for the smoke deployment: data lives in an emptyDir and is
+# lost with the pod. Its password comes from the goeland-secrets Secret, created
+# by scripts/k8s_smoke_test.sh (never committed).
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: postgis
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: postgis
+    app.kubernetes.io/part-of: goeland-poc
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: postgis
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: postgis
+        app.kubernetes.io/part-of: goeland-poc
+    spec:
+      containers:
+        - name: postgis
+          image: postgis/postgis:17-3.5
+          ports:
+            - containerPort: 5432
+              name: postgres
+          env:
+            - name: POSTGRES_DB
+              value: goeland
+            - name: POSTGRES_USER
+              value: goeland
+            - name: POSTGRES_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: goeland-secrets
+                  key: DB_PASSWORD
+            - name: PGDATA
+              value: /var/lib/postgresql/data/pgdata
+          readinessProbe:
+            exec:
+              command: ["pg_isready", "-U", "goeland", "-d", "goeland"]
+            periodSeconds: 5
+          resources:
+            requests: { cpu: 100m, memory: 128Mi }
+            limits: { cpu: "1", memory: 512Mi }
+          volumeMounts:
+            - name: data
+              mountPath: /var/lib/postgresql/data
+      volumes:
+        - name: data
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: postgis
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: postgis
+    app.kubernetes.io/part-of: goeland-poc
+spec:
+  selector:
+    app.kubernetes.io/name: postgis
+  ports:
+    - name: postgres
+      port: 5432
+      targetPort: postgres

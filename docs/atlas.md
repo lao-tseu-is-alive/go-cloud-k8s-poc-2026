@@ -50,6 +50,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
+- `scripts/k8s_smoke_test.sh` — Deploys the published image with a disposable PostGIS on a local cluster and checks rollout, probes, version, SPA and API.
 - `scripts/create_k8s_configmap_from_env.sh` — Renders a Kubernetes ConfigMap from `.env` as a dry run.
 - `scripts/execWithEnv.sh` — Runs a compiled binary with a dotenv file loaded.
 - `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
@@ -91,6 +92,13 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/goelandv1connect/timeline.connect.go` — ConnectRPC stubs generated for `TimelineService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/thing.connect.go` — ConnectRPC stubs generated for `ThingService`; never edit by hand.
 
+## Deployment
+
+- `deployments/k8s/README.md` — Local Kubernetes smoke deployment: what the manifests are (and are not) and how to run them.
+- `deployments/k8s/00-namespace.yaml` — Namespace `goeland-poc` of the smoke deployment.
+- `deployments/k8s/10-postgis.yaml` — Disposable PostGIS Deployment and Service for the smoke deployment.
+- `deployments/k8s/20-goeland.yaml` — ConfigMap, hardened Deployment with probes, and Service of the Goéland server.
+
 ## Go module and commands
 
 - `go.mod` — Go module declaration, toolchain version and direct dependencies.
@@ -102,6 +110,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
+- `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
 - `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and download endpoints with their own bearer and scope check, and the frontend config handler.
 
 ## Shared Go packages

@@ -1,0 +1,110 @@
+# The Goéland server for the smoke deployment, following
+# docs/PRODUCTION_READINESS.md: non-secret settings in a ConfigMap, secrets in
+# the goeland-secrets Secret (created by scripts/k8s_smoke_test.sh), probes on
+# /health and /readiness, one replica because blob storage is node-local.
+# Dev auth mode: a smoke test only, never production.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: goeland-config
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: goeland
+    app.kubernetes.io/part-of: goeland-poc
+data:
+  GOELAND_LISTEN_ADDRESS: "0.0.0.0:8080"
+  GOELAND_AUTH_MODE: "dev"
+  GOELAND_DEV_USER_ID: "1"
+  GOELAND_DEV_USER_EMAIL: "smoke@goeland.test"
+  GOELAND_DEV_USER_NAME: "Smoke Test"
+  GOELAND_DEV_USER_ADMIN: "true"
+  DB_HOST: "postgis"
+  DB_PORT: "5432"
+  DB_NAME: "goeland"
+  DB_USER: "goeland"
+  DB_SSL_MODE: "disable"
+  GOELAND_DB_MAX_CONNECTIONS: "10"
+  GOELAND_DOCUMENT_PATH: "/data/documents"
+  LOG_LEVEL: "info"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: goeland
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: goeland
+    app.kubernetes.io/part-of: goeland-poc
+spec:
+  replicas: 1
+  strategy:
+    type: Recreate # node-local blob storage: never two writers
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: goeland
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: goeland
+        app.kubernetes.io/part-of: goeland-poc
+    spec:
+      automountServiceAccountToken: false
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 1221
+        runAsGroup: 1221
+        fsGroup: 1221
+        seccompProfile:
+          type: RuntimeDefault
+      terminationGracePeriodSeconds: 20
+      containers:
+        - name: goeland
+          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.9.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - containerPort: 8080
+              name: http
+          envFrom:
+            - configMapRef:
+                name: goeland-config
+            - secretRef:
+                name: goeland-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          # Migrations run before the listener binds: allow time on first boot.
+          readinessProbe:
+            httpGet: { path: /readiness, port: http }
+            periodSeconds: 5
+            failureThreshold: 24
+          livenessProbe:
+            httpGet: { path: /health, port: http }
+            initialDelaySeconds: 30
+            periodSeconds: 10
+          resources:
+            requests: { cpu: 50m, memory: 64Mi }
+            limits: { cpu: 500m, memory: 256Mi }
+          volumeMounts:
+            - name: documents
+              mountPath: /data/documents
+      volumes:
+        - name: documents
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: goeland
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: goeland
+    app.kubernetes.io/part-of: goeland-poc
+spec:
+  selector:
+    app.kubernetes.io/name: goeland
+  ports:
+    - name: http
+      port: 80
+      targetPort: http

@@ -402,6 +402,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `check_release_traceability_test.sh` | Accepted/rejected cases for the traceability checker (`make scripts-check`)                       |
 | `changelog_section.sh <version>` | Print one CHANGELOG section (GitHub release notes)                                                     |
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
+| `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
 | `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
 
 ## Design rules honoured

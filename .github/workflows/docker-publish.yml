@@ -70,6 +70,14 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
+      # Revision and build stamp baked into the binary (pkg/version), as the
+      # local scripts/01_build_image_locally.sh does; /goAppInfo reports them.
+      - name: Compute build metadata
+        id: buildinfo
+        run: |
+          echo "revision=${GITHUB_REF_NAME}-${GITHUB_SHA::12}" >> "$GITHUB_OUTPUT"
+          echo "stamp=$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$GITHUB_OUTPUT"
+
       # 1. Build the image locally first for scanning
       - name: Build local image
         # v5 - pinned to commit SHA to prevent supply chain attacks,
@@ -79,6 +87,9 @@ jobs:
           context: .
           load: true # This loads the image into the local docker daemon instead of pushing it
           tags: goeland-server:test
+          build-args: |
+            APP_REVISION=${{ steps.buildinfo.outputs.revision }}
+            BUILD_STAMP=${{ steps.buildinfo.outputs.stamp }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
@@ -143,6 +154,9 @@ jobs:
           context: .
           push: true
           tags: ${{ steps.meta.outputs.tags }}
+          build-args: |
+            APP_REVISION=${{ steps.buildinfo.outputs.revision }}
+            BUILD_STAMP=${{ steps.buildinfo.outputs.stamp }}
           labels: ${{ steps.meta.outputs.labels }}
           # Use build cache to speed up subsequent runs
           cache-from: type=gha

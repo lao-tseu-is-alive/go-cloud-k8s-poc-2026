@@ -102,7 +102,9 @@ service must list the SPA's public origin in its redirect allowlist and CORS ori
 The scratch image has no shell, so there is no container `HEALTHCHECK` — configure the
 probes at the orchestration layer against the endpoints above. There is no separate
 startup probe; because migrations run before the listener binds, size the readiness
-`initialDelay`/`failureThreshold` to allow for migration time on first boot.
+`initialDelay`/`failureThreshold` to allow for migration time on first boot. At startup the
+server waits for the database (`GOELAND_DB_CONNECT_TIMEOUT_SECONDS`, §6) instead of exiting,
+so a pod started before its database does not crash-loop.
 
 ## 6. Server tuning
 
@@ -111,6 +113,7 @@ startup probe; because migrations run before the listener binds, size the readin
 | `GOELAND_LISTEN_ADDRESS`            | `127.0.0.1:8080` | Use `0.0.0.0:8080` in a container. |
 | `GOELAND_REQUEST_TIMEOUT_SECONDS`   | `10`             | Per-request timeout (1–300).       |
 | `GOELAND_SHUTDOWN_TIMEOUT_SECONDS`  | `10`             | Graceful drain window (1–300).     |
+| `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` | `60`            | Startup retries an unreachable database this long (0–600; 0 = one attempt). |
 | `LOG_LEVEL`                         | `info`           | `debug` / `info` / `warn` / `error`. |
 
 ## 7. Secrets
@@ -136,12 +139,17 @@ These are the gaps that make this a POC rather than a production service:
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
   without a shared/persistent volume.
 - **Observability is logs only.** No metrics or tracing endpoints yet.
-- **No deployment manifests / Helm chart** are shipped.
+- **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
+  PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
 
 See [requirements/IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_STATUS.md) for
 the full implemented-vs-pending tracker.
 
 ## Verifying a deployment
+
+`scripts/k8s_smoke_test.sh` deploys the published image with a disposable PostGIS on a local
+cluster (Rancher Desktop / k3s) and checks the rollout, both probes, the version, the SPA and a
+few authenticated API calls (see [deployments/k8s/README.md](../deployments/k8s/README.md)).
 
 Run the database integration tests against a disposable PostGIS database to prove the
 schema and the full document and actor lifecycles work end-to-end:

@@ -8,6 +8,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- End-to-end test of the spec v2 §50 scenario over HTTP against the real server
+  (`cmd/goeland-server/scenario_test.go`: authentication, scopes, validation, error codes).
+- Local Kubernetes smoke deployment: `deployments/k8s/` manifests (disposable PostGIS, hardened
+  Deployment with probes) and `scripts/k8s_smoke_test.sh`.
+
+### Changed
+
+- At startup the server waits for the database, retrying with a growing delay for
+  `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` (default 60), instead of exiting on the first failure: a
+  pod started before its database no longer crash-loops.
+
+### Fixed
+
+- The published container image reported `revision` and `build` as `unknown`: the
+  docker-publish workflow now passes `APP_REVISION` and `BUILD_STAMP` like the local build script.
+
 ## [0.9.0] - 2026-09-29
 
 This release completes the case spine of spec v2 (Phases 3 to 5): the case timeline

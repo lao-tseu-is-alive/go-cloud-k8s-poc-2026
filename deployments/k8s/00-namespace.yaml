@@ -1,0 +1,7 @@
+# Namespace of the local smoke deployment (see deployments/k8s/README.md).
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: goeland-poc
+  labels:
+    app.kubernetes.io/part-of: goeland-poc

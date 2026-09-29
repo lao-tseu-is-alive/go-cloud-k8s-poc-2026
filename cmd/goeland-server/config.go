@@ -23,6 +23,10 @@ const (
 	defaultMaxUploadBytes = 100 << 20 // 100 MiB
 )
 
+// defaultDBConnectTimeout bounds how long startup waits for the database (a pod
+// may start before its database accepts connections).
+const defaultDBConnectTimeout = 60 * time.Second
+
 // serverConfig holds all runtime configuration, loaded from environment variables.
 type serverConfig struct {
 	// ListenAddress is the host:port to bind (GOELAND_LISTEN_ADDRESS).
@@ -60,6 +64,9 @@ type serverConfig struct {
 	// RequestTimeout bounds each RPC through the timeout interceptor
 	// (GOELAND_REQUEST_TIMEOUT_SECONDS, default 10s).
 	RequestTimeout time.Duration
+	// DBConnectTimeout bounds how long startup retries an unreachable database
+	// (GOELAND_DB_CONNECT_TIMEOUT_SECONDS, default 60s; 0 means a single attempt).
+	DBConnectTimeout time.Duration
 	// DocumentPath is the local directory where uploaded document blobs are
 	// stored (referenced by documents via an internal:// storage_ref).
 	DocumentPath string
@@ -108,6 +115,10 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+	dbConnectSeconds, err := envInt64InRange("GOELAND_DB_CONNECT_TIMEOUT_SECONDS", int64(defaultDBConnectTimeout/time.Second), 0, 600)
+	if err != nil {
+		return serverConfig{}, err
+	}
 	logLevel, err := parseLogLevel(envOrDefault("LOG_LEVEL", "info"))
 	if err != nil {
 		return serverConfig{}, err
@@ -118,21 +129,22 @@ func loadConfig() (serverConfig, error) {
 	}
 
 	config := serverConfig{
-		ListenAddress:  listenAddress,
-		DatabaseURL:    databaseURL,
-		AuthMode:       authMode,
-		AuthServerURL:  authServerURL,
-		DevToken:       os.Getenv("GOELAND_DEV_TOKEN"),
-		DevUserID:      devUserID,
-		DevUserEmail:   envOrDefault("GOELAND_DEV_USER_EMAIL", "dev@localhost"),
-		DevDisplayName: envOrDefault("GOELAND_DEV_USER_NAME", "Local Goeland User"),
-		DevUserAdmin:   devUserAdmin,
-		LogLevel:       logLevel,
-		MaxConnections: int32(maxConnections),
-		ShutdownPeriod: time.Duration(shutdownSeconds) * time.Second,
-		RequestTimeout: time.Duration(requestTimeoutSeconds) * time.Second,
-		DocumentPath:   envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
-		MaxUploadBytes: maxUploadBytes,
+		ListenAddress:    listenAddress,
+		DatabaseURL:      databaseURL,
+		AuthMode:         authMode,
+		AuthServerURL:    authServerURL,
+		DevToken:         os.Getenv("GOELAND_DEV_TOKEN"),
+		DevUserID:        devUserID,
+		DevUserEmail:     envOrDefault("GOELAND_DEV_USER_EMAIL", "dev@localhost"),
+		DevDisplayName:   envOrDefault("GOELAND_DEV_USER_NAME", "Local Goeland User"),
+		DevUserAdmin:     devUserAdmin,
+		LogLevel:         logLevel,
+		MaxConnections:   int32(maxConnections),
+		ShutdownPeriod:   time.Duration(shutdownSeconds) * time.Second,
+		RequestTimeout:   time.Duration(requestTimeoutSeconds) * time.Second,
+		DBConnectTimeout: time.Duration(dbConnectSeconds) * time.Second,
+		DocumentPath:     envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
+		MaxUploadBytes:   maxUploadBytes,
 	}
 	if config.AuthMode == "dev" && config.DevToken == "" {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
