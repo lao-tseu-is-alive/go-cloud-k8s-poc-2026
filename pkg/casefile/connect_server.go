@@ -44,7 +44,9 @@ func (s *ConnectServer) CreateCase(ctx context.Context, req *connect.Request[goe
 		BusinessRef:  core.BusinessRefRequestFromProto(msg.BusinessRef),
 		OperatorID:   core.OperatorID(user),
 	}
-	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
+	if err := core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance); err != nil {
+		return nil, err
+	}
 	c, ev, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

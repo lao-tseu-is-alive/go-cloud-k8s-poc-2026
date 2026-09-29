@@ -423,7 +423,8 @@ type RecordMetadata struct {
 	DeletedBy string `protobuf:"bytes,7,opt,name=deleted_by,json=deletedBy,proto3" json:"deleted_by,omitempty"`
 	// owner_user_id is the owning user; on creation it defaults to the operator.
 	OwnerUserId string `protobuf:"bytes,8,opt,name=owner_user_id,json=ownerUserId,proto3" json:"owner_user_id,omitempty"`
-	// owner_org_id is the owning organizational unit; empty when unset.
+	// owner_org_id is the owning ORG_UNIT subject UUID; empty when unset. On
+	// creation it must name an existing, not dissolved unit.
 	OwnerOrgId string `protobuf:"bytes,9,opt,name=owner_org_id,json=ownerOrgId,proto3" json:"owner_org_id,omitempty"`
 	// confidentiality_level ranges from 0 (public) to 5 (secret); recorded but not
 	// yet enforced by a permission engine.
@@ -2416,7 +2417,7 @@ type ReferenceChange struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the server-assigned entry UUID.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// catalogue is case_type, relationship_type, organization_category, document_type or thing_type.
+	// catalogue is case_type, relationship_type, organization_category, document_type, thing_type or org_unit_type.
 	Catalogue string `protobuf:"bytes,2,opt,name=catalogue,proto3" json:"catalogue,omitempty"`
 	// code is the changed entry's code.
 	Code string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
@@ -3146,7 +3147,7 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x05value\x18\x02 \x01(\tB\x16\xbaH\x13r\x11\x10\x01\x18d2\v^\\S(.*\\S)?$H\x00R\x05value\x12%\n" +
 	"\ballocate\x18\x03 \x01(\bB\a\xbaH\x04j\x02\b\x01H\x00R\ballocate:x\xbaHu\x1as\n" +
 	"%business_ref.allocate_needs_namespace\x12\x1dallocate requires a namespace\x1a+!has(this.allocate) || this.namespace != ''B\x0f\n" +
-	"\x06source\x12\x05\xbaH\x02\b\x01\"\xc1\x06\n" +
+	"\x06source\x12\x05\xbaH\x02\b\x01\"\xce\x06\n" +
 	"\x0eRecordMetadata\x12*\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12>\n" +
@@ -3162,8 +3163,8 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"deleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tdeletedAt\x12\x1d\n" +
 	"\n" +
 	"deleted_by\x18\a \x01(\tR\tdeletedBy\x12\"\n" +
-	"\rowner_user_id\x18\b \x01(\tR\vownerUserId\x12 \n" +
-	"\fowner_org_id\x18\t \x01(\tR\n" +
+	"\rowner_user_id\x18\b \x01(\tR\vownerUserId\x12-\n" +
+	"\fowner_org_id\x18\t \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\n" +
 	"ownerOrgId\x12>\n" +
 	"\x15confidentiality_level\x18\n" +
 	" \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x14confidentialityLevel\x12\x1d\n" +
@@ -3344,10 +3345,10 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\fbefore_state\x18\a \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\vbeforeState\x12=\n" +
 	"\vafter_state\x18\b \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\n" +
 	"afterState\x12\x1b\n" +
-	"\x06reason\x18\t \x01(\tB\x03\xe0A\x03R\x06reason\"\xdc\x01\n" +
-	"\x1bListReferenceChangesRequest\x12u\n" +
-	"\tcatalogue\x18\x01 \x01(\tBW\xbaHTrRR\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
-	"thing_typeR\tcatalogue\x12'\n" +
+	"\x06reason\x18\t \x01(\tB\x03\xe0A\x03R\x06reason\"\xec\x01\n" +
+	"\x1bListReferenceChangesRequest\x12\x84\x01\n" +
+	"\tcatalogue\x18\x01 \x01(\tBf\xbaHcraR\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
+	"thing_typeR\rorg_unit_typeR\tcatalogue\x12'\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12\x1d\n" +
 	"\n" +

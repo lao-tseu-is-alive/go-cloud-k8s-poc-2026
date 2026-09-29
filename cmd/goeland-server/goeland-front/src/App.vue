@@ -66,6 +66,16 @@
       </v-btn>
 
       <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-sitemap-outline"
+        to="/org-units"
+        variant="text"
+      >
+        {{ t('nav.orgUnits') }}
+      </v-btn>
+
+      <v-btn
         v-if="isAdmin"
         class="d-none d-sm-inline-flex"
         prepend-icon="mdi-cog-outline"

@@ -5,6 +5,7 @@
   import { searchActors } from '@/api/actorClient'
   import { searchCases } from '@/api/caseClient'
   import { searchDocuments } from '@/api/documentClient'
+  import { searchOrgUnits } from '@/api/orgUnitClient'
   import { searchThings } from '@/api/thingClient'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { kindIcon } from '@/utils/subjects'
@@ -31,6 +32,9 @@
       ((await searchThings({ query, pageSize: PAGE_SIZE }, signal)).things ?? []).map(th => th.subjectRef),
     SUBJECT_KIND_DOCUMENT: async (query, signal) =>
       ((await searchDocuments({ query, pageSize: PAGE_SIZE }, signal)).documents ?? []).map(d => d.subjectRef),
+    // Dissolved units take no new relationship: only live ones are offered.
+    SUBJECT_KIND_ORG_UNIT: async (query, signal) =>
+      ((await searchOrgUnits({ query, pageSize: PAGE_SIZE }, signal)).units ?? []).map(u => u.subjectRef),
   }
 
   const items = ref<SubjectRef[]>([])
@@ -107,7 +111,7 @@
     </template>
   </v-autocomplete>
 
-  <!-- Kinds without a search endpoint yet (USER, ORG_UNIT): id entry. -->
+  <!-- Kinds without a search endpoint yet (USER): id entry. -->
   <v-text-field
     v-else
     v-model="model"

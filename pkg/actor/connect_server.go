@@ -56,7 +56,9 @@ func (s *ConnectServer) CreateActor(ctx context.Context, req *connect.Request[go
 		in.LastName = p.LastName
 		in.FirstName = p.FirstName
 	}
-	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
+	if err := core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance); err != nil {
+		return nil, err
+	}
 	act, ev, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

@@ -18,6 +18,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
@@ -35,6 +36,8 @@ type testEnv struct {
 	actorSvc *actor.Service
 	caseSvc  *casefile.Service
 	thingSvc *thing.Service
+	// orgUnitSvc is the organizational unit service.
+	orgUnitSvc *orgunit.Service
 	// timelineSvc is the case timeline service.
 	timelineSvc *timeline.Service
 	// blobDir is the per-test directory holding uploaded bytes.
@@ -128,6 +131,15 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build thing service: %v", err)
 	}
 
+	orgUnitRepo, err := orgunit.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build org unit repository: %v", err)
+	}
+	orgUnitSvc, err := orgunit.NewService(orgUnitRepo, coreSvc, log)
+	if err != nil {
+		t.Fatalf("build org unit service: %v", err)
+	}
+
 	timelineRepo, err := timeline.NewPostgresRepository(pool, log)
 	if err != nil {
 		t.Fatalf("build timeline repository: %v", err)
@@ -137,7 +149,7 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build timeline service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, timelineSvc: timelineSvc, blobDir: store.Root()}
+	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

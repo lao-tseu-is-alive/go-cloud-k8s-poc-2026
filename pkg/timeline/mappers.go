@@ -1,7 +1,6 @@
 package timeline
 
 import (
-	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
@@ -25,8 +24,8 @@ func DomainToProto(e *Entry) *goelandv1.TimelineEntry {
 		Body:               e.Body,
 		Visibility:         goelandv1.TimelineVisibility(e.Visibility),
 		OccurredAt:         core.TimestampOrNil(e.OccurredAt),
-		CorrectsEntryId:    uuidString(e.CorrectsEntryID),
-		CorrectedByEntryId: uuidString(e.CorrectedByEntryID),
+		CorrectsEntryId:    core.UUIDPtrString(e.CorrectsEntryID),
+		CorrectedByEntryId: core.UUIDPtrString(e.CorrectedByEntryID),
 		Documents:          documents,
 		CreatedAt:          core.TimestampOrNil(e.CreatedAt),
 		CreatedBy:          e.CreatedBy,
@@ -65,17 +64,9 @@ func LinkToProto(link *DocumentLink) *goelandv1.TimelineDocumentLink {
 		Id:                link.ID.String(),
 		DocumentId:        link.DocumentID.String(),
 		DocumentLabel:     link.DocumentLabel,
-		DocumentVersionId: uuidString(link.DocumentVersionID),
+		DocumentVersionId: core.UUIDPtrString(link.DocumentVersionID),
 		DocumentVersionNo: versionNo,
 		CreatedAt:         core.TimestampOrNil(link.CreatedAt),
 		CreatedBy:         link.CreatedBy,
 	}
-}
-
-// uuidString renders an optional id; nil becomes the empty string.
-func uuidString(id *uuid.UUID) string {
-	if id == nil {
-		return ""
-	}
-	return id.String()
 }

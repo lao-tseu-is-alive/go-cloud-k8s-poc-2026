@@ -167,8 +167,12 @@ message RecordMetadata {
   string deleted_by = 7;
   // owner_user_id is the owning user; on creation it defaults to the operator.
   string owner_user_id = 8;
-  // owner_org_id is the owning organizational unit; empty when unset.
-  string owner_org_id = 9;
+  // owner_org_id is the owning ORG_UNIT subject UUID; empty when unset. On
+  // creation it must name an existing, not dissolved unit.
+  string owner_org_id = 9 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
   // confidentiality_level ranges from 0 (public) to 5 (secret); recorded but not
   // yet enforced by a permission engine.
   int32 confidentiality_level = 10 [
@@ -548,7 +552,7 @@ message ListRelationshipTypesResponse {
 message ReferenceChange {
   // id is the server-assigned entry UUID.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // catalogue is case_type, relationship_type, organization_category, document_type or thing_type.
+  // catalogue is case_type, relationship_type, organization_category, document_type, thing_type or org_unit_type.
   string catalogue = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   // code is the changed entry's code.
   string code = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -576,7 +580,8 @@ message ListReferenceChangesRequest {
       "relationship_type",
       "organization_category",
       "document_type",
-      "thing_type"
+      "thing_type",
+      "org_unit_type"
     ]
   }];
   // page_size is the page length; 0 means the default (25), at most 200.

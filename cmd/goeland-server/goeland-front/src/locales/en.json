@@ -1,4 +1,48 @@
 {
+  "orgUnits": {
+    "title": "Organizational units",
+    "count": "{n} live units",
+    "search": "Filter by name or abbreviation",
+    "showDissolved": "Show dissolved",
+    "empty": "No unit yet. An administrator can create the root of the organization.",
+    "dissolved": "Dissolved",
+    "root": "Root of the organization",
+    "children": "Sub-units ({n})",
+    "noChildren": "No sub-unit.",
+    "relationshipsHint": "Cases led, managed or followed by this unit (links are created from the case).",
+    "fields": {
+      "label": "Name",
+      "labelHint": "Unique among the live units of the same parent.",
+      "abbreviation": "Abbreviation",
+      "abbreviationHint": "Often the one of the parent service.",
+      "type": "Unit type",
+      "parent": "Parent unit",
+      "email": "Functional mailbox",
+      "emailInvalid": "Invalid e-mail address",
+      "description": "Mission",
+      "externalRef": "External reference"
+    },
+    "dialog": {
+      "create": "New unit",
+      "edit": "Edit the unit"
+    },
+    "actions": {
+      "create": "New unit",
+      "createChild": "Add a sub-unit",
+      "edit": "Edit",
+      "dissolve": "Dissolve",
+      "changeParent": "Change",
+      "makeRoot": "Move to the root"
+    },
+    "messages": {
+      "created": "Unit created.",
+      "updated": "Unit updated.",
+      "dissolved": "Unit dissolved.",
+      "dissolveConfirm": "A dissolved unit stays visible as history but takes no new sub-unit or relationship. A reason is required.",
+      "dissolveBlocked": "Not possible: {n} live sub-unit(s). Move or dissolve them first.",
+      "dissolvedReadOnly": "Unit dissolved on {date}: {reason}"
+    }
+  },
   "timeline": {
     "empty": "No follow-up yet.",
     "showWithdrawn": "Show withdrawn",
@@ -61,6 +105,7 @@
     "language": "Language"
   },
   "nav": {
+    "orgUnits": "Units",
     "cases": "Cases",
     "createCase": "New case",
     "documents": "Documents",
@@ -155,6 +200,7 @@
       "retention": "Retention"
     },
     "reference": {
+      "org_unit_type": "Unit types",
       "case_type": "Case types",
       "relationship_type": "Relationship types",
       "organization_category": "Organization categories",
@@ -639,6 +685,7 @@
       "codeHint": "Upper-case letters, digits and _ (e.g. OPC_DEMANDE_PC); cannot change afterwards.",
       "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
       "hint": {
+        "org_unit_type": "Organizational unit types; new types are ordered after the seven official ones.",
         "case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).",
         "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.",
         "organization_category": "Classification of organizations.",

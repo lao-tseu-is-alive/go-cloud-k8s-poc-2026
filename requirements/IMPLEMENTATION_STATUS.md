@@ -51,9 +51,10 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | Reference data administration (case types, relationship types, organization categories, document types) | ✅ `0015` | ✅ `Create*/Update*` per catalogue + `CoreService.ListReferenceChanges` | ✅ | GLD-040: `goeland:admin` only; immutable codes, deactivation instead of deletion; every change in the append-only `reference_change` log; SPA administration page |
 | v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
+| v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
-| §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; users are recorded from tokens; org units pending (GLD-041) |
+| §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
 ---
 
@@ -289,6 +290,14 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   while drafts remain (validate, lock or withdraw them) and a closed case accepts no timeline
   change. Authors may validate their own entries and `visibility` is stored but not enforced
   until GLD-017; SYSTEM entries are server-written only and AI_PROPOSAL is reserved for GLD-030.
+- **ORG_UNIT (GLD-041, v2 §5.7, §31, 2026-09-29)** — modelled from the production structure
+  (aggregates only). There is no natural unique code: the abbreviation names the service a unit
+  belongs to and is inherited by most sub-units (111 values for 738 units) and labels repeat
+  across services, so identity is the subject id, live siblings never share a label, and
+  `external_ref` keeps the source id. A unit is dissolved, never deleted, and only without live
+  sub-units; a dissolved unit takes no child, owned subject or relationship. `owner_org_id`
+  became a typed foreign key (no unit existed before, so earlier free-text values were dropped).
+  User ↔ unit membership is deferred to GLD-026, where tasks need it.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
@@ -307,7 +316,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   transitions with reasons → closed-case freeze → reopen → explicit reference → soft delete),
   and the **timeline** (draft citing a document → auto case link → edit → validate with
   pinned version → immutability through the service and the DB triggers → corrections rules
-  → drafts block closure → SYSTEM entry on close → closed case rejects entries → case audit).
+  → drafts block closure → SYSTEM entry on close → closed case rejects entries → case audit),
+  and the **org units** (seeded types → tree path → sibling labels and external references →
+  no cycle through the service and the trigger → dissolution order → owning unit and case roles
+  refused for a dissolved unit).
   Env-gated on
   `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
   `go test ./...` stays green without a database.

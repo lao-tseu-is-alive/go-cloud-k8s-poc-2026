@@ -506,7 +506,7 @@ export interface BatchGetUsersResponse {
 // --- Reference data administration (GLD-040) ----------------------------------
 
 /** A catalogue administered through the API. */
-export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type'
+export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type' | 'org_unit_type'
 
 /** One entry of the append-only reference change log. */
 export interface ReferenceChange {
@@ -730,4 +730,85 @@ export interface CreateTimelineEntryRequest extends TimelineEntryContent {
 
 export interface UpdateTimelineEntryRequest extends TimelineEntryContent {
   reason?: string
+}
+
+// ---------------------------------------------------------------------------
+// Organizational units (OrgUnitService, orgunit.proto)
+// ---------------------------------------------------------------------------
+
+export interface OrgUnitType {
+  id?: string
+  code: string
+  label: string
+  description?: string
+  sortOrder?: number
+  isActive?: boolean
+}
+
+/** Light unit used to draw the tree and paths. */
+export interface OrgUnitNode {
+  id: string
+  abbreviation?: string
+  label: string
+  orgUnitTypeCode?: string
+  /** Empty (absent in JSON) for a root. */
+  parentId?: string
+  dissolved?: boolean
+}
+
+export interface OrgUnit {
+  subjectRef?: SubjectRef
+  orgUnitType?: OrgUnitType
+  /** Sigle, often shared with the parent unit (not unique). */
+  abbreviation?: string
+  label: string
+  description?: string
+  email?: string
+  parentId?: string
+  dissolvedAt?: string
+  dissolvedBy?: string
+  dissolutionReason?: string
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  recordMetadata?: RecordMetadata
+  /** Id in a source system (e.g. goeland:1234); immutable. */
+  externalRef?: string
+}
+
+export interface GetOrgUnitResponse {
+  orgUnit?: OrgUnit
+  /** From the root down to the parent. */
+  ancestors?: OrgUnitNode[]
+  children?: OrgUnitNode[]
+  relationships?: SubjectRelationship[]
+  recentAudit?: AuditEvent[]
+}
+
+/** Editable fields shared by create and update (full replacement on update). */
+export interface OrgUnitInput {
+  orgUnitTypeCode: string
+  abbreviation?: string
+  label: string
+  description?: string
+  email?: string
+  parentId?: string
+  reason?: string
+}
+
+export interface CreateOrgUnitRequest extends OrgUnitInput {
+  externalRef?: string
+}
+
+export interface SearchOrgUnitsParams {
+  query?: string
+  includeDissolved?: boolean
+  pageSize?: number
+  pageToken?: string
+}
+
+export interface SearchOrgUnitsResponse {
+  units?: OrgUnit[]
+  nextPageToken?: string
+  totalSize?: number
 }

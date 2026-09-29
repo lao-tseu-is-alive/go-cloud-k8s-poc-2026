@@ -72,16 +72,30 @@ func ToConnectError(log *slog.Logger, domain string, err error) *connect.Error {
 }
 
 // ApplyInitialGovernance copies the governance fields a create request may set
-// (owner, confidentiality, retention, metadata) into dst; nil leaves dst as is.
-// The operator is never taken from the request.
-func ApplyInitialGovernance(dst *CreateSubjectInput, gov *goelandv1.RecordMetadata) {
+// (owner, owning unit, confidentiality, retention, metadata) into dst; nil
+// leaves dst as is. The operator is never taken from the request. A malformed
+// owning unit id is a Connect InvalidArgument error.
+func ApplyInitialGovernance(dst *CreateSubjectInput, gov *goelandv1.RecordMetadata) error {
 	if gov == nil {
-		return
+		return nil
+	}
+	ownerOrgID, err := OptionalUUID(gov.OwnerOrgId)
+	if err != nil {
+		return err
 	}
 	dst.OwnerUserID = gov.OwnerUserId
-	dst.OwnerOrgID = gov.OwnerOrgId
+	dst.OwnerOrgID = ownerOrgID
 	dst.ConfidentialityLevel = gov.ConfidentialityLevel
 	dst.RetentionUntil = gov.RetentionUntil
 	dst.SortFinal = gov.SortFinal
 	dst.Metadata = gov.Metadata
+	return nil
+}
+
+// UUIDPtrString renders an optional id for the wire; nil becomes "".
+func UUIDPtrString(id *uuid.UUID) string {
+	if id == nil {
+		return ""
+	}
+	return id.String()
 }

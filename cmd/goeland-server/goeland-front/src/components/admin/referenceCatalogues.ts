@@ -8,6 +8,7 @@ import { listOrganizationCategories } from '@/api/actorClient'
 import { listCaseTypes } from '@/api/caseClient'
 import { listRelationshipTypes } from '@/api/coreClient'
 import { listDocumentTypes } from '@/api/documentClient'
+import { listOrgUnitTypes } from '@/api/orgUnitClient'
 import { listThingTypes } from '@/api/thingClient'
 
 export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean'
@@ -73,6 +74,12 @@ export const CATALOGUES: CatalogueConfig[] = [
     catalogue: 'thing_type',
     fields: [LABEL, DESCRIPTION],
     list: async () => (await listThingTypes(false)) as unknown as CatalogueEntry[],
+  },
+  {
+    // New unit types are ordered after the seven seeded ones.
+    catalogue: 'org_unit_type',
+    fields: [LABEL, DESCRIPTION],
+    list: async () => (await listOrgUnitTypes(false)) as unknown as CatalogueEntry[],
   },
 ]
 

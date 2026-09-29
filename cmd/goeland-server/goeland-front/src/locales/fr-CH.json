@@ -1,4 +1,48 @@
 {
+  "orgUnits": {
+    "title": "Unités organisationnelles",
+    "count": "{n} unités actives",
+    "search": "Filtrer par nom ou sigle",
+    "showDissolved": "Afficher les dissoutes",
+    "empty": "Aucune unité. Un administrateur peut créer la racine de l'organisation.",
+    "dissolved": "Dissoute",
+    "root": "Racine de l'organisation",
+    "children": "Sous-unités ({n})",
+    "noChildren": "Aucune sous-unité.",
+    "relationshipsHint": "Affaires pilotées, gérées ou suivies par cette unité (liens créés depuis l'affaire).",
+    "fields": {
+      "label": "Nom",
+      "labelHint": "Unique parmi les unités actives du même parent.",
+      "abbreviation": "Sigle",
+      "abbreviationHint": "Souvent celui du service de rattachement.",
+      "type": "Type d'unité",
+      "parent": "Unité parente",
+      "email": "Boîte fonctionnelle",
+      "emailInvalid": "Adresse e-mail invalide",
+      "description": "Mission",
+      "externalRef": "Référence externe"
+    },
+    "dialog": {
+      "create": "Nouvelle unité",
+      "edit": "Modifier l'unité"
+    },
+    "actions": {
+      "create": "Nouvelle unité",
+      "createChild": "Ajouter une sous-unité",
+      "edit": "Modifier",
+      "dissolve": "Dissoudre",
+      "changeParent": "Changer",
+      "makeRoot": "Placer à la racine"
+    },
+    "messages": {
+      "created": "Unité créée.",
+      "updated": "Unité mise à jour.",
+      "dissolved": "Unité dissoute.",
+      "dissolveConfirm": "L'unité dissoute reste visible dans l'historique, mais ne reçoit plus de sous-unité ni de nouveau lien. Un motif est requis.",
+      "dissolveBlocked": "Impossible : {n} sous-unité(s) active(s). Déplacez-les ou dissolvez-les d'abord.",
+      "dissolvedReadOnly": "Unité dissoute le {date} : {reason}"
+    }
+  },
   "timeline": {
     "empty": "Aucun suivi pour l’instant.",
     "showWithdrawn": "Afficher les retirés",
@@ -61,6 +105,7 @@
     "language": "Langue"
   },
   "nav": {
+    "orgUnits": "Unités",
     "cases": "Affaires",
     "createCase": "Nouvelle affaire",
     "documents": "Documents",
@@ -155,6 +200,7 @@
       "retention": "Conservation"
     },
     "reference": {
+      "org_unit_type": "Types d'unité",
       "case_type": "Types d'affaire",
       "relationship_type": "Types de relation",
       "organization_category": "Catégories d'organisation",
@@ -639,6 +685,7 @@
       "codeHint": "Majuscules, chiffres et _ (p. ex. OPC_DEMANDE_PC) ; ne peut plus changer ensuite.",
       "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
       "hint": {
+        "org_unit_type": "Types d'unité organisationnelle ; les nouveaux types sont classés après les sept types officiels.",
         "case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).",
         "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.",
         "organization_category": "Classification des personnes morales.",

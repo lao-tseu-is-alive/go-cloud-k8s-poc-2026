@@ -41,7 +41,9 @@ func (s *ConnectServer) CreateThing(ctx context.Context, req *connect.Request[go
 		GeometryGeoJSON: msg.GeometryGeojson, Parcel: parcelFromProto(msg.GetParcel()), Building: buildingFromProto(msg.GetBuilding()),
 		Metadata: core.StructToMap(msg.Metadata), OperatorID: core.OperatorID(user),
 	}
-	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
+	if err := core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance); err != nil {
+		return nil, err
+	}
 	t, ev, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

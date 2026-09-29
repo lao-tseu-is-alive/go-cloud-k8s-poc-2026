@@ -43,13 +43,8 @@ func (s *ConnectServer) CreateSubjectRef(ctx context.Context, req *connect.Reque
 		OperatorID:   OperatorID(user),
 		BusinessRef:  BusinessRefRequestFromProto(msg.BusinessRef),
 	}
-	if gov := msg.InitialMetadata; gov != nil {
-		in.OwnerUserID = gov.OwnerUserId
-		in.OwnerOrgID = gov.OwnerOrgId
-		in.ConfidentialityLevel = gov.ConfidentialityLevel
-		in.RetentionUntil = gov.RetentionUntil
-		in.SortFinal = gov.SortFinal
-		in.Metadata = gov.Metadata
+	if err := ApplyInitialGovernance(&in, msg.InitialMetadata); err != nil {
+		return nil, err
 	}
 	if in.OwnerUserID == "" {
 		in.OwnerUserID = in.OperatorID

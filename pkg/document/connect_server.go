@@ -65,7 +65,9 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 		OperatorID:       core.OperatorID(user),
 		LinkToCaseID:     linkCase,
 	}
-	core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance)
+	if err := core.ApplyInitialGovernance(&in.Governance, msg.InitialGovernance); err != nil {
+		return nil, err
+	}
 	res, err := s.service.Create(ctx, in)
 	if err != nil {
 		return nil, s.mapError(err)

@@ -87,8 +87,8 @@ type RecordMetadata struct {
 	DeletedBy string `db:"deleted_by"`
 	// OwnerUserID is the owning user; empty when unowned.
 	OwnerUserID string `db:"owner_user_id"`
-	// OwnerOrgID is the owning organizational unit; empty when unset.
-	OwnerOrgID string `db:"owner_org_id"`
+	// OwnerOrgID is the owning ORG_UNIT subject; nil when unset.
+	OwnerOrgID *uuid.UUID `db:"owner_org_id"`
 	// ConfidentialityLevel ranges from 0 (public) to 5 (most restricted),
 	// enforced by a CHECK constraint. It is recorded but not yet enforced by a
 	// permission engine.
@@ -221,8 +221,9 @@ type CreateSubjectInput struct {
 	// OwnerUserID is the initial owning user; empty leaves the subject unowned
 	// (the RPC adapters default it to the operator before calling the service).
 	OwnerUserID string
-	// OwnerOrgID is the initial owning organizational unit.
-	OwnerOrgID string
+	// OwnerOrgID is the initial owning ORG_UNIT subject; it must exist and not
+	// be dissolved. Nil leaves the owning unit unset.
+	OwnerOrgID *uuid.UUID
 	// ConfidentialityLevel is the initial level, 0 to 5.
 	ConfidentialityLevel int32
 	// RetentionUntil is the initial retention deadline (see RecordMetadata).

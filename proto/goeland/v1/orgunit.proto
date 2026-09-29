@@ -1,0 +1,409 @@
+// Goéland POC - Organizational units (spec v2 §5.7, §31).
+//
+// Proto-first definition for OrgUnitService + supporting messages. An
+// organizational unit (direction, service, office, ...) is an internal unit of
+// the administration, never an ACTOR: a first-class subject (kind = ORG_UNIT)
+// in one tree, that cases, tasks and circulations target through typed
+// relationships (CASE_HAS_ORG_UNIT_LEADER, _MANAGER, _PARTICIPANT) and that
+// RecordMetadata.owner_org_id names.
+//
+// Units have no natural unique code: the abbreviation (sigle) is often shared
+// with the parent unit. Identity is the subject id; live siblings never share
+// a label. A unit is never deleted: it is dissolved with a reason and stays as history.
+// Reading requires goeland:read; every mutation requires goeland:admin and is
+// audited in the same transaction.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// ORG UNIT MESSAGES
+// =============================================
+
+// OrgUnitType is a controlled classification of units (e.g. DIRECTION, SERVICE).
+message OrgUnitType {
+  // id is the catalogue row UUID.
+  string id = 1;
+  // code is the unique stable key, e.g. SERVICE.
+  string code = 2;
+  // label is the human label.
+  string label = 3;
+  // description documents the business meaning.
+  string description = 4;
+  // sort_order orders the types from the top of the hierarchy down.
+  int32 sort_order = 5;
+  // is_active reports whether the type is offered for new units.
+  bool is_active = 6;
+}
+
+// OrgUnitNode is the light form of a unit used to draw the tree and paths.
+message OrgUnitNode {
+  // id is the unit (ORG_UNIT subject) UUID.
+  string id = 1;
+  // abbreviation is the unit sigle (not unique); empty when none.
+  string abbreviation = 2;
+  // label is the unit name.
+  string label = 3;
+  // org_unit_type_code is the code of the unit type.
+  string org_unit_type_code = 4;
+  // parent_id is the parent unit; empty for a root.
+  string parent_id = 5;
+  // dissolved reports whether the unit is dissolved.
+  bool dissolved = 6;
+}
+
+// OrgUnit is an organizational unit, 1:1 with SubjectRef (id == subject id).
+message OrgUnit {
+  // subject_ref is the embedded canonical identity (kind = ORG_UNIT); its id is the unit id.
+  SubjectRef subject_ref = 1;
+  // org_unit_type is the classification of the unit.
+  OrgUnitType org_unit_type = 2;
+  // abbreviation is the unit sigle (e.g. SOI), often shared with the parent
+  // unit, so not unique; empty when none.
+  string abbreviation = 3;
+  // label is the unit name.
+  string label = 4;
+  // description documents the unit's mission.
+  string description = 5;
+  // email is the functional mailbox of the unit; empty when none.
+  string email = 6;
+  // parent_id is the parent unit; empty for a root.
+  string parent_id = 7;
+  // dissolved_at is set when the unit was dissolved.
+  google.protobuf.Timestamp dissolved_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // dissolved_by is the operator who dissolved the unit.
+  string dissolved_by = 9;
+  // dissolution_reason is the justification of the dissolution.
+  string dissolution_reason = 10;
+  // created_at is the server creation time.
+  google.protobuf.Timestamp created_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the unit.
+  string created_by = 12;
+  // updated_at is the last modification time, maintained by the database.
+  google.protobuf.Timestamp updated_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // record_metadata is the governance record of the unit.
+  RecordMetadata record_metadata = 14;
+  // external_ref is the unit id in a source system (e.g. goeland:1234), unique
+  // when set and immutable; empty for units created in the POC.
+  string external_ref = 15;
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// ListOrgUnitsRequest returns the whole tree as a flat list.
+message ListOrgUnitsRequest {
+  // include_dissolved also returns dissolved units.
+  bool include_dissolved = 1;
+}
+
+// ListOrgUnitsResponse is the flat tree, ordered by type order then label.
+message ListOrgUnitsResponse {
+  // units are the tree nodes; parent_id links them.
+  repeated OrgUnitNode units = 1;
+}
+
+// SearchOrgUnitsRequest searches units by abbreviation or name (accent-insensitive).
+message SearchOrgUnitsRequest {
+  // query is matched against abbreviation, label and description, or exactly
+  // against the abbreviation or the external reference; empty matches every unit.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // include_dissolved also returns dissolved units.
+  bool include_dissolved = 2;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 3 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 4 [(buf.validate.field).string.max_len = 1024];
+}
+
+// SearchOrgUnitsResponse is one page of matching units.
+message SearchOrgUnitsResponse {
+  // units are the units of this page.
+  repeated OrgUnit units = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching units across all pages.
+  int32 total_size = 3;
+}
+
+// GetOrgUnitRequest retrieves one unit.
+message GetOrgUnitRequest {
+  // id is the unit UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // include_relationships also returns the unit's relationships (both directions).
+  bool include_relationships = 2;
+  // include_audit also returns the most recent audit events.
+  bool include_audit = 3;
+}
+
+// GetOrgUnitResponse returns the unit with its place in the tree.
+message GetOrgUnitResponse {
+  // org_unit is the unit.
+  OrgUnit org_unit = 1;
+  // ancestors are the units above it, from the root down to its parent.
+  repeated OrgUnitNode ancestors = 2;
+  // children are the units directly below it (dissolved ones included), by label.
+  repeated OrgUnitNode children = 3;
+  // relationships are present when requested.
+  repeated SubjectRelationship relationships = 4;
+  // recent_audit is present when requested, newest first.
+  repeated AuditEvent recent_audit = 5;
+}
+
+// CreateOrgUnitRequest adds a unit (administrators only).
+message CreateOrgUnitRequest {
+  // org_unit_type_code is the code of an active unit type.
+  string org_unit_type_code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // abbreviation is the optional unit sigle (at most 50 characters).
+  string abbreviation = 2 [(buf.validate.field).string.max_len = 50];
+  // label is the required unit name (1-200 characters); a live sibling with the
+  // same label (whatever its case) is ALREADY_EXISTS.
+  string label = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the unit's mission (at most 2000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 2000];
+  // email is the functional mailbox (a plain address, at most 254 characters); empty for none.
+  string email = 5 [(buf.validate.field).string.max_len = 254];
+  // parent_id is an existing, not dissolved unit; empty creates a root.
+  string parent_id = 6 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 7 [(buf.validate.field).string.max_len = 2000];
+  // external_ref is the unit id in a source system (at most 100 characters),
+  // unique when set; ALREADY_EXISTS when taken. It cannot change afterwards.
+  string external_ref = 8 [(buf.validate.field).string.max_len = 100];
+}
+
+// CreateOrgUnitResponse returns the new unit.
+message CreateOrgUnitResponse {
+  // org_unit is the created unit.
+  OrgUnit org_unit = 1;
+  // created_event is the ORG_UNIT_CREATED audit event.
+  AuditEvent created_event = 2;
+}
+
+// UpdateOrgUnitRequest replaces the editable fields of a live unit
+// (administrators only); the external reference is immutable.
+message UpdateOrgUnitRequest {
+  // id is the unit UUID; a dissolved unit is FAILED_PRECONDITION.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // org_unit_type_code is the code of an active unit type (the current type
+  // stays valid even when deactivated).
+  string org_unit_type_code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the unit name (1-200 characters), unique among live siblings.
+  string label = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description replaces the mission (at most 2000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 2000];
+  // email replaces the functional mailbox; empty removes it.
+  string email = 5 [(buf.validate.field).string.max_len = 254];
+  // parent_id moves the unit under another live unit (never under itself or
+  // one of its descendants); empty makes it a root.
+  string parent_id = 6 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 7 [(buf.validate.field).string.max_len = 2000];
+  // abbreviation replaces the unit sigle (at most 50 characters); empty removes it.
+  string abbreviation = 8 [(buf.validate.field).string.max_len = 50];
+}
+
+// UpdateOrgUnitResponse returns the updated unit.
+message UpdateOrgUnitResponse {
+  // org_unit is the updated unit.
+  OrgUnit org_unit = 1;
+  // update_event is the ORG_UNIT_UPDATED audit event.
+  AuditEvent update_event = 2;
+}
+
+// DissolveOrgUnitRequest dissolves a unit (administrators only); it stays as history.
+message DissolveOrgUnitRequest {
+  // id is the unit UUID; a unit with live children is FAILED_PRECONDITION.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the required justification (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// DissolveOrgUnitResponse returns the dissolved unit.
+message DissolveOrgUnitResponse {
+  // org_unit is the dissolved unit.
+  OrgUnit org_unit = 1;
+  // dissolve_event is the ORG_UNIT_DISSOLVED audit event.
+  AuditEvent dissolve_event = 2;
+}
+
+// ListOrgUnitTypesRequest filters the unit type catalogue.
+message ListOrgUnitTypesRequest {
+  // only_active returns only types offered for new units.
+  bool only_active = 1;
+}
+
+// ListOrgUnitTypesResponse returns the matching types, by sort order then code.
+message ListOrgUnitTypesResponse {
+  // org_unit_types are the matching types.
+  repeated OrgUnitType org_unit_types = 1;
+}
+
+// CreateOrgUnitTypeRequest adds a unit type (administrators only).
+message CreateOrgUnitTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateOrgUnitTypeResponse returns the new type and its log entry.
+message CreateOrgUnitTypeResponse {
+  // org_unit_type is the created entry, active and ordered last.
+  OrgUnitType org_unit_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateOrgUnitTypeRequest changes a unit type (administrators only); absent
+// fields are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateOrgUnitTypeRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // is_active activates or deactivates the entry when present.
+  optional bool is_active = 4;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateOrgUnitTypeResponse returns the updated type and its log entry.
+message UpdateOrgUnitTypeResponse {
+  // org_unit_type is the updated entry.
+  OrgUnitType org_unit_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// =============================================
+// ORG UNIT SERVICE
+// =============================================
+
+// OrgUnitService manages the organizational units of the Goéland POC. Every RPC
+// carries a google.api.http annotation so Vanguard also exposes it as
+// REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
+service OrgUnitService {
+  // Return the whole tree as a flat list (bounded: the administration has
+  // about a thousand units). Requires goeland:read.
+  rpc ListOrgUnits(ListOrgUnitsRequest) returns (ListOrgUnitsResponse) {
+    option (google.api.http) = {get: "/api/org-units"};
+  }
+
+  // Accent-insensitive search by abbreviation, name or description. Requires goeland:read.
+  rpc SearchOrgUnits(SearchOrgUnitsRequest) returns (SearchOrgUnitsResponse) {
+    option (google.api.http) = {get: "/api/org-units/search"};
+  }
+
+  // Retrieve a unit with its ancestors, children and optionally relationships
+  // and audit. Requires goeland:read; NOT_FOUND when the unit does not exist.
+  rpc GetOrgUnit(GetOrgUnitRequest) returns (GetOrgUnitResponse) {
+    option (google.api.http) = {get: "/api/org-units/{id}"};
+  }
+
+  // Add a unit. Requires goeland:admin; writes ORG_UNIT_CREATED.
+  rpc CreateOrgUnit(CreateOrgUnitRequest) returns (CreateOrgUnitResponse) {
+    option (google.api.http) = {
+      post: "/api/org-units"
+      body: "*"
+    };
+  }
+
+  // Replace the editable fields of a live unit, moving it in the tree when the
+  // parent changes. Requires goeland:admin; writes ORG_UNIT_UPDATED.
+  rpc UpdateOrgUnit(UpdateOrgUnitRequest) returns (UpdateOrgUnitResponse) {
+    option (google.api.http) = {
+      patch: "/api/org-units/{id}"
+      body: "*"
+    };
+  }
+
+  // Dissolve a unit without live children. Requires goeland:admin; writes ORG_UNIT_DISSOLVED.
+  rpc DissolveOrgUnit(DissolveOrgUnitRequest) returns (DissolveOrgUnitResponse) {
+    option (google.api.http) = {
+      post: "/api/org-units/{id}/dissolve"
+      body: "*"
+    };
+  }
+
+  // List the unit type catalogue. Requires goeland:read.
+  rpc ListOrgUnitTypes(ListOrgUnitTypesRequest) returns (ListOrgUnitTypesResponse) {
+    option (google.api.http) = {get: "/api/org-unit-types"};
+  }
+
+  // Add a unit type. Requires goeland:admin; logs REFERENCE_CREATED.
+  rpc CreateOrgUnitType(CreateOrgUnitTypeRequest) returns (CreateOrgUnitTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/org-unit-types"
+      body: "*"
+    };
+  }
+
+  // Change a unit type. Requires goeland:admin; logs REFERENCE_UPDATED.
+  rpc UpdateOrgUnitType(UpdateOrgUnitTypeRequest) returns (UpdateOrgUnitTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/org-unit-types/{code}"
+      body: "*"
+    };
+  }
+}

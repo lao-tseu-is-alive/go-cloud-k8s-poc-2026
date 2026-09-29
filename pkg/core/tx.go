@@ -90,6 +90,11 @@ func mapBusinessRefConflict(err error) error {
 
 // InsertRecordMetadataTx inserts the 1:1 governance record for a subject using q.
 func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInput, subjectID uuid.UUID) (*RecordMetadata, error) {
+	if in.OwnerOrgID != nil {
+		if err := ensureLiveOrgUnitTx(ctx, q, *in.OwnerOrgID); err != nil {
+			return nil, err
+		}
+	}
 	metadata := in.Metadata
 	if metadata == nil {
 		metadata = map[string]string{}
@@ -108,6 +113,36 @@ func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInpu
 		return nil, err
 	}
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[RecordMetadata])
+}
+
+// ensureLiveOrgUnitTx requires id to name an existing, not dissolved ORG_UNIT
+// (the owning unit of a subject or a relationship end).
+func ensureLiveOrgUnitTx(ctx context.Context, q Querier, id uuid.UUID) error {
+	var dissolved bool
+	err := q.QueryRow(ctx, orgUnitDissolvedSQL, pgx.NamedArgs{"id": id}).Scan(&dissolved)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+		return fmt.Errorf("%w: owning org unit %s does not exist", ErrInvalidInput, id)
+	case err != nil:
+		return fmt.Errorf("check owning org unit: %w", err)
+	case dissolved:
+		return fmt.Errorf("%w: owning org unit %s is dissolved", ErrInvalidInput, id)
+	}
+	return nil
+}
+
+// ensureLiveOrgUnitEndsTx refuses a relationship end that is a dissolved
+// ORG_UNIT: a dissolved unit stays as history but takes no new relationship.
+func ensureLiveOrgUnitEndsTx(ctx context.Context, q Querier, ends ...*SubjectRef) error {
+	for _, end := range ends {
+		if end.Kind != SubjectKindOrgUnit {
+			continue
+		}
+		if err := ensureLiveOrgUnitTx(ctx, q, end.ID); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // InsertAuditEventTx appends an append-only audit event using q. Every domain
@@ -271,7 +306,8 @@ func SoftDeleteRecordMetadataTx(ctx context.Context, q Querier, subjectID uuid.U
 // It fails with ErrNotFound for an unknown subject or type code, ErrInvalidInput
 // for an inactive type, ErrKindMismatch when the subject kinds differ from the
 // type's, ErrDeleted when either end is soft-deleted (locked subjects may still
-// be linked) and ErrConflict for a duplicate open edge. It writes no audit
+// be linked), ErrInvalidInput when either end is a dissolved ORG_UNIT and
+// ErrConflict for a duplicate open edge. It writes no audit
 // event: the caller records RELATIONSHIP_LINKED in the same transaction.
 func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelationship, error) {
 	source, err := GetSubjectRefTx(ctx, q, in.SourceSubjectID)
@@ -298,6 +334,9 @@ func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelat
 		return nil, err
 	}
 	if _, err := EnsureMutableTx(ctx, q, in.TargetSubjectID, true); err != nil {
+		return nil, err
+	}
+	if err := ensureLiveOrgUnitEndsTx(ctx, q, source, target); err != nil {
 		return nil, err
 	}
 	rows, err := q.Query(ctx, insertSubjectRelationshipSQL, pgx.NamedArgs{

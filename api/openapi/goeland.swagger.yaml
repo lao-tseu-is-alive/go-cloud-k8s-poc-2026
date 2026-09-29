@@ -27,6 +27,11 @@ tags:
       exposes it as REST/JSON (and the generated OpenAPI documents that surface).
       REST paths follow the spec (§13.3) with sensible additions for the extra RPCs.
       The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
+  - name: OrgUnitService
+    description: |-
+      OrgUnitService manages the organizational units of the Goéland POC. Every RPC
+      carries a google.api.http annotation so Vanguard also exposes it as
+      REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
   - name: ThingService
     description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
   - name: TimelineService
@@ -1032,6 +1037,243 @@ paths:
             $ref: '#/definitions/rpcStatus'
       tags:
         - CoreService
+  /api/org-unit-types:
+    get:
+      summary: List the unit type catalogue. Requires goeland:read.
+      operationId: ListOrgUnitTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListOrgUnitTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          description: only_active returns only types offered for new units.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - OrgUnitService
+    post:
+      summary: Add a unit type. Requires goeland:admin; logs REFERENCE_CREATED.
+      operationId: CreateOrgUnitType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateOrgUnitTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateOrgUnitTypeRequest adds a unit type (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateOrgUnitTypeRequest'
+      tags:
+        - OrgUnitService
+  /api/org-unit-types/{code}:
+    patch:
+      summary: Change a unit type. Requires goeland:admin; logs REFERENCE_UPDATED.
+      operationId: UpdateOrgUnitType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateOrgUnitTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/OrgUnitServiceUpdateOrgUnitTypeBody'
+      tags:
+        - OrgUnitService
+  /api/org-units:
+    get:
+      summary: |-
+        Return the whole tree as a flat list (bounded: the administration has
+        about a thousand units). Requires goeland:read.
+      operationId: ListOrgUnits
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListOrgUnitsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: includeDissolved
+          description: include_dissolved also returns dissolved units.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - OrgUnitService
+    post:
+      summary: Add a unit. Requires goeland:admin; writes ORG_UNIT_CREATED.
+      operationId: CreateOrgUnit
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateOrgUnitResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateOrgUnitRequest adds a unit (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateOrgUnitRequest'
+      tags:
+        - OrgUnitService
+  /api/org-units/search:
+    get:
+      summary: Accent-insensitive search by abbreviation, name or description. Requires goeland:read.
+      operationId: SearchOrgUnits
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchOrgUnitsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: |-
+            query is matched against abbreviation, label and description, or exactly
+            against the abbreviation or the external reference; empty matches every unit.
+          in: query
+          required: false
+          type: string
+        - name: includeDissolved
+          description: include_dissolved also returns dissolved units.
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - OrgUnitService
+  /api/org-units/{id}:
+    get:
+      summary: |-
+        Retrieve a unit with its ancestors, children and optionally relationships
+        and audit. Requires goeland:read; NOT_FOUND when the unit does not exist.
+      operationId: GetOrgUnit
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetOrgUnitResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the unit UUID.
+          in: path
+          required: true
+          type: string
+        - name: includeRelationships
+          description: include_relationships also returns the unit's relationships (both directions).
+          in: query
+          required: false
+          type: boolean
+        - name: includeAudit
+          description: include_audit also returns the most recent audit events.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - OrgUnitService
+    patch:
+      summary: |-
+        Replace the editable fields of a live unit, moving it in the tree when the
+        parent changes. Requires goeland:admin; writes ORG_UNIT_UPDATED.
+      operationId: UpdateOrgUnit
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateOrgUnitResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the unit UUID; a dissolved unit is FAILED_PRECONDITION.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/OrgUnitServiceUpdateOrgUnitBody'
+      tags:
+        - OrgUnitService
+  /api/org-units/{id}/dissolve:
+    post:
+      summary: Dissolve a unit without live children. Requires goeland:admin; writes ORG_UNIT_DISSOLVED.
+      operationId: DissolveOrgUnit
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DissolveOrgUnitResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the unit UUID; a unit with live children is FAILED_PRECONDITION.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/OrgUnitServiceDissolveOrgUnitBody'
+      tags:
+        - OrgUnitService
   /api/organization-categories:
     get:
       summary: |-
@@ -2317,6 +2559,67 @@ definitions:
     description: |-
       UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  OrgUnitServiceDissolveOrgUnitBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the required justification (1-2000 characters).
+    description: DissolveOrgUnitRequest dissolves a unit (administrators only); it stays as history.
+    required:
+      - reason
+  OrgUnitServiceUpdateOrgUnitBody:
+    type: object
+    properties:
+      orgUnitTypeCode:
+        type: string
+        description: |-
+          org_unit_type_code is the code of an active unit type (the current type
+          stays valid even when deactivated).
+      label:
+        type: string
+        description: label replaces the unit name (1-200 characters), unique among live siblings.
+      description:
+        type: string
+        description: description replaces the mission (at most 2000 characters).
+      email:
+        type: string
+        description: email replaces the functional mailbox; empty removes it.
+      parentId:
+        type: string
+        description: |-
+          parent_id moves the unit under another live unit (never under itself or
+          one of its descendants); empty makes it a root.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+      abbreviation:
+        type: string
+        description: abbreviation replaces the unit sigle (at most 50 characters); empty removes it.
+    description: |-
+      UpdateOrgUnitRequest replaces the editable fields of a live unit
+      (administrators only); the external reference is immutable.
+    required:
+      - orgUnitTypeCode
+      - label
+  OrgUnitServiceUpdateOrgUnitTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      isActive:
+        type: boolean
+        description: is_active activates or deactivates the entry when present.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateOrgUnitTypeRequest changes a unit type (administrators only); absent
+      fields are kept. Entries are never deleted: deactivate them with is_active = false.
   ThingServiceUpdateThingBody:
     type: object
     properties:
@@ -3257,6 +3560,82 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_CREATED entry of the reference change log.
     description: CreateDocumentTypeResponse returns the new document type and its log entry.
+  v1CreateOrgUnitRequest:
+    type: object
+    properties:
+      orgUnitTypeCode:
+        type: string
+        description: org_unit_type_code is the code of an active unit type.
+      abbreviation:
+        type: string
+        description: abbreviation is the optional unit sigle (at most 50 characters).
+      label:
+        type: string
+        description: |-
+          label is the required unit name (1-200 characters); a live sibling with the
+          same label (whatever its case) is ALREADY_EXISTS.
+      description:
+        type: string
+        description: description documents the unit's mission (at most 2000 characters).
+      email:
+        type: string
+        description: email is the functional mailbox (a plain address, at most 254 characters); empty for none.
+      parentId:
+        type: string
+        description: parent_id is an existing, not dissolved unit; empty creates a root.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+      externalRef:
+        type: string
+        description: |-
+          external_ref is the unit id in a source system (at most 100 characters),
+          unique when set; ALREADY_EXISTS when taken. It cannot change afterwards.
+    description: CreateOrgUnitRequest adds a unit (administrators only).
+    required:
+      - orgUnitTypeCode
+      - label
+  v1CreateOrgUnitResponse:
+    type: object
+    properties:
+      orgUnit:
+        $ref: '#/definitions/v1OrgUnit'
+        description: org_unit is the created unit.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the ORG_UNIT_CREATED audit event.
+    description: CreateOrgUnitResponse returns the new unit.
+  v1CreateOrgUnitTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateOrgUnitTypeRequest adds a unit type (administrators only).
+    required:
+      - code
+      - label
+  v1CreateOrgUnitTypeResponse:
+    type: object
+    properties:
+      orgUnitType:
+        $ref: '#/definitions/v1OrgUnitType'
+        description: org_unit_type is the created entry, active and ordered last.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateOrgUnitTypeResponse returns the new type and its log entry.
   v1CreateOrganizationCategoryRequest:
     type: object
     properties:
@@ -3508,6 +3887,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: delete_event is the THING_DELETED audit event.
     description: DeleteThingResponse confirms a soft delete.
+  v1DissolveOrgUnitResponse:
+    type: object
+    properties:
+      orgUnit:
+        $ref: '#/definitions/v1OrgUnit'
+        description: org_unit is the dissolved unit.
+      dissolveEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: dissolve_event is the ORG_UNIT_DISSOLVED audit event.
+    description: DissolveOrgUnitResponse returns the dissolved unit.
   v1Document:
     type: object
     properties:
@@ -3764,6 +4153,37 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetDocumentResponse returns a document and the requested context.
+  v1GetOrgUnitResponse:
+    type: object
+    properties:
+      orgUnit:
+        $ref: '#/definitions/v1OrgUnit'
+        description: org_unit is the unit.
+      ancestors:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrgUnitNode'
+        description: ancestors are the units above it, from the root down to its parent.
+      children:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrgUnitNode'
+        description: children are the units directly below it (dissolved ones included), by label.
+      relationships:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRelationship'
+        description: relationships are present when requested.
+      recentAudit:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AuditEvent'
+        description: recent_audit is present when requested, newest first.
+    description: GetOrgUnitResponse returns the unit with its place in the tree.
   v1GetSubjectRefResponse:
     type: object
     properties:
@@ -3907,6 +4327,26 @@ definitions:
           $ref: '#/definitions/v1DocumentVersion'
         description: versions are the versions with their content, newest first.
     description: ListDocumentVersionsResponse returns every version, newest first.
+  v1ListOrgUnitTypesResponse:
+    type: object
+    properties:
+      orgUnitTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrgUnitType'
+        description: org_unit_types are the matching types.
+    description: ListOrgUnitTypesResponse returns the matching types, by sort order then code.
+  v1ListOrgUnitsResponse:
+    type: object
+    properties:
+      units:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrgUnitNode'
+        description: units are the tree nodes; parent_id links them.
+    description: ListOrgUnitsResponse is the flat tree, ordered by type order then label.
   v1ListOrganizationCategoriesResponse:
     type: object
     properties:
@@ -4016,6 +4456,110 @@ definitions:
           subject_refs are the matches, oldest first, at most 50 (a namespaced
           reference matches at most one subject).
     description: LookupSubjectsResponse returns the matching subjects.
+  v1OrgUnit:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the embedded canonical identity (kind = ORG_UNIT); its id is the unit id.
+      orgUnitType:
+        $ref: '#/definitions/v1OrgUnitType'
+        description: org_unit_type is the classification of the unit.
+      abbreviation:
+        type: string
+        description: |-
+          abbreviation is the unit sigle (e.g. SOI), often shared with the parent
+          unit, so not unique; empty when none.
+      label:
+        type: string
+        description: label is the unit name.
+      description:
+        type: string
+        description: description documents the unit's mission.
+      email:
+        type: string
+        description: email is the functional mailbox of the unit; empty when none.
+      parentId:
+        type: string
+        description: parent_id is the parent unit; empty for a root.
+      dissolvedAt:
+        type: string
+        format: date-time
+        description: dissolved_at is set when the unit was dissolved.
+        readOnly: true
+      dissolvedBy:
+        type: string
+        description: dissolved_by is the operator who dissolved the unit.
+      dissolutionReason:
+        type: string
+        description: dissolution_reason is the justification of the dissolution.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the server creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who created the unit.
+      updatedAt:
+        type: string
+        format: date-time
+        description: updated_at is the last modification time, maintained by the database.
+        readOnly: true
+      recordMetadata:
+        $ref: '#/definitions/v1RecordMetadata'
+        description: record_metadata is the governance record of the unit.
+      externalRef:
+        type: string
+        description: |-
+          external_ref is the unit id in a source system (e.g. goeland:1234), unique
+          when set and immutable; empty for units created in the POC.
+    description: OrgUnit is an organizational unit, 1:1 with SubjectRef (id == subject id).
+  v1OrgUnitNode:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the unit (ORG_UNIT subject) UUID.
+      abbreviation:
+        type: string
+        description: abbreviation is the unit sigle (not unique); empty when none.
+      label:
+        type: string
+        description: label is the unit name.
+      orgUnitTypeCode:
+        type: string
+        description: org_unit_type_code is the code of the unit type.
+      parentId:
+        type: string
+        description: parent_id is the parent unit; empty for a root.
+      dissolved:
+        type: boolean
+        description: dissolved reports whether the unit is dissolved.
+    description: OrgUnitNode is the light form of a unit used to draw the tree and paths.
+  v1OrgUnitType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the catalogue row UUID.
+      code:
+        type: string
+        description: code is the unique stable key, e.g. SERVICE.
+      label:
+        type: string
+        description: label is the human label.
+      description:
+        type: string
+        description: description documents the business meaning.
+      sortOrder:
+        type: integer
+        format: int32
+        description: sort_order orders the types from the top of the hierarchy down.
+      isActive:
+        type: boolean
+        description: is_active reports whether the type is offered for new units.
+    description: OrgUnitType is a controlled classification of units (e.g. DIRECTION, SERVICE).
   v1OrganizationCategory:
     type: object
     properties:
@@ -4143,7 +4687,9 @@ definitions:
         description: owner_user_id is the owning user; on creation it defaults to the operator.
       ownerOrgId:
         type: string
-        description: owner_org_id is the owning organizational unit; empty when unset.
+        description: |-
+          owner_org_id is the owning ORG_UNIT subject UUID; empty when unset. On
+          creation it must name an existing, not dissolved unit.
       confidentialityLevel:
         type: integer
         format: int32
@@ -4195,7 +4741,7 @@ definitions:
         readOnly: true
       catalogue:
         type: string
-        description: catalogue is case_type, relationship_type, organization_category, document_type or thing_type.
+        description: catalogue is case_type, relationship_type, organization_category, document_type, thing_type or org_unit_type.
         readOnly: true
       code:
         type: string
@@ -4333,6 +4879,23 @@ definitions:
         format: int32
         description: total_size is the number of matching documents across all pages.
     description: SearchDocumentsResponse is one page of matching documents.
+  v1SearchOrgUnitsResponse:
+    type: object
+    properties:
+      units:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OrgUnit'
+        description: units are the units of this page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching units across all pages.
+    description: SearchOrgUnitsResponse is one page of matching units.
   v1SearchThingsResponse:
     type: object
     properties:
@@ -4833,6 +5396,26 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateDocumentTypeResponse returns the updated document type and its log entry.
+  v1UpdateOrgUnitResponse:
+    type: object
+    properties:
+      orgUnit:
+        $ref: '#/definitions/v1OrgUnit'
+        description: org_unit is the updated unit.
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the ORG_UNIT_UPDATED audit event.
+    description: UpdateOrgUnitResponse returns the updated unit.
+  v1UpdateOrgUnitTypeResponse:
+    type: object
+    properties:
+      orgUnitType:
+        $ref: '#/definitions/v1OrgUnitType'
+        description: org_unit_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateOrgUnitTypeResponse returns the updated type and its log entry.
   v1UpdateOrganizationCategoryResponse:
     type: object
     properties:

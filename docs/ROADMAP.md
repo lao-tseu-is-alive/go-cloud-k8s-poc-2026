@@ -26,7 +26,7 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is in progress.
+v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is in progress.
 
 ## Cross-cutting quality
 
@@ -154,9 +154,21 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 4 — Task (v2 §28)
 
-- [ ] **GLD-041 — Minimal ORG_UNIT reference**: internal organizational units
+- [~] **GLD-041 — Minimal ORG_UNIT reference**: internal organizational units
   (code, label, parent) as ORG_UNIT subjects that tasks and circulations can
   target and that `record_metadata.owner_org_id` can name; split from GLD-025.
+  Scope decided 2026-09-29 from the production structure (aggregates only: one
+  tree of 738 units, depth 7, 7 official types, dissolved units kept, 1.7M
+  case ↔ unit role links): `pkg/orgunit` + `OrgUnitService`, administrable
+  `org_unit_type` (7 seeded types), `org_unit` (label unique among live
+  siblings, non-unique abbreviation — revised the same day: the production
+  abbreviation is inherited by sub-units, 111 values for 738 units — immutable
+  `external_ref` of the source, parent without cycles, functional e-mail,
+  dissolution instead of deletion), mutations `goeland:admin` only; `CASE_HAS_ORG_UNIT_LEADER`,
+  `_MANAGER` and `_PARTICIPANT` relationship types; `owner_org_id` becomes a
+  typed foreign key; SPA tree + detail, picker and governance label; an
+  optional local import script of the real tree (code, label, type, parent,
+  state only; nothing committed). User ↔ unit membership is deferred to GLD-026.
 - [ ] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
   a USER or ORG_UNIT, with deadlines, completion and a reassignment history.
   Depends on GLD-011, GLD-025 and GLD-041.

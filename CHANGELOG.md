@@ -21,8 +21,22 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   SPA "Suivis" panel in the case detail: filters, create / edit / validate / lock / withdraw /
   correct, cited documents with their pinned version.
 
+- **GLD-041** — Organizational units: `OrgUnitService` (`goeland.v1`, REST under
+  `/api/org-units` and `/api/org-unit-types`) over migration `0018`: administrable
+  `org_unit_type` (seven production types) and `org_unit`, an ORG_UNIT subject in one tree
+  without cycles, with a non-unique abbreviation, a label unique among live siblings, an
+  immutable external reference and dissolution instead of deletion. Mutations require
+  `goeland:admin`. Relationship types `CASE_HAS_ORG_UNIT_LEADER`, `_MANAGER` and
+  `_PARTICIPANT`. `cmd/goeland-import-orgunits` optionally imports the real tree (structure
+  only) from a read-only replica. SPA "Unités" tree and detail pages, org units in the
+  subject picker and the unit type catalogue in the administration page.
+
 ### Changed
 
+- **Breaking:** `RecordMetadata.owner_org_id` is now a typed reference to an existing, not
+  dissolved org unit (UUID); earlier free-text values are dropped by migration `0018`. The
+  governance panel shows the owning unit by name. A dissolved unit can no longer be linked.
+- E-mail normalization moved to `core.NormalizeEmail` (shared by actor contacts and units).
 - A case status change now also records a locked SYSTEM timeline entry, and a case with
   draft timeline entries can no longer be closed (FAILED_PRECONDITION; the SPA explains why).
 - The subject picker emits the picked subject so callers can show its label.

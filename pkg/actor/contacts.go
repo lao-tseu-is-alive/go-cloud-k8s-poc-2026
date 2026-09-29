@@ -2,7 +2,6 @@ package actor
 
 import (
 	"fmt"
-	"net/mail"
 	"net/url"
 	"regexp"
 	"strings"
@@ -27,9 +26,6 @@ var (
 	ideCheckWeights = [8]int{5, 4, 3, 2, 7, 6, 5, 4}
 )
 
-// maxEmailLength is the RFC 5321 path limit.
-const maxEmailLength = 254
-
 // contactNormalizers maps each type to its validator/normalizer; OTHER keeps
 // free text (its label is required instead).
 var contactNormalizers = map[ContactType]func(string) (string, error){
@@ -38,7 +34,7 @@ var contactNormalizers = map[ContactType]func(string) (string, error){
 	ContactTypePhonePro:           normalizePhone,
 	ContactTypeMobile:             normalizePhone,
 	ContactTypeFax:                normalizePhone,
-	ContactTypeEmail:              normalizeEmail,
+	ContactTypeEmail:              core.NormalizeEmail,
 	ContactTypeWebsite:            normalizeWebsite,
 	ContactTypePostalBox:          normalizePostalBox,
 	ContactTypeIDEFederal:         normalizeIDE,
@@ -76,21 +72,6 @@ func normalizePhone(v string) (string, error) {
 		return "", fmt.Errorf("expected an international (+41 21 315 22 22) or Swiss (021 315 22 22) number")
 	}
 	return n, nil
-}
-
-// normalizeEmail accepts a bare address (no display name) with a dotted domain,
-// lower-casing the domain.
-func normalizeEmail(v string) (string, error) {
-	addr, err := mail.ParseAddress(v)
-	if err != nil || addr.Name != "" || addr.Address != v || len(v) > maxEmailLength {
-		return "", fmt.Errorf("expected an e-mail address such as name@example.ch")
-	}
-	at := strings.LastIndex(v, "@")
-	domain := strings.ToLower(v[at+1:])
-	if !strings.Contains(domain, ".") {
-		return "", fmt.Errorf("expected an e-mail address such as name@example.ch")
-	}
-	return v[:at+1] + domain, nil
 }
 
 // normalizeWebsite accepts an http(s) URL with a dotted host, adding https://

@@ -282,3 +282,8 @@ SET label         = coalesce(@label::text, label),
     is_active     = coalesce(@is_active::boolean, is_active)
 WHERE code = @code
 RETURNING ` + relationshipTypeColumns + `;`
+
+// orgUnitDissolvedSQL tells whether an org unit is dissolved (no row: unknown unit).
+const orgUnitDissolvedSQL = `
+SELECT dissolved_at IS NOT NULL FROM org_unit
+WHERE id = @id;`

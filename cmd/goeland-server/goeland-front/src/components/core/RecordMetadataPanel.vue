@@ -2,14 +2,15 @@
   import type { RecordMetadata } from '@/api/types'
   import { computed } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import OrgUnitLabel from '@/components/orgunit/OrgUnitLabel.vue'
   import { formatDateTime } from '@/utils/formatters'
   import UserLabel from './UserLabel.vue'
 
   const props = defineProps<{ metadata?: RecordMetadata }>()
   const { t } = useI18n()
 
-  // A row holds either a formatted value or an operator id shown by name.
-  interface Row { key: string, value?: string, userId?: string }
+  // A row holds a formatted value, an operator id or a unit id shown by name.
+  interface Row { key: string, value?: string, userId?: string, orgUnitId?: string }
   interface Group { id: string, rows: Row[] }
 
   function fmt (v: unknown): string {
@@ -36,7 +37,7 @@
         id: 'ownership',
         rows: [
           { key: 'owner_user_id', userId: m.ownerUserId },
-          { key: 'owner_org_id', value: fmt(m.ownerOrgId) },
+          { key: 'owner_org_id', orgUnitId: m.ownerOrgId, value: '—' },
           { key: 'confidentiality_level', value: fmt(m.confidentialityLevel) },
         ],
       },
@@ -72,6 +73,7 @@
 
             <td>
               <UserLabel v-if="row.userId" :id="row.userId" />
+              <OrgUnitLabel v-else-if="row.orgUnitId" :id="row.orgUnitId" />
               <span v-else>{{ row.value ?? '—' }}</span>
             </td>
           </tr>

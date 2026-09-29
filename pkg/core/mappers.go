@@ -106,7 +106,7 @@ func DomainRecordMetadataToProto(md *RecordMetadata) *goelandv1.RecordMetadata {
 		DeletedAt:            TimestampPtrOrNil(md.DeletedAt),
 		DeletedBy:            md.DeletedBy,
 		OwnerUserId:          md.OwnerUserID,
-		OwnerOrgId:           md.OwnerOrgID,
+		OwnerOrgId:           UUIDPtrString(md.OwnerOrgID),
 		ConfidentialityLevel: md.ConfidentialityLevel,
 		Version:              md.Version,
 		IsLocked:             md.IsLocked,
