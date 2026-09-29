@@ -8,13 +8,21 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.9.0] - 2026-09-29
+
+This release completes the case spine of spec v2 (Phases 3 to 5): the case timeline
+(**GLD-012**), organizational units (**GLD-041**), tasks (**GLD-026**) and circulations
+(**GLD-013**). The 16-step demo scenario of the spec now runs end to end. Migrations `0017` to
+`0020` apply automatically at startup. **Breaking:** `RecordMetadata.owner_org_id` becomes a
+typed reference to an org unit (earlier free-text values are dropped).
+
 ### Added
 
 - **GLD-012** — Case timeline ("suivis", spec v2 §26-27): `TimelineService` (`goeland.v1`,
   REST under `/api/cases/{case_id}/timeline` and `/api/timeline-entries`) over migration
   `0017`: `case_timeline_entry` (COMMENT, OPINION, DECISION, REQUEST, RESPONSE, VALIDATION,
   SYSTEM, AI_PROPOSAL) with a business date, an intended visibility (not enforced before
-  GLD-017) and the DRAFT → VALIDATED / LOCKED / WITHDRAWN lifecycle; only drafts change
+  real authorization) and the DRAFT → VALIDATED / LOCKED / WITHDRAWN lifecycle; only drafts change
   (also enforced by database triggers) and a correction is a new entry naming the corrected
   one. `timeline_document_link` cites logical documents, links them to the case when needed
   and pins the current version on validation. Every timeline mutation is audited on the case.

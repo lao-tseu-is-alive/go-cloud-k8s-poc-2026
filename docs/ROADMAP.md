@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.8.0**.
+Tracked version: **v0.9.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -26,7 +26,9 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is done (unreleased); Task (GLD-026) is done (unreleased); Circulation (GLD-013) is in progress.
+v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
+(GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0. Next is Phase 6, security
+(GLD-017 real authorization, GLD-033 sensitive read audit).
 
 ## Cross-cutting quality
 
@@ -140,7 +142,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 3 — Timeline (v2 §26-27)
 
-- [~] **GLD-012 — Timeline**: `case_timeline_entry` (COMMENT, OPINION,
+- [x] **GLD-012 — Timeline**: `case_timeline_entry` (COMMENT, OPINION,
   DECISION, REQUEST, RESPONSE, VALIDATION, SYSTEM, AI_PROPOSAL) +
   `timeline_document_link`; a validated or locked entry is immutable and a
   correction creates a new entry. Depends on GLD-011. Scope decided 2026-09-29:
@@ -154,7 +156,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 4 — Task (v2 §28)
 
-- [~] **GLD-041 — Minimal ORG_UNIT reference**: internal organizational units
+- [x] **GLD-041 — Minimal ORG_UNIT reference**: internal organizational units
   (code, label, parent) as ORG_UNIT subjects that tasks and circulations can
   target and that `record_metadata.owner_org_id` can name; split from GLD-025.
   Scope decided 2026-09-29 from the production structure (aggregates only: one
@@ -169,7 +171,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
   typed foreign key; SPA tree + detail, picker and governance label; an
   optional local import script of the real tree (code, label, type, parent,
   state only; nothing committed). User ↔ unit membership is deferred to GLD-026.
-- [~] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
+- [x] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
   a USER or ORG_UNIT, with deadlines, completion and a reassignment history.
   Depends on GLD-011, GLD-025 and GLD-041. Scope decided 2026-09-29 (the legacy
   system has no task entity): tasks belong to the case (not subjects; audited on
@@ -183,7 +185,7 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 5 — Circulation (v2 §29)
 
-- [~] **GLD-013 — Circulation**: parallel recipients composed of tasks,
+- [x] **GLD-013 — Circulation**: parallel recipients composed of tasks,
   responses (FAVORABLE, UNFAVORABLE, COMMENT, NOT_CONCERNED, NEED_MORE_INFO),
   deadline and completion; a significant response creates a timeline entry.
   Depends on GLD-012 and GLD-026. Scope decided 2026-09-29 from the production
