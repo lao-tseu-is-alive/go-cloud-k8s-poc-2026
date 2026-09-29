@@ -11,6 +11,7 @@
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
+  import CaseTasksPanel from '@/components/task/CaseTasksPanel.vue'
   import CaseTimelinePanel from '@/components/timeline/CaseTimelinePanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
@@ -48,6 +49,8 @@
   // The timeline reloads when the status changes (SYSTEM entry) and reports its drafts.
   const timelineKey = ref(0)
   const draftCount = ref(0)
+  // Tasks report their open count too; completing one adds a timeline entry.
+  const openTasks = ref(0)
 
   // ---- derived state rules -------------------------------------------------
   const isLocked = computed(() => !!current.value?.recordMetadata?.isLocked)
@@ -57,8 +60,14 @@
   const editable = computed(() => mutable.value && !isClosed.value)
   const transitions = computed(() => (mutable.value && current.value?.status ? CASE_TRANSITIONS[current.value.status] : []))
   const reasonRequired = computed(() => !!transitionTarget.value && transitionNeedsReason(current.value?.status, transitionTarget.value))
-  // A case with draft timeline entries cannot be closed (server rule).
-  const closingBlocked = computed(() => transitionTarget.value === 'CASE_STATUS_CLOSED' && draftCount.value > 0)
+  // A case with draft timeline entries or open tasks cannot be closed (server rule).
+  const closing = computed(() => transitionTarget.value === 'CASE_STATUS_CLOSED')
+  const closingBlocked = computed(() => closing.value && (draftCount.value > 0 || openTasks.value > 0))
+
+  async function onTasksChanged () {
+    timelineKey.value++
+    await reload()
+  }
 
   async function reload () {
     loading.value = true
@@ -264,6 +273,19 @@
           </v-card>
 
           <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('sections.case.tasks') }}</v-card-title>
+
+            <v-card-text>
+              <CaseTasksPanel
+                :can-edit="editable"
+                :case-id="id"
+                @changed="onTasksChanged"
+                @open="openTasks = $event"
+              />
+            </v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
             <v-card-title class="d-flex align-center text-subtitle-1">
               {{ t('sections.case.relationships') }}
               <v-spacer />
@@ -321,13 +343,23 @@
 
           <v-card-text>
             <v-alert
-              v-if="closingBlocked"
+              v-if="closing && draftCount > 0"
               class="mb-3"
               density="compact"
               type="warning"
               variant="tonal"
             >
               {{ t('messages.case.draftsBlockClosing', { count: draftCount }, draftCount) }}
+            </v-alert>
+
+            <v-alert
+              v-if="closing && openTasks > 0"
+              class="mb-3"
+              density="compact"
+              type="warning"
+              variant="tonal"
+            >
+              {{ t('messages.case.tasksBlockClosing', { count: openTasks }, openTasks) }}
             </v-alert>
 
             <v-text-field

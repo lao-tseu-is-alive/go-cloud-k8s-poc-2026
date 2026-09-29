@@ -245,6 +245,16 @@ func (s *Service) CurrentUser(ctx context.Context, user *authadapter.Authenticat
 	return recorded, nil
 }
 
+// SearchUsers finds internal users by name or e-mail (substring; the name
+// accent-insensitively), ordered by name; limit is normalized like a page size.
+func (s *Service) SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error) {
+	limit, err := NormalizePageSize(limit)
+	if err != nil {
+		return nil, err
+	}
+	return s.repo.SearchUsers(ctx, strings.TrimSpace(query), limit)
+}
+
 // BatchGetUsers resolves operator ids to users; blank and repeated ids are
 // ignored and unknown ids are absent from the result.
 func (s *Service) BatchGetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error) {

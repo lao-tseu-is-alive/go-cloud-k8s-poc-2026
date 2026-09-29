@@ -19,6 +19,7 @@ import (
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
@@ -38,6 +39,8 @@ type testEnv struct {
 	thingSvc *thing.Service
 	// orgUnitSvc is the organizational unit service.
 	orgUnitSvc *orgunit.Service
+	// taskSvc is the case task service.
+	taskSvc *task.Service
 	// timelineSvc is the case timeline service.
 	timelineSvc *timeline.Service
 	// blobDir is the per-test directory holding uploaded bytes.
@@ -149,7 +152,16 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build timeline service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, blobDir: store.Root()}
+	taskRepo, err := task.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build task repository: %v", err)
+	}
+	taskSvc, err := task.NewService(taskRepo, log)
+	if err != nil {
+		t.Fatalf("build task service: %v", err)
+	}
+
+	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

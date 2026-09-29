@@ -438,6 +438,24 @@ message BatchGetUsersResponse {
   repeated User users = 1;
 }
 
+// SearchUsersRequest finds internal users (e.g. to assign a task or add a unit member).
+message SearchUsersRequest {
+  // query is matched by substring against the name (accent-insensitive) and
+  // the e-mail address; empty lists users by name.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // page_size is the maximum number of users; 0 means the default (25), at most 200.
+  int32 page_size = 2 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+}
+
+// SearchUsersResponse returns the matching users, ordered by name.
+message SearchUsersResponse {
+  // users are the matching users.
+  repeated User users = 1;
+}
+
 // LinkSubjectsRequest creates a typed edge between two existing subjects.
 message LinkSubjectsRequest {
   // source_subject_id is the subject the edge starts from.
@@ -552,7 +570,7 @@ message ListRelationshipTypesResponse {
 message ReferenceChange {
   // id is the server-assigned entry UUID.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // catalogue is case_type, relationship_type, organization_category, document_type, thing_type or org_unit_type.
+  // catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type or task_type.
   string catalogue = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
   // code is the changed entry's code.
   string code = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -581,7 +599,8 @@ message ListReferenceChangesRequest {
       "organization_category",
       "document_type",
       "thing_type",
-      "org_unit_type"
+      "org_unit_type",
+      "task_type"
     ]
   }];
   // page_size is the page length; 0 means the default (25), at most 200.
@@ -759,6 +778,11 @@ service CoreService {
   // /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
   rpc BatchGetUsers(BatchGetUsersRequest) returns (BatchGetUsersResponse) {
     option (google.api.http) = {get: "/api/users:batchGet"};
+  }
+
+  // Find internal users by name or e-mail. Requires goeland:read.
+  rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
+    option (google.api.http) = {get: "/api/users/search"};
   }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).

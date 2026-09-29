@@ -1,0 +1,578 @@
+// Goéland POC - Case tasks (spec v2 §28).
+//
+// Proto-first definition for TaskService + supporting messages. A task is work
+// to do on a case, independent of any workflow: created by an operator today,
+// later by a circulation, a workflow or an AI proposal (origin). It belongs to
+// its case (it is not a subject) and its audit events are written on the CASE
+// subject in the same transaction.
+//
+// A task is assigned to one internal user or one org unit, or to nobody yet;
+// every (re)assignment is kept as history. Completing or cancelling a task
+// records a SYSTEM entry in the case timeline. A closed case freezes its tasks
+// and cannot be closed while tasks are still open.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// TASK ENUMS / MESSAGES
+// =============================================
+
+// TaskStatus is the lifecycle state of a task.
+enum TaskStatus {
+  // TASK_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in filters.
+  TASK_STATUS_UNSPECIFIED = 0;
+  // TASK_STATUS_OPEN is a task to do.
+  TASK_STATUS_OPEN = 1;
+  // TASK_STATUS_IN_PROGRESS is a task being worked on.
+  TASK_STATUS_IN_PROGRESS = 2;
+  // TASK_STATUS_DONE is a completed task.
+  TASK_STATUS_DONE = 3;
+  // TASK_STATUS_CANCELLED is a task that will not be done (with a reason).
+  TASK_STATUS_CANCELLED = 4;
+}
+
+// TaskOrigin is what created a task.
+enum TaskOrigin {
+  // TASK_ORIGIN_UNSPECIFIED is the zero value; never stored.
+  TASK_ORIGIN_UNSPECIFIED = 0;
+  // TASK_ORIGIN_MANUAL is a task created by an operator.
+  TASK_ORIGIN_MANUAL = 1;
+  // TASK_ORIGIN_CIRCULATION is a task created by a circulation (GLD-013).
+  TASK_ORIGIN_CIRCULATION = 2;
+  // TASK_ORIGIN_WORKFLOW is a task created by a workflow (GLD-031).
+  TASK_ORIGIN_WORKFLOW = 3;
+  // TASK_ORIGIN_AI is a task proposed by the AI component and validated (GLD-030).
+  TASK_ORIGIN_AI = 4;
+}
+
+// TaskType is a controlled classification of tasks (e.g. SITE_VISIT).
+message TaskType {
+  // id is the catalogue row UUID.
+  string id = 1;
+  // code is the unique stable key.
+  string code = 2;
+  // label is the human label.
+  string label = 3;
+  // description documents the business meaning.
+  string description = 4;
+  // is_active reports whether the type is offered for new tasks.
+  bool is_active = 5;
+}
+
+// TaskAssignment is one (re)assignment of a task, kept as history.
+message TaskAssignment {
+  // id is the assignment UUID.
+  string id = 1;
+  // assignee_user_id is the assigned internal user; empty when a unit is assigned.
+  string assignee_user_id = 2;
+  // assignee_org_unit_id is the assigned org unit; empty when a user is assigned.
+  string assignee_org_unit_id = 3;
+  // assignee_label is the assignee's display name.
+  string assignee_label = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // assigned_at is when the assignment started.
+  google.protobuf.Timestamp assigned_at = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // assigned_by is the operator who assigned the task.
+  string assigned_by = 6;
+  // reason is the justification given for the (re)assignment.
+  string reason = 7;
+  // ended_at is when the assignment ended; absent for the current one.
+  google.protobuf.Timestamp ended_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// Task is work to do on a case.
+message Task {
+  // id is the task UUID.
+  string id = 1;
+  // case_id is the case the task belongs to.
+  string case_id = 2;
+  // case_label is the case's display label (with its business reference).
+  string case_label = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // task_type is the classification of the task.
+  TaskType task_type = 4;
+  // title is the task title (1-500 characters).
+  string title = 5;
+  // description details the work (at most 4000 characters).
+  string description = 6;
+  // status is the lifecycle state.
+  TaskStatus status = 7;
+  // origin is what created the task.
+  TaskOrigin origin = 8;
+  // origin_ref names the creating object (e.g. a circulation id); empty for a manual task.
+  string origin_ref = 9;
+  // assignee_user_id is the assigned internal user; empty otherwise.
+  string assignee_user_id = 10;
+  // assignee_org_unit_id is the assigned org unit; empty otherwise.
+  string assignee_org_unit_id = 11;
+  // assignee_label is the assignee's display name; empty when unassigned.
+  string assignee_label = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // due_at is the deadline; absent when none.
+  google.protobuf.Timestamp due_at = 13;
+  // overdue reports an open or in-progress task past its deadline.
+  bool overdue = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_at is the creation time.
+  google.protobuf.Timestamp created_at = 15 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who created the task.
+  string created_by = 16;
+  // updated_at is the last change, maintained by the database.
+  google.protobuf.Timestamp updated_at = 17 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // updated_by is the operator of the last change.
+  string updated_by = 18;
+  // started_at is when the task was (last) started.
+  google.protobuf.Timestamp started_at = 19 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // started_by is the operator who started the task.
+  string started_by = 20;
+  // completed_at is set while the task is DONE.
+  google.protobuf.Timestamp completed_at = 21 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // completed_by is the operator who completed the task.
+  string completed_by = 22;
+  // completion_note is the note left when completing.
+  string completion_note = 23;
+  // cancelled_at is set while the task is CANCELLED.
+  google.protobuf.Timestamp cancelled_at = 24 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // cancelled_by is the operator who cancelled the task.
+  string cancelled_by = 25;
+  // cancellation_reason is the justification of the cancellation.
+  string cancellation_reason = 26;
+  // assignments is the assignment history, oldest first (GetTask only).
+  repeated TaskAssignment assignments = 27;
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// ListCaseTasksRequest lists the tasks of a case: open ones first, by deadline.
+message ListCaseTasksRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // statuses restricts the result; empty means every status.
+  repeated TaskStatus statuses = 2 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      enum: {
+        defined_only: true
+        not_in: [0]
+      }
+    }
+  }];
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 3 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 4 [(buf.validate.field).string.max_len = 1024];
+}
+
+// ListCaseTasksResponse is one page of tasks.
+message ListCaseTasksResponse {
+  // tasks are the tasks of this page.
+  repeated Task tasks = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching tasks across all pages.
+  int32 total_size = 3;
+  // open_count is the number of open or in-progress tasks of the case,
+  // whatever the filters (a case with open tasks cannot be closed).
+  int32 open_count = 4;
+}
+
+// ListMyTasksRequest lists the caller's tasks across cases, by deadline.
+message ListMyTasksRequest {
+  // statuses restricts the result; empty means OPEN and IN_PROGRESS.
+  repeated TaskStatus statuses = 1 [(buf.validate.field).repeated = {
+    max_items: 4
+    items: {
+      enum: {
+        defined_only: true
+        not_in: [0]
+      }
+    }
+  }];
+  // include_units also returns tasks assigned to the caller's org units
+  // (USER_MEMBER_OF_ORG_UNIT relationships).
+  bool include_units = 2;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 3 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 4 [(buf.validate.field).string.max_len = 1024];
+}
+
+// ListMyTasksResponse is one page of the caller's tasks.
+message ListMyTasksResponse {
+  // tasks are the tasks of this page.
+  repeated Task tasks = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching tasks across all pages.
+  int32 total_size = 3;
+}
+
+// GetTaskRequest retrieves one task.
+message GetTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetTaskResponse returns the task with its assignment history.
+message GetTaskResponse {
+  // task is the task.
+  Task task = 1;
+}
+
+// CreateTaskRequest adds a manual task to an open case.
+message CreateTaskRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // task_type_code is the code of an active task type.
+  string task_type_code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // title is the required title (1-500 characters).
+  string title = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // description details the work (at most 4000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 4000];
+  // due_at is the optional deadline.
+  google.protobuf.Timestamp due_at = 5;
+  // assignee_user_id assigns an internal user (an operator id); exclusive with assignee_org_unit_id.
+  string assignee_user_id = 6 [(buf.validate.field).string.max_len = 100];
+  // assignee_org_unit_id assigns a live org unit; exclusive with assignee_user_id.
+  string assignee_org_unit_id = 7 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+}
+
+// CreateTaskResponse returns the new task.
+message CreateTaskResponse {
+  // task is the created task.
+  Task task = 1;
+  // created_event is the TASK_CREATED audit event (on the case subject).
+  AuditEvent created_event = 2;
+}
+
+// UpdateTaskRequest replaces the content of an open or in-progress task; every
+// field replaces the stored value (an absent due_at removes the deadline).
+message UpdateTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // task_type_code is the code of a task type (the current type stays valid
+  // even when deactivated; a new one must be active).
+  string task_type_code = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // title replaces the title (1-500 characters).
+  string title = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // description replaces the description (at most 4000 characters).
+  string description = 4 [(buf.validate.field).string.max_len = 4000];
+  // due_at replaces the deadline; absent removes it.
+  google.protobuf.Timestamp due_at = 5;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 6 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateTaskResponse returns the updated task.
+message UpdateTaskResponse {
+  // task is the updated task.
+  Task task = 1;
+  // update_event is the TASK_UPDATED audit event.
+  AuditEvent update_event = 2;
+}
+
+// AssignTaskRequest (re)assigns an open or in-progress task; both assignees
+// empty unassigns it.
+message AssignTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // assignee_user_id is an internal user (operator id); exclusive with assignee_org_unit_id.
+  string assignee_user_id = 2 [(buf.validate.field).string.max_len = 100];
+  // assignee_org_unit_id is a live org unit; exclusive with assignee_user_id.
+  string assignee_org_unit_id = 3 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // reason is the justification kept in the assignment history (at most 2000 characters).
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// AssignTaskResponse returns the reassigned task.
+message AssignTaskResponse {
+  // task is the task with its new assignee.
+  Task task = 1;
+  // assign_event is the TASK_ASSIGNED audit event.
+  AuditEvent assign_event = 2;
+}
+
+// StartTaskRequest starts an open task.
+message StartTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// StartTaskResponse returns the started task.
+message StartTaskResponse {
+  // task is the task, IN_PROGRESS.
+  Task task = 1;
+  // status_event is the TASK_STARTED audit event.
+  AuditEvent status_event = 2;
+}
+
+// CompleteTaskRequest completes an open or in-progress task.
+message CompleteTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // note is the optional completion note (at most 4000 characters), also
+  // written in the timeline entry.
+  string note = 2 [(buf.validate.field).string.max_len = 4000];
+}
+
+// CompleteTaskResponse returns the completed task.
+message CompleteTaskResponse {
+  // task is the task, DONE.
+  Task task = 1;
+  // status_event is the TASK_COMPLETED audit event.
+  AuditEvent status_event = 2;
+}
+
+// CancelTaskRequest cancels an open or in-progress task.
+message CancelTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the required justification (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// CancelTaskResponse returns the cancelled task.
+message CancelTaskResponse {
+  // task is the task, CANCELLED.
+  Task task = 1;
+  // status_event is the TASK_CANCELLED audit event.
+  AuditEvent status_event = 2;
+}
+
+// ReopenTaskRequest reopens a done or cancelled task.
+message ReopenTaskRequest {
+  // id is the task UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the required justification (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// ReopenTaskResponse returns the reopened task.
+message ReopenTaskResponse {
+  // task is the task, OPEN again.
+  Task task = 1;
+  // status_event is the TASK_REOPENED audit event.
+  AuditEvent status_event = 2;
+}
+
+// ListTaskTypesRequest filters the task type catalogue.
+message ListTaskTypesRequest {
+  // only_active returns only types offered for new tasks.
+  bool only_active = 1;
+}
+
+// ListTaskTypesResponse returns the matching types, by code.
+message ListTaskTypesResponse {
+  // task_types are the matching types.
+  repeated TaskType task_types = 1;
+}
+
+// CreateTaskTypeRequest adds a task type (administrators only).
+message CreateTaskTypeRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the business meaning (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateTaskTypeResponse returns the new type and its log entry.
+message CreateTaskTypeResponse {
+  // task_type is the created entry, active.
+  TaskType task_type = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateTaskTypeRequest changes a task type (administrators only); absent
+// fields are kept. Entries are never deleted: deactivate them with is_active = false.
+message UpdateTaskTypeRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // is_active activates or deactivates the entry when present.
+  optional bool is_active = 4;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 5 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateTaskTypeResponse returns the updated type and its log entry.
+message UpdateTaskTypeResponse {
+  // task_type is the updated entry.
+  TaskType task_type = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// =============================================
+// TASK SERVICE
+// =============================================
+
+// TaskService manages the tasks of the Goéland POC cases. Every RPC carries a
+// google.api.http annotation so Vanguard also exposes it as REST/JSON; the
+// Connect/gRPC path /goeland.v1.TaskService/<Method> stays available.
+// Mutations fail with FAILED_PRECONDITION when the case is closed, locked or
+// deleted, or when the task status does not allow the move.
+service TaskService {
+  // List the tasks of a case. Requires goeland:read.
+  rpc ListCaseTasks(ListCaseTasksRequest) returns (ListCaseTasksResponse) {
+    option (google.api.http) = {get: "/api/cases/{case_id}/tasks"};
+  }
+
+  // List the caller's tasks (and optionally their units') across cases,
+  // earliest deadline first. Requires goeland:read.
+  rpc ListMyTasks(ListMyTasksRequest) returns (ListMyTasksResponse) {
+    option (google.api.http) = {get: "/api/tasks/mine"};
+  }
+
+  // Retrieve a task with its assignment history. Requires goeland:read.
+  rpc GetTask(GetTaskRequest) returns (GetTaskResponse) {
+    option (google.api.http) = {get: "/api/tasks/{id}"};
+  }
+
+  // Add a manual task to an open case. Requires goeland:write; writes TASK_CREATED.
+  rpc CreateTask(CreateTaskRequest) returns (CreateTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/tasks"
+      body: "*"
+    };
+  }
+
+  // Replace the content of an open or in-progress task. Requires goeland:write; writes TASK_UPDATED.
+  rpc UpdateTask(UpdateTaskRequest) returns (UpdateTaskResponse) {
+    option (google.api.http) = {
+      patch: "/api/tasks/{id}"
+      body: "*"
+    };
+  }
+
+  // (Re)assign or unassign an open or in-progress task; the change is kept in
+  // the history. Requires goeland:write; writes TASK_ASSIGNED.
+  rpc AssignTask(AssignTaskRequest) returns (AssignTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/tasks/{id}/assign"
+      body: "*"
+    };
+  }
+
+  // Start an open task (OPEN → IN_PROGRESS). Requires goeland:write; writes TASK_STARTED.
+  rpc StartTask(StartTaskRequest) returns (StartTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/tasks/{id}/start"
+      body: "*"
+    };
+  }
+
+  // Complete an open or in-progress task, with an optional note; records a
+  // SYSTEM timeline entry. Requires goeland:write; writes TASK_COMPLETED.
+  rpc CompleteTask(CompleteTaskRequest) returns (CompleteTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/tasks/{id}/complete"
+      body: "*"
+    };
+  }
+
+  // Cancel an open or in-progress task with a required reason; records a
+  // SYSTEM timeline entry. Requires goeland:write; writes TASK_CANCELLED.
+  rpc CancelTask(CancelTaskRequest) returns (CancelTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/tasks/{id}/cancel"
+      body: "*"
+    };
+  }
+
+  // Reopen a done or cancelled task with a required reason (→ OPEN).
+  // Requires goeland:write; writes TASK_REOPENED.
+  rpc ReopenTask(ReopenTaskRequest) returns (ReopenTaskResponse) {
+    option (google.api.http) = {
+      post: "/api/tasks/{id}/reopen"
+      body: "*"
+    };
+  }
+
+  // List the task type catalogue. Requires goeland:read.
+  rpc ListTaskTypes(ListTaskTypesRequest) returns (ListTaskTypesResponse) {
+    option (google.api.http) = {get: "/api/task-types"};
+  }
+
+  // Add a task type. Requires goeland:admin; logs REFERENCE_CREATED.
+  rpc CreateTaskType(CreateTaskTypeRequest) returns (CreateTaskTypeResponse) {
+    option (google.api.http) = {
+      post: "/api/task-types"
+      body: "*"
+    };
+  }
+
+  // Change a task type. Requires goeland:admin; logs REFERENCE_UPDATED.
+  rpc UpdateTaskType(UpdateTaskTypeRequest) returns (UpdateTaskTypeResponse) {
+    option (google.api.http) = {
+      patch: "/api/task-types/{code}"
+      body: "*"
+    };
+  }
+}

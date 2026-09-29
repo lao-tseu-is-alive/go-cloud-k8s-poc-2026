@@ -92,12 +92,6 @@ const countDraftsSQL = `
 SELECT count(*) FROM case_timeline_entry
 WHERE case_id = @case_id AND status = 1;`
 
-// caseStatusSQL reads the case status; callers first lock the case's
-// governance row (core.EnsureMutableTx), which serializes status changes.
-const caseStatusSQL = `
-SELECT status FROM case_file
-WHERE id = @id;`
-
 // --- document links -----------------------------------------------------------------
 
 // listLinksSQL returns the live links of several entries with the document

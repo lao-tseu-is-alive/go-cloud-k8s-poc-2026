@@ -8,6 +8,7 @@ const KIND_ICONS: Partial<Record<SubjectKind, string>> = {
   SUBJECT_KIND_ACTOR: 'mdi-account-multiple',
   SUBJECT_KIND_THING: 'mdi-map-marker-outline',
   SUBJECT_KIND_ORG_UNIT: 'mdi-sitemap-outline',
+  SUBJECT_KIND_USER: 'mdi-account-circle-outline',
 }
 
 // SPA pages per subject kind; USER has none yet.

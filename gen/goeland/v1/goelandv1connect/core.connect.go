@@ -81,6 +81,8 @@ const (
 	// CoreServiceBatchGetUsersProcedure is the fully-qualified name of the CoreService's BatchGetUsers
 	// RPC.
 	CoreServiceBatchGetUsersProcedure = "/goeland.v1.CoreService/BatchGetUsers"
+	// CoreServiceSearchUsersProcedure is the fully-qualified name of the CoreService's SearchUsers RPC.
+	CoreServiceSearchUsersProcedure = "/goeland.v1.CoreService/SearchUsers"
 	// CoreServiceLinkSubjectsProcedure is the fully-qualified name of the CoreService's LinkSubjects
 	// RPC.
 	CoreServiceLinkSubjectsProcedure = "/goeland.v1.CoreService/LinkSubjects"
@@ -133,6 +135,8 @@ type CoreServiceClient interface {
 	// Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
 	// /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
 	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
+	// Find internal users by name or e-mail. Requires goeland:read.
+	SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -215,6 +219,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("BatchGetUsers")),
 			connect.WithClientOptions(opts...),
 		),
+		searchUsers: connect.NewClient[v1.SearchUsersRequest, v1.SearchUsersResponse](
+			httpClient,
+			baseURL+CoreServiceSearchUsersProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("SearchUsers")),
+			connect.WithClientOptions(opts...),
+		),
 		linkSubjects: connect.NewClient[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse](
 			httpClient,
 			baseURL+CoreServiceLinkSubjectsProcedure,
@@ -280,6 +290,7 @@ type coreServiceClient struct {
 	lookupSubjects         *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
 	getCurrentUser         *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
 	batchGetUsers          *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
+	searchUsers            *connect.Client[v1.SearchUsersRequest, v1.SearchUsersResponse]
 	linkSubjects           *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
 	unlinkSubjects         *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
 	endRelationship        *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
@@ -319,6 +330,11 @@ func (c *coreServiceClient) GetCurrentUser(ctx context.Context, req *connect.Req
 // BatchGetUsers calls goeland.v1.CoreService.BatchGetUsers.
 func (c *coreServiceClient) BatchGetUsers(ctx context.Context, req *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error) {
 	return c.batchGetUsers.CallUnary(ctx, req)
+}
+
+// SearchUsers calls goeland.v1.CoreService.SearchUsers.
+func (c *coreServiceClient) SearchUsers(ctx context.Context, req *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error) {
+	return c.searchUsers.CallUnary(ctx, req)
 }
 
 // LinkSubjects calls goeland.v1.CoreService.LinkSubjects.
@@ -389,6 +405,8 @@ type CoreServiceHandler interface {
 	// Resolve operator ids (created_by, actor_user_id, ...) to users, e.g.
 	// /api/users:batchGet?userIds=1&userIds=2. Requires goeland:read.
 	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
+	// Find internal users by name or e-mail. Requires goeland:read.
+	SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -467,6 +485,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("BatchGetUsers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceSearchUsersHandler := connect.NewUnaryHandler(
+		CoreServiceSearchUsersProcedure,
+		svc.SearchUsers,
+		connect.WithSchema(coreServiceMethods.ByName("SearchUsers")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceLinkSubjectsHandler := connect.NewUnaryHandler(
 		CoreServiceLinkSubjectsProcedure,
 		svc.LinkSubjects,
@@ -535,6 +559,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceGetCurrentUserHandler.ServeHTTP(w, r)
 		case CoreServiceBatchGetUsersProcedure:
 			coreServiceBatchGetUsersHandler.ServeHTTP(w, r)
+		case CoreServiceSearchUsersProcedure:
+			coreServiceSearchUsersHandler.ServeHTTP(w, r)
 		case CoreServiceLinkSubjectsProcedure:
 			coreServiceLinkSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceUnlinkSubjectsProcedure:
@@ -584,6 +610,10 @@ func (UnimplementedCoreServiceHandler) GetCurrentUser(context.Context, *connect.
 
 func (UnimplementedCoreServiceHandler) BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.BatchGetUsers is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.SearchUsers is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error) {

@@ -244,6 +244,17 @@ FROM app_user
 WHERE user_id = ANY(@user_ids::text[])
 ORDER BY user_id;`
 
+// searchAppUsersSQL matches the name (accent-insensitively) or the e-mail
+// address by substring, ordered by name.
+const searchAppUsersSQL = `
+SELECT ` + appUserColumns + `
+FROM app_user
+WHERE @query = ''
+   OR immutable_unaccent(lower(display_name)) LIKE '%' || immutable_unaccent(lower(@query)) || '%'
+   OR lower(email) LIKE '%' || lower(@query) || '%'
+ORDER BY lower(display_name), user_id
+LIMIT @limit;`
+
 // --- reference_change ------------------------------------------------------------
 
 const referenceChangeColumns = `
@@ -286,4 +297,9 @@ RETURNING ` + relationshipTypeColumns + `;`
 // orgUnitDissolvedSQL tells whether an org unit is dissolved (no row: unknown unit).
 const orgUnitDissolvedSQL = `
 SELECT dissolved_at IS NOT NULL FROM org_unit
+WHERE id = @id;`
+
+// caseStatusSQL reads a case status (no row: the subject is not a case).
+const caseStatusSQL = `
+SELECT status FROM case_file
 WHERE id = @id;`

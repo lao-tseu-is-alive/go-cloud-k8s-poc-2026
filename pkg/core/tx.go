@@ -91,7 +91,7 @@ func mapBusinessRefConflict(err error) error {
 // InsertRecordMetadataTx inserts the 1:1 governance record for a subject using q.
 func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInput, subjectID uuid.UUID) (*RecordMetadata, error) {
 	if in.OwnerOrgID != nil {
-		if err := ensureLiveOrgUnitTx(ctx, q, *in.OwnerOrgID); err != nil {
+		if err := EnsureLiveOrgUnitTx(ctx, q, *in.OwnerOrgID); err != nil {
 			return nil, err
 		}
 	}
@@ -115,9 +115,10 @@ func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInpu
 	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[RecordMetadata])
 }
 
-// ensureLiveOrgUnitTx requires id to name an existing, not dissolved ORG_UNIT
-// (the owning unit of a subject or a relationship end).
-func ensureLiveOrgUnitTx(ctx context.Context, q Querier, id uuid.UUID) error {
+// EnsureLiveOrgUnitTx requires id to name an existing, not dissolved ORG_UNIT
+// (the owning unit of a subject, a relationship end, a task assignee): unknown
+// or dissolved units are ErrInvalidInput.
+func EnsureLiveOrgUnitTx(ctx context.Context, q Querier, id uuid.UUID) error {
 	var dissolved bool
 	err := q.QueryRow(ctx, orgUnitDissolvedSQL, pgx.NamedArgs{"id": id}).Scan(&dissolved)
 	switch {
@@ -138,9 +139,35 @@ func ensureLiveOrgUnitEndsTx(ctx context.Context, q Querier, ends ...*SubjectRef
 		if end.Kind != SubjectKindOrgUnit {
 			continue
 		}
-		if err := ensureLiveOrgUnitTx(ctx, q, end.ID); err != nil {
+		if err := EnsureLiveOrgUnitTx(ctx, q, end.ID); err != nil {
 			return err
 		}
+	}
+	return nil
+}
+
+// caseStatusClosed is case_file.status for a closed case (casefile.StatusClosed;
+// repeated here because the case domain builds on core).
+const caseStatusClosed = 4
+
+// EnsureOpenCaseTx locks the case's governance row (rejecting a locked or
+// deleted case) and rejects a closed case (ErrInvalidState). It guards every
+// mutation of what belongs to a case (timeline entries, tasks); the governance
+// lock serializes them with the case status changes, which take it too.
+func EnsureOpenCaseTx(ctx context.Context, q Querier, caseID uuid.UUID) error {
+	if _, err := EnsureMutableTx(ctx, q, caseID, false); err != nil {
+		return err
+	}
+	var status int16
+	err := q.QueryRow(ctx, caseStatusSQL, pgx.NamedArgs{"id": caseID}).Scan(&status)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return fmt.Errorf("%w: subject %s is not a case", ErrNotFound, caseID)
+	}
+	if err != nil {
+		return fmt.Errorf("read case status: %w", err)
+	}
+	if status == caseStatusClosed {
+		return fmt.Errorf("%w: a closed case must be reopened before it changes", ErrInvalidState)
 	}
 	return nil
 }

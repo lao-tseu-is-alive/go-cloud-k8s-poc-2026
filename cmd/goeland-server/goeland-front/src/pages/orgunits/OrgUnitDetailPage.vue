@@ -1,15 +1,17 @@
 <script setup lang="ts">
-  import type { AuditEvent, OrgUnit, OrgUnitInput, OrgUnitNode, SubjectRelationship } from '@/api/types'
+  import type { AuditEvent, OrgUnit, OrgUnitInput, OrgUnitNode, SubjectRef, SubjectRelationship } from '@/api/types'
   import type { OrgUnitForm } from '@/components/orgunit/orgUnitForm'
   import { storeToRefs } from 'pinia'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
+  import { linkSubjects, unlinkSubjects } from '@/api/coreClient'
   import { createOrgUnit, dissolveOrgUnit, getOrgUnit, updateOrgUnit } from '@/api/orgUnitClient'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
+  import SubjectPicker from '@/components/core/SubjectPicker.vue'
   import { emptyOrgUnitForm, forgetOrgUnitLabel, nodeLabel, orgUnitToForm } from '@/components/orgunit/orgUnitForm'
   import OrgUnitFormDialog from '@/components/orgunit/OrgUnitFormDialog.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -40,6 +42,37 @@
   const dissolveOpen = ref(false)
   const dissolveReason = ref('')
   const dissolveBusy = ref(false)
+
+  // Membership (USER_MEMBER_OF_ORG_UNIT) has its own section; the table shows the rest.
+  const MEMBER_TYPE = 'USER_MEMBER_OF_ORG_UNIT'
+  const members = computed(() => relationships.value.filter(r => r.relationshipType?.code === MEMBER_TYPE && !r.validTo))
+  const otherRelationships = computed(() => relationships.value.filter(r => r.relationshipType?.code !== MEMBER_TYPE))
+  const memberPick = ref<string | undefined>()
+  const memberBusy = ref(false)
+
+  async function addMember (user: SubjectRef) {
+    memberBusy.value = true
+    try {
+      await linkSubjects(user.id, id.value, MEMBER_TYPE)
+      ui.notify(t('orgUnits.messages.memberAdded'), 'success')
+      memberPick.value = undefined
+      await reload()
+    } catch (error) {
+      report(error)
+    } finally {
+      memberBusy.value = false
+    }
+  }
+
+  async function removeMember (rel: SubjectRelationship) {
+    try {
+      await unlinkSubjects(rel.id, '')
+      ui.notify(t('orgUnits.messages.memberRemoved'), 'success')
+      await reload()
+    } catch (error) {
+      report(error)
+    }
+  }
 
   const dissolved = computed(() => !!unit.value?.dissolvedAt)
   const manageable = computed(() => isAdmin.value && !!unit.value && !dissolved.value)
@@ -214,11 +247,42 @@
           </v-card>
 
           <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('orgUnits.members', { n: members.length }) }}</v-card-title>
+
+            <v-card-text>
+              <p class="text-caption text-medium-emphasis mb-2">{{ t('orgUnits.membersHint') }}</p>
+              <p v-if="members.length === 0" class="text-medium-emphasis">{{ t('orgUnits.noMembers') }}</p>
+
+              <div v-else class="d-flex flex-wrap ga-2 mb-3">
+                <v-chip
+                  v-for="m in members"
+                  :key="m.id"
+                  :closable="manageable"
+                  prepend-icon="mdi-account-circle-outline"
+                  size="small"
+                  @click:close="removeMember(m)"
+                >
+                  {{ m.source?.displayLabel }}
+                </v-chip>
+              </div>
+
+              <SubjectPicker
+                v-if="manageable"
+                v-model="memberPick"
+                :disabled="memberBusy"
+                kind="SUBJECT_KIND_USER"
+                :label="t('orgUnits.actions.addMember')"
+                @picked="addMember"
+              />
+            </v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.case.relationships') }}</v-card-title>
 
             <v-card-text>
               <p class="text-caption text-medium-emphasis mb-2">{{ t('orgUnits.relationshipsHint') }}</p>
-              <RelationshipTable :can-unlink="false" :relationships="relationships" @ended="reload" />
+              <RelationshipTable :can-unlink="false" :relationships="otherRelationships" @ended="reload" />
             </v-card-text>
           </v-card>
         </v-col>

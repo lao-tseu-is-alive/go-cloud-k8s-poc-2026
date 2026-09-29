@@ -68,6 +68,16 @@
       <v-btn
         v-if="isAuthenticated"
         class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-checkbox-marked-circle-outline"
+        to="/tasks/mine"
+        variant="text"
+      >
+        {{ t('nav.myTasks') }}
+      </v-btn>
+
+      <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
         prepend-icon="mdi-sitemap-outline"
         to="/org-units"
         variant="text"

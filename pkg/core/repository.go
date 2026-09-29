@@ -25,5 +25,6 @@ type Repository interface {
 	ListReferenceChanges(ctx context.Context, filter ReferenceFilter) (ReferenceResult, error)
 	RecordUser(ctx context.Context, profile UserProfile) (*AppUser, error)
 	GetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error)
+	SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error)
 	ListAuditEvents(ctx context.Context, filter AuditFilter) (AuditResult, error)
 }

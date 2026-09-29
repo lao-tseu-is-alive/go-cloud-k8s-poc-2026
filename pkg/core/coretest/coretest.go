@@ -88,6 +88,11 @@ func (StubRepository) GetUsers(context.Context, []string) ([]*core.AppUser, erro
 	return nil, nil
 }
 
+// SearchUsers returns no users.
+func (StubRepository) SearchUsers(context.Context, string, int) ([]*core.AppUser, error) {
+	return nil, nil
+}
+
 // EndRelationship returns zero values.
 func (StubRepository) EndRelationship(context.Context, core.EndInput) (*core.SubjectRelationship, *core.AuditEvent, error) {
 	return nil, nil, nil

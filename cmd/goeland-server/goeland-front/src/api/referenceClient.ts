@@ -14,6 +14,7 @@ export const CATALOGUE_PATHS: Record<ReferenceCatalogue, string> = {
   document_type: '/api/document-types',
   thing_type: '/api/thing-types',
   org_unit_type: '/api/org-unit-types',
+  task_type: '/api/task-types',
 }
 
 /** Response field holding the entry, per catalogue. */
@@ -24,6 +25,7 @@ const ENTRY_KEYS: Record<ReferenceCatalogue, string> = {
   document_type: 'documentType',
   thing_type: 'thingType',
   org_unit_type: 'orgUnitType',
+  task_type: 'taskType',
 }
 
 type EntryResponse = Record<string, unknown> & { change?: ReferenceChange }

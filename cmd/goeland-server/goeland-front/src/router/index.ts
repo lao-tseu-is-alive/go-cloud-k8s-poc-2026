@@ -33,6 +33,11 @@ const router = createRouter({
       component: () => import('@/pages/orgunits/OrgUnitDetailPage.vue'),
     },
     {
+      path: '/tasks/mine',
+      name: 'my-tasks',
+      component: () => import('@/pages/tasks/MyTasksPage.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/pages/admin/AdminPage.vue'),

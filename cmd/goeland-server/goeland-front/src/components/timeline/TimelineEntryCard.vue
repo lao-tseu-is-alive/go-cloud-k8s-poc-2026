@@ -27,18 +27,37 @@
 
   // A case status change is rendered in the UI language from its structured
   // metadata; the stored French body is the fallback.
-  const bodyText = computed(() => {
-    const meta = props.entry.metadata
-    if (!isSystem.value || metadataText(meta, 'event') !== 'CASE_STATUS_CHANGED') {
-      return props.entry.body
-    }
+  const event = computed(() => (isSystem.value ? metadataText(props.entry.metadata, 'event') : ''))
+  const SYSTEM_TITLES: Record<string, string> = {
+    CASE_STATUS_CHANGED: 'timeline.system.title',
+    TASK_COMPLETED: 'timeline.system.taskCompleted',
+    TASK_CANCELLED: 'timeline.system.taskCancelled',
+  }
+
+  function statusChangeText (meta?: Record<string, unknown>): string {
     const from = enumLabel('CaseStatus', `CASE_STATUS_${metadataText(meta, 'from')}`)
     const to = enumLabel('CaseStatus', `CASE_STATUS_${metadataText(meta, 'to')}`)
     const reason = metadataText(meta, 'reason')
     const text = t('timeline.system.statusChanged', { from, to })
     return reason ? `${text}\n${t('timeline.system.reason', { reason })}` : text
+  }
+
+  function taskText (meta?: Record<string, unknown>): string {
+    const note = metadataText(meta, 'note')
+    const key = event.value === 'TASK_CANCELLED' ? 'timeline.system.reason' : 'timeline.system.note'
+    const title = metadataText(meta, 'title')
+    return note ? `${title}\n${t(key, { reason: note, note })}` : title
+  }
+
+  const bodyText = computed(() => {
+    if (event.value === 'CASE_STATUS_CHANGED') return statusChangeText(props.entry.metadata)
+    if (event.value.startsWith('TASK_')) return taskText(props.entry.metadata)
+    return props.entry.body
   })
-  const heading = computed(() => (isSystem.value ? t('timeline.system.title') : props.entry.title))
+  const heading = computed(() => {
+    const key = SYSTEM_TITLES[event.value]
+    return key ? t(key) : props.entry.title
+  })
 
   const frozenBy = computed(() => props.entry.validatedBy || props.entry.lockedBy)
   const frozenAt = computed(() => props.entry.validatedAt || props.entry.lockedAt)
@@ -105,7 +124,7 @@
       </div>
     </v-card-text>
 
-    <v-card-actions v-if="canEdit && (draft || isCorrectable(entry))">
+    <v-card-actions v-if="canEdit && !isSystem && (draft || isCorrectable(entry))">
       <template v-if="draft">
         <v-btn prepend-icon="mdi-pencil" size="small" variant="text" @click="emit('edit', entry)">{{ t('timeline.actions.edit') }}</v-btn>
 

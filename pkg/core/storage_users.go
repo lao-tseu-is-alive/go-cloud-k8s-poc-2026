@@ -123,6 +123,15 @@ func (r *PostgresRepository) GetUsers(ctx context.Context, userIDs []string) ([]
 	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[AppUser])
 }
 
+// SearchUsers returns at most limit users whose name or e-mail contains query.
+func (r *PostgresRepository) SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error) {
+	rows, err := r.pool.Query(ctx, searchAppUsersSQL, pgx.NamedArgs{"query": query, "limit": limit})
+	if err != nil {
+		return nil, fmt.Errorf("search app users: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[AppUser])
+}
+
 // collectAppUser reads exactly one app_user row from a Query result.
 func collectAppUser(rows pgx.Rows, err error) (*AppUser, error) {
 	if err != nil {

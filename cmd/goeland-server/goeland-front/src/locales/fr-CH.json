@@ -1,5 +1,62 @@
 {
+  "tasks": {
+    "showAll": "Afficher terminées et annulées",
+    "empty": "Aucune tâche ouverte.",
+    "emptyAll": "Aucune tâche.",
+    "noHistory": "Jamais attribuée.",
+    "timelineHint": "Une entrée « Système » sera ajoutée aux suivis de l'affaire.",
+    "fields": {
+      "title": "Tâche",
+      "case": "Affaire",
+      "assignee": "Attribuée à",
+      "dueAt": "Échéance",
+      "status": "Statut",
+      "type": "Type de tâche",
+      "description": "Description",
+      "note": "Note de fin (facultative)"
+    },
+    "assignee": {
+      "none": "Personne",
+      "user": "Utilisateur",
+      "unit": "Unité",
+      "pickUser": "Rechercher un utilisateur",
+      "pickUnit": "Rechercher une unité"
+    },
+    "actions": {
+      "create": "Nouvelle tâche",
+      "edit": "Modifier",
+      "assign": "Attribuer",
+      "history": "Historique des attributions",
+      "start": "Commencer",
+      "complete": "Terminer",
+      "cancel": "Annuler la tâche",
+      "reopen": "Rouvrir"
+    },
+    "dialog": {
+      "create": "Nouvelle tâche",
+      "edit": "Modifier la tâche"
+    },
+    "messages": {
+      "create": "Tâche créée.",
+      "edit": "Tâche mise à jour.",
+      "assign": "Attribution enregistrée.",
+      "start": "Tâche commencée.",
+      "complete": "Tâche terminée.",
+      "cancel": "Tâche annulée.",
+      "reopen": "Tâche rouverte."
+    },
+    "mine": {
+      "title": "Mes tâches",
+      "count": "{n} tâche(s)",
+      "overdue": "{n} en retard",
+      "includeUnits": "Inclure les tâches de mes unités",
+      "empty": "Aucune tâche pour vous."
+    }
+  },
   "orgUnits": {
+    "noMembers": "Aucun membre.",
+    "membersHint": "Les membres voient les tâches de l'unité dans « Mes tâches ».",
+    "members": "Membres ({n})",
     "title": "Unités organisationnelles",
     "count": "{n} unités actives",
     "search": "Filtrer par nom ou sigle",
@@ -27,6 +84,7 @@
       "edit": "Modifier l'unité"
     },
     "actions": {
+      "addMember": "Ajouter un membre",
       "create": "Nouvelle unité",
       "createChild": "Ajouter une sous-unité",
       "edit": "Modifier",
@@ -35,6 +93,8 @@
       "makeRoot": "Placer à la racine"
     },
     "messages": {
+      "memberRemoved": "Membre retiré.",
+      "memberAdded": "Membre ajouté.",
       "created": "Unité créée.",
       "updated": "Unité mise à jour.",
       "dissolved": "Unité dissoute.",
@@ -94,6 +154,9 @@
       "withdraw": "Brouillon retiré."
     },
     "system": {
+      "note": "Note : {note}",
+      "taskCancelled": "Tâche annulée",
+      "taskCompleted": "Tâche terminée",
       "title": "Changement de statut",
       "statusChanged": "Statut de l’affaire : {from} → {to}",
       "reason": "Motif : {reason}"
@@ -105,6 +168,7 @@
     "language": "Langue"
   },
   "nav": {
+    "myTasks": "Mes tâches",
     "orgUnits": "Unités",
     "cases": "Affaires",
     "createCase": "Nouvelle affaire",
@@ -172,6 +236,7 @@
   },
   "sections": {
     "case": {
+      "tasks": "Tâches",
       "timeline": "Suivis",
       "summary": "Résumé",
       "relationships": "Intervenants, documents et sujets liés"
@@ -200,6 +265,7 @@
       "retention": "Conservation"
     },
     "reference": {
+      "task_type": "Types de tâche",
       "org_unit_type": "Types d'unité",
       "case_type": "Types d'affaire",
       "relationship_type": "Types de relation",
@@ -489,6 +555,13 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "TaskStatus": {
+      "TASK_STATUS_UNSPECIFIED": "Statut non précisé",
+      "TASK_STATUS_OPEN": "À faire",
+      "TASK_STATUS_IN_PROGRESS": "En cours",
+      "TASK_STATUS_DONE": "Terminée",
+      "TASK_STATUS_CANCELLED": "Annulée"
+    },
     "TimelineVisibility": {
       "TIMELINE_VISIBILITY_UNSPECIFIED": "Visibilité non précisée",
       "TIMELINE_VISIBILITY_CASE_PARTICIPANTS": "Intervenants de l’affaire",
@@ -636,6 +709,7 @@
       "linked": "Relation créée."
     },
     "case": {
+      "tasksBlockClosing": "Une tâche est encore ouverte : terminez-la ou annulez-la avant de clôturer. | {count} tâches sont encore ouvertes : terminez-les ou annulez-les avant de clôturer.",
       "draftsBlockClosing": "Un suivi est encore en brouillon : validez-le, verrouillez-le ou retirez-le avant de clôturer. | {count} suivis sont encore en brouillon : validez-les, verrouillez-les ou retirez-les avant de clôturer.",
       "createSuccess": "Affaire ouverte {ref}.",
       "updateSuccess": "Affaire mise à jour.",
@@ -685,6 +759,7 @@
       "codeHint": "Majuscules, chiffres et _ (p. ex. OPC_DEMANDE_PC) ; ne peut plus changer ensuite.",
       "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
       "hint": {
+        "task_type": "Types de tâche proposés à la création d'une tâche.",
         "org_unit_type": "Types d'unité organisationnelle ; les nouveaux types sont classés après les sept types officiels.",
         "case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).",
         "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.",

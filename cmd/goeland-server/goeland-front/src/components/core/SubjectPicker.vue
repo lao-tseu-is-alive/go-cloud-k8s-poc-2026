@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { searchActors } from '@/api/actorClient'
   import { searchCases } from '@/api/caseClient'
+  import { searchUsers } from '@/api/coreClient'
   import { searchDocuments } from '@/api/documentClient'
   import { searchOrgUnits } from '@/api/orgUnitClient'
   import { searchThings } from '@/api/thingClient'
@@ -32,6 +33,11 @@
       ((await searchThings({ query, pageSize: PAGE_SIZE }, signal)).things ?? []).map(th => th.subjectRef),
     SUBJECT_KIND_DOCUMENT: async (query, signal) =>
       ((await searchDocuments({ query, pageSize: PAGE_SIZE }, signal)).documents ?? []).map(d => d.subjectRef),
+    // An internal user reads as its USER subject (its id is the subject id).
+    SUBJECT_KIND_USER: async (query, signal) =>
+      (await searchUsers(query, PAGE_SIZE, signal)).map(u => u.subjectId
+        ? { id: u.subjectId, kind: 'SUBJECT_KIND_USER', displayLabel: u.displayName || u.email || u.id }
+        : undefined),
     // Dissolved units take no new relationship: only live ones are offered.
     SUBJECT_KIND_ORG_UNIT: async (query, signal) =>
       ((await searchOrgUnits({ query, pageSize: PAGE_SIZE }, signal)).units ?? []).map(u => u.subjectRef),
@@ -111,7 +117,7 @@
     </template>
   </v-autocomplete>
 
-  <!-- Kinds without a search endpoint yet (USER): id entry. -->
+  <!-- Kinds without a search endpoint: id entry. -->
   <v-text-field
     v-else
     v-model="model"

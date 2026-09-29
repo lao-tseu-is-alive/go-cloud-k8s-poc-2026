@@ -4,8 +4,9 @@
   import { computed, nextTick, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import SubjectPicker from '@/components/core/SubjectPicker.vue'
-  import { entryTypeStyle, fromLocalInput, MAX_BODY_LENGTH, OPERATOR_ENTRY_TYPES, toLocalInput, VISIBILITIES } from '@/components/timeline/timelineForm'
+  import { entryTypeStyle, MAX_BODY_LENGTH, OPERATOR_ENTRY_TYPES, VISIBILITIES } from '@/components/timeline/timelineForm'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { fromLocalInput, toLocalInput } from '@/utils/dateInput'
   import { maxLength, required } from '@/utils/validation'
 
   // Creates a draft, edits one, or prepares the correction of an immutable

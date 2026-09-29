@@ -52,7 +52,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
-| §4.1 `case_task` | ⬜ | ⬜ | ⬜ | listed in the overview; no schema in spec yet |
+| §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
 | §10 `access_grant` + confidentiality enforcement | ⬜ | 🟡 `SecurityService` | 🟡 | see Deviations — only scope-based auth today |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
@@ -75,7 +75,8 @@ lifecycle → edit blocked when locked → audit):
 - ✅ (2–3) create a parcel and a building as THING — `CreateThing` (with LV95 geometry, EGRID / EGID)
 - ✅ (6) link the case to the parcel — `LinkSubjects(CASE_CONCERNS_THING)`; (9) `DOCUMENT_REPRESENTS_THING` now has THING targets
 - ✅ (10–12) add a follow-up, cite a document, validate it → immutable — `CreateTimelineEntry{documentIds}` + `ValidateTimelineEntry` (v2 §50 steps 19–21)
-- ⬜ (13–15) circulation + response — pending `CirculationService` (GLD-013)
+- ✅ (13–14) create tasks and reassign one with history — `CreateTask` + `AssignTask` (v2 §50 steps 22–23)
+- ⬜ (15) circulation + response — pending `CirculationService` (GLD-013)
 
 ---
 
@@ -298,6 +299,14 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   sub-units; a dissolved unit takes no child, owned subject or relationship. `owner_org_id`
   became a typed foreign key (no unit existed before, so earlier free-text values were dropped).
   User ↔ unit membership is deferred to GLD-026, where tasks need it.
+- **Task (GLD-026, v2 §28, 2026-09-29)** — the legacy system has no task entity, so the model is
+  new. A task belongs to its case (not a subject; audited on the CASE subject), like a timeline
+  entry. One assignee at a time (an `app_user` or a live org unit) or none; every (re)assignment
+  is a `case_task_assignment` row. A done or cancelled task may be reopened with a reason (its
+  completion stamps are cleared, the audit keeps them). A case cannot close with open tasks.
+  Only completion and cancellation write SYSTEM timeline entries (creation and reassignment stay
+  in the history and the audit). Unit membership is the `USER_MEMBER_OF_ORG_UNIT` relationship;
+  the SPA offers it to administrators, but until GLD-017 any writer may create it through the API.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
@@ -317,6 +326,8 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   and the **timeline** (draft citing a document → auto case link → edit → validate with
   pinned version → immutability through the service and the DB triggers → corrections rules
   → drafts block closure → SYSTEM entry on close → closed case rejects entries → case audit),
+  the **tasks** (creation, reassignment history, assignee checks, state machine, SYSTEM entries,
+  "my tasks" through unit membership, closure refused with open tasks, closed case frozen),
   and the **org units** (seeded types → tree path → sibling labels and external references →
   no cycle through the service and the trigger → dissolution order → owning unit and case roles
   refused for a dissolved unit).

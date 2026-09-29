@@ -32,6 +32,13 @@ tags:
       OrgUnitService manages the organizational units of the Goéland POC. Every RPC
       carries a google.api.http annotation so Vanguard also exposes it as
       REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
+  - name: TaskService
+    description: |-
+      TaskService manages the tasks of the Goéland POC cases. Every RPC carries a
+      google.api.http annotation so Vanguard also exposes it as REST/JSON; the
+      Connect/gRPC path /goeland.v1.TaskService/<Method> stays available.
+      Mutations fail with FAILED_PRECONDITION when the case is closed, locked or
+      deleted, or when the task status does not allow the move.
   - name: ThingService
     description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
   - name: TimelineService
@@ -401,6 +408,84 @@ paths:
           type: string
       tags:
         - CaseService
+  /api/cases/{caseId}/tasks:
+    get:
+      summary: List the tasks of a case. Requires goeland:read.
+      operationId: ListCaseTasks
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListCaseTasksResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: statuses
+          description: |-
+            statuses restricts the result; empty means every status.
+
+             - TASK_STATUS_UNSPECIFIED: TASK_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in filters.
+             - TASK_STATUS_OPEN: TASK_STATUS_OPEN is a task to do.
+             - TASK_STATUS_IN_PROGRESS: TASK_STATUS_IN_PROGRESS is a task being worked on.
+             - TASK_STATUS_DONE: TASK_STATUS_DONE is a completed task.
+             - TASK_STATUS_CANCELLED: TASK_STATUS_CANCELLED is a task that will not be done (with a reason).
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - TASK_STATUS_UNSPECIFIED
+              - TASK_STATUS_OPEN
+              - TASK_STATUS_IN_PROGRESS
+              - TASK_STATUS_DONE
+              - TASK_STATUS_CANCELLED
+          collectionFormat: multi
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - TaskService
+    post:
+      summary: Add a manual task to an open case. Requires goeland:write; writes TASK_CREATED.
+      operationId: CreateTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceCreateTaskBody'
+      tags:
+        - TaskService
   /api/cases/{caseId}/timeline:
     get:
       summary: |-
@@ -1830,6 +1915,315 @@ paths:
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
+  /api/task-types:
+    get:
+      summary: List the task type catalogue. Requires goeland:read.
+      operationId: ListTaskTypes
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListTaskTypesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          description: only_active returns only types offered for new tasks.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - TaskService
+    post:
+      summary: Add a task type. Requires goeland:admin; logs REFERENCE_CREATED.
+      operationId: CreateTaskType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateTaskTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateTaskTypeRequest adds a task type (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateTaskTypeRequest'
+      tags:
+        - TaskService
+  /api/task-types/{code}:
+    patch:
+      summary: Change a task type. Requires goeland:admin; logs REFERENCE_UPDATED.
+      operationId: UpdateTaskType
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateTaskTypeResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceUpdateTaskTypeBody'
+      tags:
+        - TaskService
+  /api/tasks/mine:
+    get:
+      summary: |-
+        List the caller's tasks (and optionally their units') across cases,
+        earliest deadline first. Requires goeland:read.
+      operationId: ListMyTasks
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListMyTasksResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: statuses
+          description: |-
+            statuses restricts the result; empty means OPEN and IN_PROGRESS.
+
+             - TASK_STATUS_UNSPECIFIED: TASK_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in filters.
+             - TASK_STATUS_OPEN: TASK_STATUS_OPEN is a task to do.
+             - TASK_STATUS_IN_PROGRESS: TASK_STATUS_IN_PROGRESS is a task being worked on.
+             - TASK_STATUS_DONE: TASK_STATUS_DONE is a completed task.
+             - TASK_STATUS_CANCELLED: TASK_STATUS_CANCELLED is a task that will not be done (with a reason).
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - TASK_STATUS_UNSPECIFIED
+              - TASK_STATUS_OPEN
+              - TASK_STATUS_IN_PROGRESS
+              - TASK_STATUS_DONE
+              - TASK_STATUS_CANCELLED
+          collectionFormat: multi
+        - name: includeUnits
+          description: |-
+            include_units also returns tasks assigned to the caller's org units
+            (USER_MEMBER_OF_ORG_UNIT relationships).
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - TaskService
+  /api/tasks/{id}:
+    get:
+      summary: Retrieve a task with its assignment history. Requires goeland:read.
+      operationId: GetTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+      tags:
+        - TaskService
+    patch:
+      summary: Replace the content of an open or in-progress task. Requires goeland:write; writes TASK_UPDATED.
+      operationId: UpdateTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceUpdateTaskBody'
+      tags:
+        - TaskService
+  /api/tasks/{id}/assign:
+    post:
+      summary: |-
+        (Re)assign or unassign an open or in-progress task; the change is kept in
+        the history. Requires goeland:write; writes TASK_ASSIGNED.
+      operationId: AssignTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1AssignTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceAssignTaskBody'
+      tags:
+        - TaskService
+  /api/tasks/{id}/cancel:
+    post:
+      summary: |-
+        Cancel an open or in-progress task with a required reason; records a
+        SYSTEM timeline entry. Requires goeland:write; writes TASK_CANCELLED.
+      operationId: CancelTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CancelTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceCancelTaskBody'
+      tags:
+        - TaskService
+  /api/tasks/{id}/complete:
+    post:
+      summary: |-
+        Complete an open or in-progress task, with an optional note; records a
+        SYSTEM timeline entry. Requires goeland:write; writes TASK_COMPLETED.
+      operationId: CompleteTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CompleteTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceCompleteTaskBody'
+      tags:
+        - TaskService
+  /api/tasks/{id}/reopen:
+    post:
+      summary: |-
+        Reopen a done or cancelled task with a required reason (→ OPEN).
+        Requires goeland:write; writes TASK_REOPENED.
+      operationId: ReopenTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ReopenTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceReopenTaskBody'
+      tags:
+        - TaskService
+  /api/tasks/{id}/start:
+    post:
+      summary: Start an open task (OPEN → IN_PROGRESS). Requires goeland:write; writes TASK_STARTED.
+      operationId: StartTask
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1StartTaskResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the task UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TaskServiceStartTaskBody'
+      tags:
+        - TaskService
   /api/thing-types:
     get:
       summary: List the thing type catalogue. Requires goeland:read.
@@ -2258,6 +2652,35 @@ paths:
             $ref: '#/definitions/TimelineServiceWithdrawTimelineEntryBody'
       tags:
         - TimelineService
+  /api/users/search:
+    get:
+      summary: Find internal users by name or e-mail. Requires goeland:read.
+      operationId: SearchUsers
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchUsersResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: |-
+            query is matched by substring against the name (accent-insensitive) and
+            the e-mail address; empty lists users by name.
+          in: query
+          required: false
+          type: string
+        - name: pageSize
+          description: page_size is the maximum number of users; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+      tags:
+        - CoreService
   /api/users:batchGet:
     get:
       summary: |-
@@ -2619,6 +3042,122 @@ definitions:
         description: reason is the justification recorded in the reference change log (at most 2000 characters).
     description: |-
       UpdateOrgUnitTypeRequest changes a unit type (administrators only); absent
+      fields are kept. Entries are never deleted: deactivate them with is_active = false.
+  TaskServiceAssignTaskBody:
+    type: object
+    properties:
+      assigneeUserId:
+        type: string
+        description: assignee_user_id is an internal user (operator id); exclusive with assignee_org_unit_id.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id is a live org unit; exclusive with assignee_user_id.
+      reason:
+        type: string
+        description: reason is the justification kept in the assignment history (at most 2000 characters).
+    description: |-
+      AssignTaskRequest (re)assigns an open or in-progress task; both assignees
+      empty unassigns it.
+  TaskServiceCancelTaskBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the required justification (1-2000 characters).
+    description: CancelTaskRequest cancels an open or in-progress task.
+    required:
+      - reason
+  TaskServiceCompleteTaskBody:
+    type: object
+    properties:
+      note:
+        type: string
+        description: |-
+          note is the optional completion note (at most 4000 characters), also
+          written in the timeline entry.
+    description: CompleteTaskRequest completes an open or in-progress task.
+  TaskServiceCreateTaskBody:
+    type: object
+    properties:
+      taskTypeCode:
+        type: string
+        description: task_type_code is the code of an active task type.
+      title:
+        type: string
+        description: title is the required title (1-500 characters).
+      description:
+        type: string
+        description: description details the work (at most 4000 characters).
+      dueAt:
+        type: string
+        format: date-time
+        description: due_at is the optional deadline.
+      assigneeUserId:
+        type: string
+        description: assignee_user_id assigns an internal user (an operator id); exclusive with assignee_org_unit_id.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id assigns a live org unit; exclusive with assignee_user_id.
+    description: CreateTaskRequest adds a manual task to an open case.
+    required:
+      - taskTypeCode
+      - title
+  TaskServiceReopenTaskBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the required justification (1-2000 characters).
+    description: ReopenTaskRequest reopens a done or cancelled task.
+    required:
+      - reason
+  TaskServiceStartTaskBody:
+    type: object
+    description: StartTaskRequest starts an open task.
+  TaskServiceUpdateTaskBody:
+    type: object
+    properties:
+      taskTypeCode:
+        type: string
+        description: |-
+          task_type_code is the code of a task type (the current type stays valid
+          even when deactivated; a new one must be active).
+      title:
+        type: string
+        description: title replaces the title (1-500 characters).
+      description:
+        type: string
+        description: description replaces the description (at most 4000 characters).
+      dueAt:
+        type: string
+        format: date-time
+        description: due_at replaces the deadline; absent removes it.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      UpdateTaskRequest replaces the content of an open or in-progress task; every
+      field replaces the stored value (an absent due_at removes the deadline).
+    required:
+      - taskTypeCode
+      - title
+  TaskServiceUpdateTaskTypeBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      isActive:
+        type: boolean
+        description: is_active activates or deactivates the entry when present.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateTaskTypeRequest changes a task type (administrators only); absent
       fields are kept. Entries are never deleted: deactivate them with is_active = false.
   ThingServiceUpdateThingBody:
     type: object
@@ -3001,6 +3540,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the BUSINESS_REF_ASSIGNED audit event.
     description: AssignBusinessRefResponse returns the subject with its reference.
+  v1AssignTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task with its new assignee.
+      assignEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: assign_event is the TASK_ASSIGNED audit event.
+    description: AssignTaskResponse returns the reassigned task.
   v1AuditEvent:
     type: object
     properties:
@@ -3124,6 +3673,16 @@ definitions:
     description: |-
       BusinessRefRequest asks for a business reference on a subject: an explicit
       value or a server-allocated one. A subject keeps its first reference.
+  v1CancelTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task, CANCELLED.
+      statusEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: status_event is the TASK_CANCELLED audit event.
+    description: CancelTaskResponse returns the cancelled task.
   v1Case:
     type: object
     properties:
@@ -3229,6 +3788,16 @@ definitions:
       Types are seeded reference data; a case's type is fixed at creation.
     required:
       - code
+  v1CompleteTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task, DONE.
+      statusEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: status_event is the TASK_COMPLETED audit event.
+    description: CompleteTaskResponse returns the completed task.
   v1ContactType:
     type: string
     enum:
@@ -3748,6 +4317,47 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the SUBJECT_CREATED audit event.
     description: CreateSubjectRefResponse returns the created identity, governance and audit event.
+  v1CreateTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the created task.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the TASK_CREATED audit event (on the case subject).
+    description: CreateTaskResponse returns the new task.
+  v1CreateTaskTypeRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the business meaning (at most 2000 characters).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateTaskTypeRequest adds a task type (administrators only).
+    required:
+      - code
+      - label
+  v1CreateTaskTypeResponse:
+    type: object
+    properties:
+      taskType:
+        $ref: '#/definitions/v1TaskType'
+        description: task_type is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateTaskTypeResponse returns the new type and its log entry.
   v1CreateThingRequest:
     type: object
     properties:
@@ -4200,6 +4810,13 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events; empty unless include_audit_summary was set.
     description: GetSubjectRefResponse returns a subject and the requested optional parts.
+  v1GetTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task.
+    description: GetTaskResponse returns the task with its assignment history.
   v1GetThingResponse:
     type: object
     properties:
@@ -4297,6 +4914,29 @@ definitions:
         format: int32
         description: total_size is the number of matching events across all pages.
     description: ListAuditEventsResponse is one page of audit events.
+  v1ListCaseTasksResponse:
+    type: object
+    properties:
+      tasks:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Task'
+        description: tasks are the tasks of this page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching tasks across all pages.
+      openCount:
+        type: integer
+        format: int32
+        description: |-
+          open_count is the number of open or in-progress tasks of the case,
+          whatever the filters (a case with open tasks cannot be closed).
+    description: ListCaseTasksResponse is one page of tasks.
   v1ListCaseTypesResponse:
     type: object
     properties:
@@ -4327,6 +4967,23 @@ definitions:
           $ref: '#/definitions/v1DocumentVersion'
         description: versions are the versions with their content, newest first.
     description: ListDocumentVersionsResponse returns every version, newest first.
+  v1ListMyTasksResponse:
+    type: object
+    properties:
+      tasks:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Task'
+        description: tasks are the tasks of this page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching tasks across all pages.
+    description: ListMyTasksResponse is one page of the caller's tasks.
   v1ListOrgUnitTypesResponse:
     type: object
     properties:
@@ -4401,6 +5058,16 @@ definitions:
         format: int32
         description: total_size is the number of matching edges across all pages.
     description: ListRelationshipsResponse is one page of edges.
+  v1ListTaskTypesResponse:
+    type: object
+    properties:
+      taskTypes:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1TaskType'
+        description: task_types are the matching types.
+    description: ListTaskTypesResponse returns the matching types, by code.
   v1ListThingTypesResponse:
     type: object
     properties:
@@ -4741,7 +5408,7 @@ definitions:
         readOnly: true
       catalogue:
         type: string
-        description: catalogue is case_type, relationship_type, organization_category, document_type, thing_type or org_unit_type.
+        description: catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type or task_type.
         readOnly: true
       code:
         type: string
@@ -4813,6 +5480,16 @@ definitions:
       kinds equal source_kind and target_kind.
     required:
       - code
+  v1ReopenTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task, OPEN again.
+      statusEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: status_event is the TASK_REOPENED audit event.
+    description: ReopenTaskResponse returns the reopened task.
   v1Salutation:
     type: string
     enum:
@@ -4913,6 +5590,26 @@ definitions:
         format: int32
         description: total_size is the number of matches across all pages.
     description: SearchThingsResponse is one page of search results.
+  v1SearchUsersResponse:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1User'
+        description: users are the matching users.
+    description: SearchUsersResponse returns the matching users, ordered by name.
+  v1StartTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the task, IN_PROGRESS.
+      statusEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: status_event is the TASK_STARTED audit event.
+    description: StartTaskResponse returns the started task.
   v1SubjectKind:
     type: string
     enum:
@@ -5024,6 +5721,194 @@ definitions:
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
       an ended edge stays as history.
+  v1Task:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the task UUID.
+      caseId:
+        type: string
+        description: case_id is the case the task belongs to.
+      caseLabel:
+        type: string
+        description: case_label is the case's display label (with its business reference).
+        readOnly: true
+      taskType:
+        $ref: '#/definitions/v1TaskType'
+        description: task_type is the classification of the task.
+      title:
+        type: string
+        description: title is the task title (1-500 characters).
+      description:
+        type: string
+        description: description details the work (at most 4000 characters).
+      status:
+        $ref: '#/definitions/v1TaskStatus'
+        description: status is the lifecycle state.
+      origin:
+        $ref: '#/definitions/v1TaskOrigin'
+        description: origin is what created the task.
+      originRef:
+        type: string
+        description: origin_ref names the creating object (e.g. a circulation id); empty for a manual task.
+      assigneeUserId:
+        type: string
+        description: assignee_user_id is the assigned internal user; empty otherwise.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id is the assigned org unit; empty otherwise.
+      assigneeLabel:
+        type: string
+        description: assignee_label is the assignee's display name; empty when unassigned.
+        readOnly: true
+      dueAt:
+        type: string
+        format: date-time
+        description: due_at is the deadline; absent when none.
+      overdue:
+        type: boolean
+        description: overdue reports an open or in-progress task past its deadline.
+        readOnly: true
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who created the task.
+      updatedAt:
+        type: string
+        format: date-time
+        description: updated_at is the last change, maintained by the database.
+        readOnly: true
+      updatedBy:
+        type: string
+        description: updated_by is the operator of the last change.
+      startedAt:
+        type: string
+        format: date-time
+        description: started_at is when the task was (last) started.
+        readOnly: true
+      startedBy:
+        type: string
+        description: started_by is the operator who started the task.
+      completedAt:
+        type: string
+        format: date-time
+        description: completed_at is set while the task is DONE.
+        readOnly: true
+      completedBy:
+        type: string
+        description: completed_by is the operator who completed the task.
+      completionNote:
+        type: string
+        description: completion_note is the note left when completing.
+      cancelledAt:
+        type: string
+        format: date-time
+        description: cancelled_at is set while the task is CANCELLED.
+        readOnly: true
+      cancelledBy:
+        type: string
+        description: cancelled_by is the operator who cancelled the task.
+      cancellationReason:
+        type: string
+        description: cancellation_reason is the justification of the cancellation.
+      assignments:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1TaskAssignment'
+        description: assignments is the assignment history, oldest first (GetTask only).
+    description: Task is work to do on a case.
+  v1TaskAssignment:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the assignment UUID.
+      assigneeUserId:
+        type: string
+        description: assignee_user_id is the assigned internal user; empty when a unit is assigned.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id is the assigned org unit; empty when a user is assigned.
+      assigneeLabel:
+        type: string
+        description: assignee_label is the assignee's display name.
+        readOnly: true
+      assignedAt:
+        type: string
+        format: date-time
+        description: assigned_at is when the assignment started.
+        readOnly: true
+      assignedBy:
+        type: string
+        description: assigned_by is the operator who assigned the task.
+      reason:
+        type: string
+        description: reason is the justification given for the (re)assignment.
+      endedAt:
+        type: string
+        format: date-time
+        description: ended_at is when the assignment ended; absent for the current one.
+        readOnly: true
+    description: TaskAssignment is one (re)assignment of a task, kept as history.
+  v1TaskOrigin:
+    type: string
+    enum:
+      - TASK_ORIGIN_UNSPECIFIED
+      - TASK_ORIGIN_MANUAL
+      - TASK_ORIGIN_CIRCULATION
+      - TASK_ORIGIN_WORKFLOW
+      - TASK_ORIGIN_AI
+    default: TASK_ORIGIN_UNSPECIFIED
+    description: |-
+      TaskOrigin is what created a task.
+
+       - TASK_ORIGIN_UNSPECIFIED: TASK_ORIGIN_UNSPECIFIED is the zero value; never stored.
+       - TASK_ORIGIN_MANUAL: TASK_ORIGIN_MANUAL is a task created by an operator.
+       - TASK_ORIGIN_CIRCULATION: TASK_ORIGIN_CIRCULATION is a task created by a circulation (GLD-013).
+       - TASK_ORIGIN_WORKFLOW: TASK_ORIGIN_WORKFLOW is a task created by a workflow (GLD-031).
+       - TASK_ORIGIN_AI: TASK_ORIGIN_AI is a task proposed by the AI component and validated (GLD-030).
+  v1TaskStatus:
+    type: string
+    enum:
+      - TASK_STATUS_UNSPECIFIED
+      - TASK_STATUS_OPEN
+      - TASK_STATUS_IN_PROGRESS
+      - TASK_STATUS_DONE
+      - TASK_STATUS_CANCELLED
+    default: TASK_STATUS_UNSPECIFIED
+    description: |-
+      TaskStatus is the lifecycle state of a task.
+
+       - TASK_STATUS_UNSPECIFIED: TASK_STATUS_UNSPECIFIED is the zero value; never stored, "any status" in filters.
+       - TASK_STATUS_OPEN: TASK_STATUS_OPEN is a task to do.
+       - TASK_STATUS_IN_PROGRESS: TASK_STATUS_IN_PROGRESS is a task being worked on.
+       - TASK_STATUS_DONE: TASK_STATUS_DONE is a completed task.
+       - TASK_STATUS_CANCELLED: TASK_STATUS_CANCELLED is a task that will not be done (with a reason).
+  v1TaskType:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the catalogue row UUID.
+      code:
+        type: string
+        description: code is the unique stable key.
+      label:
+        type: string
+        description: label is the human label.
+      description:
+        type: string
+        description: description documents the business meaning.
+      isActive:
+        type: boolean
+        description: is_active reports whether the type is offered for new tasks.
+    description: TaskType is a controlled classification of tasks (e.g. SITE_VISIT).
   v1Thing:
     type: object
     properties:
@@ -5436,6 +6321,26 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
+  v1UpdateTaskResponse:
+    type: object
+    properties:
+      task:
+        $ref: '#/definitions/v1Task'
+        description: task is the updated task.
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the TASK_UPDATED audit event.
+    description: UpdateTaskResponse returns the updated task.
+  v1UpdateTaskTypeResponse:
+    type: object
+    properties:
+      taskType:
+        $ref: '#/definitions/v1TaskType'
+        description: task_type is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateTaskTypeResponse returns the updated type and its log entry.
   v1UpdateThingResponse:
     type: object
     properties:

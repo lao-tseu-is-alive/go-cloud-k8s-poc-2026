@@ -31,8 +31,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   only) from a read-only replica. SPA "Unités" tree and detail pages, org units in the
   subject picker and the unit type catalogue in the administration page.
 
+- **GLD-026** — Case tasks: `TaskService` (`goeland.v1`, REST under `/api/cases/{case_id}/tasks`,
+  `/api/tasks` and `/api/task-types`) over migration `0019`: administrable `task_type`,
+  `case_task` (OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, deadline, origin)
+  assigned to one internal user or org unit with a `case_task_assignment` history, "my tasks"
+  (mine and my units' through the new `USER_MEMBER_OF_ORG_UNIT` relationship), SYSTEM timeline
+  entries on completion and cancellation. `CoreService.SearchUsers` (`/api/users/search`).
+  SPA: tasks panel in the case, "Mes tâches" page, unit members, users in the subject picker.
+
 ### Changed
 
+- A case with open tasks can no longer be closed (FAILED_PRECONDITION; the SPA explains why);
+  the "is this case open" guard is shared as `core.EnsureOpenCaseTx`.
+- SPA: a SYSTEM timeline entry no longer offers a correction.
 - **Breaking:** `RecordMetadata.owner_org_id` is now a typed reference to an existing, not
   dissolved org unit (UUID); earlier free-text values are dropped by migration `0018`. The
   governance panel shows the owning unit by name. A dissolved unit can no longer be linked.

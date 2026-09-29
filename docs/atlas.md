@@ -67,6 +67,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
 - `proto/goeland/v1/orgunit.proto` — Authoritative `OrgUnitService` contract: organizational units, tree nodes, dissolution and the unit type catalogue.
+- `proto/goeland/v1/task.proto` — Authoritative `TaskService` contract: case tasks, lifecycle moves, assignment history, "my tasks" and the task type catalogue.
 - `proto/goeland/v1/timeline.proto` — Authoritative `TimelineService` contract: case timeline entries, lifecycle, corrections and cited documents.
 - `proto/goeland/v1/thing.proto` — Authoritative `ThingService` contract: things, types, parcel and building details, LV95 GeoJSON geometry, search by extent.
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
@@ -75,6 +76,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
 - `gen/goeland/v1/orgunit.pb.go` — Go messages generated from `orgunit.proto`; never edit by hand.
+- `gen/goeland/v1/task.pb.go` — Go messages generated from `task.proto`; never edit by hand.
 - `gen/goeland/v1/timeline.pb.go` — Go messages generated from `timeline.proto`; never edit by hand.
 - `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
@@ -82,6 +84,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/orgunit.connect.go` — ConnectRPC stubs generated for `OrgUnitService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/task.connect.go` — ConnectRPC stubs generated for `TaskService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/timeline.connect.go` — ConnectRPC stubs generated for `TimelineService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/thing.connect.go` — ConnectRPC stubs generated for `ThingService`; never edit by hand.
 
@@ -158,6 +161,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
 - `pkg/core/module/db/migrations/0016_thing.sql` — Schema migration: `thing_type`, `thing` (EPSG:2056 geometry, GIST, validity check), `thing_parcel` (EGRID), `thing_building` (EGID), land-rights roles, thing types administrable.
 - `pkg/core/module/db/migrations/0018_org_unit.sql` — Schema migration: `org_unit_type` (7 seeded types), `org_unit` (tree without cycles, sibling-unique labels, external reference, dissolution), typed `owner_org_id`, case ↔ unit roles.
+- `pkg/core/module/db/migrations/0019_task.sql` — Schema migration: `task_type` (5 seeded types), `case_task` (lifecycle stamps, one assignee, origin), `case_task_assignment` history, `USER_MEMBER_OF_ORG_UNIT`.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -246,6 +250,22 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/orgunit/module/module.go` — Bundleable org unit module: dependency validation and lifecycle.
 - `pkg/orgunit/module/routes.go` — Org unit interceptor chain, Vanguard services and standalone routes.
 
+## Task domain (`pkg/task`)
+
+- `pkg/task/connect_server.go` — `TaskService` ConnectRPC adapter, including "my tasks" and the lifecycle moves.
+- `pkg/task/doc.go` — Package documentation for the case tasks.
+- `pkg/task/mappers.go` — Task, assignment and task type domain ↔ proto mappers (overdue computed at mapping time).
+- `pkg/task/model.go` — Status, origin, task, assignment, task type models with `db` tags, inputs and filters.
+- `pkg/task/reference_admin.go` — Task type administration over `core.MutateReference`.
+- `pkg/task/repository.go` — Task persistence interface.
+- `pkg/task/service.go` — Task business rules: content limits, assignee normalization, required reasons, default "my tasks" statuses.
+- `pkg/task/service_test.go` — Tests normalization, required reasons, the state machine, "my tasks" defaults and overdue.
+- `pkg/task/sql.go` — Raw SQL: task projections with case and assignee labels, lifecycle updates, "my tasks" with unit membership, assignments, types.
+- `pkg/task/storage_postgres.go` — pgx implementation: create, update, assign with history, lifecycle moves with SYSTEM timeline entries, lists.
+- `pkg/task/tx.go` — Task state machine and transaction helpers: case and task locks, assignee checks, audit on the case; exported `EnsureNoOpenTasksTx` for the case lifecycle.
+- `pkg/task/module/module.go` — Bundleable task module: dependency validation and lifecycle.
+- `pkg/task/module/routes.go` — Task interceptor chain, Vanguard services and standalone routes.
+
 ## Timeline domain (`pkg/timeline`)
 
 - `pkg/timeline/connect_server.go` — `TimelineService` ConnectRPC adapter over the timeline service.
@@ -270,6 +290,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
+- `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
@@ -296,6 +317,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
 - `cmd/goeland-server/goeland-front/src/api/timelineClient.ts` — REST client for `TimelineService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/orgUnitClient.ts` — REST client for `OrgUnitService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/taskClient.ts` — REST client for `TaskService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
@@ -336,6 +358,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/orgunit/OrgUnitFormDialog.vue` — Create or edit a unit: name, abbreviation, type, parent (subject picker), mailbox, mission.
 - `cmd/goeland-server/goeland-front/src/components/orgunit/OrgUnitLabel.vue` — An org unit shown by name, linking to its page (used for the owning unit).
 - `cmd/goeland-server/goeland-front/src/components/orgunit/orgUnitForm.ts` — Unit form model and request mapping, display label, tree building and a label cache.
+- `cmd/goeland-server/goeland-front/src/components/task/AssigneePicker.vue` — Chooses a task assignee: an internal user (searched), a live org unit or nobody.
+- `cmd/goeland-server/goeland-front/src/components/task/CaseTasksPanel.vue` — Case tasks panel: pending or all tasks, creation, open count for the closure rule.
+- `cmd/goeland-server/goeland-front/src/components/task/TaskDialogs.vue` — Every task dialog (create, edit, assign, status moves, assignment history) behind exposed openers.
+- `cmd/goeland-server/goeland-front/src/components/task/TaskTable.vue` — Task table: assignee, deadline with overdue highlight, status and the actions it allows.
+- `cmd/goeland-server/goeland-front/src/components/task/taskForm.ts` — Task statuses, allowed moves mirroring the server, colors and assignee mapping.
 - `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingMainForm.vue` — Thing fields: detail block per specialization, texts and geometry with live preview.
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingTypeSelect.vue` — Thing type selector bound to the code, emitting the selected type.
@@ -374,6 +401,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingDetailPage.vue` — Thing detail: identifiers, geometry preview and map link, relationships (link, end, unlink), edit, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
+- `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing search and list page (text, type).
 - `cmd/goeland-server/goeland-front/src/plugins/README.md` — Scaffold note on the plugins folder.
 - `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
@@ -390,6 +418,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/address.ts` — Postal code and country rules mirroring the server, address display lines and map link.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
+- `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.

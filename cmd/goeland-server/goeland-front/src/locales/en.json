@@ -1,5 +1,62 @@
 {
+  "tasks": {
+    "showAll": "Show done and cancelled",
+    "empty": "No open task.",
+    "emptyAll": "No task.",
+    "noHistory": "Never assigned.",
+    "timelineHint": "A \"System\" entry will be added to the case follow-ups.",
+    "fields": {
+      "title": "Task",
+      "case": "Case",
+      "assignee": "Assigned to",
+      "dueAt": "Deadline",
+      "status": "Status",
+      "type": "Task type",
+      "description": "Description",
+      "note": "Completion note (optional)"
+    },
+    "assignee": {
+      "none": "Nobody",
+      "user": "User",
+      "unit": "Unit",
+      "pickUser": "Search a user",
+      "pickUnit": "Search a unit"
+    },
+    "actions": {
+      "create": "New task",
+      "edit": "Edit",
+      "assign": "Assign",
+      "history": "Assignment history",
+      "start": "Start",
+      "complete": "Complete",
+      "cancel": "Cancel the task",
+      "reopen": "Reopen"
+    },
+    "dialog": {
+      "create": "New task",
+      "edit": "Edit the task"
+    },
+    "messages": {
+      "create": "Task created.",
+      "edit": "Task updated.",
+      "assign": "Assignment saved.",
+      "start": "Task started.",
+      "complete": "Task completed.",
+      "cancel": "Task cancelled.",
+      "reopen": "Task reopened."
+    },
+    "mine": {
+      "title": "My tasks",
+      "count": "{n} task(s)",
+      "overdue": "{n} overdue",
+      "includeUnits": "Include my units' tasks",
+      "empty": "No task for you."
+    }
+  },
   "orgUnits": {
+    "noMembers": "No member.",
+    "membersHint": "Members see the unit's tasks in \"My tasks\".",
+    "members": "Members ({n})",
     "title": "Organizational units",
     "count": "{n} live units",
     "search": "Filter by name or abbreviation",
@@ -27,6 +84,7 @@
       "edit": "Edit the unit"
     },
     "actions": {
+      "addMember": "Add a member",
       "create": "New unit",
       "createChild": "Add a sub-unit",
       "edit": "Edit",
@@ -35,6 +93,8 @@
       "makeRoot": "Move to the root"
     },
     "messages": {
+      "memberRemoved": "Member removed.",
+      "memberAdded": "Member added.",
       "created": "Unit created.",
       "updated": "Unit updated.",
       "dissolved": "Unit dissolved.",
@@ -94,6 +154,9 @@
       "withdraw": "Draft withdrawn."
     },
     "system": {
+      "note": "Note: {note}",
+      "taskCancelled": "Task cancelled",
+      "taskCompleted": "Task completed",
       "title": "Status change",
       "statusChanged": "Case status: {from} → {to}",
       "reason": "Reason: {reason}"
@@ -105,6 +168,7 @@
     "language": "Language"
   },
   "nav": {
+    "myTasks": "My tasks",
     "orgUnits": "Units",
     "cases": "Cases",
     "createCase": "New case",
@@ -172,6 +236,7 @@
   },
   "sections": {
     "case": {
+      "tasks": "Tasks",
       "timeline": "Follow-ups",
       "summary": "Summary",
       "relationships": "Participants, documents and related subjects"
@@ -200,6 +265,7 @@
       "retention": "Retention"
     },
     "reference": {
+      "task_type": "Task types",
       "org_unit_type": "Unit types",
       "case_type": "Case types",
       "relationship_type": "Relationship types",
@@ -489,6 +555,13 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "TaskStatus": {
+      "TASK_STATUS_UNSPECIFIED": "Unspecified status",
+      "TASK_STATUS_OPEN": "To do",
+      "TASK_STATUS_IN_PROGRESS": "In progress",
+      "TASK_STATUS_DONE": "Done",
+      "TASK_STATUS_CANCELLED": "Cancelled"
+    },
     "TimelineVisibility": {
       "TIMELINE_VISIBILITY_UNSPECIFIED": "Unspecified visibility",
       "TIMELINE_VISIBILITY_CASE_PARTICIPANTS": "Case participants",
@@ -636,6 +709,7 @@
       "linked": "Relationship created."
     },
     "case": {
+      "tasksBlockClosing": "One task is still open: complete or cancel it before closing. | {count} tasks are still open: complete or cancel them before closing.",
       "draftsBlockClosing": "One follow-up is still a draft: validate, lock or withdraw it before closing. | {count} follow-ups are still drafts: validate, lock or withdraw them before closing.",
       "createSuccess": "Case opened {ref}.",
       "updateSuccess": "Case updated.",
@@ -685,6 +759,7 @@
       "codeHint": "Upper-case letters, digits and _ (e.g. OPC_DEMANDE_PC); cannot change afterwards.",
       "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
       "hint": {
+        "task_type": "Task types offered when creating a task.",
         "org_unit_type": "Organizational unit types; new types are ordered after the seven official ones.",
         "case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).",
         "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.",

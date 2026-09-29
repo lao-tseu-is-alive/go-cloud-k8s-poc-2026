@@ -26,7 +26,7 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is in progress.
+v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is done (unreleased); Task (GLD-026) is in progress.
 
 ## Cross-cutting quality
 
@@ -169,9 +169,17 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
   typed foreign key; SPA tree + detail, picker and governance label; an
   optional local import script of the real tree (code, label, type, parent,
   state only; nothing committed). User ↔ unit membership is deferred to GLD-026.
-- [ ] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
+- [~] **GLD-026 — Task**: `case_task` independent of any workflow, assigned to
   a USER or ORG_UNIT, with deadlines, completion and a reassignment history.
-  Depends on GLD-011, GLD-025 and GLD-041.
+  Depends on GLD-011, GLD-025 and GLD-041. Scope decided 2026-09-29 (the legacy
+  system has no task entity): tasks belong to the case (not subjects; audited on
+  the CASE subject), administrable `task_type`, OPEN → IN_PROGRESS → DONE |
+  CANCELLED (reason) and reopen with a reason, one assignee (user or unit) or
+  none, `case_task_assignment` history, `origin` (MANUAL now; CIRCULATION,
+  WORKFLOW, AI reserved), a case cannot close with open tasks, completion and
+  cancellation write SYSTEM timeline entries; user ↔ unit membership
+  (`USER_MEMBER_OF_ORG_UNIT`), `SearchUsers` and a "my tasks" view (mine and
+  my units').
 
 ## Phase 5 — Circulation (v2 §29)
 

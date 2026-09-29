@@ -11,10 +11,6 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
-// caseStatusClosed is case_file.status for a closed case (casefile.StatusClosed;
-// the value is repeated here because casefile imports this package).
-const caseStatusClosed = 4
-
 // EnsureNoDraftsTx fails with core.ErrInvalidState when the case still has
 // draft entries. The case lifecycle calls it before closing a case: a draft
 // must be validated, locked or withdrawn first, never frozen half-written.
@@ -62,24 +58,7 @@ func RecordSystemEntryTx(ctx context.Context, q core.Querier, in SystemEntry) (*
 	return e, nil
 }
 
-// lockOpenCaseTx locks the case's governance row (rejecting a locked or
-// deleted case) and rejects a closed case. The governance lock serializes
-// every timeline mutation with the case status changes, which take it too.
-func lockOpenCaseTx(ctx context.Context, q core.Querier, caseID uuid.UUID) error {
-	if _, err := core.EnsureMutableTx(ctx, q, caseID, false); err != nil {
-		return err
-	}
-	var status int16
-	if err := q.QueryRow(ctx, caseStatusSQL, pgx.NamedArgs{"id": caseID}).Scan(&status); err != nil {
-		return mapDBError(err)
-	}
-	if status == caseStatusClosed {
-		return fmt.Errorf("%w: a closed case must be reopened before its timeline changes", core.ErrInvalidState)
-	}
-	return nil
-}
-
-// lockDraftTx locks the entry's case (see lockOpenCaseTx), then the entry
+// lockDraftTx locks the entry's case (see core.EnsureOpenCaseTx), then the entry
 // itself, and rejects an entry that is no longer a draft. The case is locked
 // first, in the same order as entry creation, to avoid lock inversions.
 func lockDraftTx(ctx context.Context, q core.Querier, id uuid.UUID) (*Entry, error) {
@@ -87,7 +66,7 @@ func lockDraftTx(ctx context.Context, q core.Querier, id uuid.UUID) (*Entry, err
 	if err != nil {
 		return nil, err
 	}
-	if err := lockOpenCaseTx(ctx, q, current.CaseID); err != nil {
+	if err := core.EnsureOpenCaseTx(ctx, q, current.CaseID); err != nil {
 		return nil, err
 	}
 	e, err := collectEntry(q.Query(ctx, getEntryForUpdateSQL, pgx.NamedArgs{"id": id}))

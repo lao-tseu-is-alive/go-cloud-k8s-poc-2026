@@ -3,6 +3,7 @@ import type {
   BatchGetUsersResponse,
   GetCurrentUserResponse,
   RelationshipType,
+  SearchUsersResponse,
   SubjectKind,
   SubjectRelationship,
   User,
@@ -80,6 +81,12 @@ export async function endRelationship (
 /** The authenticated caller: recorded profile, admin flag and scopes. */
 export function getCurrentUser (): Promise<GetCurrentUserResponse> {
   return apiFetch<GetCurrentUserResponse>('/api/me')
+}
+
+/** Internal users whose name or e-mail contains query, by name. */
+export async function searchUsers (query: string, pageSize = 20, signal?: AbortSignal): Promise<User[]> {
+  const res = await apiFetch<SearchUsersResponse>('/api/users/search', { query: { query, pageSize }, signal })
+  return res.users ?? []
 }
 
 /** Resolves operator ids (createdBy, actorUserId, ...) to users; unknown ids are absent. */

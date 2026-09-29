@@ -52,7 +52,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Entry
 	var created *Entry
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "create timeline entry", func(tx pgx.Tx) error {
-		if err := lockOpenCaseTx(ctx, tx, in.CaseID); err != nil {
+		if err := core.EnsureOpenCaseTx(ctx, tx, in.CaseID); err != nil {
 			return err
 		}
 		if in.CorrectsEntryID != nil {

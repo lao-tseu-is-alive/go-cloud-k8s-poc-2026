@@ -311,6 +311,22 @@ func (s *ConnectServer) BatchGetUsers(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&goelandv1.BatchGetUsersResponse{Users: out}), nil
 }
 
+// SearchUsers finds internal users by name or e-mail.
+func (s *ConnectServer) SearchUsers(ctx context.Context, req *connect.Request[goelandv1.SearchUsersRequest]) (*connect.Response[goelandv1.SearchUsersResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
+	}
+	users, err := s.service.SearchUsers(ctx, req.Msg.Query, int(req.Msg.PageSize))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.User, len(users))
+	for i, u := range users {
+		out[i] = DomainUserToProto(u)
+	}
+	return connect.NewResponse(&goelandv1.SearchUsersResponse{Users: out}), nil
+}
+
 // CreateRelationshipType adds a relationship type (administrators only).
 func (s *ConnectServer) CreateRelationshipType(ctx context.Context, req *connect.Request[goelandv1.CreateRelationshipTypeRequest]) (*connect.Response[goelandv1.CreateRelationshipTypeResponse], error) {
 	user, err := RequireCaller(ctx, ScopeAdmin)

@@ -9,6 +9,7 @@ import { listCaseTypes } from '@/api/caseClient'
 import { listRelationshipTypes } from '@/api/coreClient'
 import { listDocumentTypes } from '@/api/documentClient'
 import { listOrgUnitTypes } from '@/api/orgUnitClient'
+import { listTaskTypes } from '@/api/taskClient'
 import { listThingTypes } from '@/api/thingClient'
 
 export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean'
@@ -80,6 +81,11 @@ export const CATALOGUES: CatalogueConfig[] = [
     catalogue: 'org_unit_type',
     fields: [LABEL, DESCRIPTION],
     list: async () => (await listOrgUnitTypes(false)) as unknown as CatalogueEntry[],
+  },
+  {
+    catalogue: 'task_type',
+    fields: [LABEL, DESCRIPTION],
+    list: async () => (await listTaskTypes(false)) as unknown as CatalogueEntry[],
   },
 ]
 

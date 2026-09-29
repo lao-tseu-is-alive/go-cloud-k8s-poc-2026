@@ -506,7 +506,7 @@ export interface BatchGetUsersResponse {
 // --- Reference data administration (GLD-040) ----------------------------------
 
 /** A catalogue administered through the API. */
-export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type' | 'org_unit_type'
+export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type' | 'org_unit_type' | 'task_type'
 
 /** One entry of the append-only reference change log. */
 export interface ReferenceChange {
@@ -811,4 +811,100 @@ export interface SearchOrgUnitsResponse {
   units?: OrgUnit[]
   nextPageToken?: string
   totalSize?: number
+}
+
+// ---------------------------------------------------------------------------
+// Case tasks (TaskService, task.proto)
+// ---------------------------------------------------------------------------
+
+export type TaskStatus
+  = | 'TASK_STATUS_UNSPECIFIED'
+    | 'TASK_STATUS_OPEN'
+    | 'TASK_STATUS_IN_PROGRESS'
+    | 'TASK_STATUS_DONE'
+    | 'TASK_STATUS_CANCELLED'
+
+export type TaskOrigin
+  = | 'TASK_ORIGIN_UNSPECIFIED'
+    | 'TASK_ORIGIN_MANUAL'
+    | 'TASK_ORIGIN_CIRCULATION'
+    | 'TASK_ORIGIN_WORKFLOW'
+    | 'TASK_ORIGIN_AI'
+
+export interface TaskType {
+  id?: string
+  code: string
+  label: string
+  description?: string
+  isActive?: boolean
+}
+
+export interface TaskAssignment {
+  id: string
+  assigneeUserId?: string
+  assigneeOrgUnitId?: string
+  assigneeLabel?: string
+  assignedAt?: string
+  assignedBy?: string
+  reason?: string
+  /** Absent for the current assignment. */
+  endedAt?: string
+}
+
+export interface Task {
+  id: string
+  caseId: string
+  /** Business reference and title of the case. */
+  caseLabel?: string
+  taskType?: TaskType
+  title: string
+  description?: string
+  status?: TaskStatus
+  origin?: TaskOrigin
+  originRef?: string
+  assigneeUserId?: string
+  assigneeOrgUnitId?: string
+  assigneeLabel?: string
+  dueAt?: string
+  /** A pending task past its deadline (absent in JSON when false). */
+  overdue?: boolean
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  updatedBy?: string
+  startedAt?: string
+  startedBy?: string
+  completedAt?: string
+  completedBy?: string
+  completionNote?: string
+  cancelledAt?: string
+  cancelledBy?: string
+  cancellationReason?: string
+  /** Assignment history, oldest first (GetTask only). */
+  assignments?: TaskAssignment[]
+}
+
+export interface ListTasksResponse {
+  tasks?: Task[]
+  nextPageToken?: string
+  totalSize?: number
+  /** Pending tasks of the case whatever the filters (case lists only). */
+  openCount?: number
+}
+
+/** Editable content of a task; update replaces every field (absent dueAt removes it). */
+export interface TaskContent {
+  taskTypeCode: string
+  title: string
+  description?: string
+  dueAt?: string
+}
+
+export interface CreateTaskRequest extends TaskContent {
+  assigneeUserId?: string
+  assigneeOrgUnitId?: string
+}
+
+export interface SearchUsersResponse {
+  users?: User[]
 }

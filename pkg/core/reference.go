@@ -30,6 +30,8 @@ const (
 	CatalogueThingType = "thing_type"
 	// CatalogueOrgUnitType is the org_unit_type catalogue.
 	CatalogueOrgUnitType = "org_unit_type"
+	// CatalogueTaskType is the task_type catalogue.
+	CatalogueTaskType = "task_type"
 
 	// ReferenceCreated is the event type of a new catalogue entry.
 	ReferenceCreated = "REFERENCE_CREATED"
