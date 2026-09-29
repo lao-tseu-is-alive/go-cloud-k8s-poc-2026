@@ -178,7 +178,13 @@ covered by an integration test.
   relationships and confidentiality, deny by default (Casbin/OpenFGA evaluated
   behind the interface). Must revisit the automatic document reuse of GLD-023
   against read rights (§3g). Today every authenticated caller gets both
-  `goeland:read` and `goeland:write`.
+  `goeland:read` and `goeland:write`. Application roles, administrator
+  included, are decided, configured and stored in Goéland (on `app_user`,
+  GLD-025), every grant and revocation audited; the token then only
+  authenticates. Decided 2026-09-29: today `goeland:admin` comes from the
+  auth server's `IsAdmin` flag; the first administrators' bootstrap
+  (auth-server flag kept as break-glass, or ids in a `GOELAND_*` setting) is
+  decided within this task.
 - [ ] **GLD-033 — Sensitive read audit**: `access_audit_event` for
   READ_SENSITIVE, DOWNLOAD and EXPORT on sensitive scopes, distinct from the
   mutation audit.
