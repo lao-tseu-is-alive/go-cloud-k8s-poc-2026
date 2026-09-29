@@ -113,7 +113,7 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_LISTEN_ADDRESS`            | `127.0.0.1:8080` | Use `0.0.0.0:8080` in a container. |
 | `GOELAND_REQUEST_TIMEOUT_SECONDS`   | `10`             | Per-request timeout (1–300).       |
 | `GOELAND_SHUTDOWN_TIMEOUT_SECONDS`  | `10`             | Graceful drain window (1–300).     |
-| `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` | `60`            | Startup retries an unreachable database this long (0–600; 0 = one attempt). |
+| `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` | `60`            | Startup retries an unreachable database this long (0–600; 0 = one attempt); migrations and wiring then get 60 s more. SIGTERM stops a waiting startup. |
 | `LOG_LEVEL`                         | `info`           | `debug` / `info` / `warn` / `error`. |
 
 ## 7. Secrets

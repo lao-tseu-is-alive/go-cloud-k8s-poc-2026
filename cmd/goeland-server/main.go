@@ -25,6 +25,10 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
 )
 
+// startupWorkBudget bounds the startup work after the database answered:
+// migrations, module wiring and the first queries.
+const startupWorkBudget = 60 * time.Second
+
 func main() {
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
@@ -49,7 +53,11 @@ func main() {
 		"auth_mode", config.AuthMode,
 	)
 
-	startupCtx, startupCancel := context.WithTimeout(context.Background(), 15*time.Second)
+	// SIGINT / SIGTERM stop the server, and also a startup still waiting for its
+	// database. Startup may take the database wait plus the migration budget.
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	startupCtx, startupCancel := context.WithTimeout(ctx, config.DBConnectTimeout+startupWorkBudget)
 	app, err := newApplication(startupCtx, config, log)
 	startupCancel()
 	if err != nil {
@@ -65,8 +73,6 @@ func main() {
 	}
 	log.Info("goeland server listening", "address", listener.Addr().String())
 
-	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	if err := app.serve(ctx, listener, config.ShutdownPeriod); err != nil {
 		log.Error("goeland server stopped with error", "error", err)
 		os.Exit(1)

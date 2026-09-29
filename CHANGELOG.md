@@ -19,7 +19,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 - At startup the server waits for the database, retrying with a growing delay for
   `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` (default 60), instead of exiting on the first failure: a
-  pod started before its database no longer crash-loops.
+  pod started before its database no longer crash-loops. The startup budget is that wait plus
+  60 s for migrations (it was a fixed 15 s), and SIGTERM now also stops a startup in progress.
 
 ### Fixed
 
