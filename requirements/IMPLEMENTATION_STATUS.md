@@ -45,7 +45,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 / v2 §26-27 `case_timeline_entry` + `timeline_document_link` | ✅ `0017` | ✅ `TimelineService.*` (9 RPCs) | ✅ | GLD-012: DRAFT → VALIDATED / LOCKED / WITHDRAWN, immutable once out of draft (DB trigger too), corrections as new entries, documents cited by logical id with the version pinned on validation, case status changes as SYSTEM entries, audited on the CASE subject; SPA "Suivis" panel in the case detail |
-| §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
+| §9 / v2 §29 `case_circulation` + `case_circulation_recipient` | ✅ `0020` | ✅ `CirculationService.*` (5 RPCs) | ✅ | GLD-013: a composition of tasks (one per recipient, user or unit, origin CIRCULATION, managed by the circulation), ordered steps, answers as locked RESPONSE timeline entries, completion with a SYSTEM summary, cancellation of open tasks, no closure with an open circulation; overdue computed; SPA case panel + answer from "Mes tâches" |
 | §6.3 / v2 §25 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ✅ `0016` | ✅ `ThingService.*` (8 RPCs) | ✅ | GLD-016: EPSG:2056 geometry (GIST, validity, Swiss extent, type per specialization) as GeoJSON with computed area; EGRID / EGID unique; bbox search; land-rights roles `THING_HAS_ACTOR_*`; SPA list / create / detail with SVG preview |
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
 | Reference data administration (case types, relationship types, organization categories, document types) | ✅ `0015` | ✅ `Create*/Update*` per catalogue + `CoreService.ListReferenceChanges` | ✅ | GLD-040: `goeland:admin` only; immutable codes, deactivation instead of deletion; every change in the append-only `reference_change` log; SPA administration page |
@@ -60,8 +60,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo still needs Circulation, so it is
-partly pending — but **Actor, Case and Thing are now done** (persons/organizations creatable and
+The 16-step demo is now complete end to end; in addition **Actor, Case and Thing are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
 lifecycle → edit blocked when locked → audit):
@@ -76,7 +75,7 @@ lifecycle → edit blocked when locked → audit):
 - ✅ (6) link the case to the parcel — `LinkSubjects(CASE_CONCERNS_THING)`; (9) `DOCUMENT_REPRESENTS_THING` now has THING targets
 - ✅ (10–12) add a follow-up, cite a document, validate it → immutable — `CreateTimelineEntry{documentIds}` + `ValidateTimelineEntry` (v2 §50 steps 19–21)
 - ✅ (13–14) create tasks and reassign one with history — `CreateTask` + `AssignTask` (v2 §50 steps 22–23)
-- ⬜ (15) circulation + response — pending `CirculationService` (GLD-013)
+- ✅ (15–16) send a circulation to two units / users and record the answers in the timeline — `CreateCirculation` + `RespondToCirculation` (v2 §50 steps 24–25)
 
 ---
 
@@ -307,6 +306,16 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   Only completion and cancellation write SYSTEM timeline entries (creation and reassignment stay
   in the history and the audit). Unit membership is the `USER_MEMBER_OF_ORG_UNIT` relationship;
   the SPA offers it to administrators, but until GLD-017 any writer may create it through the API.
+- **Circulation (GLD-013, v2 §29, spec v1 §9, 2026-09-29)** — modelled from the production
+  structure (aggregates only: 134k circulations, 3.1 recipients on average, 60% with several
+  ordered steps). A circulation is a composition of tasks: each recipient (one user or one live
+  unit) gets a task (origin CIRCULATION) when its step opens; such a task can only be started
+  directly, its completion and cancellation belong to the circulation. Every answer (even
+  NOT_CONCERNED) is a locked RESPONSE timeline entry authored by the operator who records it
+  (until GLD-017 any writer may record an answer, e.g. one received by mail). Deviation from v1 §9:
+  no EXPIRED status — overdue is computed and late answers are accepted; automatic expiry with its
+  audit event comes with the scheduler of GLD-028. "For information" recipients (a copy on almost
+  every production circulation) are deferred until notifications exist.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
@@ -326,6 +335,8 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   and the **timeline** (draft citing a document → auto case link → edit → validate with
   pinned version → immutability through the service and the DB triggers → corrections rules
   → drafts block closure → SYSTEM entry on close → closed case rejects entries → case audit),
+  the **circulations** (two steps with user and unit recipients, managed tasks, answers opening
+  the next step, completion summary, closure refused while open, cancellation),
   the **tasks** (creation, reassignment history, assignee checks, state machine, SYSTEM entries,
   "my tasks" through unit membership, closure refused with open tasks, closed case frozen),
   and the **org units** (seeded types → tree path → sibling labels and external references →

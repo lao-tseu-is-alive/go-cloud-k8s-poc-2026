@@ -21,10 +21,17 @@ CASE WHEN x.assignee_user_id IS NOT NULL
      THEN coalesce(nullif(au.display_name, ''), nullif(au.email, ''), x.assignee_user_id)
      ELSE coalesce(su.display_label, '') END`
 
+// AssigneeLabelSQL is the SQL expression naming the assignee of a row aliased
+// alias (with assignee_user_id and assignee_org_unit_id columns); the query
+// must LEFT JOIN app_user au ON the user and subject_ref su ON the unit.
+func AssigneeLabelSQL(alias string) string {
+	return strings.ReplaceAll(assigneeLabelExpr, "x.", alias+".")
+}
+
 // readTaskColumns adds the case and assignee labels (needs taskFrom).
 var readTaskColumns = rawTaskColumns + `,
 CASE WHEN sr.business_ref <> '' THEN sr.business_ref || ' — ' || sr.display_label ELSE sr.display_label END AS case_label,
-` + strings.ReplaceAll(assigneeLabelExpr, "x.", "t.") + ` AS assignee_label`
+` + AssigneeLabelSQL("t") + ` AS assignee_label`
 
 const taskFrom = `
 FROM case_task t
@@ -38,9 +45,9 @@ ORDER BY (t.status IN (1, 2)) DESC, t.due_at ASC NULLS LAST, t.created_at, t.id`
 
 const insertTaskSQL = `
 INSERT INTO case_task AS t (case_id, task_type_id, title, description, due_at,
-    assignee_user_id, assignee_org_unit_id, created_by, updated_by)
+    assignee_user_id, assignee_org_unit_id, origin, origin_ref, created_by, updated_by)
 VALUES (@case_id, @task_type_id, @title, @description, @due_at,
-    @assignee_user_id, @assignee_org_unit_id, @operator_id, @operator_id)
+    @assignee_user_id, @assignee_org_unit_id, @origin, @origin_ref, @operator_id, @operator_id)
 RETURNING ` + rawTaskColumns + `;`
 
 var getTaskSQL = `
@@ -138,9 +145,9 @@ const insertAssignmentSQL = `
 INSERT INTO case_task_assignment (task_id, assignee_user_id, assignee_org_unit_id, assigned_by, reason)
 VALUES (@task_id, @assignee_user_id, @assignee_org_unit_id, @operator_id, @reason);`
 
-const listAssignmentsSQL = `
+var listAssignmentsSQL = `
 SELECT x.id, x.task_id, x.assignee_user_id, x.assignee_org_unit_id,
-       ` + assigneeLabelExpr + ` AS assignee_label,
+       ` + AssigneeLabelSQL("x") + ` AS assignee_label,
        x.assigned_at, x.assigned_by, x.reason, x.ended_at
 FROM case_task_assignment x
 LEFT JOIN app_user au ON au.user_id = x.assignee_user_id

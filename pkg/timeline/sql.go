@@ -24,11 +24,11 @@ VALUES (@case_id, @entry_type, @title, @body, @visibility,
         coalesce(@occurred_at::timestamptz, now()), @corrects_entry_id, @created_by)
 RETURNING ` + entryColumns + `;`
 
-// insertSystemEntrySQL records a server-written fact, born LOCKED.
+// insertSystemEntrySQL records a server-written entry, born LOCKED.
 const insertSystemEntrySQL = `
 INSERT INTO case_timeline_entry AS e
     (case_id, entry_type, status, title, body, metadata, created_by, locked_at, locked_by)
-VALUES (@case_id, 7, 3, @title, @body, @metadata, @operator_id, now(), @operator_id)
+VALUES (@case_id, @entry_type, 3, @title, @body, @metadata, @operator_id, now(), @operator_id)
 RETURNING ` + entryColumns + `;`
 
 const getEntrySQL = `

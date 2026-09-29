@@ -1,7 +1,7 @@
 // Command goeland-server runs the Goéland POC as a single binary: it loads the
 // configuration from the environment, connects to PostgreSQL, applies the
 // embedded migrations under an advisory lock, wires the core, document, actor, case,
-// thing, org unit, timeline and task modules onto one shared Vanguard transcoder (REST under /api/ plus Connect,
+// thing, org unit, timeline, task and circulation modules onto one shared Vanguard transcoder (REST under /api/ plus Connect,
 // gRPC and gRPC-Web), and serves the embedded Vue SPA at /. SIGINT and SIGTERM
 // trigger a graceful shutdown bounded by GOELAND_SHUTDOWN_TIMEOUT_SECONDS.
 //

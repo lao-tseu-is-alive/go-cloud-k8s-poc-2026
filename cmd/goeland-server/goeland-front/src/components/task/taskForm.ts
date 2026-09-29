@@ -11,11 +11,24 @@ export function isPending (task: Task): boolean {
   return !!task.status && PENDING_STATUSES.includes(task.status)
 }
 
+/** A task created by a circulation: only started here, answered through the circulation. */
+export function isCirculationTask (task: Task): boolean {
+  return task.origin === 'TASK_ORIGIN_CIRCULATION'
+}
+
+/** A task another component manages (circulation, workflow, AI). */
+export function isManaged (task: Task): boolean {
+  return !!task.origin && task.origin !== 'TASK_ORIGIN_MANUAL'
+}
+
 /**
  * The moves offered for a task, mirroring the server state machine
- * (task.moves); the server stays the authority.
+ * (task.moves, task.MoveTx); the server stays the authority.
  */
 export function allowedMoves (task: Task): TaskMove[] {
+  if (isManaged(task)) {
+    return task.status === 'TASK_STATUS_OPEN' ? ['start'] : []
+  }
   switch (task.status) {
     case 'TASK_STATUS_OPEN': { return ['start', 'complete', 'cancel']
     }

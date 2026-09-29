@@ -32,6 +32,20 @@
     CASE_STATUS_CHANGED: 'timeline.system.title',
     TASK_COMPLETED: 'timeline.system.taskCompleted',
     TASK_CANCELLED: 'timeline.system.taskCancelled',
+    CIRCULATION_CREATED: 'timeline.system.circulationCreated',
+    CIRCULATION_COMPLETED: 'timeline.system.circulationCompleted',
+    CIRCULATION_CANCELLED: 'timeline.system.circulationCancelled',
+  }
+  // A circulation answer (RESPONSE entry written by the circulation).
+  const responseMeta = computed(() => metadataText(props.entry.metadata, 'event') === 'CIRCULATION_RESPONSE' ? props.entry.metadata : undefined)
+
+  // The completion summary, e.g. "Favorable: 2, Unfavorable: 1".
+  function countsText (meta?: Record<string, unknown>): string {
+    const counts = meta?.counts
+    if (!counts || typeof counts !== 'object') return ''
+    return Object.entries(counts as Record<string, unknown>)
+      .map(([k, n]) => `${enumLabel('CirculationResponse', `CIRCULATION_RESPONSE_${k}`)} : ${typeof n === 'number' ? n : ''}`)
+      .join(', ')
   }
 
   function statusChangeText (meta?: Record<string, unknown>): string {
@@ -52,11 +66,22 @@
   const bodyText = computed(() => {
     if (event.value === 'CASE_STATUS_CHANGED') return statusChangeText(props.entry.metadata)
     if (event.value.startsWith('TASK_')) return taskText(props.entry.metadata)
+    if (event.value === 'CIRCULATION_COMPLETED') return `${metadataText(props.entry.metadata, 'circulation_title')}\n${countsText(props.entry.metadata)}`
+    if (event.value === 'CIRCULATION_CANCELLED') {
+      return `${metadataText(props.entry.metadata, 'circulation_title')}\n${t('timeline.system.reason', { reason: metadataText(props.entry.metadata, 'reason') })}`
+    }
+    if (event.value === 'CIRCULATION_CREATED') return metadataText(props.entry.metadata, 'circulation_title')
     return props.entry.body
   })
   const heading = computed(() => {
     const key = SYSTEM_TITLES[event.value]
-    return key ? t(key) : props.entry.title
+    if (key) return t(key)
+    const meta = responseMeta.value
+    if (meta) {
+      const response = enumLabel('CirculationResponse', `CIRCULATION_RESPONSE_${metadataText(meta, 'response')}`)
+      return t('timeline.response', { response, recipient: metadataText(meta, 'recipient') })
+    }
+    return props.entry.title
   })
 
   const frozenBy = computed(() => props.entry.validatedBy || props.entry.lockedBy)
@@ -124,7 +149,7 @@
       </div>
     </v-card-text>
 
-    <v-card-actions v-if="canEdit && !isSystem && (draft || isCorrectable(entry))">
+    <v-card-actions v-if="canEdit && !isSystem && !responseMeta && (draft || isCorrectable(entry))">
       <template v-if="draft">
         <v-btn prepend-icon="mdi-pencil" size="small" variant="text" @click="emit('edit', entry)">{{ t('timeline.actions.edit') }}</v-btn>
 

@@ -1,4 +1,44 @@
 {
+  "circulations": {
+    "empty": "Aucune circulation.",
+    "badge": "Circulation",
+    "awaiting": "Réponse attendue",
+    "notYet": "Étape pas encore ouverte",
+    "step": "Étape {step}",
+    "stepOf": "Étape {step} / {count}",
+    "due": "Réponses attendues le {date}",
+    "overdue": "En retard (échéance {date})",
+    "cancelledBecause": "Annulée : {reason}",
+    "cancelConfirm": "Les tâches encore ouvertes des destinataires seront annulées. Un motif est requis.",
+    "respondFor": "Réponse de : {recipient}",
+    "respondHint": "La réponse est ajoutée aux suivis de l'affaire et termine la tâche du destinataire.",
+    "stepsHint": "Les destinataires d'une même étape répondent en parallèle ; l'étape suivante s'ouvre quand tous ont répondu.",
+    "recipientsRequired": "Choisissez au moins un destinataire.",
+    "fields": {
+      "title": "Objet",
+      "message": "Message aux destinataires",
+      "dueAt": "Réponses attendues le",
+      "recipients": "Destinataires",
+      "step": "Étape",
+      "responseText": "Texte de la réponse"
+    },
+    "dialog": {
+      "create": "Nouvelle circulation"
+    },
+    "actions": {
+      "create": "Mettre en circulation",
+      "send": "Envoyer",
+      "respond": "Répondre",
+      "cancel": "Annuler la circulation",
+      "addRecipient": "Ajouter un destinataire",
+      "removeRecipient": "Retirer ce destinataire"
+    },
+    "messages": {
+      "created": "Circulation envoyée.",
+      "responded": "Réponse enregistrée.",
+      "cancelled": "Circulation annulée."
+    }
+  },
   "tasks": {
     "showAll": "Afficher terminées et annulées",
     "empty": "Aucune tâche ouverte.",
@@ -104,6 +144,7 @@
     }
   },
   "timeline": {
+    "response": "Réponse : {response} — {recipient}",
     "empty": "Aucun suivi pour l’instant.",
     "showWithdrawn": "Afficher les retirés",
     "pinnedVersion": "version {n}",
@@ -154,6 +195,9 @@
       "withdraw": "Brouillon retiré."
     },
     "system": {
+      "circulationCancelled": "Circulation annulée",
+      "circulationCompleted": "Circulation terminée",
+      "circulationCreated": "Circulation envoyée",
       "note": "Note : {note}",
       "taskCancelled": "Tâche annulée",
       "taskCompleted": "Tâche terminée",
@@ -236,6 +280,7 @@
   },
   "sections": {
     "case": {
+      "circulations": "Circulations",
       "tasks": "Tâches",
       "timeline": "Suivis",
       "summary": "Résumé",
@@ -555,6 +600,20 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "CirculationResponse": {
+      "CIRCULATION_RESPONSE_UNSPECIFIED": "Sans réponse",
+      "CIRCULATION_RESPONSE_FAVORABLE": "Favorable",
+      "CIRCULATION_RESPONSE_UNFAVORABLE": "Défavorable",
+      "CIRCULATION_RESPONSE_COMMENT": "Remarque",
+      "CIRCULATION_RESPONSE_NOT_CONCERNED": "Non concerné",
+      "CIRCULATION_RESPONSE_NEED_MORE_INFO": "Complément d'information demandé"
+    },
+    "CirculationStatus": {
+      "CIRCULATION_STATUS_UNSPECIFIED": "Statut non précisé",
+      "CIRCULATION_STATUS_OPEN": "En circulation",
+      "CIRCULATION_STATUS_COMPLETED": "Terminée",
+      "CIRCULATION_STATUS_CANCELLED": "Annulée"
+    },
     "TaskStatus": {
       "TASK_STATUS_UNSPECIFIED": "Statut non précisé",
       "TASK_STATUS_OPEN": "À faire",
@@ -709,6 +768,7 @@
       "linked": "Relation créée."
     },
     "case": {
+      "circulationsBlockClosing": "Une circulation est encore ouverte : attendez les réponses ou annulez-la avant de clôturer. | {count} circulations sont encore ouvertes : attendez les réponses ou annulez-les avant de clôturer.",
       "tasksBlockClosing": "Une tâche est encore ouverte : terminez-la ou annulez-la avant de clôturer. | {count} tâches sont encore ouvertes : terminez-les ou annulez-les avant de clôturer.",
       "draftsBlockClosing": "Un suivi est encore en brouillon : validez-le, verrouillez-le ou retirez-le avant de clôturer. | {count} suivis sont encore en brouillon : validez-les, verrouillez-les ou retirez-les avant de clôturer.",
       "createSuccess": "Affaire ouverte {ref}.",

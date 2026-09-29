@@ -47,6 +47,101 @@ var moves = map[Move]moveRule{
 	MoveReopen:   {from: []Status{StatusDone, StatusCancelled}, sql: reopenTaskSQL, event: "TASK_REOPENED", past: "reopened"},
 }
 
+// MoveOptions tunes MoveTx for the component that created a task.
+type MoveOptions struct {
+	// ByOrigin is set by the component a non-manual task belongs to (e.g. the
+	// circulation): only it may complete, cancel or reopen such a task.
+	ByOrigin bool
+	// SkipTimeline leaves out the SYSTEM timeline entry, when the caller writes
+	// its own (a circulation response, a circulation cancellation).
+	SkipTimeline bool
+}
+
+// CreateTx inserts a task in the caller's transaction: the case must be open,
+// the type active and the assignee valid; it records the first assignment and
+// writes TASK_CREATED on the case. origin and originRef name what created the
+// task (OriginManual and "" for an operator).
+func CreateTx(ctx context.Context, q core.Querier, in CreateInput, origin Origin, originRef string) (*Task, *core.AuditEvent, error) {
+	if err := core.EnsureOpenCaseTx(ctx, q, in.CaseID); err != nil {
+		return nil, nil, err
+	}
+	taskType, err := activeType(ctx, q, in.TypeCode)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := CheckAssigneeTx(ctx, q, in.Assignee); err != nil {
+		return nil, nil, err
+	}
+	t, err := collectTask(q.Query(ctx, insertTaskSQL, pgx.NamedArgs{
+		"case_id":              in.CaseID,
+		"task_type_id":         taskType.ID,
+		"title":                in.Title,
+		"description":          in.Description,
+		"due_at":               in.DueAt,
+		"assignee_user_id":     in.Assignee.UserID,
+		"assignee_org_unit_id": in.Assignee.OrgUnitID,
+		"origin":               int16(origin),
+		"origin_ref":           originRef,
+		"operator_id":          in.OperatorID,
+	}))
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := recordAssignmentTx(ctx, q, t.ID, in.Assignee, in.OperatorID, ""); err != nil {
+		return nil, nil, err
+	}
+	ev, err := auditTx(ctx, q, t, "TASK_CREATED", in.OperatorID, "", nil, taskState(t, taskType.Code))
+	if err != nil {
+		return nil, nil, err
+	}
+	return t, ev, nil
+}
+
+// MoveTx applies one lifecycle move in the caller's transaction and writes its
+// audit event; completion and cancellation also record a SYSTEM timeline entry
+// unless opts.SkipTimeline. A task created by another component (circulation,
+// workflow, AI) can only be started directly: its other moves belong to that
+// component (opts.ByOrigin).
+func MoveTx(ctx context.Context, q core.Querier, id uuid.UUID, move Move, operatorID, note string, opts MoveOptions) (*Task, *core.AuditEvent, error) {
+	rule, known := moves[move]
+	if !known {
+		return nil, nil, fmt.Errorf("%w: unknown task move %d", core.ErrInvalidInput, move)
+	}
+	current, err := lockTaskTx(ctx, q, id)
+	if err != nil {
+		return nil, nil, err
+	}
+	if move != MoveStart && !opts.ByOrigin {
+		if err := ensureManualTx(current); err != nil {
+			return nil, nil, err
+		}
+	}
+	if !rule.allowed(current.Status) {
+		return nil, nil, fmt.Errorf("%w: a %s task cannot be %s", core.ErrInvalidState, current.Status, rule.past)
+	}
+	t, err := collectTask(q.Query(ctx, rule.sql, pgx.NamedArgs{"id": id, "operator_id": operatorID, "note": note}))
+	if err != nil {
+		return nil, nil, err
+	}
+	ev, err := auditTx(ctx, q, t, rule.event, operatorID, note,
+		map[string]any{"status": current.Status.String()}, map[string]any{"status": t.Status.String()})
+	if err != nil || rule.timelineTitle == "" || opts.SkipTimeline {
+		return t, ev, err
+	}
+	if _, err := timeline.RecordSystemEntryTx(ctx, q, systemEntry(t, rule, operatorID, note)); err != nil {
+		return nil, nil, err
+	}
+	return t, ev, nil
+}
+
+// ensureManualTx refuses a direct change to a task another component manages.
+func ensureManualTx(t *Task) error {
+	if t.Origin != OriginManual {
+		return fmt.Errorf("%w: this task is managed by the object that created it (e.g. answer the circulation)", core.ErrInvalidState)
+	}
+	return nil
+}
+
 // EnsureNoOpenTasksTx fails with core.ErrInvalidState when the case still has
 // open or in-progress tasks. The case lifecycle calls it before closing a case.
 func EnsureNoOpenTasksTx(ctx context.Context, q core.Querier, caseID uuid.UUID) error {
@@ -95,9 +190,9 @@ func lockPendingTx(ctx context.Context, q core.Querier, id uuid.UUID) (*Task, er
 	return t, nil
 }
 
-// checkAssigneeTx requires at most one assignee, an existing internal user or
-// a live org unit.
-func checkAssigneeTx(ctx context.Context, q core.Querier, a Assignee) error {
+// CheckAssigneeTx requires at most one assignee, an existing internal user or
+// a live org unit (core.ErrInvalidInput otherwise).
+func CheckAssigneeTx(ctx context.Context, q core.Querier, a Assignee) error {
 	switch {
 	case a.UserID != nil && a.OrgUnitID != nil:
 		return fmt.Errorf("%w: assign a user or an org unit, not both", core.ErrInvalidInput)

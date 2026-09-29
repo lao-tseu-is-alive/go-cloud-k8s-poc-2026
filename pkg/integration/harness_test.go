@@ -15,6 +15,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
@@ -39,6 +40,8 @@ type testEnv struct {
 	thingSvc *thing.Service
 	// orgUnitSvc is the organizational unit service.
 	orgUnitSvc *orgunit.Service
+	// circulationSvc is the case circulation service.
+	circulationSvc *circulation.Service
 	// taskSvc is the case task service.
 	taskSvc *task.Service
 	// timelineSvc is the case timeline service.
@@ -161,7 +164,16 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build task service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, blobDir: store.Root()}
+	circulationRepo, err := circulation.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build circulation repository: %v", err)
+	}
+	circulationSvc, err := circulation.NewService(circulationRepo, log)
+	if err != nil {
+		t.Fatalf("build circulation service: %v", err)
+	}
+
+	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

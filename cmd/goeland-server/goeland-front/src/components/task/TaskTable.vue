@@ -3,7 +3,7 @@
   import type { Task } from '@/api/types'
   import { useI18n } from 'vue-i18n'
   import UserLabel from '@/components/core/UserLabel.vue'
-  import { allowedMoves, isPending, MOVE_ICONS, taskStatusColor } from '@/components/task/taskForm'
+  import { allowedMoves, isCirculationTask, isManaged, isPending, MOVE_ICONS, taskStatusColor } from '@/components/task/taskForm'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDate } from '@/utils/formatters'
 
@@ -15,6 +15,7 @@
     assign: [task: Task]
     move: [task: Task, move: TaskMove]
     history: [task: Task]
+    respond: [task: Task]
   }>()
 
   const { t } = useI18n()
@@ -38,7 +39,11 @@
       <tr v-for="task in tasks" :key="task.id" :class="{ 'task-closed': !isPending(task) }">
         <td>
           <div class="font-weight-medium">{{ task.title }}</div>
-          <div class="text-caption text-medium-emphasis">{{ task.taskType?.label ?? task.taskType?.code }}</div>
+
+          <div class="text-caption text-medium-emphasis">
+            {{ task.taskType?.label ?? task.taskType?.code }}
+            <v-chip v-if="isCirculationTask(task)" class="ml-1" prepend-icon="mdi-send-outline" size="x-small">{{ t('circulations.badge') }}</v-chip>
+          </div>
         </td>
 
         <td v-if="showCase">
@@ -81,7 +86,17 @@
             />
 
             <v-btn
-              v-if="isPending(task)"
+              v-if="isCirculationTask(task) && isPending(task)"
+              :aria-label="t('circulations.actions.respond')"
+              icon="mdi-reply-outline"
+              size="small"
+              :title="t('circulations.actions.respond')"
+              variant="text"
+              @click="emit('respond', task)"
+            />
+
+            <v-btn
+              v-if="isPending(task) && !isManaged(task)"
               :aria-label="t('tasks.actions.assign')"
               icon="mdi-account-switch-outline"
               size="small"
@@ -91,7 +106,7 @@
             />
 
             <v-btn
-              v-if="isPending(task)"
+              v-if="isPending(task) && !isManaged(task)"
               :aria-label="t('tasks.actions.edit')"
               icon="mdi-pencil-outline"
               size="small"

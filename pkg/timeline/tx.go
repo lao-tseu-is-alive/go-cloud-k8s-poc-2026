@@ -34,15 +34,22 @@ func countDraftsTx(ctx context.Context, q core.Querier, caseID uuid.UUID) (int32
 	return drafts, nil
 }
 
-// RecordSystemEntryTx records a server-written fact in a case timeline, born
+// RecordSystemEntryTx records a server-written entry in a case timeline, born
 // locked, and writes its TIMELINE_ENTRY_ADDED audit event on the case, in the
 // caller's transaction. It does not check the case status: the caller is the
-// server reacting to a case mutation it has already validated.
+// server reacting to a change it has already validated.
 func RecordSystemEntryTx(ctx context.Context, q core.Querier, in SystemEntry) (*Entry, error) {
 	if in.CaseID == uuid.Nil || in.Body == "" {
 		return nil, fmt.Errorf("%w: a system entry needs a case and a body", core.ErrInvalidInput)
 	}
+	if in.Type == TypeUnspecified {
+		in.Type = TypeSystem
+	}
+	if !in.Type.Valid() || in.Type == TypeAIProposal {
+		return nil, fmt.Errorf("%w: a server-written entry cannot be of type %s", core.ErrInvalidInput, in.Type)
+	}
 	e, err := collectEntry(q.Query(ctx, insertSystemEntrySQL, pgx.NamedArgs{
+		"entry_type":  int16(in.Type),
 		"case_id":     in.CaseID,
 		"title":       in.Title,
 		"body":        in.Body,

@@ -1,10 +1,12 @@
 <script setup lang="ts">
   import type { TaskMove } from '@/api/taskClient'
-  import type { Task, TaskType } from '@/api/types'
+  import type { CirculationRecipient, Task, TaskType } from '@/api/types'
   import type { AssigneeChoice } from '@/components/task/taskForm'
   import { computed, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { getCirculation } from '@/api/circulationClient'
   import { assignTask, createTask, getTask, listTaskTypes, moveTask, updateTask } from '@/api/taskClient'
+  import CirculationRespondDialog from '@/components/circulation/CirculationRespondDialog.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
   import AssigneePicker from '@/components/task/AssigneePicker.vue'
   import { assigneeFields, assigneeOf, moveNeedsText } from '@/components/task/taskForm'
@@ -45,6 +47,9 @@
   const move = ref<TaskMove>('start')
   const moveText = ref('')
   const historyOpen = ref(false)
+  const respondOpen = ref(false)
+  const respondTo = ref<CirculationRecipient | undefined>()
+  const respondTitle = ref('')
 
   const typeItems = computed(() => types.value
     .filter(ty => ty.isActive || ty.code === current.value?.taskType?.code)
@@ -106,6 +111,18 @@
     }
   }
 
+  // A circulation task is answered through its circulation (origin_ref).
+  async function openRespond (task: Task) {
+    try {
+      const circulation = await getCirculation(task.originRef ?? '')
+      respondTo.value = circulation.recipients?.find(r => r.taskId === task.id)
+      respondTitle.value = circulation.title
+      respondOpen.value = !!respondTo.value
+    } catch (error) {
+      report(error)
+    }
+  }
+
   // run performs one API call with the busy flag, feedback and reload.
   async function run (call: () => Promise<unknown>, message: string, close: () => void) {
     busy.value = true
@@ -143,7 +160,7 @@
     await run(() => moveTask(id, move.value, moveText.value.trim() || undefined), `tasks.messages.${move.value}`, () => (moveOpen.value = false))
   }
 
-  defineExpose({ openCreate, openEdit, openAssign, openMove, openHistory })
+  defineExpose({ openCreate, openEdit, openAssign, openMove, openHistory, openRespond })
 </script>
 
 <template>
@@ -222,6 +239,8 @@
       </v-card-actions>
     </v-card>
   </v-dialog>
+
+  <CirculationRespondDialog v-model="respondOpen" :circulation-title="respondTitle" :recipient="respondTo" @responded="emit('changed')" />
 
   <v-dialog v-model="historyOpen" max-width="640" scrollable>
     <v-card>

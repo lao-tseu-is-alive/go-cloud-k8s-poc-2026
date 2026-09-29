@@ -39,8 +39,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   entries on completion and cancellation. `CoreService.SearchUsers` (`/api/users/search`).
   SPA: tasks panel in the case, "Mes tâches" page, unit members, users in the subject picker.
 
+- **GLD-013** — Case circulations: `CirculationService` (`goeland.v1`, REST under
+  `/api/cases/{case_id}/circulations`, `/api/circulations` and `/api/circulation-recipients`)
+  over migration `0020`: a circulation sends a case to users and org units in ordered steps;
+  each recipient gets a task managed by the circulation, answers (FAVORABLE, UNFAVORABLE,
+  COMMENT, NOT_CONCERNED, NEED_MORE_INFO) are recorded as locked RESPONSE timeline entries, the
+  next step opens once a step has fully answered and the last answer completes the circulation
+  with a summary. SPA: circulations panel in the case, answering from "Mes tâches".
+
 ### Changed
 
+- Tasks created by a circulation can only be started directly (`task.MoveTx` with
+  `MoveOptions`); `timeline.RecordSystemEntryTx` can also write other locked entry types.
+- A case with an open circulation can no longer be closed.
 - A case with open tasks can no longer be closed (FAILED_PRECONDITION; the SPA explains why);
   the "is this case open" guard is shared as `core.EnsureOpenCaseTx`.
 - SPA: a SYSTEM timeline entry no longer offers a correction.

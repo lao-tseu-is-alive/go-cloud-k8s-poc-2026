@@ -6,6 +6,7 @@
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
   import { CASE_TRANSITIONS, transitionNeedsReason } from '@/components/case/caseForm'
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
+  import CaseCirculationsPanel from '@/components/circulation/CaseCirculationsPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
@@ -51,6 +52,8 @@
   const draftCount = ref(0)
   // Tasks report their open count too; completing one adds a timeline entry.
   const openTasks = ref(0)
+  // Open circulations block closing too; their answers change tasks and timeline.
+  const openCirculations = ref(0)
 
   // ---- derived state rules -------------------------------------------------
   const isLocked = computed(() => !!current.value?.recordMetadata?.isLocked)
@@ -62,7 +65,7 @@
   const reasonRequired = computed(() => !!transitionTarget.value && transitionNeedsReason(current.value?.status, transitionTarget.value))
   // A case with draft timeline entries or open tasks cannot be closed (server rule).
   const closing = computed(() => transitionTarget.value === 'CASE_STATUS_CLOSED')
-  const closingBlocked = computed(() => closing.value && (draftCount.value > 0 || openTasks.value > 0))
+  const closingBlocked = computed(() => closing.value && (draftCount.value > 0 || openTasks.value > 0 || openCirculations.value > 0))
 
   async function onTasksChanged () {
     timelineKey.value++
@@ -273,12 +276,27 @@
           </v-card>
 
           <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('sections.case.circulations') }}</v-card-title>
+
+            <v-card-text>
+              <CaseCirculationsPanel
+                :can-edit="editable"
+                :case-id="id"
+                :reload-key="timelineKey"
+                @changed="onTasksChanged"
+                @open="openCirculations = $event"
+              />
+            </v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.case.tasks') }}</v-card-title>
 
             <v-card-text>
               <CaseTasksPanel
                 :can-edit="editable"
                 :case-id="id"
+                :reload-key="timelineKey"
                 @changed="onTasksChanged"
                 @open="openTasks = $event"
               />
@@ -350,6 +368,16 @@
               variant="tonal"
             >
               {{ t('messages.case.draftsBlockClosing', { count: draftCount }, draftCount) }}
+            </v-alert>
+
+            <v-alert
+              v-if="closing && openCirculations > 0"
+              class="mb-3"
+              density="compact"
+              type="warning"
+              variant="tonal"
+            >
+              {{ t('messages.case.circulationsBlockClosing', { count: openCirculations }, openCirculations) }}
             </v-alert>
 
             <v-alert

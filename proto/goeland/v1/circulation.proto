@@ -1,0 +1,288 @@
+// Goéland POC - Case circulations (spec v2 §29).
+//
+// Proto-first definition for CirculationService + supporting messages. A
+// circulation sends a case to several recipients (internal users or org
+// units) for their answer. It is a light orchestration of tasks: each
+// recipient gets a task (origin CIRCULATION) when its step opens; recipients
+// of one step answer in parallel and the next step opens once the previous one
+// has fully answered.
+//
+// Every response completes the recipient's task and is recorded as a locked
+// RESPONSE entry in the case timeline; the last response completes the
+// circulation with a SYSTEM summary entry. A circulation belongs to its case
+// and is audited on the CASE subject; a closed case freezes it.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "goeland/v1/task.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// CIRCULATION ENUMS / MESSAGES
+// =============================================
+
+// CirculationStatus is the lifecycle state of a circulation.
+enum CirculationStatus {
+  // CIRCULATION_STATUS_UNSPECIFIED is the zero value; never stored.
+  CIRCULATION_STATUS_UNSPECIFIED = 0;
+  // CIRCULATION_STATUS_OPEN is a circulation waiting for responses.
+  CIRCULATION_STATUS_OPEN = 1;
+  // CIRCULATION_STATUS_COMPLETED is a circulation every recipient answered.
+  CIRCULATION_STATUS_COMPLETED = 2;
+  // CIRCULATION_STATUS_CANCELLED is a circulation stopped with a reason.
+  CIRCULATION_STATUS_CANCELLED = 3;
+}
+
+// CirculationResponse is the answer of a recipient (v2 §29).
+enum CirculationResponse {
+  // CIRCULATION_RESPONSE_UNSPECIFIED is the zero value: not answered yet.
+  CIRCULATION_RESPONSE_UNSPECIFIED = 0;
+  // CIRCULATION_RESPONSE_FAVORABLE is a favourable opinion.
+  CIRCULATION_RESPONSE_FAVORABLE = 1;
+  // CIRCULATION_RESPONSE_UNFAVORABLE is an unfavourable opinion.
+  CIRCULATION_RESPONSE_UNFAVORABLE = 2;
+  // CIRCULATION_RESPONSE_COMMENT is a remark without an opinion.
+  CIRCULATION_RESPONSE_COMMENT = 3;
+  // CIRCULATION_RESPONSE_NOT_CONCERNED means the recipient is not concerned.
+  CIRCULATION_RESPONSE_NOT_CONCERNED = 4;
+  // CIRCULATION_RESPONSE_NEED_MORE_INFO asks for more information.
+  CIRCULATION_RESPONSE_NEED_MORE_INFO = 5;
+}
+
+// CirculationRecipient is one recipient of a circulation and its answer.
+message CirculationRecipient {
+  // id is the recipient UUID (the target of RespondToCirculation).
+  string id = 1;
+  // step is the recipient's step (1 first); recipients of a step answer in parallel.
+  int32 step = 2;
+  // assignee_user_id is the internal user; empty when a unit is the recipient.
+  string assignee_user_id = 3;
+  // assignee_org_unit_id is the org unit; empty when a user is the recipient.
+  string assignee_org_unit_id = 4;
+  // assignee_label is the recipient's display name.
+  string assignee_label = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // task_id is the recipient's task; empty until its step opens.
+  string task_id = 6;
+  // task_status is the status of the recipient's task, when it exists.
+  TaskStatus task_status = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // awaiting reports a recipient whose step is open and who has not answered.
+  bool awaiting = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // response is the answer; UNSPECIFIED until given.
+  CirculationResponse response = 9;
+  // response_text is the text of the answer.
+  string response_text = 10;
+  // responded_at is when the answer was recorded.
+  google.protobuf.Timestamp responded_at = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // responded_by is the operator who recorded the answer.
+  string responded_by = 12;
+  // response_entry_id is the RESPONSE timeline entry of the answer.
+  string response_entry_id = 13;
+}
+
+// Circulation sends a case to recipients for their answer.
+message Circulation {
+  // id is the circulation UUID.
+  string id = 1;
+  // case_id is the case the circulation belongs to.
+  string case_id = 2;
+  // title names the circulation (1-500 characters).
+  string title = 3;
+  // message is the request sent to the recipients (at most 4000 characters).
+  string message = 4;
+  // due_at is the deadline of the answers; absent when none.
+  google.protobuf.Timestamp due_at = 5;
+  // overdue reports an open circulation past its deadline (answers are still accepted).
+  bool overdue = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // status is the lifecycle state.
+  CirculationStatus status = 7;
+  // current_step is the open step (the last one once completed).
+  int32 current_step = 8;
+  // step_count is the number of steps.
+  int32 step_count = 9;
+  // created_at is the creation time.
+  google.protobuf.Timestamp created_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who sent the circulation.
+  string created_by = 11;
+  // completed_at is set once every recipient answered.
+  google.protobuf.Timestamp completed_at = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // cancelled_at is set when the circulation was cancelled.
+  google.protobuf.Timestamp cancelled_at = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // cancelled_by is the operator who cancelled it.
+  string cancelled_by = 14;
+  // cancellation_reason is the justification of the cancellation.
+  string cancellation_reason = 15;
+  // recipients are the recipients by step then label.
+  repeated CirculationRecipient recipients = 16;
+}
+
+// CirculationRecipientInput is a recipient of a new circulation: one user or one unit.
+message CirculationRecipientInput {
+  // step is the recipient's step (1 or more); 0 means 1. Steps are renumbered
+  // from 1 in their order, so 1, 3, 3 becomes 1, 2, 2.
+  int32 step = 1 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 50
+  ];
+  // assignee_user_id is an internal user (operator id); exclusive with assignee_org_unit_id.
+  string assignee_user_id = 2 [(buf.validate.field).string.max_len = 100];
+  // assignee_org_unit_id is a live org unit; exclusive with assignee_user_id.
+  string assignee_org_unit_id = 3 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// ListCaseCirculationsRequest lists the circulations of a case, newest first.
+message ListCaseCirculationsRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// ListCaseCirculationsResponse returns the circulations with their recipients.
+message ListCaseCirculationsResponse {
+  // circulations are the case circulations, newest first.
+  repeated Circulation circulations = 1;
+}
+
+// GetCirculationRequest retrieves one circulation.
+message GetCirculationRequest {
+  // id is the circulation UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetCirculationResponse returns the circulation with its recipients.
+message GetCirculationResponse {
+  // circulation is the circulation.
+  Circulation circulation = 1;
+}
+
+// CreateCirculationRequest sends an open case to recipients.
+message CreateCirculationRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // title names the circulation (1-500 characters).
+  string title = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 500
+  ];
+  // message is the request sent to the recipients (at most 4000 characters).
+  string message = 3 [(buf.validate.field).string.max_len = 4000];
+  // due_at is the optional deadline of the answers (also the recipients' task deadline).
+  google.protobuf.Timestamp due_at = 4;
+  // recipients are 1 to 50 distinct users or units.
+  repeated CirculationRecipientInput recipients = 5 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 50
+  }];
+}
+
+// CreateCirculationResponse returns the new circulation.
+message CreateCirculationResponse {
+  // circulation is the created circulation, its first step open.
+  Circulation circulation = 1;
+  // created_event is the CIRCULATION_CREATED audit event (on the case subject).
+  AuditEvent created_event = 2;
+}
+
+// RespondToCirculationRequest records the answer of a recipient whose step is open.
+message RespondToCirculationRequest {
+  // recipient_id is the recipient UUID.
+  string recipient_id = 1 [(buf.validate.field).string.uuid = true];
+  // response is the answer.
+  CirculationResponse response = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // text details the answer (at most 4000 characters); required for COMMENT and NEED_MORE_INFO.
+  string text = 3 [(buf.validate.field).string.max_len = 4000];
+}
+
+// RespondToCirculationResponse returns the circulation after the answer.
+message RespondToCirculationResponse {
+  // circulation is the circulation (possibly with its next step open, or completed).
+  Circulation circulation = 1;
+  // response_event is the CIRCULATION_RESPONDED audit event.
+  AuditEvent response_event = 2;
+}
+
+// CancelCirculationRequest stops an open circulation.
+message CancelCirculationRequest {
+  // id is the circulation UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the required justification (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// CancelCirculationResponse returns the cancelled circulation.
+message CancelCirculationResponse {
+  // circulation is the cancelled circulation (its open tasks are cancelled).
+  Circulation circulation = 1;
+  // cancel_event is the CIRCULATION_CANCELLED audit event.
+  AuditEvent cancel_event = 2;
+}
+
+// =============================================
+// CIRCULATION SERVICE
+// =============================================
+
+// CirculationService manages the circulations of the Goéland POC cases. Every
+// RPC carries a google.api.http annotation so Vanguard also exposes it as
+// REST/JSON; the Connect/gRPC path /goeland.v1.CirculationService/<Method>
+// stays available. Mutations fail with FAILED_PRECONDITION when the case is
+// closed, locked or deleted, or when the circulation is no longer open.
+service CirculationService {
+  // List the circulations of a case. Requires goeland:read.
+  rpc ListCaseCirculations(ListCaseCirculationsRequest) returns (ListCaseCirculationsResponse) {
+    option (google.api.http) = {get: "/api/cases/{case_id}/circulations"};
+  }
+
+  // Retrieve a circulation with its recipients. Requires goeland:read.
+  rpc GetCirculation(GetCirculationRequest) returns (GetCirculationResponse) {
+    option (google.api.http) = {get: "/api/circulations/{id}"};
+  }
+
+  // Send an open case to recipients: the first step's tasks are created at once.
+  // Requires goeland:write; writes CIRCULATION_CREATED and a SYSTEM timeline entry.
+  rpc CreateCirculation(CreateCirculationRequest) returns (CreateCirculationResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/circulations"
+      body: "*"
+    };
+  }
+
+  // Record the answer of a recipient: completes its task, writes a RESPONSE
+  // timeline entry, opens the next step or completes the circulation.
+  // Requires goeland:write; writes CIRCULATION_RESPONDED.
+  rpc RespondToCirculation(RespondToCirculationRequest) returns (RespondToCirculationResponse) {
+    option (google.api.http) = {
+      post: "/api/circulation-recipients/{recipient_id}/respond"
+      body: "*"
+    };
+  }
+
+  // Cancel an open circulation and its open tasks. Requires goeland:write;
+  // writes CIRCULATION_CANCELLED and a SYSTEM timeline entry.
+  rpc CancelCirculation(CancelCirculationRequest) returns (CancelCirculationResponse) {
+    option (google.api.http) = {
+      post: "/api/circulations/{id}/cancel"
+      body: "*"
+    };
+  }
+}

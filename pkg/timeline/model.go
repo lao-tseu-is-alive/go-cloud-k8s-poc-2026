@@ -203,9 +203,12 @@ type UpdateInput struct {
 	Reason string
 }
 
-// SystemEntry is a server-written fact recorded in a case timeline, born
-// locked (see RecordSystemEntryTx).
+// SystemEntry is an entry the server writes in a case timeline, born locked
+// (see RecordSystemEntryTx): a fact (SYSTEM) or a statement recorded on an
+// operator's behalf by another component (e.g. a circulation RESPONSE).
 type SystemEntry struct {
+	// Type is the entry type; zero means TypeSystem.
+	Type EntryType
 	// CaseID is the case the fact belongs to.
 	CaseID uuid.UUID
 	// Title is the headline, e.g. "Changement de statut".

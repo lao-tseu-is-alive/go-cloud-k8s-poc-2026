@@ -1,4 +1,44 @@
 {
+  "circulations": {
+    "empty": "No circulation.",
+    "badge": "Circulation",
+    "awaiting": "Answer awaited",
+    "notYet": "Step not open yet",
+    "step": "Step {step}",
+    "stepOf": "Step {step} / {count}",
+    "due": "Answers due on {date}",
+    "overdue": "Overdue (due {date})",
+    "cancelledBecause": "Cancelled: {reason}",
+    "cancelConfirm": "The recipients' open tasks will be cancelled. A reason is required.",
+    "respondFor": "Answer of: {recipient}",
+    "respondHint": "The answer is added to the case follow-ups and completes the recipient's task.",
+    "stepsHint": "Recipients of one step answer in parallel; the next step opens once all of them answered.",
+    "recipientsRequired": "Choose at least one recipient.",
+    "fields": {
+      "title": "Subject",
+      "message": "Message to the recipients",
+      "dueAt": "Answers due on",
+      "recipients": "Recipients",
+      "step": "Step",
+      "responseText": "Answer text"
+    },
+    "dialog": {
+      "create": "New circulation"
+    },
+    "actions": {
+      "create": "Send for circulation",
+      "send": "Send",
+      "respond": "Answer",
+      "cancel": "Cancel the circulation",
+      "addRecipient": "Add a recipient",
+      "removeRecipient": "Remove this recipient"
+    },
+    "messages": {
+      "created": "Circulation sent.",
+      "responded": "Answer recorded.",
+      "cancelled": "Circulation cancelled."
+    }
+  },
   "tasks": {
     "showAll": "Show done and cancelled",
     "empty": "No open task.",
@@ -104,6 +144,7 @@
     }
   },
   "timeline": {
+    "response": "Answer: {response} — {recipient}",
     "empty": "No follow-up yet.",
     "showWithdrawn": "Show withdrawn",
     "pinnedVersion": "version {n}",
@@ -154,6 +195,9 @@
       "withdraw": "Draft withdrawn."
     },
     "system": {
+      "circulationCancelled": "Circulation cancelled",
+      "circulationCompleted": "Circulation completed",
+      "circulationCreated": "Circulation sent",
       "note": "Note: {note}",
       "taskCancelled": "Task cancelled",
       "taskCompleted": "Task completed",
@@ -236,6 +280,7 @@
   },
   "sections": {
     "case": {
+      "circulations": "Circulations",
       "tasks": "Tasks",
       "timeline": "Follow-ups",
       "summary": "Summary",
@@ -555,6 +600,20 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "CirculationResponse": {
+      "CIRCULATION_RESPONSE_UNSPECIFIED": "No answer",
+      "CIRCULATION_RESPONSE_FAVORABLE": "Favourable",
+      "CIRCULATION_RESPONSE_UNFAVORABLE": "Unfavourable",
+      "CIRCULATION_RESPONSE_COMMENT": "Remark",
+      "CIRCULATION_RESPONSE_NOT_CONCERNED": "Not concerned",
+      "CIRCULATION_RESPONSE_NEED_MORE_INFO": "More information needed"
+    },
+    "CirculationStatus": {
+      "CIRCULATION_STATUS_UNSPECIFIED": "Unspecified status",
+      "CIRCULATION_STATUS_OPEN": "Circulating",
+      "CIRCULATION_STATUS_COMPLETED": "Completed",
+      "CIRCULATION_STATUS_CANCELLED": "Cancelled"
+    },
     "TaskStatus": {
       "TASK_STATUS_UNSPECIFIED": "Unspecified status",
       "TASK_STATUS_OPEN": "To do",
@@ -709,6 +768,7 @@
       "linked": "Relationship created."
     },
     "case": {
+      "circulationsBlockClosing": "One circulation is still open: wait for the answers or cancel it before closing. | {count} circulations are still open: wait for the answers or cancel them before closing.",
       "tasksBlockClosing": "One task is still open: complete or cancel it before closing. | {count} tasks are still open: complete or cancel them before closing.",
       "draftsBlockClosing": "One follow-up is still a draft: validate, lock or withdraw it before closing. | {count} follow-ups are still drafts: validate, lock or withdraw them before closing.",
       "createSuccess": "Case opened {ref}.",

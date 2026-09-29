@@ -9,6 +9,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
@@ -158,7 +159,7 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 // Transition moves an unlocked, live case to in.Target when CanTransition
 // allows it, writes CASE_STATUS_CHANGED with the before/after status and
 // records the change as a SYSTEM timeline entry. A case with draft timeline
-// entries or open tasks cannot be closed.
+// entries, open circulations or open tasks cannot be closed.
 func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in TransitionInput) (*Case, *core.AuditEvent, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -177,10 +178,7 @@ func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in Tr
 		return nil, nil, fmt.Errorf("%w: a reason is required to close or reopen a case", core.ErrInvalidInput)
 	}
 	if in.Target == StatusClosed {
-		if err := timeline.EnsureNoDraftsTx(ctx, tx, id); err != nil {
-			return nil, nil, err
-		}
-		if err := task.EnsureNoOpenTasksTx(ctx, tx, id); err != nil {
+		if err := ensureClosableTx(ctx, tx, id); err != nil {
 			return nil, nil, err
 		}
 	}
@@ -211,6 +209,18 @@ func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in Tr
 		return nil, nil, fmt.Errorf("commit transition case: %w", err)
 	}
 	return c, ev, r.hydrate(ctx, c)
+}
+
+// ensureClosableTx refuses to close a case that still has draft timeline
+// entries, open circulations or open tasks (in that order of explanation).
+func ensureClosableTx(ctx context.Context, tx pgx.Tx, id uuid.UUID) error {
+	if err := timeline.EnsureNoDraftsTx(ctx, tx, id); err != nil {
+		return err
+	}
+	if err := circulation.EnsureNoOpenCirculationsTx(ctx, tx, id); err != nil {
+		return err
+	}
+	return task.EnsureNoOpenTasksTx(ctx, tx, id)
 }
 
 // lockMutableCase rejects a locked or soft-deleted case (core.EnsureMutableTx)

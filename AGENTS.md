@@ -107,6 +107,14 @@ whenever a task starts, completes, changes scope or order.
   `origin` MANUAL today. Completion / cancellation write SYSTEM timeline entries
   (`timeline.RecordSystemEntryTx`); `casefile` calls `task.EnsureNoOpenTasksTx` before closing.
   "My tasks" include the caller's units through `USER_MEMBER_OF_ORG_UNIT`.
+- **circulation** (`pkg/circulation`) — `case_circulation` + `case_circulation_recipient` →
+  `CirculationService`: a composition of tasks. Each recipient (user or live unit) gets a task
+  (`task.CreateTx`, origin CIRCULATION) when its step opens; only the circulation completes or
+  cancels it (`task.MoveTx` with `MoveOptions{ByOrigin}`). An answer writes a locked RESPONSE
+  entry (`timeline.RecordSystemEntryTx` with a Type), a fully answered step opens the next one,
+  the last answer completes the circulation with a SYSTEM summary. `casefile` calls
+  `circulation.EnsureNoOpenCirculationsTx` before closing. Import order: casefile → circulation →
+  task → timeline → core (never the reverse).
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete) and the Case module
@@ -116,7 +124,7 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-Circulation, a real permission/confidentiality engine, storage (MinIO),
+A real permission/confidentiality engine, storage (MinIO),
 search (Meilisearch), workflow. The Actor domain continues too (addresses, and the
 full production role vocabulary mapped onto `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
@@ -124,7 +132,7 @@ Design new domains as first-class subjects that reuse the core primitives.
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto  (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -132,7 +140,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0019 (dbmate format)
+  │   └── db/migrations/     0001..0020 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -145,6 +153,8 @@ pkg/casefile/                case (affaire) domain: types, status lifecycle (reu
 pkg/thing/                   thing (objet) domain: parcels, buildings, LV95 PostGIS geometry
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/orgunit/                 organizational units (ORG_UNIT subjects in one tree, dissolution)
+  └── module/                bundleable module (NO migrations; core owns schema)
+pkg/circulation/             case circulations (recipients by step, answers in the timeline)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/task/                    case tasks (assignment history, lifecycle, "my tasks")
   └── module/                bundleable module (NO migrations; core owns schema)
@@ -292,6 +302,8 @@ bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`; ThingService: `/api/things`, `/api/things/{id}`,
 `/api/things/search` (text, type, `bbox=e_min,n_min,e_max,n_max` in LV95), `/api/thing-types`;
+CirculationService: `/api/cases/{case_id}/circulations`, `/api/circulations/{id}` (+ `/cancel`),
+`/api/circulation-recipients/{recipient_id}/respond`;
 TaskService: `/api/cases/{case_id}/tasks`, `/api/tasks/mine`, `/api/tasks/{id}` with `/assign`,
 `/start`, `/complete`, `/cancel`, `/reopen`, `/api/task-types`; CoreService also `/api/users/search`;
 OrgUnitService: `/api/org-units` (flat tree), `/api/org-units/search`, `/api/org-units/{id}`,

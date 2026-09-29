@@ -79,6 +79,7 @@
       @edit="dialogs?.openEdit($event)"
       @history="dialogs?.openHistory($event)"
       @move="(task, move) => dialogs?.openMove(task, move)"
+      @respond="dialogs?.openRespond($event)"
     />
 
     <TaskDialogs ref="dialogs" :case-id="caseId" @changed="changed" />

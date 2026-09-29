@@ -64,6 +64,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/.gitignore` — Ignores the locally exported third-party proto tree.
 - `proto/goeland/v1/actor.proto` — Authoritative `ActorService` contract: persons, organizations, typed contacts, categories.
 - `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
+- `proto/goeland/v1/circulation.proto` — Authoritative `CirculationService` contract: circulations, recipients by step, responses, cancellation.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
 - `proto/goeland/v1/orgunit.proto` — Authoritative `OrgUnitService` contract: organizational units, tree nodes, dissolution and the unit type catalogue.
@@ -73,6 +74,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
 - `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
+- `gen/goeland/v1/circulation.pb.go` — Go messages generated from `circulation.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
 - `gen/goeland/v1/orgunit.pb.go` — Go messages generated from `orgunit.proto`; never edit by hand.
@@ -81,6 +83,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/circulation.connect.go` — ConnectRPC stubs generated for `CirculationService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/orgunit.connect.go` — ConnectRPC stubs generated for `OrgUnitService`; never edit by hand.
@@ -117,6 +120,20 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure and prefix routing.
 - `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
 - `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
+
+## Circulation domain (`pkg/circulation`)
+
+- `pkg/circulation/connect_server.go` — `CirculationService` ConnectRPC adapter.
+- `pkg/circulation/doc.go` — Package documentation for the case circulations.
+- `pkg/circulation/mappers.go` — Circulation and recipient domain ↔ proto mappers (overdue and awaiting computed).
+- `pkg/circulation/model.go` — Status, response, circulation and recipient models with `db` tags and inputs.
+- `pkg/circulation/repository.go` — Circulation persistence interface.
+- `pkg/circulation/service.go` — Circulation rules: texts, recipient checks and step renumbering, required answer texts and reasons.
+- `pkg/circulation/service_test.go` — Tests step renumbering, recipient rejection, answer validation and names.
+- `pkg/circulation/sql.go` — Raw SQL: circulations, recipients with labels and task status, answers, step progress, summaries.
+- `pkg/circulation/storage_postgres.go` — Orchestration in one transaction: recipient tasks per step, answers as RESPONSE entries, next step or completion, cancellation; `EnsureNoOpenCirculationsTx`.
+- `pkg/circulation/module/module.go` — Bundleable circulation module: dependency validation and lifecycle.
+- `pkg/circulation/module/routes.go` — Circulation interceptor chain, Vanguard services and standalone routes.
 
 ## Core domain (`pkg/core`)
 
@@ -162,6 +179,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0016_thing.sql` — Schema migration: `thing_type`, `thing` (EPSG:2056 geometry, GIST, validity check), `thing_parcel` (EGRID), `thing_building` (EGID), land-rights roles, thing types administrable.
 - `pkg/core/module/db/migrations/0018_org_unit.sql` — Schema migration: `org_unit_type` (7 seeded types), `org_unit` (tree without cycles, sibling-unique labels, external reference, dissolution), typed `owner_org_id`, case ↔ unit roles.
 - `pkg/core/module/db/migrations/0019_task.sql` — Schema migration: `task_type` (5 seeded types), `case_task` (lifecycle stamps, one assignee, origin), `case_task_assignment` history, `USER_MEMBER_OF_ORG_UNIT`.
+- `pkg/core/module/db/migrations/0020_circulation.sql` — Schema migration: `case_circulation` (steps, status stamps) and `case_circulation_recipient` (one user or unit, task, response, timeline entry), CIRCULATION_RESPONSE task type.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -296,6 +314,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
 - `pkg/integration/document_versions_test.go` — DB test: deduplication (incl. concurrent), automatic reuse across cases, versions sharing a blob, immutability trigger, lock guard.
+- `pkg/integration/circulation_test.go` — Circulations: two steps with user and unit recipients, managed tasks, answers and next step, completion summary, closure rules, cancellation.
 - `pkg/integration/document_lifecycle_test.go` — DB test: idempotent seeded migrations and the full document lifecycle.
 - `pkg/integration/harness_test.go` — Test harness gated on `GOELAND_TEST_DATABASE_URL`: migrate and connect.
 
@@ -319,6 +338,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/orgUnitClient.ts` — REST client for `OrgUnitService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/taskClient.ts` — REST client for `TaskService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/circulationClient.ts` — REST client for `CirculationService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
@@ -344,6 +364,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
 - `cmd/goeland-server/goeland-front/src/components/case/caseForm.ts` — Case form model, status list and the client mirror of the transition table.
+- `cmd/goeland-server/goeland-front/src/components/circulation/CaseCirculationsPanel.vue` — Case circulations panel: recipients by step with their answer, answer and cancel actions, open count for the closure rule.
+- `cmd/goeland-server/goeland-front/src/components/circulation/CirculationCreateDialog.vue` — Send the case for circulation: subject, message, deadline and recipients (user or unit) by step.
+- `cmd/goeland-server/goeland-front/src/components/circulation/CirculationRespondDialog.vue` — Record the answer of one recipient (response and text).
+- `cmd/goeland-server/goeland-front/src/components/circulation/circulationForm.ts` — Circulation responses, colors, answer-text rule and grouping by step.
 - `cmd/goeland-server/goeland-front/src/components/core/AuditTimeline.vue` — Read-only audit event timeline.
 - `cmd/goeland-server/goeland-front/src/components/core/EndRelationshipDialog.vue` — Dialog ending a relationship (optional end date, reason) through `CoreService.EndRelationship`.
 - `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link (type, then a searched target of its kind); the parent performs the call.

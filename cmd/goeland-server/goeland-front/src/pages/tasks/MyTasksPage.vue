@@ -92,6 +92,7 @@
           @edit="dialogs?.openEdit($event)"
           @history="dialogs?.openHistory($event)"
           @move="(task, move) => dialogs?.openMove(task, move)"
+          @respond="dialogs?.openRespond($event)"
         />
 
         <div v-if="nextToken" class="d-flex justify-center mt-2">

@@ -22,6 +22,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
 	casemodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile/module"
+	circulationmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
@@ -196,7 +197,7 @@ type bundledModule interface {
 
 // buildDomainModules wires the subject domains that share the same
 // dependencies (pool, verifier, core service, logger): actor, case, thing,
-// org unit, the case timeline and tasks.
+// org unit, the case timeline, tasks and circulations.
 func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.Pool, verifier authadapter.TokenVerifier, coreSvc *core.Service, log *slog.Logger) ([]bundledModule, error) {
 	timeout := config.RequestTimeout
 	actorMod, err := actormodule.New(ctx, actormodule.Config{RequestTimeout: timeout}, actormodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
@@ -223,7 +224,11 @@ func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.
 	if err != nil {
 		return nil, fmt.Errorf("task module: %w", err)
 	}
-	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod}, nil
+	circulationMod, err := circulationmodule.New(ctx, circulationmodule.Config{RequestTimeout: timeout}, circulationmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("circulation module: %w", err)
+	}
+	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod}, nil
 }
 
 // buildRecordingVerifier wraps the auth-mode verifier so every verified caller

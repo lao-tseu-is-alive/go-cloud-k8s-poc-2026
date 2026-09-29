@@ -26,7 +26,7 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is done (unreleased); Task (GLD-026) is in progress.
+v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is done (unreleased); ORG_UNIT (GLD-041) is done (unreleased); Task (GLD-026) is done (unreleased); Circulation (GLD-013) is in progress.
 
 ## Cross-cutting quality
 
@@ -183,10 +183,19 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 5 — Circulation (v2 §29)
 
-- [ ] **GLD-013 — Circulation**: parallel recipients composed of tasks,
+- [~] **GLD-013 — Circulation**: parallel recipients composed of tasks,
   responses (FAVORABLE, UNFAVORABLE, COMMENT, NOT_CONCERNED, NEED_MORE_INFO),
   deadline and completion; a significant response creates a timeline entry.
-  Depends on GLD-012 and GLD-026.
+  Depends on GLD-012 and GLD-026. Scope decided 2026-09-29 from the production
+  structure (aggregates only: 134k circulations, 3.1 recipients on average, 60%
+  with several ordered steps, a "for information" copy on almost every one):
+  each recipient (user or unit) gets a task (origin CIRCULATION) managed by the
+  circulation; recipients are grouped in steps, a step opens when the previous
+  one has fully answered; every response completes its task and writes a
+  locked RESPONSE timeline entry; the last response completes the circulation
+  with a SYSTEM summary entry; cancelling cancels the open tasks; overdue is
+  computed (no EXPIRED status, late responses accepted, automatic expiry with
+  GLD-028); "for information" recipients deferred until notifications exist.
 
 Exit criteria for Phases 1-5: the v2 §50 scenario steps 1-25 run end to end,
 covered by an integration test.

@@ -11,7 +11,6 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
 
 // PostgresRepository implements Repository with pgx, composing core primitives.
@@ -54,35 +53,10 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Task,
 	var id uuid.UUID
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "create task", func(tx pgx.Tx) error {
-		if err := core.EnsureOpenCaseTx(ctx, tx, in.CaseID); err != nil {
-			return err
+		t, created, err := CreateTx(ctx, tx, in, OriginManual, "")
+		if err == nil {
+			id, ev = t.ID, created
 		}
-		taskType, err := activeType(ctx, tx, in.TypeCode)
-		if err != nil {
-			return err
-		}
-		if err := checkAssigneeTx(ctx, tx, in.Assignee); err != nil {
-			return err
-		}
-		t, err := collectTask(tx.Query(ctx, insertTaskSQL, pgx.NamedArgs{
-			"case_id":              in.CaseID,
-			"task_type_id":         taskType.ID,
-			"title":                in.Title,
-			"description":          in.Description,
-			"due_at":               in.DueAt,
-			"assignee_user_id":     in.Assignee.UserID,
-			"assignee_org_unit_id": in.Assignee.OrgUnitID,
-			"operator_id":          in.OperatorID,
-		}))
-		if err != nil {
-			return err
-		}
-		id = t.ID
-		if err := recordAssignmentTx(ctx, tx, t.ID, in.Assignee, in.OperatorID, ""); err != nil {
-			return err
-		}
-		after := taskState(t, taskType.Code)
-		ev, err = auditTx(ctx, tx, t, "TASK_CREATED", in.OperatorID, "", nil, after)
 		return err
 	})
 	if err != nil {
@@ -98,6 +72,9 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 	err := r.inTx(ctx, "update task", func(tx pgx.Tx) error {
 		current, err := lockPendingTx(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if err := ensureManualTx(current); err != nil {
 			return err
 		}
 		currentType, taskType, err := resolveType(ctx, tx, current.TypeID, in.TypeCode)
@@ -130,10 +107,13 @@ func (r *PostgresRepository) Assign(ctx context.Context, id uuid.UUID, to Assign
 		if err != nil {
 			return err
 		}
+		if err := ensureManualTx(current); err != nil {
+			return err
+		}
 		if sameAssignee(current, to) {
 			return fmt.Errorf("%w: the task is already assigned this way", core.ErrInvalidInput)
 		}
-		if err := checkAssigneeTx(ctx, tx, to); err != nil {
+		if err := CheckAssigneeTx(ctx, tx, to); err != nil {
 			return err
 		}
 		t, err := collectTask(tx.Query(ctx, setAssigneeSQL, pgx.NamedArgs{
@@ -161,26 +141,10 @@ func (r *PostgresRepository) Assign(ctx context.Context, id uuid.UUID, to Assign
 // ChangeStatus applies one lifecycle move (see moves) and writes its audit
 // event; completion and cancellation also record a SYSTEM timeline entry.
 func (r *PostgresRepository) ChangeStatus(ctx context.Context, id uuid.UUID, move Move, operatorID, note string) (*Task, *core.AuditEvent, error) {
-	rule := moves[move]
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "change task status", func(tx pgx.Tx) error {
-		current, err := lockTaskTx(ctx, tx, id)
-		if err != nil {
-			return err
-		}
-		if !rule.allowed(current.Status) {
-			return fmt.Errorf("%w: a %s task cannot be %s", core.ErrInvalidState, current.Status, rule.past)
-		}
-		t, err := collectTask(tx.Query(ctx, rule.sql, pgx.NamedArgs{"id": id, "operator_id": operatorID, "note": note}))
-		if err != nil {
-			return err
-		}
-		ev, err = auditTx(ctx, tx, t, rule.event, operatorID, note,
-			map[string]any{"status": current.Status.String()}, map[string]any{"status": t.Status.String()})
-		if err != nil || rule.timelineTitle == "" {
-			return err
-		}
-		_, err = timeline.RecordSystemEntryTx(ctx, tx, systemEntry(t, rule, operatorID, note))
+		var err error
+		_, ev, err = MoveTx(ctx, tx, id, move, operatorID, note, MoveOptions{})
 		return err
 	})
 	if err != nil {

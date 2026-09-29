@@ -908,3 +908,71 @@ export interface CreateTaskRequest extends TaskContent {
 export interface SearchUsersResponse {
   users?: User[]
 }
+
+// ---------------------------------------------------------------------------
+// Case circulations (CirculationService, circulation.proto)
+// ---------------------------------------------------------------------------
+
+export type CirculationStatus
+  = | 'CIRCULATION_STATUS_UNSPECIFIED'
+    | 'CIRCULATION_STATUS_OPEN'
+    | 'CIRCULATION_STATUS_COMPLETED'
+    | 'CIRCULATION_STATUS_CANCELLED'
+
+export type CirculationResponse
+  = | 'CIRCULATION_RESPONSE_UNSPECIFIED'
+    | 'CIRCULATION_RESPONSE_FAVORABLE'
+    | 'CIRCULATION_RESPONSE_UNFAVORABLE'
+    | 'CIRCULATION_RESPONSE_COMMENT'
+    | 'CIRCULATION_RESPONSE_NOT_CONCERNED'
+    | 'CIRCULATION_RESPONSE_NEED_MORE_INFO'
+
+export interface CirculationRecipient {
+  id: string
+  step?: number
+  assigneeUserId?: string
+  assigneeOrgUnitId?: string
+  assigneeLabel?: string
+  /** Empty until the recipient's step opens. */
+  taskId?: string
+  taskStatus?: TaskStatus
+  /** Step open and not answered yet (absent in JSON when false). */
+  awaiting?: boolean
+  response?: CirculationResponse
+  responseText?: string
+  respondedAt?: string
+  respondedBy?: string
+  responseEntryId?: string
+}
+
+export interface Circulation {
+  id: string
+  caseId: string
+  title: string
+  message?: string
+  dueAt?: string
+  overdue?: boolean
+  status?: CirculationStatus
+  currentStep?: number
+  stepCount?: number
+  createdAt?: string
+  createdBy?: string
+  completedAt?: string
+  cancelledAt?: string
+  cancelledBy?: string
+  cancellationReason?: string
+  recipients?: CirculationRecipient[]
+}
+
+export interface CirculationRecipientInput {
+  step?: number
+  assigneeUserId?: string
+  assigneeOrgUnitId?: string
+}
+
+export interface CreateCirculationRequest {
+  title: string
+  message?: string
+  dueAt?: string
+  recipients: CirculationRecipientInput[]
+}

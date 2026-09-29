@@ -19,6 +19,20 @@ tags:
       CaseService is the case (affaire) component of the Goéland POC. Every RPC carries a
       google.api.http annotation so Vanguard also exposes it as REST/JSON; the
       Connect/gRPC path /goeland.v1.CaseService/<Method> stays available.
+  - name: TaskService
+    description: |-
+      TaskService manages the tasks of the Goéland POC cases. Every RPC carries a
+      google.api.http annotation so Vanguard also exposes it as REST/JSON; the
+      Connect/gRPC path /goeland.v1.TaskService/<Method> stays available.
+      Mutations fail with FAILED_PRECONDITION when the case is closed, locked or
+      deleted, or when the task status does not allow the move.
+  - name: CirculationService
+    description: |-
+      CirculationService manages the circulations of the Goéland POC cases. Every
+      RPC carries a google.api.http annotation so Vanguard also exposes it as
+      REST/JSON; the Connect/gRPC path /goeland.v1.CirculationService/<Method>
+      stays available. Mutations fail with FAILED_PRECONDITION when the case is
+      closed, locked or deleted, or when the circulation is no longer open.
   - name: DocumentService
     description: |-
       DocumentService is the modern-GED document component of the Goéland POC.
@@ -32,13 +46,6 @@ tags:
       OrgUnitService manages the organizational units of the Goéland POC. Every RPC
       carries a google.api.http annotation so Vanguard also exposes it as
       REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
-  - name: TaskService
-    description: |-
-      TaskService manages the tasks of the Goéland POC cases. Every RPC carries a
-      google.api.http annotation so Vanguard also exposes it as REST/JSON; the
-      Connect/gRPC path /goeland.v1.TaskService/<Method> stays available.
-      Mutations fail with FAILED_PRECONDITION when the case is closed, locked or
-      deleted, or when the task status does not allow the move.
   - name: ThingService
     description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
   - name: TimelineService
@@ -408,6 +415,54 @@ paths:
           type: string
       tags:
         - CaseService
+  /api/cases/{caseId}/circulations:
+    get:
+      summary: List the circulations of a case. Requires goeland:read.
+      operationId: ListCaseCirculations
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListCaseCirculationsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+      tags:
+        - CirculationService
+    post:
+      summary: |-
+        Send an open case to recipients: the first step's tasks are created at once.
+        Requires goeland:write; writes CIRCULATION_CREATED and a SYSTEM timeline entry.
+      operationId: CreateCirculation
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateCirculationResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CirculationServiceCreateCirculationBody'
+      tags:
+        - CirculationService
   /api/cases/{caseId}/tasks:
     get:
       summary: List the tasks of a case. Requires goeland:read.
@@ -700,6 +755,84 @@ paths:
             $ref: '#/definitions/CaseServiceTransitionCaseBody'
       tags:
         - CaseService
+  /api/circulation-recipients/{recipientId}/respond:
+    post:
+      summary: |-
+        Record the answer of a recipient: completes its task, writes a RESPONSE
+        timeline entry, opens the next step or completes the circulation.
+        Requires goeland:write; writes CIRCULATION_RESPONDED.
+      operationId: RespondToCirculation
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RespondToCirculationResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: recipientId
+          description: recipient_id is the recipient UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CirculationServiceRespondToCirculationBody'
+      tags:
+        - CirculationService
+  /api/circulations/{id}:
+    get:
+      summary: Retrieve a circulation with its recipients. Requires goeland:read.
+      operationId: GetCirculation
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetCirculationResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the circulation UUID.
+          in: path
+          required: true
+          type: string
+      tags:
+        - CirculationService
+  /api/circulations/{id}/cancel:
+    post:
+      summary: |-
+        Cancel an open circulation and its open tasks. Requires goeland:write;
+        writes CIRCULATION_CANCELLED and a SYSTEM timeline entry.
+      operationId: CancelCirculation
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CancelCirculationResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the circulation UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CirculationServiceCancelCirculationBody'
+      tags:
+        - CirculationService
   /api/document-types:
     get:
       summary: |-
@@ -2831,6 +2964,47 @@ definitions:
     description: |-
       UpdateCaseTypeRequest changes a case type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  CirculationServiceCancelCirculationBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the required justification (1-2000 characters).
+    description: CancelCirculationRequest stops an open circulation.
+    required:
+      - reason
+  CirculationServiceCreateCirculationBody:
+    type: object
+    properties:
+      title:
+        type: string
+        description: title names the circulation (1-500 characters).
+      message:
+        type: string
+        description: message is the request sent to the recipients (at most 4000 characters).
+      dueAt:
+        type: string
+        format: date-time
+        description: due_at is the optional deadline of the answers (also the recipients' task deadline).
+      recipients:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CirculationRecipientInput'
+        description: recipients are 1 to 50 distinct users or units.
+    description: CreateCirculationRequest sends an open case to recipients.
+    required:
+      - title
+  CirculationServiceRespondToCirculationBody:
+    type: object
+    properties:
+      response:
+        $ref: '#/definitions/v1CirculationResponse'
+        description: response is the answer.
+      text:
+        type: string
+        description: text details the answer (at most 4000 characters); required for COMMENT and NEED_MORE_INFO.
+    description: RespondToCirculationRequest records the answer of a recipient whose step is open.
   CoreServiceAssignBusinessRefBody:
     type: object
     properties:
@@ -3673,6 +3847,16 @@ definitions:
     description: |-
       BusinessRefRequest asks for a business reference on a subject: an explicit
       value or a server-allocated one. A subject keeps its first reference.
+  v1CancelCirculationResponse:
+    type: object
+    properties:
+      circulation:
+        $ref: '#/definitions/v1Circulation'
+        description: circulation is the cancelled circulation (its open tasks are cancelled).
+      cancelEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: cancel_event is the CIRCULATION_CANCELLED audit event.
+    description: CancelCirculationResponse returns the cancelled circulation.
   v1CancelTaskResponse:
     type: object
     properties:
@@ -3788,6 +3972,170 @@ definitions:
       Types are seeded reference data; a case's type is fixed at creation.
     required:
       - code
+  v1Circulation:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the circulation UUID.
+      caseId:
+        type: string
+        description: case_id is the case the circulation belongs to.
+      title:
+        type: string
+        description: title names the circulation (1-500 characters).
+      message:
+        type: string
+        description: message is the request sent to the recipients (at most 4000 characters).
+      dueAt:
+        type: string
+        format: date-time
+        description: due_at is the deadline of the answers; absent when none.
+      overdue:
+        type: boolean
+        description: overdue reports an open circulation past its deadline (answers are still accepted).
+        readOnly: true
+      status:
+        $ref: '#/definitions/v1CirculationStatus'
+        description: status is the lifecycle state.
+      currentStep:
+        type: integer
+        format: int32
+        description: current_step is the open step (the last one once completed).
+      stepCount:
+        type: integer
+        format: int32
+        description: step_count is the number of steps.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the creation time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who sent the circulation.
+      completedAt:
+        type: string
+        format: date-time
+        description: completed_at is set once every recipient answered.
+        readOnly: true
+      cancelledAt:
+        type: string
+        format: date-time
+        description: cancelled_at is set when the circulation was cancelled.
+        readOnly: true
+      cancelledBy:
+        type: string
+        description: cancelled_by is the operator who cancelled it.
+      cancellationReason:
+        type: string
+        description: cancellation_reason is the justification of the cancellation.
+      recipients:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CirculationRecipient'
+        description: recipients are the recipients by step then label.
+    description: Circulation sends a case to recipients for their answer.
+  v1CirculationRecipient:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the recipient UUID (the target of RespondToCirculation).
+      step:
+        type: integer
+        format: int32
+        description: step is the recipient's step (1 first); recipients of a step answer in parallel.
+      assigneeUserId:
+        type: string
+        description: assignee_user_id is the internal user; empty when a unit is the recipient.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id is the org unit; empty when a user is the recipient.
+      assigneeLabel:
+        type: string
+        description: assignee_label is the recipient's display name.
+        readOnly: true
+      taskId:
+        type: string
+        description: task_id is the recipient's task; empty until its step opens.
+      taskStatus:
+        $ref: '#/definitions/v1TaskStatus'
+        description: task_status is the status of the recipient's task, when it exists.
+        readOnly: true
+      awaiting:
+        type: boolean
+        description: awaiting reports a recipient whose step is open and who has not answered.
+        readOnly: true
+      response:
+        $ref: '#/definitions/v1CirculationResponse'
+        description: response is the answer; UNSPECIFIED until given.
+      responseText:
+        type: string
+        description: response_text is the text of the answer.
+      respondedAt:
+        type: string
+        format: date-time
+        description: responded_at is when the answer was recorded.
+        readOnly: true
+      respondedBy:
+        type: string
+        description: responded_by is the operator who recorded the answer.
+      responseEntryId:
+        type: string
+        description: response_entry_id is the RESPONSE timeline entry of the answer.
+    description: CirculationRecipient is one recipient of a circulation and its answer.
+  v1CirculationRecipientInput:
+    type: object
+    properties:
+      step:
+        type: integer
+        format: int32
+        description: |-
+          step is the recipient's step (1 or more); 0 means 1. Steps are renumbered
+          from 1 in their order, so 1, 3, 3 becomes 1, 2, 2.
+      assigneeUserId:
+        type: string
+        description: assignee_user_id is an internal user (operator id); exclusive with assignee_org_unit_id.
+      assigneeOrgUnitId:
+        type: string
+        description: assignee_org_unit_id is a live org unit; exclusive with assignee_user_id.
+    description: 'CirculationRecipientInput is a recipient of a new circulation: one user or one unit.'
+  v1CirculationResponse:
+    type: string
+    enum:
+      - CIRCULATION_RESPONSE_UNSPECIFIED
+      - CIRCULATION_RESPONSE_FAVORABLE
+      - CIRCULATION_RESPONSE_UNFAVORABLE
+      - CIRCULATION_RESPONSE_COMMENT
+      - CIRCULATION_RESPONSE_NOT_CONCERNED
+      - CIRCULATION_RESPONSE_NEED_MORE_INFO
+    default: CIRCULATION_RESPONSE_UNSPECIFIED
+    description: |-
+      CirculationResponse is the answer of a recipient (v2 §29).
+
+       - CIRCULATION_RESPONSE_UNSPECIFIED: CIRCULATION_RESPONSE_UNSPECIFIED is the zero value: not answered yet.
+       - CIRCULATION_RESPONSE_FAVORABLE: CIRCULATION_RESPONSE_FAVORABLE is a favourable opinion.
+       - CIRCULATION_RESPONSE_UNFAVORABLE: CIRCULATION_RESPONSE_UNFAVORABLE is an unfavourable opinion.
+       - CIRCULATION_RESPONSE_COMMENT: CIRCULATION_RESPONSE_COMMENT is a remark without an opinion.
+       - CIRCULATION_RESPONSE_NOT_CONCERNED: CIRCULATION_RESPONSE_NOT_CONCERNED means the recipient is not concerned.
+       - CIRCULATION_RESPONSE_NEED_MORE_INFO: CIRCULATION_RESPONSE_NEED_MORE_INFO asks for more information.
+  v1CirculationStatus:
+    type: string
+    enum:
+      - CIRCULATION_STATUS_UNSPECIFIED
+      - CIRCULATION_STATUS_OPEN
+      - CIRCULATION_STATUS_COMPLETED
+      - CIRCULATION_STATUS_CANCELLED
+    default: CIRCULATION_STATUS_UNSPECIFIED
+    description: |-
+      CirculationStatus is the lifecycle state of a circulation.
+
+       - CIRCULATION_STATUS_UNSPECIFIED: CIRCULATION_STATUS_UNSPECIFIED is the zero value; never stored.
+       - CIRCULATION_STATUS_OPEN: CIRCULATION_STATUS_OPEN is a circulation waiting for responses.
+       - CIRCULATION_STATUS_COMPLETED: CIRCULATION_STATUS_COMPLETED is a circulation every recipient answered.
+       - CIRCULATION_STATUS_CANCELLED: CIRCULATION_STATUS_CANCELLED is a circulation stopped with a reason.
   v1CompleteTaskResponse:
     type: object
     properties:
@@ -4007,6 +4355,16 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_CREATED entry of the reference change log.
     description: CreateCaseTypeResponse returns the new case type and its log entry.
+  v1CreateCirculationResponse:
+    type: object
+    properties:
+      circulation:
+        $ref: '#/definitions/v1Circulation'
+        description: circulation is the created circulation, its first step open.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the CIRCULATION_CREATED audit event (on the case subject).
+    description: CreateCirculationResponse returns the new circulation.
   v1CreateDocumentRequest:
     type: object
     properties:
@@ -4732,6 +5090,13 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetCaseResponse returns a case and the requested context.
+  v1GetCirculationResponse:
+    type: object
+    properties:
+      circulation:
+        $ref: '#/definitions/v1Circulation'
+        description: circulation is the circulation.
+    description: GetCirculationResponse returns the circulation with its recipients.
   v1GetCurrentUserResponse:
     type: object
     properties:
@@ -4914,6 +5279,16 @@ definitions:
         format: int32
         description: total_size is the number of matching events across all pages.
     description: ListAuditEventsResponse is one page of audit events.
+  v1ListCaseCirculationsResponse:
+    type: object
+    properties:
+      circulations:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1Circulation'
+        description: circulations are the case circulations, newest first.
+    description: ListCaseCirculationsResponse returns the circulations with their recipients.
   v1ListCaseTasksResponse:
     type: object
     properties:
@@ -5490,6 +5865,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: status_event is the TASK_REOPENED audit event.
     description: ReopenTaskResponse returns the reopened task.
+  v1RespondToCirculationResponse:
+    type: object
+    properties:
+      circulation:
+        $ref: '#/definitions/v1Circulation'
+        description: circulation is the circulation (possibly with its next step open, or completed).
+      responseEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: response_event is the CIRCULATION_RESPONDED audit event.
+    description: RespondToCirculationResponse returns the circulation after the answer.
   v1Salutation:
     type: string
     enum:
