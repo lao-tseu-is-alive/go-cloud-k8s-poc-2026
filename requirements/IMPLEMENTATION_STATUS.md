@@ -60,7 +60,9 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo is now complete end to end; in addition **Actor, Case and Thing are now done** (persons/organizations creatable and
+The v2 §50 scenario is now played end to end over HTTP by `cmd/goeland-server/scenario_test.go`
+(steps 1–25 and 28–30; 26–27 AI proposal and 31 ExportCase are logged as skipped until GLD-030 /
+GLD-029). The v1 16-step demo is complete too; in addition **Actor, Case and Thing are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
 lifecycle → edit blocked when locked → audit):
@@ -345,6 +347,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   Env-gated on
   `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
   `go test ./...` stays green without a database.
+- ✅ **End-to-end scenario** (`cmd/goeland-server/scenario_test.go`, 2026-09-29): v2 §50 over HTTP
+  against the real handler (REST JSON through Vanguard, dev tokens), covering authentication (401),
+  scopes (403 without `goeland:admin`), protovalidate (400), error mapping (FAILED_PRECONDITION on
+  a closed case) and the module wiring. Combined coverage with the integration tests: 62.6%.
 - ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /
   security) — add alongside each new domain, following the `pkg/integration` pattern.
 - 🟡 Frontend has no unit tests yet; the gate is `bun run type-check` + `bun run lint`

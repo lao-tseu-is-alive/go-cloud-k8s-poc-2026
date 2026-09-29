@@ -198,6 +198,9 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   pgcrypto/pg_trgm/unaccent):
   `GOELAND_TEST_DATABASE_URL='postgres://…?sslmode=disable' go test ./pkg/integration/...`.
   Do not point them at a working database — they migrate and write test rows.
+  The same variable enables the **end-to-end scenario** `cmd/goeland-server/scenario_test.go`
+  (spec v2 §50 over HTTP against the real handler): run it with
+  `go test ./cmd/goeland-server -run TestScenarioV2` after every slice that changes an API.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,
