@@ -1,0 +1,460 @@
+// Goéland POC - Case timeline (suivis, spec v2 §26-27).
+//
+// Proto-first definition for TimelineService + supporting messages. The
+// timeline is the chronological business history of a case: comments,
+// opinions, decisions, requests, responses, validations and system facts. An
+// entry belongs to its case (it is not a subject of its own) and its audit
+// events are written on the CASE subject in the same transaction.
+//
+// Only a draft entry changes. A validated or locked entry is immutable and a
+// correction is a new entry pointing at the entry it corrects; a draft set
+// aside is withdrawn, never deleted. A closed case accepts no timeline change.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/struct.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// TIMELINE ENUMS / MESSAGES
+// =============================================
+
+// TimelineEntryType is the business nature of a timeline entry (v2 §26).
+enum TimelineEntryType {
+  // TIMELINE_ENTRY_TYPE_UNSPECIFIED is the zero value; never stored, "any type" in filters.
+  TIMELINE_ENTRY_TYPE_UNSPECIFIED = 0;
+  // TIMELINE_ENTRY_TYPE_COMMENT is a free follow-up note.
+  TIMELINE_ENTRY_TYPE_COMMENT = 1;
+  // TIMELINE_ENTRY_TYPE_OPINION is an opinion (préavis) given on the case.
+  TIMELINE_ENTRY_TYPE_OPINION = 2;
+  // TIMELINE_ENTRY_TYPE_DECISION is a business decision.
+  TIMELINE_ENTRY_TYPE_DECISION = 3;
+  // TIMELINE_ENTRY_TYPE_REQUEST is a request sent or received (e.g. missing documents).
+  TIMELINE_ENTRY_TYPE_REQUEST = 4;
+  // TIMELINE_ENTRY_TYPE_RESPONSE is a response to a request.
+  TIMELINE_ENTRY_TYPE_RESPONSE = 5;
+  // TIMELINE_ENTRY_TYPE_VALIDATION records a business validation act.
+  TIMELINE_ENTRY_TYPE_VALIDATION = 6;
+  // TIMELINE_ENTRY_TYPE_SYSTEM is a fact written by the server (e.g. a case
+  // status change); never created through the API, always locked.
+  TIMELINE_ENTRY_TYPE_SYSTEM = 7;
+  // TIMELINE_ENTRY_TYPE_AI_PROPOSAL is a proposal awaiting human validation;
+  // reserved for the AI component (GLD-030) and rejected until then.
+  TIMELINE_ENTRY_TYPE_AI_PROPOSAL = 8;
+}
+
+// TimelineEntryStatus is the lifecycle state of a timeline entry. Only a DRAFT
+// changes; every other state is immutable.
+enum TimelineEntryStatus {
+  // TIMELINE_ENTRY_STATUS_UNSPECIFIED is the zero value; never stored.
+  TIMELINE_ENTRY_STATUS_UNSPECIFIED = 0;
+  // TIMELINE_ENTRY_STATUS_DRAFT is an editable entry.
+  TIMELINE_ENTRY_STATUS_DRAFT = 1;
+  // TIMELINE_ENTRY_STATUS_VALIDATED is an entry endorsed by an operator.
+  TIMELINE_ENTRY_STATUS_VALIDATED = 2;
+  // TIMELINE_ENTRY_STATUS_LOCKED is an entry frozen as is, without endorsement.
+  TIMELINE_ENTRY_STATUS_LOCKED = 3;
+  // TIMELINE_ENTRY_STATUS_WITHDRAWN is a draft set aside; kept, hidden by default.
+  TIMELINE_ENTRY_STATUS_WITHDRAWN = 4;
+}
+
+// TimelineVisibility is the intended audience of an entry. It is stored and
+// displayed but not enforced until the authorization engine (GLD-017).
+enum TimelineVisibility {
+  // TIMELINE_VISIBILITY_UNSPECIFIED is the zero value; CASE_PARTICIPANTS on create.
+  TIMELINE_VISIBILITY_UNSPECIFIED = 0;
+  // TIMELINE_VISIBILITY_CASE_PARTICIPANTS is visible to everyone taking part in the case.
+  TIMELINE_VISIBILITY_CASE_PARTICIPANTS = 1;
+  // TIMELINE_VISIBILITY_INTERNAL is visible to the administration only.
+  TIMELINE_VISIBILITY_INTERNAL = 2;
+  // TIMELINE_VISIBILITY_RESTRICTED is visible to a restricted circle only.
+  TIMELINE_VISIBILITY_RESTRICTED = 3;
+}
+
+// TimelineDocumentLink is a document cited by a timeline entry. The link
+// targets the logical document; the version current at validation is pinned.
+message TimelineDocumentLink {
+  // id is the link UUID.
+  string id = 1;
+  // document_id is the linked document (a DOCUMENT subject).
+  string document_id = 2;
+  // document_label is the document's display label.
+  string document_label = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // document_version_id is the version pinned when the entry was validated or
+  // locked; empty while the entry is a draft or when the document had no version.
+  string document_version_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // document_version_no is the pinned version number; 0 when none is pinned.
+  int32 document_version_no = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_at is when the document was linked.
+  google.protobuf.Timestamp created_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator who linked the document.
+  string created_by = 7;
+}
+
+// TimelineEntry is one element of a case timeline.
+message TimelineEntry {
+  // id is the entry UUID.
+  string id = 1;
+  // case_id is the case the entry belongs to.
+  string case_id = 2;
+  // entry_type is the business nature of the entry.
+  TimelineEntryType entry_type = 3;
+  // status is the lifecycle state.
+  TimelineEntryStatus status = 4;
+  // title is an optional headline (at most 500 characters).
+  string title = 5;
+  // body is the content (1-20000 characters).
+  string body = 6;
+  // visibility is the intended audience (not enforced before GLD-017).
+  TimelineVisibility visibility = 7;
+  // occurred_at is the business date of the event; the timeline is ordered on it.
+  google.protobuf.Timestamp occurred_at = 8;
+  // corrects_entry_id is the immutable entry this one corrects; empty otherwise.
+  string corrects_entry_id = 9;
+  // corrected_by_entry_id is the live (not withdrawn) entry correcting this
+  // one; empty when it is not corrected.
+  string corrected_by_entry_id = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // documents are the live document links, oldest first.
+  repeated TimelineDocumentLink documents = 11;
+  // created_at is the recording time.
+  google.protobuf.Timestamp created_at = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // created_by is the operator (or "system") who recorded the entry.
+  string created_by = 13;
+  // updated_at is the last draft change; absent when never changed.
+  google.protobuf.Timestamp updated_at = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // updated_by is the operator of the last draft change.
+  string updated_by = 15;
+  // validated_at is set when the entry was validated.
+  google.protobuf.Timestamp validated_at = 16 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // validated_by is the operator who validated the entry.
+  string validated_by = 17;
+  // locked_at is set when the entry was locked.
+  google.protobuf.Timestamp locked_at = 18 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // locked_by is the operator who locked the entry.
+  string locked_by = 19;
+  // withdrawn_at is set when the draft was withdrawn.
+  google.protobuf.Timestamp withdrawn_at = 20 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // withdrawn_by is the operator who withdrew the draft.
+  string withdrawn_by = 21;
+  // withdrawal_reason is the justification given when withdrawing.
+  string withdrawal_reason = 22;
+  // metadata holds secondary structured data; for a SYSTEM entry, the event
+  // behind it (e.g. {"event":"CASE_STATUS_CHANGED","from":"OPEN","to":"CLOSED"})
+  // so clients can render it in their language.
+  google.protobuf.Struct metadata = 23 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// =============================================
+// REQUEST / RESPONSE MESSAGES
+// =============================================
+
+// ListTimelineEntriesRequest pages through a case timeline, most recent
+// occurred_at first.
+message ListTimelineEntriesRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // entry_types restricts the result to these types; empty means any type.
+  repeated TimelineEntryType entry_types = 2 [(buf.validate.field).repeated = {
+    max_items: 8
+    items: {
+      enum: {
+        defined_only: true
+        not_in: [0]
+      }
+    }
+  }];
+  // include_withdrawn also returns withdrawn drafts.
+  bool include_withdrawn = 3;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 4 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 5 [(buf.validate.field).string.max_len = 1024];
+}
+
+// ListTimelineEntriesResponse is one page of timeline entries.
+message ListTimelineEntriesResponse {
+  // entries are the entries of this page.
+  repeated TimelineEntry entries = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching entries across all pages.
+  int32 total_size = 3;
+  // draft_count is the number of drafts of the case, whatever the filters (a
+  // case with drafts cannot be closed).
+  int32 draft_count = 4;
+}
+
+// CreateTimelineEntryRequest adds a draft entry to an open (not closed) case.
+message CreateTimelineEntryRequest {
+  // case_id is the case UUID.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // entry_type is the nature of the entry; SYSTEM and AI_PROPOSAL are rejected.
+  TimelineEntryType entry_type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // title is an optional headline (at most 500 characters).
+  string title = 3 [(buf.validate.field).string.max_len = 500];
+  // body is the required content (1-20000 characters); surrounding whitespace is trimmed.
+  string body = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 20000
+  ];
+  // visibility is the intended audience; UNSPECIFIED means CASE_PARTICIPANTS.
+  TimelineVisibility visibility = 5 [(buf.validate.field).enum.defined_only = true];
+  // occurred_at is the business date of the event; absent means now. It may
+  // not lie in the future.
+  google.protobuf.Timestamp occurred_at = 6;
+  // corrects_entry_id is an immutable (validated or locked) entry of the same
+  // case that this entry corrects; it may be corrected only once.
+  string corrects_entry_id = 7 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // document_ids are documents cited by the entry (at most 50); each one is
+  // also linked to the case (CASE_HAS_DOCUMENT) when it is not already.
+  repeated string document_ids = 8 [(buf.validate.field).repeated = {
+    max_items: 50
+    unique: true
+    items: {
+      string: {uuid: true}
+    }
+  }];
+}
+
+// CreateTimelineEntryResponse returns the new draft.
+message CreateTimelineEntryResponse {
+  // entry is the created draft with its documents.
+  TimelineEntry entry = 1;
+  // created_event is the TIMELINE_ENTRY_ADDED audit event (on the case subject).
+  AuditEvent created_event = 2;
+}
+
+// GetTimelineEntryRequest retrieves one entry.
+message GetTimelineEntryRequest {
+  // id is the entry UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetTimelineEntryResponse returns the entry.
+message GetTimelineEntryResponse {
+  // entry is the entry with its documents.
+  TimelineEntry entry = 1;
+}
+
+// UpdateTimelineEntryRequest replaces the content of a draft. Every field
+// replaces the stored value, except occurred_at which is kept when absent.
+message UpdateTimelineEntryRequest {
+  // id is the draft entry UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // entry_type is the nature of the entry; SYSTEM and AI_PROPOSAL are rejected.
+  TimelineEntryType entry_type = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // title replaces the headline (at most 500 characters).
+  string title = 3 [(buf.validate.field).string.max_len = 500];
+  // body replaces the content (1-20000 characters).
+  string body = 4 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 20000
+  ];
+  // visibility replaces the audience; UNSPECIFIED means CASE_PARTICIPANTS.
+  TimelineVisibility visibility = 5 [(buf.validate.field).enum.defined_only = true];
+  // occurred_at replaces the business date when present; never in the future.
+  google.protobuf.Timestamp occurred_at = 6;
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 7 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateTimelineEntryResponse returns the updated draft.
+message UpdateTimelineEntryResponse {
+  // entry is the updated draft.
+  TimelineEntry entry = 1;
+  // update_event is the TIMELINE_ENTRY_UPDATED audit event.
+  AuditEvent update_event = 2;
+}
+
+// ValidateTimelineEntryRequest endorses a draft, making it immutable.
+message ValidateTimelineEntryRequest {
+  // id is the draft entry UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// ValidateTimelineEntryResponse returns the validated entry.
+message ValidateTimelineEntryResponse {
+  // entry is the validated entry, with its document versions pinned.
+  TimelineEntry entry = 1;
+  // validate_event is the TIMELINE_ENTRY_VALIDATED audit event.
+  AuditEvent validate_event = 2;
+}
+
+// LockTimelineEntryRequest freezes a draft as is, without endorsing it.
+message LockTimelineEntryRequest {
+  // id is the draft entry UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// LockTimelineEntryResponse returns the locked entry.
+message LockTimelineEntryResponse {
+  // entry is the locked entry, with its document versions pinned.
+  TimelineEntry entry = 1;
+  // lock_event is the TIMELINE_ENTRY_LOCKED audit event.
+  AuditEvent lock_event = 2;
+}
+
+// WithdrawTimelineEntryRequest sets a draft aside (non-destructive).
+message WithdrawTimelineEntryRequest {
+  // id is the draft entry UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the required justification (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// WithdrawTimelineEntryResponse returns the withdrawn entry.
+message WithdrawTimelineEntryResponse {
+  // entry is the withdrawn entry.
+  TimelineEntry entry = 1;
+  // withdraw_event is the TIMELINE_ENTRY_WITHDRAWN audit event.
+  AuditEvent withdraw_event = 2;
+}
+
+// LinkTimelineDocumentRequest cites a document in a draft entry.
+message LinkTimelineDocumentRequest {
+  // entry_id is the draft entry UUID.
+  string entry_id = 1 [(buf.validate.field).string.uuid = true];
+  // document_id is the document to cite; it is also linked to the case
+  // (CASE_HAS_DOCUMENT) when it is not already.
+  string document_id = 2 [(buf.validate.field).string.uuid = true];
+}
+
+// LinkTimelineDocumentResponse returns the entry with the new link.
+message LinkTimelineDocumentResponse {
+  // entry is the draft with its documents.
+  TimelineEntry entry = 1;
+  // link_event is the TIMELINE_DOCUMENT_LINKED audit event.
+  AuditEvent link_event = 2;
+}
+
+// UnlinkTimelineDocumentRequest removes a document from a draft entry; the
+// link is kept as history and the case relationship is left untouched.
+message UnlinkTimelineDocumentRequest {
+  // entry_id is the draft entry UUID.
+  string entry_id = 1 [(buf.validate.field).string.uuid = true];
+  // document_id is the cited document to remove.
+  string document_id = 2 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded on the audit event (at most 2000 characters).
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UnlinkTimelineDocumentResponse returns the entry without the link.
+message UnlinkTimelineDocumentResponse {
+  // entry is the draft with its remaining documents.
+  TimelineEntry entry = 1;
+  // unlink_event is the TIMELINE_DOCUMENT_UNLINKED audit event.
+  AuditEvent unlink_event = 2;
+}
+
+// =============================================
+// TIMELINE SERVICE
+// =============================================
+
+// TimelineService is the case timeline component of the Goéland POC. Every RPC
+// carries a google.api.http annotation so Vanguard also exposes it as
+// REST/JSON; the Connect/gRPC path /goeland.v1.TimelineService/<Method> stays
+// available. Mutations fail with FAILED_PRECONDITION when the case is closed,
+// locked or deleted, or when the entry is no longer a draft.
+service TimelineService {
+  // List a case timeline, most recent business date first.
+  // Requires goeland:read; NOT_FOUND when the case does not exist.
+  rpc ListTimelineEntries(ListTimelineEntriesRequest) returns (ListTimelineEntriesResponse) {
+    option (google.api.http) = {get: "/api/cases/{case_id}/timeline"};
+  }
+
+  // Add a draft entry (optionally a correction, optionally citing documents).
+  // Requires goeland:write; writes TIMELINE_ENTRY_ADDED on the case.
+  rpc CreateTimelineEntry(CreateTimelineEntryRequest) returns (CreateTimelineEntryResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/timeline"
+      body: "*"
+    };
+  }
+
+  // Retrieve one entry with its documents.
+  // Requires goeland:read; NOT_FOUND when the entry does not exist.
+  rpc GetTimelineEntry(GetTimelineEntryRequest) returns (GetTimelineEntryResponse) {
+    option (google.api.http) = {get: "/api/timeline-entries/{id}"};
+  }
+
+  // Replace the content of a draft.
+  // Requires goeland:write; writes TIMELINE_ENTRY_UPDATED.
+  rpc UpdateTimelineEntry(UpdateTimelineEntryRequest) returns (UpdateTimelineEntryResponse) {
+    option (google.api.http) = {
+      patch: "/api/timeline-entries/{id}"
+      body: "*"
+    };
+  }
+
+  // Validate a draft: it becomes immutable and the current version of each
+  // cited document is pinned. Requires goeland:write; writes TIMELINE_ENTRY_VALIDATED.
+  rpc ValidateTimelineEntry(ValidateTimelineEntryRequest) returns (ValidateTimelineEntryResponse) {
+    option (google.api.http) = {
+      post: "/api/timeline-entries/{id}/validate"
+      body: "*"
+    };
+  }
+
+  // Lock a draft as is: it becomes immutable without endorsement and the
+  // current document versions are pinned. Requires goeland:write; writes TIMELINE_ENTRY_LOCKED.
+  rpc LockTimelineEntry(LockTimelineEntryRequest) returns (LockTimelineEntryResponse) {
+    option (google.api.http) = {
+      post: "/api/timeline-entries/{id}/lock"
+      body: "*"
+    };
+  }
+
+  // Withdraw a draft (kept, hidden by default).
+  // Requires goeland:write; writes TIMELINE_ENTRY_WITHDRAWN.
+  rpc WithdrawTimelineEntry(WithdrawTimelineEntryRequest) returns (WithdrawTimelineEntryResponse) {
+    option (google.api.http) = {
+      post: "/api/timeline-entries/{id}/withdraw"
+      body: "*"
+    };
+  }
+
+  // Cite a document in a draft. Requires goeland:write; writes
+  // TIMELINE_DOCUMENT_LINKED; ALREADY_EXISTS when the document is already cited.
+  rpc LinkTimelineDocument(LinkTimelineDocumentRequest) returns (LinkTimelineDocumentResponse) {
+    option (google.api.http) = {
+      post: "/api/timeline-entries/{entry_id}/documents"
+      body: "*"
+    };
+  }
+
+  // Remove a document from a draft. Requires goeland:write; writes
+  // TIMELINE_DOCUMENT_UNLINKED; NOT_FOUND when the document is not cited.
+  rpc UnlinkTimelineDocument(UnlinkTimelineDocumentRequest) returns (UnlinkTimelineDocumentResponse) {
+    option (google.api.http) = {delete: "/api/timeline-entries/{entry_id}/documents/{document_id}"};
+  }
+}

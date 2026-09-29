@@ -13,6 +13,8 @@
   // the chosen subject's id, so nobody has to paste a UUID.
   const props = defineProps<{ kind: SubjectKind, excludeId?: string, label?: string }>()
   const model = defineModel<string | undefined>()
+  // picked carries the whole chosen subject, for callers that show its label.
+  const emit = defineEmits<{ picked: [subject: SubjectRef] }>()
 
   const { t } = useI18n()
   const { report } = useApiErrors()
@@ -62,6 +64,10 @@
     if (picked && term === picked.displayLabel) return
     clearTimeout(timer)
     timer = setTimeout(() => void run(term ?? ''), DEBOUNCE_MS)
+  })
+  watch(model, id => {
+    const picked = items.value.find(s => s.id === id)
+    if (picked) emit('picked', picked)
   })
   watch(() => props.kind, () => {
     model.value = undefined

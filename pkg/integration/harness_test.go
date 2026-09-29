@@ -19,6 +19,7 @@ import (
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
 
 // testDatabaseURLEnv names the DSN env var that enables the DB integration tests.
@@ -34,6 +35,8 @@ type testEnv struct {
 	actorSvc *actor.Service
 	caseSvc  *casefile.Service
 	thingSvc *thing.Service
+	// timelineSvc is the case timeline service.
+	timelineSvc *timeline.Service
 	// blobDir is the per-test directory holding uploaded bytes.
 	blobDir string
 }
@@ -125,7 +128,16 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build thing service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, blobDir: store.Root()}
+	timelineRepo, err := timeline.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("build timeline repository: %v", err)
+	}
+	timelineSvc, err := timeline.NewService(timelineRepo, log)
+	if err != nil {
+		t.Fatalf("build timeline service: %v", err)
+	}
+
+	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, timelineSvc: timelineSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

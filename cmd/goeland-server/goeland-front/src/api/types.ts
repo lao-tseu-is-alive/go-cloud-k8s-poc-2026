@@ -629,3 +629,105 @@ export interface SearchThingsResponse {
   nextPageToken?: string
   totalSize?: number
 }
+
+// ---------------------------------------------------------------------------
+// Case timeline (TimelineService, timeline.proto)
+// ---------------------------------------------------------------------------
+
+export type TimelineEntryType
+  = | 'TIMELINE_ENTRY_TYPE_UNSPECIFIED'
+    | 'TIMELINE_ENTRY_TYPE_COMMENT'
+    | 'TIMELINE_ENTRY_TYPE_OPINION'
+    | 'TIMELINE_ENTRY_TYPE_DECISION'
+    | 'TIMELINE_ENTRY_TYPE_REQUEST'
+    | 'TIMELINE_ENTRY_TYPE_RESPONSE'
+    | 'TIMELINE_ENTRY_TYPE_VALIDATION'
+    | 'TIMELINE_ENTRY_TYPE_SYSTEM'
+    | 'TIMELINE_ENTRY_TYPE_AI_PROPOSAL'
+
+export type TimelineEntryStatus
+  = | 'TIMELINE_ENTRY_STATUS_UNSPECIFIED'
+    | 'TIMELINE_ENTRY_STATUS_DRAFT'
+    | 'TIMELINE_ENTRY_STATUS_VALIDATED'
+    | 'TIMELINE_ENTRY_STATUS_LOCKED'
+    | 'TIMELINE_ENTRY_STATUS_WITHDRAWN'
+
+export type TimelineVisibility
+  = | 'TIMELINE_VISIBILITY_UNSPECIFIED'
+    | 'TIMELINE_VISIBILITY_CASE_PARTICIPANTS'
+    | 'TIMELINE_VISIBILITY_INTERNAL'
+    | 'TIMELINE_VISIBILITY_RESTRICTED'
+
+/** A document cited by an entry; the version is pinned once the entry leaves the draft state. */
+export interface TimelineDocumentLink {
+  id: string
+  documentId: string
+  documentLabel?: string
+  /** Empty while the entry is a draft. */
+  documentVersionId?: string
+  /** 0 (absent in JSON) when no version is pinned. */
+  documentVersionNo?: number
+  createdAt?: string
+  createdBy?: string
+}
+
+export interface TimelineEntry {
+  id: string
+  caseId: string
+  entryType?: TimelineEntryType
+  status?: TimelineEntryStatus
+  title?: string
+  body: string
+  visibility?: TimelineVisibility
+  /** Business date of the event; the timeline is ordered on it. */
+  occurredAt?: string
+  correctsEntryId?: string
+  correctedByEntryId?: string
+  documents?: TimelineDocumentLink[]
+  createdAt?: string
+  createdBy?: string
+  updatedAt?: string
+  updatedBy?: string
+  validatedAt?: string
+  validatedBy?: string
+  lockedAt?: string
+  lockedBy?: string
+  withdrawnAt?: string
+  withdrawnBy?: string
+  withdrawalReason?: string
+  /** For a SYSTEM entry: { event, from, to, reason } describing the fact. */
+  metadata?: Record<string, unknown>
+}
+
+export interface ListTimelineParams {
+  entryTypes?: TimelineEntryType[]
+  includeWithdrawn?: boolean
+  pageSize?: number
+  pageToken?: string
+}
+
+export interface ListTimelineResponse {
+  entries?: TimelineEntry[]
+  nextPageToken?: string
+  totalSize?: number
+  /** Drafts of the case whatever the filters (0 is absent in JSON). */
+  draftCount?: number
+}
+
+/** Operator-editable content shared by create and update. */
+export interface TimelineEntryContent {
+  entryType: TimelineEntryType
+  title?: string
+  body: string
+  visibility?: TimelineVisibility
+  occurredAt?: string
+}
+
+export interface CreateTimelineEntryRequest extends TimelineEntryContent {
+  correctsEntryId?: string
+  documentIds?: string[]
+}
+
+export interface UpdateTimelineEntryRequest extends TimelineEntryContent {
+  reason?: string
+}

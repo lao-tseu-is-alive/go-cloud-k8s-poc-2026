@@ -1,4 +1,60 @@
 {
+  "timeline": {
+    "empty": "No follow-up yet.",
+    "showWithdrawn": "Show withdrawn",
+    "pinnedVersion": "version {n}",
+    "validatedBy": "Validated on {date} by",
+    "lockedBy": "Locked on {date} by",
+    "updatedAt": "Draft changed on {date}",
+    "withdrawnBy": "Withdrawn on {date}: {reason}",
+    "correctsLink": "Corrects an earlier follow-up",
+    "correctedByLink": "This follow-up was corrected: see the correction",
+    "fields": {
+      "type": "Follow-up type",
+      "occurredAt": "Event date",
+      "occurredAtHint": "Business date (yesterday's call, a letter received…); not in the future.",
+      "recordedAt": "Recorded on {date}",
+      "title": "Title (optional)",
+      "body": "Content",
+      "visibility": "Visibility",
+      "visibilityHint": "Informative: it will be enforced with the authorization engine.",
+      "documents": "Cited documents",
+      "documentsHint": "A cited document is also linked to the case. Its current version is pinned on validation.",
+      "addDocument": "Add a document"
+    },
+    "dialog": {
+      "create": "New follow-up",
+      "edit": "Edit the draft",
+      "correct": "Correct the follow-up",
+      "correctHint": "A validated or locked follow-up never changes: the correction is a new follow-up linked to the original, which stays visible."
+    },
+    "actions": {
+      "add": "Add a follow-up",
+      "edit": "Edit",
+      "validate": "Validate",
+      "lock": "Lock",
+      "withdraw": "Withdraw",
+      "correct": "Correct"
+    },
+    "confirm": {
+      "validate": "A validated follow-up can no longer change; the current version of the cited documents will be pinned.",
+      "lock": "The follow-up will be frozen as is, without endorsement; the current version of the cited documents will be pinned.",
+      "withdraw": "The draft will be removed from the timeline (it is kept). A reason is required."
+    },
+    "messages": {
+      "create": "Follow-up added.",
+      "edit": "Draft saved.",
+      "correct": "Correction added.",
+      "validate": "Follow-up validated.",
+      "lock": "Follow-up locked.",
+      "withdraw": "Draft withdrawn."
+    },
+    "system": {
+      "title": "Status change",
+      "statusChanged": "Case status: {from} → {to}",
+      "reason": "Reason: {reason}"
+    }
+  },
   "app": {
     "title": "Goéland",
     "subtitle": "POC — Document management",
@@ -71,6 +127,7 @@
   },
   "sections": {
     "case": {
+      "timeline": "Follow-ups",
       "summary": "Summary",
       "relationships": "Participants, documents and related subjects"
     },
@@ -386,6 +443,30 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "TimelineVisibility": {
+      "TIMELINE_VISIBILITY_UNSPECIFIED": "Unspecified visibility",
+      "TIMELINE_VISIBILITY_CASE_PARTICIPANTS": "Case participants",
+      "TIMELINE_VISIBILITY_INTERNAL": "Administration only",
+      "TIMELINE_VISIBILITY_RESTRICTED": "Restricted"
+    },
+    "TimelineEntryStatus": {
+      "TIMELINE_ENTRY_STATUS_UNSPECIFIED": "Unspecified status",
+      "TIMELINE_ENTRY_STATUS_DRAFT": "Draft",
+      "TIMELINE_ENTRY_STATUS_VALIDATED": "Validated",
+      "TIMELINE_ENTRY_STATUS_LOCKED": "Locked",
+      "TIMELINE_ENTRY_STATUS_WITHDRAWN": "Withdrawn"
+    },
+    "TimelineEntryType": {
+      "TIMELINE_ENTRY_TYPE_UNSPECIFIED": "Unspecified type",
+      "TIMELINE_ENTRY_TYPE_COMMENT": "Comment",
+      "TIMELINE_ENTRY_TYPE_OPINION": "Opinion",
+      "TIMELINE_ENTRY_TYPE_DECISION": "Decision",
+      "TIMELINE_ENTRY_TYPE_REQUEST": "Request",
+      "TIMELINE_ENTRY_TYPE_RESPONSE": "Response",
+      "TIMELINE_ENTRY_TYPE_VALIDATION": "Validation",
+      "TIMELINE_ENTRY_TYPE_SYSTEM": "System",
+      "TIMELINE_ENTRY_TYPE_AI_PROPOSAL": "AI proposal"
+    },
     "CaseStatus": {
       "CASE_STATUS_UNSPECIFIED": "Unspecified status",
       "CASE_STATUS_OPEN": "Open",
@@ -509,6 +590,7 @@
       "linked": "Relationship created."
     },
     "case": {
+      "draftsBlockClosing": "One follow-up is still a draft: validate, lock or withdraw it before closing. | {count} follow-ups are still drafts: validate, lock or withdraw them before closing.",
       "createSuccess": "Case opened {ref}.",
       "updateSuccess": "Case updated.",
       "statusChanged": "Case status changed.",

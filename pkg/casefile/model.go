@@ -195,6 +195,15 @@ var statusNames = map[Status]string{
 	StatusClosed:      "CLOSED",
 }
 
+// statusLabelsFR are the French labels of the SYSTEM timeline entries written
+// on status changes (clients may render the structured metadata instead).
+var statusLabelsFR = map[Status]string{
+	StatusOpen:       "Ouverte",
+	StatusInProgress: "En cours",
+	StatusSuspended:  "Suspendue",
+	StatusClosed:     "Clôturée",
+}
+
 // String returns the stable status name (e.g. IN_PROGRESS).
 func (s Status) String() string {
 	if name, ok := statusNames[s]; ok {

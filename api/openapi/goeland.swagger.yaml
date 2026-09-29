@@ -29,6 +29,13 @@ tags:
       The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
   - name: ThingService
     description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
+  - name: TimelineService
+    description: |-
+      TimelineService is the case timeline component of the Goéland POC. Every RPC
+      carries a google.api.http annotation so Vanguard also exposes it as
+      REST/JSON; the Connect/gRPC path /goeland.v1.TimelineService/<Method> stays
+      available. Mutations fail with FAILED_PRECONDITION when the case is closed,
+      locked or deleted, or when the entry is no longer a draft.
 consumes:
   - application/json
 produces:
@@ -389,6 +396,103 @@ paths:
           type: string
       tags:
         - CaseService
+  /api/cases/{caseId}/timeline:
+    get:
+      summary: |-
+        List a case timeline, most recent business date first.
+        Requires goeland:read; NOT_FOUND when the case does not exist.
+      operationId: ListTimelineEntries
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListTimelineEntriesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: entryTypes
+          description: |-
+            entry_types restricts the result to these types; empty means any type.
+
+             - TIMELINE_ENTRY_TYPE_UNSPECIFIED: TIMELINE_ENTRY_TYPE_UNSPECIFIED is the zero value; never stored, "any type" in filters.
+             - TIMELINE_ENTRY_TYPE_COMMENT: TIMELINE_ENTRY_TYPE_COMMENT is a free follow-up note.
+             - TIMELINE_ENTRY_TYPE_OPINION: TIMELINE_ENTRY_TYPE_OPINION is an opinion (préavis) given on the case.
+             - TIMELINE_ENTRY_TYPE_DECISION: TIMELINE_ENTRY_TYPE_DECISION is a business decision.
+             - TIMELINE_ENTRY_TYPE_REQUEST: TIMELINE_ENTRY_TYPE_REQUEST is a request sent or received (e.g. missing documents).
+             - TIMELINE_ENTRY_TYPE_RESPONSE: TIMELINE_ENTRY_TYPE_RESPONSE is a response to a request.
+             - TIMELINE_ENTRY_TYPE_VALIDATION: TIMELINE_ENTRY_TYPE_VALIDATION records a business validation act.
+             - TIMELINE_ENTRY_TYPE_SYSTEM: TIMELINE_ENTRY_TYPE_SYSTEM is a fact written by the server (e.g. a case
+            status change); never created through the API, always locked.
+             - TIMELINE_ENTRY_TYPE_AI_PROPOSAL: TIMELINE_ENTRY_TYPE_AI_PROPOSAL is a proposal awaiting human validation;
+            reserved for the AI component (GLD-030) and rejected until then.
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - TIMELINE_ENTRY_TYPE_UNSPECIFIED
+              - TIMELINE_ENTRY_TYPE_COMMENT
+              - TIMELINE_ENTRY_TYPE_OPINION
+              - TIMELINE_ENTRY_TYPE_DECISION
+              - TIMELINE_ENTRY_TYPE_REQUEST
+              - TIMELINE_ENTRY_TYPE_RESPONSE
+              - TIMELINE_ENTRY_TYPE_VALIDATION
+              - TIMELINE_ENTRY_TYPE_SYSTEM
+              - TIMELINE_ENTRY_TYPE_AI_PROPOSAL
+          collectionFormat: multi
+        - name: includeWithdrawn
+          description: include_withdrawn also returns withdrawn drafts.
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - TimelineService
+    post:
+      summary: |-
+        Add a draft entry (optionally a correction, optionally citing documents).
+        Requires goeland:write; writes TIMELINE_ENTRY_ADDED on the case.
+      operationId: CreateTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceCreateTimelineEntryBody'
+      tags:
+        - TimelineService
   /api/cases/{id}:
     get:
       summary: |-
@@ -1717,6 +1821,201 @@ paths:
             $ref: '#/definitions/ThingServiceUpdateThingBody'
       tags:
         - ThingService
+  /api/timeline-entries/{entryId}/documents:
+    post:
+      summary: |-
+        Cite a document in a draft. Requires goeland:write; writes
+        TIMELINE_DOCUMENT_LINKED; ALREADY_EXISTS when the document is already cited.
+      operationId: LinkTimelineDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1LinkTimelineDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: entryId
+          description: entry_id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceLinkTimelineDocumentBody'
+      tags:
+        - TimelineService
+  /api/timeline-entries/{entryId}/documents/{documentId}:
+    delete:
+      summary: |-
+        Remove a document from a draft. Requires goeland:write; writes
+        TIMELINE_DOCUMENT_UNLINKED; NOT_FOUND when the document is not cited.
+      operationId: UnlinkTimelineDocument
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UnlinkTimelineDocumentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: entryId
+          description: entry_id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: documentId
+          description: document_id is the cited document to remove.
+          in: path
+          required: true
+          type: string
+        - name: reason
+          description: reason is the justification recorded on the audit event (at most 2000 characters).
+          in: query
+          required: false
+          type: string
+      tags:
+        - TimelineService
+  /api/timeline-entries/{id}:
+    get:
+      summary: |-
+        Retrieve one entry with its documents.
+        Requires goeland:read; NOT_FOUND when the entry does not exist.
+      operationId: GetTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the entry UUID.
+          in: path
+          required: true
+          type: string
+      tags:
+        - TimelineService
+    patch:
+      summary: |-
+        Replace the content of a draft.
+        Requires goeland:write; writes TIMELINE_ENTRY_UPDATED.
+      operationId: UpdateTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceUpdateTimelineEntryBody'
+      tags:
+        - TimelineService
+  /api/timeline-entries/{id}/lock:
+    post:
+      summary: |-
+        Lock a draft as is: it becomes immutable without endorsement and the
+        current document versions are pinned. Requires goeland:write; writes TIMELINE_ENTRY_LOCKED.
+      operationId: LockTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1LockTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceLockTimelineEntryBody'
+      tags:
+        - TimelineService
+  /api/timeline-entries/{id}/validate:
+    post:
+      summary: |-
+        Validate a draft: it becomes immutable and the current version of each
+        cited document is pinned. Requires goeland:write; writes TIMELINE_ENTRY_VALIDATED.
+      operationId: ValidateTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ValidateTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceValidateTimelineEntryBody'
+      tags:
+        - TimelineService
+  /api/timeline-entries/{id}/withdraw:
+    post:
+      summary: |-
+        Withdraw a draft (kept, hidden by default).
+        Requires goeland:write; writes TIMELINE_ENTRY_WITHDRAWN.
+      operationId: WithdrawTimelineEntry
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1WithdrawTimelineEntryResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the draft entry UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/TimelineServiceWithdrawTimelineEntryBody'
+      tags:
+        - TimelineService
   /api/users:batchGet:
     get:
       summary: |-
@@ -2070,6 +2369,101 @@ definitions:
     description: |-
       UpdateThingTypeRequest changes a thing type (administrators only); absent
       fields are kept, and the code and specialization never change.
+  TimelineServiceCreateTimelineEntryBody:
+    type: object
+    properties:
+      entryType:
+        $ref: '#/definitions/v1TimelineEntryType'
+        description: entry_type is the nature of the entry; SYSTEM and AI_PROPOSAL are rejected.
+      title:
+        type: string
+        description: title is an optional headline (at most 500 characters).
+      body:
+        type: string
+        description: body is the required content (1-20000 characters); surrounding whitespace is trimmed.
+      visibility:
+        $ref: '#/definitions/v1TimelineVisibility'
+        description: visibility is the intended audience; UNSPECIFIED means CASE_PARTICIPANTS.
+      occurredAt:
+        type: string
+        format: date-time
+        description: |-
+          occurred_at is the business date of the event; absent means now. It may
+          not lie in the future.
+      correctsEntryId:
+        type: string
+        description: |-
+          corrects_entry_id is an immutable (validated or locked) entry of the same
+          case that this entry corrects; it may be corrected only once.
+      documentIds:
+        type: array
+        items:
+          type: string
+        description: |-
+          document_ids are documents cited by the entry (at most 50); each one is
+          also linked to the case (CASE_HAS_DOCUMENT) when it is not already.
+    description: CreateTimelineEntryRequest adds a draft entry to an open (not closed) case.
+    required:
+      - body
+  TimelineServiceLinkTimelineDocumentBody:
+    type: object
+    properties:
+      documentId:
+        type: string
+        description: |-
+          document_id is the document to cite; it is also linked to the case
+          (CASE_HAS_DOCUMENT) when it is not already.
+    description: LinkTimelineDocumentRequest cites a document in a draft entry.
+  TimelineServiceLockTimelineEntryBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: LockTimelineEntryRequest freezes a draft as is, without endorsing it.
+  TimelineServiceUpdateTimelineEntryBody:
+    type: object
+    properties:
+      entryType:
+        $ref: '#/definitions/v1TimelineEntryType'
+        description: entry_type is the nature of the entry; SYSTEM and AI_PROPOSAL are rejected.
+      title:
+        type: string
+        description: title replaces the headline (at most 500 characters).
+      body:
+        type: string
+        description: body replaces the content (1-20000 characters).
+      visibility:
+        $ref: '#/definitions/v1TimelineVisibility'
+        description: visibility replaces the audience; UNSPECIFIED means CASE_PARTICIPANTS.
+      occurredAt:
+        type: string
+        format: date-time
+        description: occurred_at replaces the business date when present; never in the future.
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: |-
+      UpdateTimelineEntryRequest replaces the content of a draft. Every field
+      replaces the stored value, except occurred_at which is kept when absent.
+    required:
+      - body
+  TimelineServiceValidateTimelineEntryBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the justification recorded on the audit event (at most 2000 characters).
+    description: ValidateTimelineEntryRequest endorses a draft, making it immutable.
+  TimelineServiceWithdrawTimelineEntryBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the required justification (1-2000 characters).
+    description: WithdrawTimelineEntryRequest sets a draft aside (non-destructive).
+    required:
+      - reason
   protobufAny:
     type: object
     properties:
@@ -3064,6 +3458,16 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_CREATED entry of the reference change log.
     description: CreateThingTypeResponse returns the new thing type and its log entry.
+  v1CreateTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the created draft with its documents.
+      createdEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: created_event is the TIMELINE_ENTRY_ADDED audit event (on the case subject).
+    description: CreateTimelineEntryResponse returns the new draft.
   v1DeleteActorResponse:
     type: object
     properties:
@@ -3395,6 +3799,13 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetThingResponse returns a thing and the requested context.
+  v1GetTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the entry with its documents.
+    description: GetTimelineEntryResponse returns the entry.
   v1LinkDocumentResponse:
     type: object
     properties:
@@ -3439,6 +3850,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the RELATIONSHIP_LINKED audit event.
     description: LinkSubjectsResponse returns the created edge and its audit event.
+  v1LinkTimelineDocumentResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the draft with its documents.
+      linkEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: link_event is the TIMELINE_DOCUMENT_LINKED audit event.
+    description: LinkTimelineDocumentResponse returns the entry with the new link.
   v1ListAuditEventsResponse:
     type: object
     properties:
@@ -3550,6 +3971,39 @@ definitions:
           $ref: '#/definitions/v1ThingType'
         description: thing_types are the catalogue entries.
     description: ListThingTypesResponse returns the thing types ordered by code.
+  v1ListTimelineEntriesResponse:
+    type: object
+    properties:
+      entries:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1TimelineEntry'
+        description: entries are the entries of this page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching entries across all pages.
+      draftCount:
+        type: integer
+        format: int32
+        description: |-
+          draft_count is the number of drafts of the case, whatever the filters (a
+          case with drafts cannot be closed).
+    description: ListTimelineEntriesResponse is one page of timeline entries.
+  v1LockTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the locked entry, with its document versions pinned.
+      lockEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: lock_event is the TIMELINE_ENTRY_LOCKED audit event.
+    description: LockTimelineEntryResponse returns the locked entry.
   v1LookupSubjectsResponse:
     type: object
     properties:
@@ -4109,6 +4563,196 @@ definitions:
     description: ThingType is a controlled classification of things (PARCEL, BUILDING, STREET, ...).
     required:
       - code
+  v1TimelineDocumentLink:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the link UUID.
+      documentId:
+        type: string
+        description: document_id is the linked document (a DOCUMENT subject).
+      documentLabel:
+        type: string
+        description: document_label is the document's display label.
+        readOnly: true
+      documentVersionId:
+        type: string
+        description: |-
+          document_version_id is the version pinned when the entry was validated or
+          locked; empty while the entry is a draft or when the document had no version.
+        readOnly: true
+      documentVersionNo:
+        type: integer
+        format: int32
+        description: document_version_no is the pinned version number; 0 when none is pinned.
+        readOnly: true
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is when the document was linked.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator who linked the document.
+    description: |-
+      TimelineDocumentLink is a document cited by a timeline entry. The link
+      targets the logical document; the version current at validation is pinned.
+  v1TimelineEntry:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the entry UUID.
+      caseId:
+        type: string
+        description: case_id is the case the entry belongs to.
+      entryType:
+        $ref: '#/definitions/v1TimelineEntryType'
+        description: entry_type is the business nature of the entry.
+      status:
+        $ref: '#/definitions/v1TimelineEntryStatus'
+        description: status is the lifecycle state.
+      title:
+        type: string
+        description: title is an optional headline (at most 500 characters).
+      body:
+        type: string
+        description: body is the content (1-20000 characters).
+      visibility:
+        $ref: '#/definitions/v1TimelineVisibility'
+        description: visibility is the intended audience (not enforced before GLD-017).
+      occurredAt:
+        type: string
+        format: date-time
+        description: occurred_at is the business date of the event; the timeline is ordered on it.
+      correctsEntryId:
+        type: string
+        description: corrects_entry_id is the immutable entry this one corrects; empty otherwise.
+      correctedByEntryId:
+        type: string
+        description: |-
+          corrected_by_entry_id is the live (not withdrawn) entry correcting this
+          one; empty when it is not corrected.
+        readOnly: true
+      documents:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1TimelineDocumentLink'
+        description: documents are the live document links, oldest first.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is the recording time.
+        readOnly: true
+      createdBy:
+        type: string
+        description: created_by is the operator (or "system") who recorded the entry.
+      updatedAt:
+        type: string
+        format: date-time
+        description: updated_at is the last draft change; absent when never changed.
+        readOnly: true
+      updatedBy:
+        type: string
+        description: updated_by is the operator of the last draft change.
+      validatedAt:
+        type: string
+        format: date-time
+        description: validated_at is set when the entry was validated.
+        readOnly: true
+      validatedBy:
+        type: string
+        description: validated_by is the operator who validated the entry.
+      lockedAt:
+        type: string
+        format: date-time
+        description: locked_at is set when the entry was locked.
+        readOnly: true
+      lockedBy:
+        type: string
+        description: locked_by is the operator who locked the entry.
+      withdrawnAt:
+        type: string
+        format: date-time
+        description: withdrawn_at is set when the draft was withdrawn.
+        readOnly: true
+      withdrawnBy:
+        type: string
+        description: withdrawn_by is the operator who withdrew the draft.
+      withdrawalReason:
+        type: string
+        description: withdrawal_reason is the justification given when withdrawing.
+      metadata:
+        type: object
+        description: |-
+          metadata holds secondary structured data; for a SYSTEM entry, the event
+          behind it (e.g. {"event":"CASE_STATUS_CHANGED","from":"OPEN","to":"CLOSED"})
+          so clients can render it in their language.
+        readOnly: true
+    description: TimelineEntry is one element of a case timeline.
+  v1TimelineEntryStatus:
+    type: string
+    enum:
+      - TIMELINE_ENTRY_STATUS_UNSPECIFIED
+      - TIMELINE_ENTRY_STATUS_DRAFT
+      - TIMELINE_ENTRY_STATUS_VALIDATED
+      - TIMELINE_ENTRY_STATUS_LOCKED
+      - TIMELINE_ENTRY_STATUS_WITHDRAWN
+    default: TIMELINE_ENTRY_STATUS_UNSPECIFIED
+    description: |-
+      TimelineEntryStatus is the lifecycle state of a timeline entry. Only a DRAFT
+      changes; every other state is immutable.
+
+       - TIMELINE_ENTRY_STATUS_UNSPECIFIED: TIMELINE_ENTRY_STATUS_UNSPECIFIED is the zero value; never stored.
+       - TIMELINE_ENTRY_STATUS_DRAFT: TIMELINE_ENTRY_STATUS_DRAFT is an editable entry.
+       - TIMELINE_ENTRY_STATUS_VALIDATED: TIMELINE_ENTRY_STATUS_VALIDATED is an entry endorsed by an operator.
+       - TIMELINE_ENTRY_STATUS_LOCKED: TIMELINE_ENTRY_STATUS_LOCKED is an entry frozen as is, without endorsement.
+       - TIMELINE_ENTRY_STATUS_WITHDRAWN: TIMELINE_ENTRY_STATUS_WITHDRAWN is a draft set aside; kept, hidden by default.
+  v1TimelineEntryType:
+    type: string
+    enum:
+      - TIMELINE_ENTRY_TYPE_UNSPECIFIED
+      - TIMELINE_ENTRY_TYPE_COMMENT
+      - TIMELINE_ENTRY_TYPE_OPINION
+      - TIMELINE_ENTRY_TYPE_DECISION
+      - TIMELINE_ENTRY_TYPE_REQUEST
+      - TIMELINE_ENTRY_TYPE_RESPONSE
+      - TIMELINE_ENTRY_TYPE_VALIDATION
+      - TIMELINE_ENTRY_TYPE_SYSTEM
+      - TIMELINE_ENTRY_TYPE_AI_PROPOSAL
+    default: TIMELINE_ENTRY_TYPE_UNSPECIFIED
+    description: |-
+      TimelineEntryType is the business nature of a timeline entry (v2 §26).
+
+       - TIMELINE_ENTRY_TYPE_UNSPECIFIED: TIMELINE_ENTRY_TYPE_UNSPECIFIED is the zero value; never stored, "any type" in filters.
+       - TIMELINE_ENTRY_TYPE_COMMENT: TIMELINE_ENTRY_TYPE_COMMENT is a free follow-up note.
+       - TIMELINE_ENTRY_TYPE_OPINION: TIMELINE_ENTRY_TYPE_OPINION is an opinion (préavis) given on the case.
+       - TIMELINE_ENTRY_TYPE_DECISION: TIMELINE_ENTRY_TYPE_DECISION is a business decision.
+       - TIMELINE_ENTRY_TYPE_REQUEST: TIMELINE_ENTRY_TYPE_REQUEST is a request sent or received (e.g. missing documents).
+       - TIMELINE_ENTRY_TYPE_RESPONSE: TIMELINE_ENTRY_TYPE_RESPONSE is a response to a request.
+       - TIMELINE_ENTRY_TYPE_VALIDATION: TIMELINE_ENTRY_TYPE_VALIDATION records a business validation act.
+       - TIMELINE_ENTRY_TYPE_SYSTEM: TIMELINE_ENTRY_TYPE_SYSTEM is a fact written by the server (e.g. a case
+      status change); never created through the API, always locked.
+       - TIMELINE_ENTRY_TYPE_AI_PROPOSAL: TIMELINE_ENTRY_TYPE_AI_PROPOSAL is a proposal awaiting human validation;
+      reserved for the AI component (GLD-030) and rejected until then.
+  v1TimelineVisibility:
+    type: string
+    enum:
+      - TIMELINE_VISIBILITY_UNSPECIFIED
+      - TIMELINE_VISIBILITY_CASE_PARTICIPANTS
+      - TIMELINE_VISIBILITY_INTERNAL
+      - TIMELINE_VISIBILITY_RESTRICTED
+    default: TIMELINE_VISIBILITY_UNSPECIFIED
+    description: |-
+      TimelineVisibility is the intended audience of an entry. It is stored and
+      displayed but not enforced until the authorization engine (GLD-017).
+
+       - TIMELINE_VISIBILITY_UNSPECIFIED: TIMELINE_VISIBILITY_UNSPECIFIED is the zero value; CASE_PARTICIPANTS on create.
+       - TIMELINE_VISIBILITY_CASE_PARTICIPANTS: TIMELINE_VISIBILITY_CASE_PARTICIPANTS is visible to everyone taking part in the case.
+       - TIMELINE_VISIBILITY_INTERNAL: TIMELINE_VISIBILITY_INTERNAL is visible to the administration only.
+       - TIMELINE_VISIBILITY_RESTRICTED: TIMELINE_VISIBILITY_RESTRICTED is visible to a restricted circle only.
   v1TransitionCaseResponse:
     type: object
     properties:
@@ -4129,6 +4773,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the RELATIONSHIP_UNLINKED audit event.
     description: UnlinkSubjectsResponse confirms an unlink.
+  v1UnlinkTimelineDocumentResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the draft with its remaining documents.
+      unlinkEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: unlink_event is the TIMELINE_DOCUMENT_UNLINKED audit event.
+    description: UnlinkTimelineDocumentResponse returns the entry without the link.
   v1UpdateActorResponse:
     type: object
     properties:
@@ -4219,6 +4873,16 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateThingTypeResponse returns the updated thing type and its log entry.
+  v1UpdateTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the updated draft.
+      updateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: update_event is the TIMELINE_ENTRY_UPDATED audit event.
+    description: UpdateTimelineEntryResponse returns the updated draft.
   v1User:
     type: object
     properties:
@@ -4256,6 +4920,16 @@ definitions:
       User is an internal, authenticated user (an employee), recorded from its
       verified token; never an external ACTOR. Governance and audit fields that
       hold an operator id (created_by, actor_user_id, ...) refer to User.id.
+  v1ValidateTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the validated entry, with its document versions pinned.
+      validateEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: validate_event is the TIMELINE_ENTRY_VALIDATED audit event.
+    description: ValidateTimelineEntryResponse returns the validated entry.
   v1VerifyDocumentIntegrityResponse:
     type: object
     properties:
@@ -4277,3 +4951,13 @@ definitions:
           storage_ref_checked is the storage reference whose bytes were hashed;
           always empty because no bytes are read yet.
     description: VerifyDocumentIntegrityResponse reports the non-probative hash comparison.
+  v1WithdrawTimelineEntryResponse:
+    type: object
+    properties:
+      entry:
+        $ref: '#/definitions/v1TimelineEntry'
+        description: entry is the withdrawn entry.
+      withdrawEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: withdraw_event is the TIMELINE_ENTRY_WITHDRAWN audit event.
+    description: WithdrawTimelineEntryResponse returns the withdrawn entry.

@@ -44,7 +44,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document, Actor and Case modules as full slices in the browser; core panels read-only; Thing UI pending its service |
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
-| §8 `case_timeline_entry` + `timeline_document_link` | ⬜ | ⬜ `TimelineService` | ⬜ | timeline is the primary case history (spec §17.8) |
+| §8 / v2 §26-27 `case_timeline_entry` + `timeline_document_link` | ✅ `0017` | ✅ `TimelineService.*` (9 RPCs) | ✅ | GLD-012: DRAFT → VALIDATED / LOCKED / WITHDRAWN, immutable once out of draft (DB trigger too), corrections as new entries, documents cited by logical id with the version pinned on validation, case status changes as SYSTEM entries, audited on the CASE subject; SPA "Suivis" panel in the case detail |
 | §9 `case_circulation` + `case_circulation_recipient` | ⬜ | ⬜ `CirculationService` | ⬜ | depends on Case + Timeline |
 | §6.3 / v2 §25 `thing` + `thing_type` (+ `thing_parcel`, `thing_building`) | ✅ `0016` | ✅ `ThingService.*` (8 RPCs) | ✅ | GLD-016: EPSG:2056 geometry (GIST, validity, Swiss extent, type per specialization) as GeoJSON with computed area; EGRID / EGID unique; bbox search; land-rights roles `THING_HAS_ACTOR_*`; SPA list / create / detail with SVG preview |
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
@@ -59,7 +59,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
-The 16-step demo still needs Timeline + Circulation, so it is
+The 16-step demo still needs Circulation, so it is
 partly pending — but **Actor, Case and Thing are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
@@ -73,7 +73,8 @@ lifecycle → edit blocked when locked → audit):
 - ✅ (4–5) create an actor and link it as requester/mandatee — `CreateActor` + `LinkSubjects(CASE_HAS_ACTOR_*)`
 - ✅ (2–3) create a parcel and a building as THING — `CreateThing` (with LV95 geometry, EGRID / EGID)
 - ✅ (6) link the case to the parcel — `LinkSubjects(CASE_CONCERNS_THING)`; (9) `DOCUMENT_REPRESENTS_THING` now has THING targets
-- ⬜ (10–15) timeline add + validate + immutability, circulation + response — pending their services
+- ✅ (10–12) add a follow-up, cite a document, validate it → immutable — `CreateTimelineEntry{documentIds}` + `ValidateTimelineEntry` (v2 §50 steps 19–21)
+- ⬜ (13–15) circulation + response — pending `CirculationService` (GLD-013)
 
 ---
 
@@ -120,6 +121,14 @@ These are deliberate betterments beyond the spec — keep them:
   `pkg/blobstore/filestore` behind `blobstore.Store`, path-traversal guarded). Preserves proto validation /
   governance / audit while still supporting real file upload; swap the local blob store
   for MinIO later without touching the contract.
+
+- 🚀 **Timeline beyond v2 §26-27 (GLD-012)**: a business date `occurred_at` distinct from
+  the recording time (the timeline is ordered on it — a call from yesterday is recorded
+  today); explicit corrections (`corrects_entry_id`, shown both ways); withdrawal of a draft
+  with a reason instead of deletion; the cited document version pinned on validation (the
+  "future need" of §27, cheap and probative); case status changes recorded as SYSTEM entries
+  with structured metadata so the SPA renders them in the user's language; `draft_count` so
+  the SPA explains why a case cannot be closed yet.
 
 - 🚀 **Enforced documentation contract** (2026-09-23, beyond the spec): the
   [`docs/DOCUMENTATION.md`](../docs/DOCUMENTATION.md) contract ported from `go-pdf-forge`
@@ -271,6 +280,15 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
 - **Branches (2026-09-24, GLD-014)** — addresses are M:N and typed (head office, branch,
   correspondence, billing) with one principal; a branch acting as a distinct party (its own
   complements and cases) is a separate ORGANIZATION linked by `ACTOR_BRANCH_OF_ACTOR`.
+- **Timeline (GLD-012, v2 §26-27, 2026-09-29)** — an entry belongs to its case and is not a
+  subject: no `subject_ref`, its audit events go to the CASE subject with the entry id in
+  metadata. `timeline_document_link` has its own id and a removal stamp instead of the v2
+  composite primary key, so a document removed from a draft stays as history and can be cited
+  again. VALIDATED (endorsed) and LOCKED (frozen as is) are both immutable; a correction is a
+  new entry (`corrects_entry_id`, same case, at most one live correction). A case cannot close
+  while drafts remain (validate, lock or withdraw them) and a closed case accepts no timeline
+  change. Authors may validate their own entries and `visibility` is stored but not enforced
+  until GLD-017; SYSTEM entries are server-written only and AI_PROPOSAL is reserved for GLD-030.
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
@@ -286,7 +304,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   case→actor link → soft-delete+rejection → audit; person minimal identity (derived display name, search by names, required last name);
   organization `legal_name` required; 33 categories seeded), and the **case lifecycle**
   (seeded types → create with allocated reference → actor roles + document links →
-  transitions with reasons → closed-case freeze → reopen → explicit reference → soft delete).
+  transitions with reasons → closed-case freeze → reopen → explicit reference → soft delete),
+  and the **timeline** (draft citing a document → auto case link → edit → validate with
+  pinned version → immutability through the service and the DB triggers → corrections rules
+  → drafts block closure → SYSTEM entry on close → closed case rejects entries → case audit).
   Env-gated on
   `GOELAND_TEST_DATABASE_URL` (needs PostGIS/pgcrypto/pg_trgm/unaccent); skipped when unset so
   `go test ./...` stays green without a database.

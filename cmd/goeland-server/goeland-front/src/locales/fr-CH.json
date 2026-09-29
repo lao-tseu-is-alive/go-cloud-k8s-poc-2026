@@ -1,4 +1,60 @@
 {
+  "timeline": {
+    "empty": "Aucun suivi pour l’instant.",
+    "showWithdrawn": "Afficher les retirés",
+    "pinnedVersion": "version {n}",
+    "validatedBy": "Validé le {date} par",
+    "lockedBy": "Verrouillé le {date} par",
+    "updatedAt": "Brouillon modifié le {date}",
+    "withdrawnBy": "Retiré le {date} : {reason}",
+    "correctsLink": "Corrige un suivi précédent",
+    "correctedByLink": "Ce suivi a été corrigé : voir la correction",
+    "fields": {
+      "type": "Type de suivi",
+      "occurredAt": "Date de l’événement",
+      "occurredAtHint": "Date métier (un appel d’hier, un courrier reçu…) ; pas dans le futur.",
+      "recordedAt": "Saisi le {date}",
+      "title": "Titre (facultatif)",
+      "body": "Contenu",
+      "visibility": "Visibilité",
+      "visibilityHint": "Indicative : elle sera appliquée avec la gestion des autorisations.",
+      "documents": "Documents cités",
+      "documentsHint": "Un document cité est aussi rattaché à l’affaire. Sa version courante est figée à la validation.",
+      "addDocument": "Ajouter un document"
+    },
+    "dialog": {
+      "create": "Nouveau suivi",
+      "edit": "Modifier le brouillon",
+      "correct": "Corriger le suivi",
+      "correctHint": "Un suivi validé ou verrouillé ne change plus : la correction est un nouveau suivi, lié à l’original qui reste visible."
+    },
+    "actions": {
+      "add": "Ajouter un suivi",
+      "edit": "Modifier",
+      "validate": "Valider",
+      "lock": "Verrouiller",
+      "withdraw": "Retirer",
+      "correct": "Corriger"
+    },
+    "confirm": {
+      "validate": "Le suivi validé ne pourra plus être modifié ; la version courante des documents cités sera figée.",
+      "lock": "Le suivi sera figé tel quel, sans valeur d’approbation ; la version courante des documents cités sera figée.",
+      "withdraw": "Le brouillon sera retiré de la chronologie (il reste conservé). Un motif est requis."
+    },
+    "messages": {
+      "create": "Suivi ajouté.",
+      "edit": "Brouillon enregistré.",
+      "correct": "Correction ajoutée.",
+      "validate": "Suivi validé.",
+      "lock": "Suivi verrouillé.",
+      "withdraw": "Brouillon retiré."
+    },
+    "system": {
+      "title": "Changement de statut",
+      "statusChanged": "Statut de l’affaire : {from} → {to}",
+      "reason": "Motif : {reason}"
+    }
+  },
   "app": {
     "title": "Goéland",
     "subtitle": "POC — Gestion documentaire",
@@ -71,6 +127,7 @@
   },
   "sections": {
     "case": {
+      "timeline": "Suivis",
       "summary": "Résumé",
       "relationships": "Intervenants, documents et sujets liés"
     },
@@ -386,6 +443,30 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "TimelineVisibility": {
+      "TIMELINE_VISIBILITY_UNSPECIFIED": "Visibilité non précisée",
+      "TIMELINE_VISIBILITY_CASE_PARTICIPANTS": "Intervenants de l’affaire",
+      "TIMELINE_VISIBILITY_INTERNAL": "Interne à l’administration",
+      "TIMELINE_VISIBILITY_RESTRICTED": "Restreinte"
+    },
+    "TimelineEntryStatus": {
+      "TIMELINE_ENTRY_STATUS_UNSPECIFIED": "Statut non précisé",
+      "TIMELINE_ENTRY_STATUS_DRAFT": "Brouillon",
+      "TIMELINE_ENTRY_STATUS_VALIDATED": "Validé",
+      "TIMELINE_ENTRY_STATUS_LOCKED": "Verrouillé",
+      "TIMELINE_ENTRY_STATUS_WITHDRAWN": "Retiré"
+    },
+    "TimelineEntryType": {
+      "TIMELINE_ENTRY_TYPE_UNSPECIFIED": "Type non précisé",
+      "TIMELINE_ENTRY_TYPE_COMMENT": "Commentaire",
+      "TIMELINE_ENTRY_TYPE_OPINION": "Préavis",
+      "TIMELINE_ENTRY_TYPE_DECISION": "Décision",
+      "TIMELINE_ENTRY_TYPE_REQUEST": "Demande",
+      "TIMELINE_ENTRY_TYPE_RESPONSE": "Réponse",
+      "TIMELINE_ENTRY_TYPE_VALIDATION": "Validation",
+      "TIMELINE_ENTRY_TYPE_SYSTEM": "Système",
+      "TIMELINE_ENTRY_TYPE_AI_PROPOSAL": "Proposition IA"
+    },
     "CaseStatus": {
       "CASE_STATUS_UNSPECIFIED": "Statut non spécifié",
       "CASE_STATUS_OPEN": "Ouverte",
@@ -509,6 +590,7 @@
       "linked": "Relation créée."
     },
     "case": {
+      "draftsBlockClosing": "Un suivi est encore en brouillon : validez-le, verrouillez-le ou retirez-le avant de clôturer. | {count} suivis sont encore en brouillon : validez-les, verrouillez-les ou retirez-les avant de clôturer.",
       "createSuccess": "Affaire ouverte {ref}.",
       "updateSuccess": "Affaire mise à jour.",
       "statusChanged": "Statut de l’affaire modifié.",

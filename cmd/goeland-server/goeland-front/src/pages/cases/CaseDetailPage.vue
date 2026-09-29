@@ -11,6 +11,7 @@
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
+  import CaseTimelinePanel from '@/components/timeline/CaseTimelinePanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
@@ -44,6 +45,9 @@
   const deleteOpen = ref(false)
   const deleteReason = ref('')
   const deleteBusy = ref(false)
+  // The timeline reloads when the status changes (SYSTEM entry) and reports its drafts.
+  const timelineKey = ref(0)
+  const draftCount = ref(0)
 
   // ---- derived state rules -------------------------------------------------
   const isLocked = computed(() => !!current.value?.recordMetadata?.isLocked)
@@ -53,6 +57,8 @@
   const editable = computed(() => mutable.value && !isClosed.value)
   const transitions = computed(() => (mutable.value && current.value?.status ? CASE_TRANSITIONS[current.value.status] : []))
   const reasonRequired = computed(() => !!transitionTarget.value && transitionNeedsReason(current.value?.status, transitionTarget.value))
+  // A case with draft timeline entries cannot be closed (server rule).
+  const closingBlocked = computed(() => transitionTarget.value === 'CASE_STATUS_CLOSED' && draftCount.value > 0)
 
   async function reload () {
     loading.value = true
@@ -100,13 +106,14 @@
   }
 
   async function doTransition () {
-    if (!transitionTarget.value) return
+    if (!transitionTarget.value || closingBlocked.value) return
     if (reasonRequired.value && !transitionReason.value.trim()) return
     transitionBusy.value = true
     try {
       await transitionCase(id.value, transitionTarget.value, transitionReason.value.trim() || undefined)
       ui.notify(t('messages.case.statusChanged'), 'success')
       transitionTarget.value = null
+      timelineKey.value++
       await reload()
     } catch (error) {
       report(error)
@@ -243,6 +250,20 @@
           </v-card>
 
           <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('sections.case.timeline') }}</v-card-title>
+
+            <v-card-text>
+              <CaseTimelinePanel
+                :can-edit="editable"
+                :case-id="id"
+                :reload-key="timelineKey"
+                @changed="reload"
+                @drafts="draftCount = $event"
+              />
+            </v-card-text>
+          </v-card>
+
+          <v-card class="mb-4">
             <v-card-title class="d-flex align-center text-subtitle-1">
               {{ t('sections.case.relationships') }}
               <v-spacer />
@@ -299,6 +320,16 @@
           <v-card-title>{{ t('actions.case.moveTo', { status: enumLabel('CaseStatus', transitionTarget ?? undefined) }) }}</v-card-title>
 
           <v-card-text>
+            <v-alert
+              v-if="closingBlocked"
+              class="mb-3"
+              density="compact"
+              type="warning"
+              variant="tonal"
+            >
+              {{ t('messages.case.draftsBlockClosing', { count: draftCount }, draftCount) }}
+            </v-alert>
+
             <v-text-field
               v-model="transitionReason"
               :hint="reasonRequired ? t('messages.case.reasonRequired') : ''"
@@ -311,7 +342,16 @@
           <v-card-actions>
             <v-spacer />
             <v-btn variant="text" @click="transitionTarget = null">{{ t('actions.common.cancel') }}</v-btn>
-            <v-btn color="primary" :loading="transitionBusy" variant="flat" @click="doTransition">{{ t('actions.common.confirm') }}</v-btn>
+
+            <v-btn
+              color="primary"
+              :disabled="closingBlocked"
+              :loading="transitionBusy"
+              variant="flat"
+              @click="doTransition"
+            >
+              {{ t('actions.common.confirm') }}
+            </v-btn>
           </v-card-actions>
         </v-card>
       </v-dialog>

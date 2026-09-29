@@ -66,17 +66,20 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
+- `proto/goeland/v1/timeline.proto` — Authoritative `TimelineService` contract: case timeline entries, lifecycle, corrections and cited documents.
 - `proto/goeland/v1/thing.proto` — Authoritative `ThingService` contract: things, types, parcel and building details, LV95 GeoJSON geometry, search by extent.
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
 - `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
+- `gen/goeland/v1/timeline.pb.go` — Go messages generated from `timeline.proto`; never edit by hand.
 - `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/timeline.connect.go` — ConnectRPC stubs generated for `TimelineService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/thing.connect.go` — ConnectRPC stubs generated for `ThingService`; never edit by hand.
 
 ## Go module and commands
@@ -149,6 +152,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0008_document_versions.sql` — Schema migration: `content_blob` (unique SHA-256), `document_version` with its immutability trigger, `document.current_version_id`, lossless backfill.
 - `pkg/core/module/db/migrations/0009_drop_document_file_columns.sql` — Schema migration: drops the document file/version columns superseded by 0008 (reversible from the current version).
 - `pkg/core/module/db/migrations/0016_thing.sql` — Schema migration: `thing_type`, `thing` (EPSG:2056 geometry, GIST, validity check), `thing_parcel` (EGRID), `thing_building` (EGID), land-rights roles, thing types administrable.
+- `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
 - `pkg/core/module/db/migrations/0013_person_identity.sql` — Schema migration: person minimal identity (salutation, last and first name, person-only) and the actor search vector over the names.
@@ -221,6 +225,21 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/thing/module/module.go` — Bundleable thing module: dependency validation and lifecycle.
 - `pkg/thing/module/routes.go` — Thing interceptor chain, Vanguard services and standalone routes.
 
+## Timeline domain (`pkg/timeline`)
+
+- `pkg/timeline/connect_server.go` — `TimelineService` ConnectRPC adapter over the timeline service.
+- `pkg/timeline/doc.go` — Package documentation for the case timeline (suivis).
+- `pkg/timeline/mappers.go` — Timeline entry and document link domain ↔ proto mappers.
+- `pkg/timeline/model.go` — Entry types, statuses, visibilities, entry and document link models with `db` tags, inputs and list filter.
+- `pkg/timeline/repository.go` — Timeline persistence interface.
+- `pkg/timeline/service.go` — Timeline business rules: operator-creatable types, content limits, business date, document list, reasons.
+- `pkg/timeline/service_test.go` — Tests content normalization and rejection, type and status rules, list filter and withdrawal reason.
+- `pkg/timeline/sql.go` — Raw SQL: entry projections with the live correction, lifecycle updates, document links and version pinning.
+- `pkg/timeline/storage_postgres.go` — pgx implementation: create with corrections and cited documents, draft edits, freeze with pinned versions, links, hydration.
+- `pkg/timeline/tx.go` — Transaction helpers: open-case and draft locks, document citation with case link, audit on the case; exported `EnsureNoDraftsTx` and `RecordSystemEntryTx` for the case lifecycle.
+- `pkg/timeline/module/module.go` — Bundleable timeline module: dependency validation and lifecycle.
+- `pkg/timeline/module/routes.go` — Timeline interceptor chain, Vanguard services and standalone routes.
+
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
@@ -229,6 +248,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
+- `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
@@ -252,6 +272,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
+- `cmd/goeland-server/goeland-front/src/api/timelineClient.ts` — REST client for `TimelineService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
@@ -285,6 +306,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
 - `cmd/goeland-server/goeland-front/src/components/core/UserLabel.vue` — Internal user shown by name (admin icon, e-mail and id in the tooltip) from an operator id.
+- `cmd/goeland-server/goeland-front/src/components/timeline/CaseTimelinePanel.vue` — Case timeline panel: type filters, withdrawn toggle, paging, entry dialog and status confirmations; reports the draft count.
+- `cmd/goeland-server/goeland-front/src/components/timeline/TimelineEntryCard.vue` — One timeline entry: type, status, business date, author, cited documents with pinned version, correction links and draft actions.
+- `cmd/goeland-server/goeland-front/src/components/timeline/TimelineEntryDialog.vue` — Create, edit or correct an entry: type, business date, title, body, visibility and cited documents.
+- `cmd/goeland-server/goeland-front/src/components/timeline/timelineForm.ts` — Timeline type lists and styles, lifecycle helpers, datetime-local conversions and dialog payload types.
 - `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingMainForm.vue` — Thing fields: detail block per specialization, texts and geometry with live preview.
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingTypeSelect.vue` — Thing type selector bound to the code, emitting the selected type.

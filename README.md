@@ -103,14 +103,14 @@ and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 ## Project structure
 
 ```
-proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto, thing.proto  (API contract)
+proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto  (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
 api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0016 (dbmate format)
+      └── db/migrations/  0001..0017 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -120,6 +120,8 @@ pkg/actor/               actor domain: persons & organizations (reuses core prim
 pkg/casefile/            case (affaire) domain: case types, status lifecycle, search
   └── module/            bundleable module (schema owned by core)
 pkg/thing/               thing (objet) domain: parcels, buildings, LV95 PostGIS geometry
+  └── module/            bundleable module (schema owned by core)
+pkg/timeline/            case timeline (suivis): drafts, validation, corrections, cited documents
   └── module/            bundleable module (schema owned by core)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
@@ -315,6 +317,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0014_actor_address.sql       address + typed actor_address (one principal, ended links kept) + branch / contact-person types
 0015_reference_change.sql    reference_change: append-only log of reference data administration
 0016_thing.sql               thing_type + thing (EPSG:2056 geometry) + thing_parcel (EGRID) + thing_building (EGID) + land-rights roles
+0017_timeline.sql            case_timeline_entry (immutable once out of draft, corrections) + timeline_document_link (pinned version)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

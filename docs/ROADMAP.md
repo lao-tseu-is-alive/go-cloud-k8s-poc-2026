@@ -26,7 +26,7 @@ Phases follow v2 §48; "v2 §N" cites
 ## Next action
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
-v0.7.0, the Thing slice (GLD-016) in v0.8.0; next is the Timeline (GLD-012).
+v0.7.0, the Thing slice (GLD-016) in v0.8.0; the Timeline (GLD-012) is in progress.
 
 ## Cross-cutting quality
 
@@ -140,10 +140,17 @@ Ordered before Thing at the user's request: v0.6.0 could not be used for real wo
 
 ## Phase 3 — Timeline (v2 §26-27)
 
-- [ ] **GLD-012 — Timeline**: `case_timeline_entry` (COMMENT, OPINION,
+- [~] **GLD-012 — Timeline**: `case_timeline_entry` (COMMENT, OPINION,
   DECISION, REQUEST, RESPONSE, VALIDATION, SYSTEM, AI_PROPOSAL) +
   `timeline_document_link`; a validated or locked entry is immutable and a
-  correction creates a new entry. Depends on GLD-011.
+  correction creates a new entry. Depends on GLD-011. Scope decided 2026-09-29:
+  entries belong to the case (not subjects; audited on the CASE subject),
+  DRAFT → VALIDATED | LOCKED | WITHDRAWN, explicit `corrects_entry_id`, business
+  `occurred_at`, the linked document version is pinned at validation, linking a
+  document also links it to the case, case transitions write SYSTEM entries, a
+  case cannot close while drafts remain, authors may validate their own entries
+  until GLD-017, `visibility` is stored but not enforced until GLD-017, and
+  AI_PROPOSAL stays reserved for GLD-030.
 
 ## Phase 4 — Task (v2 §28)
 

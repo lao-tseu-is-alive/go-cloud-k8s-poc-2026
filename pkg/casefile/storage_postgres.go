@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
 
 // PostgresRepository implements Repository with pgx, composing core primitives.
@@ -154,7 +155,9 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 }
 
 // Transition moves an unlocked, live case to in.Target when CanTransition
-// allows it, and writes CASE_STATUS_CHANGED with the before/after status.
+// allows it, writes CASE_STATUS_CHANGED with the before/after status and
+// records the change as a SYSTEM timeline entry. A case with draft timeline
+// entries cannot be closed.
 func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in TransitionInput) (*Case, *core.AuditEvent, error) {
 	tx, err := r.pool.Begin(ctx)
 	if err != nil {
@@ -171,6 +174,11 @@ func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in Tr
 	}
 	if RequiresReason(current.Status, in.Target) && in.Reason == "" {
 		return nil, nil, fmt.Errorf("%w: a reason is required to close or reopen a case", core.ErrInvalidInput)
+	}
+	if in.Target == StatusClosed {
+		if err := timeline.EnsureNoDraftsTx(ctx, tx, id); err != nil {
+			return nil, nil, err
+		}
 	}
 	c, err := collectCase(tx.Query(ctx, transitionCaseSQL, pgx.NamedArgs{
 		"id":          id,
@@ -191,6 +199,9 @@ func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in Tr
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+	if _, err := timeline.RecordSystemEntryTx(ctx, tx, statusChangeEntry(id, current.Status, c.Status, in)); err != nil {
+		return nil, nil, fmt.Errorf("record timeline entry: %w", err)
 	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transition case: %w", err)
@@ -343,4 +354,25 @@ func mapDBError(err error) error {
 		return core.ErrNotFound
 	}
 	return err
+}
+
+// statusChangeEntry describes a status change as a SYSTEM timeline entry: a
+// French readable body and the structured event for clients.
+func statusChangeEntry(caseID uuid.UUID, from, to Status, in TransitionInput) timeline.SystemEntry {
+	body := fmt.Sprintf("Statut de l'affaire : %s → %s", statusLabelsFR[from], statusLabelsFR[to])
+	if in.Reason != "" {
+		body += "\nMotif : " + in.Reason
+	}
+	return timeline.SystemEntry{
+		CaseID: caseID,
+		Title:  "Changement de statut",
+		Body:   body,
+		Metadata: map[string]any{
+			"event":  "CASE_STATUS_CHANGED",
+			"from":   from.String(),
+			"to":     to.String(),
+			"reason": in.Reason,
+		},
+		OperatorID: in.OperatorID,
+	}
 }

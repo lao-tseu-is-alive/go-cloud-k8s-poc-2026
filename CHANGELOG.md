@@ -8,6 +8,25 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-012** — Case timeline ("suivis", spec v2 §26-27): `TimelineService` (`goeland.v1`,
+  REST under `/api/cases/{case_id}/timeline` and `/api/timeline-entries`) over migration
+  `0017`: `case_timeline_entry` (COMMENT, OPINION, DECISION, REQUEST, RESPONSE, VALIDATION,
+  SYSTEM, AI_PROPOSAL) with a business date, an intended visibility (not enforced before
+  GLD-017) and the DRAFT → VALIDATED / LOCKED / WITHDRAWN lifecycle; only drafts change
+  (also enforced by database triggers) and a correction is a new entry naming the corrected
+  one. `timeline_document_link` cites logical documents, links them to the case when needed
+  and pins the current version on validation. Every timeline mutation is audited on the case.
+  SPA "Suivis" panel in the case detail: filters, create / edit / validate / lock / withdraw /
+  correct, cited documents with their pinned version.
+
+### Changed
+
+- A case status change now also records a locked SYSTEM timeline entry, and a case with
+  draft timeline entries can no longer be closed (FAILED_PRECONDITION; the SPA explains why).
+- The subject picker emits the picked subject so callers can show its label.
+
 ## [0.8.0] - 2026-09-24
 
 This release adds the Thing slice (**GLD-016**, spec v2 Phase 2): parcels, buildings and other
