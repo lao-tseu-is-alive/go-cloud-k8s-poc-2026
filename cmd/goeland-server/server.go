@@ -141,14 +141,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	mux.Handle("GET /api/documents/download",
 		httpAuthMiddleware(verifier, log, core.ScopeRead, downloadHandler(blobStore, log)))
 
-	// The Vanguard transcoder serves BOTH the Connect/gRPC RPC paths
-	// (/goeland.v1.<Service>/<Method>) and the REST bindings declared via
-	// google.api.http (/api/...). Mount it on those explicit prefixes so the
-	// embedded SPA can own "/" as the catch-all fallback below.
-	transcoderHandler := http.MaxBytesHandler(transcoder, maxRequestBodyBytes)
-	mux.Handle("/api/", transcoderHandler)
-	for _, name := range serviceNames {
-		mux.Handle("/"+name+"/", transcoderHandler)
+	if err := mountTranscoder(mux, transcoder, serviceNames); err != nil {
+		return nil, err
 	}
 
 	// Serve the embedded Vuetify frontend (SPA fallback to index.html).
@@ -166,6 +160,24 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, securityHeadersMiddleware(contentSecurityPolicy(config), mux)))),
 		log:     log,
 	}, nil
+}
+
+// mountTranscoder mounts the shared Vanguard transcoder. It serves BOTH the
+// Connect/gRPC RPC paths (/goeland.v1.<Service>/<Method>) and the REST bindings
+// declared via google.api.http (/api/...), on those explicit prefixes so the
+// embedded SPA can own "/" as the catch-all fallback. REST query parameters
+// are checked against the request messages first (GLD-043).
+func mountTranscoder(mux *http.ServeMux, transcoder http.Handler, serviceNames []string) error {
+	transcoderHandler := http.MaxBytesHandler(transcoder, maxRequestBodyBytes)
+	routes, err := restRoutes(serviceNames)
+	if err != nil {
+		return fmt.Errorf("read REST bindings: %w", err)
+	}
+	mux.Handle("/api/", unknownQueryParamsMiddleware(routes, transcoderHandler))
+	for _, name := range serviceNames {
+		mux.Handle("/"+name+"/", transcoderHandler)
+	}
+	return nil
 }
 
 // waitForDatabase pings the database until it answers, retrying with a growing

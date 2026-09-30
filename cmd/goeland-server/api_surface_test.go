@@ -128,6 +128,7 @@ func (s *surface) actors() {
 func (s *surface) cases() {
 	s.ok("GET", "/api/cases/"+s.caseID, nil)
 	s.fails(codeNotFound, "GET", missing("/api/cases"), nil)
+	s.fails(codeInvalidArgument, "GET", "/api/cases/search?querry=typo", nil) // GLD-043: 400, not 500
 	found := s.ok("GET", "/api/cases/search?query=Surface+"+s.token, nil)
 	if len(list(found, "cases")) == 0 {
 		s.t.Fatalf("case search: %v", found)
