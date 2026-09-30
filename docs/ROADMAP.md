@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.9.1**.
+Tracked version: **v0.9.2**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -28,8 +28,8 @@ Phases follow v2 §48; "v2 §N" cites
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
-(GLD-042, GLD-043) in v0.9.1. Next is the second review hardening (GLD-044), then Phase 6,
-security (GLD-017 real authorization, GLD-033 sensitive read audit).
+(GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Next is
+Phase 6, security (GLD-017 real authorization, GLD-033 sensitive read audit).
 
 ## Cross-cutting quality
 
@@ -79,7 +79,7 @@ security (GLD-017 real authorization, GLD-033 sensitive read audit).
   silently). A middleware on `/api/` checks the query parameters against the request message of
   the matched REST binding and answers 400 INVALID_ARGUMENT, so a mistyped filter is never
   silently ignored.
-- [~] **GLD-044 — Second review hardening** (review `reports/report_20260930_gpt-5.md`, decided
+- [x] **GLD-044 — Second review hardening** (review `reports/report_20260930_gpt-5.md`, decided
   2026-09-30): the PostgreSQL integration, §50 scenario and API surface tests run in CI against a
   PostGIS service (the same `make release-check`, enabled by `GOELAND_TEST_DATABASE_URL`);
   `audit_event` and `reference_change` refuse UPDATE and DELETE in the database; stale README,

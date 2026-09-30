@@ -8,9 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.9.2] - 2026-09-30
+
+This release applies the second review of 2026-09-30 (**GLD-044**): the database integration and
+end-to-end tests now run in CI, and the audit trail is append-only in the database. Migration
+`0021` applies automatically at startup. **Breaking for deployments:** `AUTH_SERVER_URL` must use
+HTTPS unless its host is loopback or `GOELAND_ALLOW_INSECURE_AUTH_URL=true` is set.
+
 ### Added
 
-- **GLD-044** (in progress) — Second review hardening: the database integration tests, the §50
+- **GLD-044** — Second review hardening: the database integration tests, the §50
   scenario and the API surface test run in CI against a PostGIS service (`GOELAND_REQUIRE_DB_TESTS`
   makes a missing database fail instead of skip); migration `0021` makes `audit_event` and
   `reference_change` refuse UPDATE, DELETE and TRUNCATE; the PAT cache is bounded (1024 entries,
