@@ -2,7 +2,6 @@ package timeline
 
 import (
 	"context"
-	"errors"
 	"fmt"
 
 	"github.com/google/uuid"
@@ -206,26 +205,20 @@ func jsonMap(m map[string]any) map[string]any {
 
 // isUniqueViolation reports whether err is a PostgreSQL unique violation.
 func isUniqueViolation(err error) bool {
-	pgErr, ok := errors.AsType[*pgconn.PgError](err)
-	return ok && pgErr.Code == "23505"
+	_, ok := core.PgErrorWithCode(err, core.PgUniqueViolation)
+	return ok
 }
 
 // mapDBError translates pgx.ErrNoRows and foreign-key violations to
 // core.ErrNotFound and unique violations to core.ErrConflict.
 func mapDBError(err error) error {
-	if err == nil {
-		return nil
-	}
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+	return core.MapDBError(err, func(pgErr *pgconn.PgError) error {
 		switch pgErr.Code {
-		case "23505": // unique_violation
+		case core.PgUniqueViolation:
 			return fmt.Errorf("%w: %s", core.ErrConflict, pgErr.Message)
-		case "23503": // foreign_key_violation
+		case core.PgForeignKeyViolation:
 			return fmt.Errorf("%w: %s", core.ErrNotFound, pgErr.Message)
 		}
-	}
-	return err
+		return nil
+	})
 }

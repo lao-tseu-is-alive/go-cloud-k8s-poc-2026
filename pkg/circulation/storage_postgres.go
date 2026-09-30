@@ -2,7 +2,6 @@ package circulation
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 	"strings"
@@ -38,20 +37,9 @@ func NewPostgresRepository(pool *pgxpool.Pool, log *slog.Logger) (*PostgresRepos
 	return &PostgresRepository{pool: pool, log: log}, nil
 }
 
-// inTx runs fn in a transaction and commits it when fn succeeds.
+// inTx runs fn in a transaction on the repository's pool (core.InTx).
 func (r *PostgresRepository) inTx(ctx context.Context, op string, fn func(pgx.Tx) error) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin %s: %w", op, err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(tx); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit %s: %w", op, err)
-	}
-	return nil
+	return core.InTx(ctx, r.pool, op, fn)
 }
 
 // Create sends an open case to its recipients: the circulation, its
@@ -482,16 +470,13 @@ func collectRecipient(rows pgx.Rows, err error) (*Recipient, error) {
 // mapDBError translates pgx.ErrNoRows to core.ErrNotFound, a repeated recipient
 // to core.ErrInvalidInput and an unknown user or unit to core.ErrInvalidInput.
 func mapDBError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+	return core.MapDBError(err, func(pgErr *pgconn.PgError) error {
 		switch pgErr.Code {
-		case "23505":
+		case core.PgUniqueViolation:
 			return fmt.Errorf("%w: a recipient appears twice in the circulation", core.ErrInvalidInput)
-		case "23503":
+		case core.PgForeignKeyViolation:
 			return fmt.Errorf("%w: unknown recipient (%s)", core.ErrInvalidInput, pgErr.ConstraintName)
 		}
-	}
-	return err
+		return nil
+	})
 }

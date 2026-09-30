@@ -17,7 +17,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   (dev token, browsing, reset, troubleshooting) and a README section.
 - **GLD-042** (in progress) — Post-audit hardening: browser security headers on every response
   (CSP with the auth server origin in `jwt` mode, nosniff, no framing, referrer, opener and
-  permissions policies); `AGENTS.md` frontend entry brought up to date.
+  permissions policies); a shared `core.InTx` and `core.MapDBError` base (SQLSTATE constants,
+  `PgErrorWithCode`) replacing the per-domain copies while each domain keeps its messages;
+  `AGENTS.md` frontend entry brought up to date.
 
 ### Changed
 

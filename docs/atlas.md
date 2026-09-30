@@ -155,6 +155,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
 - `pkg/core/coretest/coretest.go` — Test helpers: a no-op `core.Repository` stub and a core service built on it for sibling-domain unit tests.
 - `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
+- `pkg/core/database.go` — Shared database helpers: `InTx` (begin, commit, rollback), SQLSTATE constants, `PgErrorWithCode` and the `MapDBError` base each domain's error translation builds on.
+- `pkg/core/database_test.go` — Tests `MapDBError`, `PgErrorWithCode` and `InTx` (commit, rollback, begin and commit errors).
 - `pkg/core/doc.go` — Package documentation for the transversal core domain.
 - `pkg/core/email.go` — Shared e-mail address normalization (bare address, dotted lower-cased domain).
 - `pkg/core/errors.go` — Domain sentinel errors shared by every domain package.

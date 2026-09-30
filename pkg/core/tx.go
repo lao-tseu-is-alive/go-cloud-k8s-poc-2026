@@ -81,8 +81,7 @@ func AssignBusinessRefTx(ctx context.Context, q Querier, subjectID uuid.UUID, re
 // mapBusinessRefConflict translates the unique (namespace, business_ref) index
 // violation into ErrConflict.
 func mapBusinessRefConflict(err error) error {
-	var pgErr *pgconn.PgError
-	if errors.As(err, &pgErr) && pgErr.Code == "23505" {
+	if _, ok := PgErrorWithCode(err, PgUniqueViolation); ok {
 		return fmt.Errorf("%w: business reference already in use in this namespace", ErrConflict)
 	}
 	return err

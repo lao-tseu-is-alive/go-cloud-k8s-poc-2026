@@ -443,10 +443,7 @@ func derefInt32(i *int32) int32 {
 
 // mapDBError translates pgx.ErrNoRows to core.ErrNotFound.
 func mapDBError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	return err
+	return core.MapDBError(err, nil)
 }
 
 // derefSalutation returns the salutation as its column value, 0 when nil.

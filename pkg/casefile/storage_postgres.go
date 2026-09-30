@@ -2,7 +2,6 @@ package casefile
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"log/slog"
 
@@ -364,10 +363,7 @@ func jsonMap(m map[string]any) map[string]any {
 
 // mapDBError translates pgx.ErrNoRows to core.ErrNotFound.
 func mapDBError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	return err
+	return core.MapDBError(err, nil)
 }
 
 // statusChangeEntry describes a status change as a SYSTEM timeline entry: a

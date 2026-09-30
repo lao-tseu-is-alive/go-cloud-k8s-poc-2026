@@ -11,7 +11,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
@@ -176,7 +175,7 @@ func insertReferenceChangeTx(ctx context.Context, q Querier, c ReferenceChange) 
 
 // MapReferenceConflict translates a duplicate code into ErrConflict.
 func MapReferenceConflict(err error, catalogue, code string) error {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" { // unique_violation
+	if _, ok := PgErrorWithCode(err, PgUniqueViolation); ok {
 		return fmt.Errorf("%w: %s %q already exists", ErrConflict, catalogue, code)
 	}
 	return err

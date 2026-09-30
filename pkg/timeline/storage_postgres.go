@@ -29,20 +29,9 @@ func NewPostgresRepository(pool *pgxpool.Pool, log *slog.Logger) (*PostgresRepos
 	return &PostgresRepository{pool: pool, log: log}, nil
 }
 
-// inTx runs fn in a transaction and commits it when fn succeeds.
+// inTx runs fn in a transaction on the repository's pool (core.InTx).
 func (r *PostgresRepository) inTx(ctx context.Context, op string, fn func(pgx.Tx) error) error {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return fmt.Errorf("begin %s: %w", op, err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-	if err := fn(tx); err != nil {
-		return err
-	}
-	if err := tx.Commit(ctx); err != nil {
-		return fmt.Errorf("commit %s: %w", op, err)
-	}
-	return nil
+	return core.InTx(ctx, r.pool, op, fn)
 }
 
 // Create adds a draft to an open case: optional correction target checks, the

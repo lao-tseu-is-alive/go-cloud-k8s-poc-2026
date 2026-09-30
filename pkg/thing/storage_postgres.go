@@ -8,7 +8,6 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
-	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
@@ -240,7 +239,7 @@ func saveDetails(ctx context.Context, tx pgx.Tx, id uuid.UUID, parcel *Parcel, b
 
 // mapDetailConflict turns a unique violation of a detail block into ErrConflict.
 func mapDetailConflict(err error, message string) error {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23505" { // unique_violation
+	if _, ok := core.PgErrorWithCode(err, core.PgUniqueViolation); ok {
 		return fmt.Errorf("%w: %s", core.ErrConflict, message)
 	}
 	if err != nil {

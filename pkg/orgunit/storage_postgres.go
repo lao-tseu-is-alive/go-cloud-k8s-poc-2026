@@ -408,19 +408,16 @@ func collectNodes(rows pgx.Rows, err error) ([]*Node, error) {
 // external reference already in use to core.ErrConflict and the tree
 // trigger's cycle refusal to core.ErrInvalidInput.
 func mapDBError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
+	return core.MapDBError(err, func(pgErr *pgconn.PgError) error {
 		switch pgErr.Code {
-		case "23505": // unique_violation
+		case core.PgUniqueViolation:
 			if pgErr.ConstraintName == "idx_org_unit_external_ref_unique" {
 				return fmt.Errorf("%w: an org unit already has this external reference", core.ErrConflict)
 			}
 			return fmt.Errorf("%w: a live unit with this label already exists under the same parent", core.ErrConflict)
-		case "23514": // check_violation (cycle refused by guard_org_unit)
+		case core.PgCheckViolation: // cycle refused by guard_org_unit
 			return fmt.Errorf("%w: %s", core.ErrInvalidInput, pgErr.Message)
 		}
-	}
-	return err
+		return nil
+	})
 }

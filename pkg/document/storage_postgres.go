@@ -749,8 +749,5 @@ func toLowerHex(s string) string {
 
 // mapDBError translates pgx.ErrNoRows to core.ErrNotFound and preserves conflict/FK mapping.
 func mapDBError(err error) error {
-	if errors.Is(err, pgx.ErrNoRows) {
-		return core.ErrNotFound
-	}
-	return err
+	return core.MapDBError(err, nil)
 }

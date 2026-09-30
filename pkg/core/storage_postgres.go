@@ -278,7 +278,7 @@ func lockOpenRelationshipTx(ctx context.Context, q Querier, in EndInput) (*Subje
 // mapValidityOrder translates the validity-order CHECK violation (the default
 // end, now, precedes a future valid_from) into ErrInvalidInput.
 func mapValidityOrder(err error) error {
-	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok && pgErr.Code == "23514" { // check_violation
+	if _, ok := PgErrorWithCode(err, PgCheckViolation); ok {
 		return fmt.Errorf("%w: valid_to precedes valid_from", ErrInvalidInput)
 	}
 	return fmt.Errorf("end relationship: %w", err)
@@ -432,9 +432,9 @@ func mapNotFound(err error) error {
 func mapConflict(err error) error {
 	if pgErr, ok := errors.AsType[*pgconn.PgError](err); ok {
 		switch pgErr.Code {
-		case "23505": // unique_violation
+		case PgUniqueViolation:
 			return fmt.Errorf("%w: an open relationship of this type already links the subjects", ErrConflict)
-		case "23503": // foreign_key_violation
+		case PgForeignKeyViolation:
 			return fmt.Errorf("%w: referenced subject or type does not exist", ErrNotFound)
 		}
 	}
