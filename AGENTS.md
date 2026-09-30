@@ -201,8 +201,11 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   `GOELAND_TEST_DATABASE_URL='postgres://…?sslmode=disable' go test ./pkg/integration/...`.
   Do not point them at a working database — they migrate and write test rows.
   The same variable enables the **end-to-end scenario** `cmd/goeland-server/scenario_test.go`
-  (spec v2 §50 over HTTP against the real handler): run it with
-  `go test ./cmd/goeland-server -run TestScenarioV2` after every slice that changes an API.
+  (spec v2 §50 over HTTP against the real handler) and the **API surface test**
+  `cmd/goeland-server/api_surface_test.go` (every RPC the scenario does not reach, once, with
+  its not-found mapping): run both with
+  `go test ./cmd/goeland-server -run 'TestScenarioV2|TestAPISurface'` after every slice that
+  changes an API, and add each new RPC to one of them.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,

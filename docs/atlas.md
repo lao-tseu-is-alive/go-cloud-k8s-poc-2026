@@ -105,6 +105,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `go.sum` — Cryptographic checksums of the resolved Go dependencies.
 - `cmd/doccheck/main.go` — Documentation checker: GoDoc coverage and exact atlas inventory, parameterized by flags.
 - `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
+- `cmd/goeland-server/api_surface_test.go` — Calls over REST every RPC the §50 scenario does not reach (reads, searches, updates, deletions, catalogues, not-found mapping); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.

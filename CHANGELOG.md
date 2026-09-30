@@ -20,7 +20,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   permissions policies); a shared `core.InTx` and `core.MapDBError` base (SQLSTATE constants,
   `PgErrorWithCode`) replacing the per-domain copies while each domain keeps its messages;
   the case, actor, document, thing and org unit searches hydrate a page in a fixed number of
-  queries (`core` batch loaders) instead of three to five per row;
+  queries (`core` batch loaders) instead of three to five per row; an API surface test calls
+  every RPC the §50 scenario does not reach over REST (Connect adapters from 13-56 % to
+  72-79 % covered, 74.8 % overall);
   `AGENTS.md` frontend entry brought up to date.
 
 ### Changed

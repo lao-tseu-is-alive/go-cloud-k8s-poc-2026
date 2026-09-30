@@ -66,10 +66,14 @@ read audit).
 - [~] **GLD-042 — Post-audit hardening** (audit of 2026-09-29, decided 2026-09-30): security
   headers on every response; a shared `core` transaction helper and pgx error-mapping base
   (each domain keeps its own messages); batched hydration instead of per-row queries in the
-  case, org unit and thing searches; table tests of the Connect adapters; Vitest on the SPA's
+  case, actor, document, org unit and thing searches; every RPC exercised over REST by an API
+  surface test (instead of per-adapter fakes, decided 2026-09-30); Vitest on the SPA's
   pure `utils/` wired into `make front-check` (first step of GLD-009); the SPA entry of
   `AGENTS.md` brought up to date. Deferred: rate limiting (belongs to the ingress, see
   PRODUCTION_READINESS) and the k8s smoke test in CI (manual or nightly workflow later).
+- [ ] **GLD-043 — Unknown REST query parameter answers 500**: the Vanguard transcoder rejects a
+  query parameter that matches no request field with `UNKNOWN` / HTTP 500 (found by the API
+  surface test, 2026-09-30); it is a client error and should answer 400.
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
