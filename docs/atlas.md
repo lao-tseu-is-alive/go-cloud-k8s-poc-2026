@@ -94,7 +94,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Deployment
 
-- `deployments/k8s/README.md` — Local Kubernetes smoke deployment: what the manifests are (and are not) and how to run them.
+- `deployments/k8s/README.md` — Local Kubernetes smoke deployment: what the manifests are (and are not), how to run them, the Secret and dev token, browsing, reset and troubleshooting.
 - `deployments/k8s/00-namespace.yaml` — Namespace `goeland-poc` of the smoke deployment.
 - `deployments/k8s/10-postgis.yaml` — Disposable PostGIS Deployment and Service for the smoke deployment.
 - `deployments/k8s/20-goeland.yaml` — ConfigMap, hardened Deployment with probes, and Service of the Goéland server.

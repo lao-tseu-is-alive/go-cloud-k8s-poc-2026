@@ -13,7 +13,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - End-to-end test of the spec v2 §50 scenario over HTTP against the real server
   (`cmd/goeland-server/scenario_test.go`: authentication, scopes, validation, error codes).
 - Local Kubernetes smoke deployment: `deployments/k8s/` manifests (disposable PostGIS, hardened
-  Deployment with probes) and `scripts/k8s_smoke_test.sh`.
+  Deployment with probes) and `scripts/k8s_smoke_test.sh`, documented in `deployments/k8s/README.md`
+  (dev token, browsing, reset, troubleshooting) and a README section.
 
 ### Changed
 

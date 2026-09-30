@@ -196,6 +196,22 @@ JWTs from `<AUTH_SERVER_URL>/auth/token` (cookie sent with `credentials: include
 
 Scopes: reads need `goeland:read`, mutations `goeland:write` (granted by the auth service).
 
+## Running on a local Kubernetes cluster (smoke test)
+
+`deployments/k8s/` deploys the published image with a disposable PostGIS on Rancher Desktop
+(or any k3s cluster, `KUBE_CONTEXT=…`), in `dev` auth mode:
+
+```bash
+scripts/k8s_smoke_test.sh     # deploy + check probes, version, SPA and a few API calls
+kubectl --context rancher-desktop -n goeland-poc port-forward svc/goeland 18090:80
+```
+
+The dev token is generated on the first run and stored only in the Secret `goeland-secrets`
+(never printed). Read it with
+`kubectl --context rancher-desktop -n goeland-poc get secret goeland-secrets -o jsonpath='{.data.GOELAND_DEV_TOKEN}' | base64 -d`,
+then sign in on `http://127.0.0.1:18090`. Choosing your own token, resetting and
+troubleshooting: [deployments/k8s/README.md](deployments/k8s/README.md).
+
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
