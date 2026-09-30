@@ -8,6 +8,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.9.1] - 2026-09-30
+
+This release applies the post-audit hardening of 2026-09-29 (**GLD-042**, **GLD-043**): browser
+security headers, batched search hydration, shared database plumbing, an API surface test
+reaching every RPC, the first SPA unit tests, a local Kubernetes smoke deployment, and a server
+that waits for its database at startup. No migration and no API change; REST calls with an
+unknown query parameter now answer 400 instead of 500.
+
 ### Added
 
 - End-to-end test of the spec v2 §50 scenario over HTTP against the real server
@@ -15,7 +23,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - Local Kubernetes smoke deployment: `deployments/k8s/` manifests (disposable PostGIS, hardened
   Deployment with probes) and `scripts/k8s_smoke_test.sh`, documented in `deployments/k8s/README.md`
   (dev token, browsing, reset, troubleshooting) and a README section.
-- **GLD-042** (in progress) — Post-audit hardening: browser security headers on every response
+- **GLD-042** — Post-audit hardening: browser security headers on every response
   (CSP with the auth server origin in `jwt` mode, nosniff, no framing, referrer, opener and
   permissions policies); a shared `core.InTx` and `core.MapDBError` base (SQLSTATE constants,
   `PgErrorWithCode`) replacing the per-domain copies while each domain keeps its messages;
@@ -24,7 +32,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   every RPC the §50 scenario does not reach over REST (Connect adapters from 13-56 % to
   72-79 % covered, 74.8 % overall); Vitest unit tests of the SPA's pure modules in
   `make front-check`, the contact rules checked against the server's own cases
-  (`pkg/actor/testdata/contact_values.json`, first step of GLD-009);
+  (`pkg/actor/testdata/contact_values.json`, the first frontend tests);
   `AGENTS.md` frontend entry brought up to date.
 
 ### Changed
@@ -36,6 +44,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Fixed
 
+- **GLD-043** — A REST call with a query parameter that names no request field (a typo such as
+  `?querry=`) answered 500 `UNKNOWN` from the Vanguard transcoder; it now answers 400
+  `INVALID_ARGUMENT` naming the parameter (`cmd/goeland-server/queryparams.go`).
 - The published container image reported `revision` and `build` as `unknown`: the
   docker-publish workflow now passes `APP_REVISION` and `BUILD_STAMP` like the local build script.
 
