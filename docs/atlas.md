@@ -107,6 +107,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
+- `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
+- `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.

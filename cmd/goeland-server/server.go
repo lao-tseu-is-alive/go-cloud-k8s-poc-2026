@@ -163,7 +163,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	cleanup = false
 	return &application{
 		pool:    pool,
-		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, mux))),
+		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, securityHeadersMiddleware(contentSecurityPolicy(config), mux)))),
 		log:     log,
 	}, nil
 }

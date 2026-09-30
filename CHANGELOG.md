@@ -15,6 +15,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - Local Kubernetes smoke deployment: `deployments/k8s/` manifests (disposable PostGIS, hardened
   Deployment with probes) and `scripts/k8s_smoke_test.sh`, documented in `deployments/k8s/README.md`
   (dev token, browsing, reset, troubleshooting) and a README section.
+- **GLD-042** (in progress) — Post-audit hardening: browser security headers on every response
+  (CSP with the auth server origin in `jwt` mode, nosniff, no framing, referrer, opener and
+  permissions policies); `AGENTS.md` frontend entry brought up to date.
 
 ### Changed
 

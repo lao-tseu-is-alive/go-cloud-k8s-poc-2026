@@ -27,8 +27,9 @@ Phases follow v2 §48; "v2 §N" cites
 
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
-(GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0. Next is Phase 6, security
-(GLD-017 real authorization, GLD-033 sensitive read audit).
+(GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0. Next is the post-audit
+hardening (GLD-042), then Phase 6, security (GLD-017 real authorization, GLD-033 sensitive
+read audit).
 
 ## Cross-cutting quality
 
@@ -62,6 +63,13 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 - [ ] **GLD-009 — Frontend tests**: add unit/component tests to the SPA; the
   gate is currently type-check, lint and build only.
 - [ ] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces.
+- [~] **GLD-042 — Post-audit hardening** (audit of 2026-09-29, decided 2026-09-30): security
+  headers on every response; a shared `core` transaction helper and pgx error-mapping base
+  (each domain keeps its own messages); batched hydration instead of per-row queries in the
+  case, org unit and thing searches; table tests of the Connect adapters; Vitest on the SPA's
+  pure `utils/` wired into `make front-check` (first step of GLD-009); the SPA entry of
+  `AGENTS.md` brought up to date. Deferred: rate limiting (belongs to the ingress, see
+  PRODUCTION_READINESS) and the k8s smoke test in CI (manual or nightly workflow later).
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 

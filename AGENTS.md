@@ -117,10 +117,12 @@ whenever a task starts, completes, changes scope or order.
   task → timeline → core (never the reverse).
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
-  delete), the Actor module (list/create/detail/edit/activate/delete) and the Case module
-  (list/create/detail/edit/transition/link/delete), plus read-only
-  governance/audit and core panels. Embedded via `//go:embed` and served at `/`.
-  See "Frontend" below.
+  delete), the Actor module (list/create/detail/edit/activate/delete, addresses), the Case
+  module (list/create/detail/edit/transition/link/delete, with its timeline, tasks and
+  circulations panels), the Thing module (list/create/detail with SVG geometry preview/edit/
+  link/delete), "my tasks", the org unit tree (edited by admins) and the admin page
+  (reference data), plus read-only governance/audit and core panels. Embedded via
+  `//go:embed` and served at `/`. See "Frontend" below.
 
 ### Not yet built (same foundation)
 

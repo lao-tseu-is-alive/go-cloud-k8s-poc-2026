@@ -92,6 +92,12 @@ e-mail addresses.
 service must list the SPA's public origin in its redirect allowlist and CORS origins (README,
 "Running locally with SSO").
 
+Every response carries browser security headers (`cmd/goeland-server/headers.go`): a
+Content-Security-Policy (`'self'` only, inline styles for Vuetify, the `AUTH_SERVER_URL` origin
+added to `connect-src` in `jwt` mode), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+`Referrer-Policy`, `Cross-Origin-Opener-Policy` and `Permissions-Policy`. HSTS is left to the TLS
+terminator (ingress); set it there.
+
 ## 5. Probes (Kubernetes)
 
 | Probe      | Endpoint      | Behavior                                                        |
@@ -141,6 +147,9 @@ These are the gaps that make this a POC rather than a production service:
 - **Observability is logs only.** No metrics or tracing endpoints yet.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
+- **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),
+  but request rates are not limited: an in-process limiter would be per pod, so this belongs to
+  the ingress or API gateway in front of the replicas.
 
 See [requirements/IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_STATUS.md) for
 the full implemented-vs-pending tracker.
