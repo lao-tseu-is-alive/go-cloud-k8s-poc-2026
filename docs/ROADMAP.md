@@ -28,8 +28,8 @@ Phases follow v2 §48; "v2 §N" cites
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
-(GLD-042, GLD-043) in v0.9.1. Next is Phase 6, security (GLD-017 real authorization, GLD-033
-sensitive read audit).
+(GLD-042, GLD-043) in v0.9.1. Next is the second review hardening (GLD-044), then Phase 6,
+security (GLD-017 real authorization, GLD-033 sensitive read audit).
 
 ## Cross-cutting quality
 
@@ -63,7 +63,8 @@ sensitive read audit).
 - [~] **GLD-009 — Frontend tests**: add unit/component tests to the SPA. Started with
   GLD-042: Vitest on the pure `utils/` modules in `make front-check`, the contact rules checked
   against the server's own cases (shared fixture); component tests remain.
-- [ ] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces.
+- [ ] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces. The pool
+  statistics now shown by the public `/health` move to the metrics endpoint.
 - [x] **GLD-042 — Post-audit hardening** (audit of 2026-09-29, decided 2026-09-30): security
   headers on every response; a shared `core` transaction helper and pgx error-mapping base
   (each domain keeps its own messages); batched hydration instead of per-row queries in the
@@ -78,6 +79,15 @@ sensitive read audit).
   silently). A middleware on `/api/` checks the query parameters against the request message of
   the matched REST binding and answers 400 INVALID_ARGUMENT, so a mistyped filter is never
   silently ignored.
+- [~] **GLD-044 — Second review hardening** (review `reports/report_20260930_gpt-5.md`, decided
+  2026-09-30): the PostgreSQL integration, §50 scenario and API surface tests run in CI against a
+  PostGIS service (the same `make release-check`, enabled by `GOELAND_TEST_DATABASE_URL`);
+  `audit_event` and `reference_change` refuse UPDATE and DELETE in the database; stale README,
+  PRODUCTION_READINESS and IMPLEMENTATION_STATUS passages corrected; `make test` works on a clean
+  checkout; the PAT cache is bounded and evicts expired entries; `AUTH_SERVER_URL` must be HTTPS
+  outside loopback unless explicitly allowed; `X-Request-ID` is bounded; server configuration
+  tests. The CI pinning rule is reworded instead (third-party actions by SHA, GitHub's own on
+  their major tag).
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
@@ -231,7 +241,17 @@ covered by an integration test.
   authenticates. Decided 2026-09-29: today `goeland:admin` comes from the
   auth server's `IsAdmin` flag; the first administrators' bootstrap
   (auth-server flag kept as break-glass, or ids in a `GOELAND_*` setting) is
-  decided within this task.
+  decided within this task. Also in scope (decided 2026-09-30): the two
+  go-cloud-k8s-auth findings this task relies on — accounts linked by e-mail
+  without checking the identity provider's `email_verified`, and the user list
+  visible to every authenticated user — are fixed or explicitly accepted in that
+  repository; and unknown fields in a JSON request body, silently ignored today
+  (proto-JSON default) while unknown query parameters answer 400 (GLD-043), are
+  either rejected or kept lenient by an explicit decision. From the 2026-09-30
+  review: downloads go through a document or version and the access policy
+  instead of a raw `?ref=` storage reference, and the search confidentiality
+  ceiling is derived server-side from the caller's rights instead of taken
+  from the request.
 - [ ] **GLD-033 — Sensitive read audit**: `access_audit_event` for
   READ_SENSITIVE, DOWNLOAD and EXPORT on sensitive scopes, distinct from the
   mutation audit.
@@ -299,3 +319,11 @@ the legacy IDs as provenance. Profiling stays aggregates-only.
 - [ ] **GLD-021 — Probative integrity verification**: stream the stored bytes,
   recompute SHA-256, set `content_blob.verified_at` and write an audited
   verification event under the write scope (v2 §49 "streaming verification").
+- [ ] **GLD-045 — Orphan upload collection**: bytes uploaded but never attached by
+  `CreateDocument` / `AddDocumentVersion` stay forever (blob row and file); give
+  unattached blobs an age limit and a cautious collector that never removes a
+  referenced blob (review 2026-09-30).
+- [ ] **GLD-046 — Separate migrations from the runtime**: a migration job (or
+  init container) with the DDL role, and an application role limited to DML, so
+  a faulty migration does not block every new pod and the runtime cannot alter
+  the schema or drop the audit triggers (review 2026-09-30).

@@ -400,7 +400,7 @@ the image on version tags), and `release` (cross-compiled binaries on version ta
 jobs upload SARIF to the Security tab **and fail on fixable HIGH/CRITICAL findings** — in
 `docker-publish` this gates the publish step, so a vulnerable image is never pushed. Documented
 non-applicable advisories are suppressed in [`.trivyignore`](.trivyignore). The Go version is
-sourced from `go.mod`, and third-party actions are pinned to commit SHAs. The container image is
+sourced from `go.mod`, and third-party actions are pinned to commit SHAs (GitHub's own `actions/*` and `github/*` use their major tag). The container image is
 self-contained: it builds the embedded frontend in a `bun` stage before the Go build.
 
 ## Scripts (`scripts/`)

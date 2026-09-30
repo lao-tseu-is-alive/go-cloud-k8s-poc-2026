@@ -487,8 +487,11 @@ enforced locally so they fail `make check` instead of reappearing on the dashboa
   credentials are never sent over plain HTTP except to the loopback interface.
 - **Trivy suppressions** (`.trivyignore`) document why the advisory does not apply (with the
   `govulncheck` evidence) and carry an `exp:YYYY-MM-DD` date so they lapse and get re-reviewed.
-- **CI actions** are pinned by commit SHA; downloaded tools are verified by checksum (e.g.
-  `bufbuild/buf-action` with `checksum`), never `go install tool@version` in a workflow.
+- **CI actions:** third-party actions are pinned by commit SHA (a mutable tag of an outside
+  maintainer is a supply-chain risk); GitHub's own actions (`actions/*`, `github/*`) may use
+  their major tag, since they come from the platform that runs the workflow (decided
+  2026-09-30). Downloaded tools are verified by checksum (e.g. `bufbuild/buf-action` with
+  `checksum`), never `go install tool@version` in a workflow.
 - **Contexts:** never replace an available `ctx` by `context.Background()`; to outlive a
   cancelled context keep its values with `context.WithoutCancel(ctx)`.
 - A genuine false positive is fixed at the source (`.sonarcloud.properties`) or, for one line,
