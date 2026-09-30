@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"math/rand/v2"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 
@@ -106,6 +107,36 @@ func (s *surface) core() {
 		s.t.Fatalf("batch get users: %v", users)
 	}
 	s.ok("GET", "/api/users/search?query=Admin", nil)
+	s.roles(userID)
+}
+
+// roles covers the application roles (GLD-047): the administrator's own ADMIN
+// role and scope, a grant and a revocation of the writer, and the refusals.
+func (s *surface) roles(adminID string) {
+	me := s.ok("GET", "/api/me", nil)
+	scopes := list(me, "scopes")
+	if !slices.Contains(list(me, "user", "roles"), any("ADMIN")) || !slices.Contains(scopes, any("goeland:admin")) {
+		s.t.Fatalf("the bootstrap administrator holds ADMIN and goeland:admin: %v", me)
+	}
+	if len(list(s.ok("GET", "/api/app-roles", nil), "roles")) == 0 {
+		s.t.Fatal("the role catalogue is listed")
+	}
+	holders := s.ok("GET", "/api/app-roles/ADMIN/holders", nil)
+	if !slices.ContainsFunc(list(holders, "users"), func(u any) bool { return str(u, "id") == adminID }) {
+		s.t.Fatalf("the administrator is among the holders: %v", holders)
+	}
+	writer := str(s.call(s.writer, writerToken, "GET", "/api/me", nil).body, "user", "id")
+	s.expect(s.call(s.writer, writerToken, "POST", "/api/users/"+writer+"/roles", map[string]any{"roleCode": "ADMIN", "reason": "moi-même"}),
+		codePermissionDenied, "a writer cannot grant roles")
+	s.ok("POST", "/api/users/"+writer+"/roles", map[string]any{"roleCode": "ADMIN", "reason": "suppléance"})
+	s.fails(codeAlreadyExists, "POST", "/api/users/"+writer+"/roles", map[string]any{"roleCode": "ADMIN", "reason": "encore"})
+	s.ok("POST", "/api/users/"+writer+"/roles/ADMIN/revoke", map[string]any{"reason": "fin de suppléance"})
+	s.fails(codeNotFound, "POST", "/api/users/"+writer+"/roles/ADMIN/revoke", map[string]any{"reason": "encore"})
+	history := s.ok("GET", "/api/users/"+writer+"/roles?includeRevoked=true", nil)
+	if len(list(history, "roles")) != 1 || str(list(history, "roles")[0], "revokedBy") == "" {
+		s.t.Fatalf("the revoked assignment is kept as history: %v", history)
+	}
+	s.fails(codeNotFound, "POST", "/api/users/it-never-seen/roles", map[string]any{"roleCode": "ADMIN", "reason": "x"})
 }
 
 // actors covers read, search, update and deletion of an organization.

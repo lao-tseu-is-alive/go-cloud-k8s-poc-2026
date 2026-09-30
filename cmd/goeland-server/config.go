@@ -7,6 +7,7 @@ import (
 	"net"
 	"net/url"
 	"os"
+	"slices"
 	"strconv"
 	"strings"
 	"time"
@@ -72,6 +73,38 @@ type serverConfig struct {
 	DocumentPath string
 	// MaxUploadBytes caps the size of a single multipart upload.
 	MaxUploadBytes int64
+	// BootstrapAdmins are the user ids granted the ADMIN role on their next
+	// request (GOELAND_BOOTSTRAP_ADMINS, comma-separated); the recovery path
+	// when no administrator is left.
+	BootstrapAdmins []string
+}
+
+// maxBootstrapAdmins bounds GOELAND_BOOTSTRAP_ADMINS.
+const maxBootstrapAdmins = 20
+
+// bootstrapAdmins returns the configured bootstrap ids, plus the dev user when
+// GOELAND_DEV_USER_ADMIN=true in dev mode.
+func (c serverConfig) bootstrapAdmins() []string {
+	ids := slices.Clone(c.BootstrapAdmins)
+	if c.AuthMode == "dev" && c.DevUserAdmin {
+		ids = append(ids, strconv.FormatInt(c.DevUserID, 10))
+	}
+	return ids
+}
+
+// bootstrapAdminsFromEnv reads GOELAND_BOOTSTRAP_ADMINS: comma-separated user
+// ids, blanks ignored, at most maxBootstrapAdmins.
+func bootstrapAdminsFromEnv() ([]string, error) {
+	var ids []string
+	for _, id := range strings.Split(os.Getenv("GOELAND_BOOTSTRAP_ADMINS"), ",") {
+		if id = strings.TrimSpace(id); id != "" {
+			ids = append(ids, id)
+		}
+	}
+	if len(ids) > maxBootstrapAdmins {
+		return nil, fmt.Errorf("GOELAND_BOOTSTRAP_ADMINS lists more than %d user ids", maxBootstrapAdmins)
+	}
+	return ids, nil
 }
 
 // loadConfig reads and validates all environment variables.
@@ -103,53 +136,67 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
-	maxConnections, err := envInt64InRange("GOELAND_DB_MAX_CONNECTIONS", defaultMaxConnections, 1, 1000)
-	if err != nil {
-		return serverConfig{}, err
-	}
-	shutdownSeconds, err := envInt64InRange("GOELAND_SHUTDOWN_TIMEOUT_SECONDS", int64(defaultShutdownPeriod/time.Second), 1, 300)
-	if err != nil {
-		return serverConfig{}, err
-	}
-	requestTimeoutSeconds, err := envInt64InRange("GOELAND_REQUEST_TIMEOUT_SECONDS", int64(defaultRequestTimeout/time.Second), 1, 300)
-	if err != nil {
-		return serverConfig{}, err
-	}
-	dbConnectSeconds, err := envInt64InRange("GOELAND_DB_CONNECT_TIMEOUT_SECONDS", int64(defaultDBConnectTimeout/time.Second), 0, 600)
-	if err != nil {
-		return serverConfig{}, err
-	}
 	logLevel, err := parseLogLevel(envOrDefault("LOG_LEVEL", "info"))
 	if err != nil {
 		return serverConfig{}, err
 	}
-	maxUploadBytes, err := envInt64InRange("GOELAND_MAX_UPLOAD_BYTES", defaultMaxUploadBytes, 1, math.MaxInt64)
+	bootstrapAdmins, err := bootstrapAdminsFromEnv()
 	if err != nil {
 		return serverConfig{}, err
 	}
 
 	config := serverConfig{
-		ListenAddress:    listenAddress,
-		DatabaseURL:      databaseURL,
-		AuthMode:         authMode,
-		AuthServerURL:    authServerURL,
-		DevToken:         os.Getenv("GOELAND_DEV_TOKEN"),
-		DevUserID:        devUserID,
-		DevUserEmail:     envOrDefault("GOELAND_DEV_USER_EMAIL", "dev@localhost"),
-		DevDisplayName:   envOrDefault("GOELAND_DEV_USER_NAME", "Local Goeland User"),
-		DevUserAdmin:     devUserAdmin,
-		LogLevel:         logLevel,
-		MaxConnections:   int32(maxConnections),
-		ShutdownPeriod:   time.Duration(shutdownSeconds) * time.Second,
-		RequestTimeout:   time.Duration(requestTimeoutSeconds) * time.Second,
-		DBConnectTimeout: time.Duration(dbConnectSeconds) * time.Second,
-		DocumentPath:     envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
-		MaxUploadBytes:   maxUploadBytes,
+		ListenAddress:   listenAddress,
+		DatabaseURL:     databaseURL,
+		AuthMode:        authMode,
+		AuthServerURL:   authServerURL,
+		DevToken:        os.Getenv("GOELAND_DEV_TOKEN"),
+		DevUserID:       devUserID,
+		DevUserEmail:    envOrDefault("GOELAND_DEV_USER_EMAIL", "dev@localhost"),
+		DevDisplayName:  envOrDefault("GOELAND_DEV_USER_NAME", "Local Goeland User"),
+		DevUserAdmin:    devUserAdmin,
+		LogLevel:        logLevel,
+		DocumentPath:    envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
+		BootstrapAdmins: bootstrapAdmins,
+	}
+	if err := config.readLimits(); err != nil {
+		return serverConfig{}, err
 	}
 	if config.AuthMode == "dev" && config.DevToken == "" {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
 	}
 	return config, nil
+}
+
+// readLimits reads the bounded numeric settings: pool size, timeouts and the
+// upload size.
+func (c *serverConfig) readLimits() error {
+	maxConnections, err := envInt64InRange("GOELAND_DB_MAX_CONNECTIONS", defaultMaxConnections, 1, 1000)
+	if err != nil {
+		return err
+	}
+	shutdownSeconds, err := envInt64InRange("GOELAND_SHUTDOWN_TIMEOUT_SECONDS", int64(defaultShutdownPeriod/time.Second), 1, 300)
+	if err != nil {
+		return err
+	}
+	requestTimeoutSeconds, err := envInt64InRange("GOELAND_REQUEST_TIMEOUT_SECONDS", int64(defaultRequestTimeout/time.Second), 1, 300)
+	if err != nil {
+		return err
+	}
+	dbConnectSeconds, err := envInt64InRange("GOELAND_DB_CONNECT_TIMEOUT_SECONDS", int64(defaultDBConnectTimeout/time.Second), 0, 600)
+	if err != nil {
+		return err
+	}
+	maxUploadBytes, err := envInt64InRange("GOELAND_MAX_UPLOAD_BYTES", defaultMaxUploadBytes, 1, math.MaxInt64)
+	if err != nil {
+		return err
+	}
+	c.MaxConnections = int32(maxConnections)
+	c.ShutdownPeriod = time.Duration(shutdownSeconds) * time.Second
+	c.RequestTimeout = time.Duration(requestTimeoutSeconds) * time.Second
+	c.DBConnectTimeout = time.Duration(dbConnectSeconds) * time.Second
+	c.MaxUploadBytes = maxUploadBytes
+	return nil
 }
 
 // authServerURLFromEnv reads AUTH_SERVER_URL, which must be an http(s) URL; a

@@ -1,6 +1,7 @@
 package core
 
 import (
+	"slices"
 	"time"
 
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
@@ -210,7 +211,41 @@ func DomainUserToProto(u *AppUser) *goelandv1.User {
 		IsAdmin:     u.IsAdmin,
 		FirstSeenAt: TimestampOrNil(u.FirstSeenAt),
 		LastSeenAt:  TimestampOrNil(u.LastSeenAt),
+		Roles:       slices.Clone(u.Roles),
 	}
+}
+
+// DomainUsersToProto converts a list of internal users.
+func DomainUsersToProto(users []*AppUser) []*goelandv1.User {
+	out := make([]*goelandv1.User, len(users))
+	for i, u := range users {
+		out[i] = DomainUserToProto(u)
+	}
+	return out
+}
+
+// DomainAppRoleToProto converts an application role to its proto representation.
+func DomainAppRoleToProto(r *AppRole) *goelandv1.AppRole {
+	if r == nil {
+		return nil
+	}
+	return &goelandv1.AppRole{Code: r.Code, Label: r.Label, Description: r.Description, IsActive: r.IsActive}
+}
+
+// DomainUserRoleToProto converts a role assignment to its proto representation.
+func DomainUserRoleToProto(r *UserRole) *goelandv1.UserRole {
+	if r == nil {
+		return nil
+	}
+	out := &goelandv1.UserRole{
+		Id: r.ID.String(), UserId: r.UserID, RoleCode: r.RoleCode,
+		GrantedAt: TimestampOrNil(r.GrantedAt), GrantedBy: r.GrantedBy, GrantReason: r.GrantReason,
+		RevokedAt: TimestampPtrOrNil(r.RevokedAt), RevokeReason: r.RevokeReason,
+	}
+	if r.RevokedBy != nil {
+		out.RevokedBy = *r.RevokedBy
+	}
+	return out
 }
 
 // DomainReferenceChangeToProto converts a reference change log entry to its proto representation.

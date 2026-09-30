@@ -1,4 +1,32 @@
 {
+  "roles": {
+    "tab": "Roles",
+    "empty": "Nobody holds this role.",
+    "current": "Current",
+    "pickUser": "Search a user",
+    "signedInOnly": "Only users who have signed in to Goéland at least once are listed.",
+    "lastAdmin": "The last administrator cannot be removed: grant the role to someone else first.",
+    "grantTitle": "Grant the role \"{role}\"",
+    "revokeTitle": "Revoke the role \"{role}\" from {user}",
+    "historyTitle": "Role history of {user}",
+    "actions": {
+      "grant": "Grant",
+      "revoke": "Revoke",
+      "history": "History"
+    },
+    "fields": {
+      "role": "Role",
+      "user": "User",
+      "email": "E-mail",
+      "reason": "Reason",
+      "granted": "Granted",
+      "revoked": "Revoked"
+    },
+    "messages": {
+      "granted": "Role granted.",
+      "revoked": "Role revoked."
+    }
+  },
   "circulations": {
     "empty": "No circulation.",
     "badge": "Circulation",
@@ -263,7 +291,7 @@
       "create": { "title": "Create actor" }
     },
     "admin": {
-      "title": "Reference data administration"
+      "title": "Administration"
     },
     "things": {
       "list": {
@@ -815,7 +843,7 @@
     },
     "reference": {
       "saved": "Reference data saved.",
-      "adminOnly": "This page is for administrators (goeland:admin right).",
+      "adminOnly": "This page is for administrators (Administrator role).",
       "codeHint": "Upper-case letters, digits and _ (e.g. OPC_DEMANDE_PC); cannot change afterwards.",
       "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
       "hint": {

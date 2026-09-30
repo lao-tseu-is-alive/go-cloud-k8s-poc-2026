@@ -246,6 +246,42 @@ paths:
             $ref: '#/definitions/ActorServiceUpdateActorBody'
       tags:
         - ActorService
+  /api/app-roles:
+    get:
+      summary: List the application role catalogue. Requires goeland:read.
+      operationId: ListAppRoles
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListAppRolesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      tags:
+        - CoreService
+  /api/app-roles/{roleCode}/holders:
+    get:
+      summary: List the users currently holding a role. Requires goeland:read.
+      operationId: ListRoleHolders
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListRoleHoldersResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: roleCode
+          description: role_code is the role.
+          in: path
+          required: true
+          type: string
+      tags:
+        - CoreService
   /api/case-types:
     get:
       summary: |-
@@ -2814,6 +2850,92 @@ paths:
           format: int32
       tags:
         - CoreService
+  /api/users/{userId}/roles:
+    get:
+      summary: List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
+      operationId: ListUserRoles
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListUserRolesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: userId
+          description: user_id is the internal user (User.id).
+          in: path
+          required: true
+          type: string
+        - name: includeRevoked
+          description: include_revoked also returns revoked assignments (history).
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - CoreService
+    post:
+      summary: |-
+        Grant an application role to a user, audited on the user's subject.
+        Requires goeland:admin.
+      operationId: GrantUserRole
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GrantUserRoleResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: userId
+          description: user_id is the internal user (User.id); it must have signed in once.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CoreServiceGrantUserRoleBody'
+      tags:
+        - CoreService
+  /api/users/{userId}/roles/{roleCode}/revoke:
+    post:
+      summary: |-
+        Revoke an application role (kept as history, audited); refused for the
+        last administrator. Requires goeland:admin.
+      operationId: RevokeUserRole
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RevokeUserRoleResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: userId
+          description: user_id is the internal user (User.id).
+          in: path
+          required: true
+          type: string
+        - name: roleCode
+          description: role_code is the role to revoke.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CoreServiceRevokeUserRoleBody'
+      tags:
+        - CoreService
   /api/users:batchGet:
     get:
       summary: |-
@@ -3032,6 +3154,25 @@ definitions:
       EndRelationshipRequest records that an open edge ended in the business sense
       ("the mandate ended"), keeping it in the graph as history. Use UnlinkSubjects
       instead when the edge was a mistake.
+  CoreServiceGrantUserRoleBody:
+    type: object
+    properties:
+      roleCode:
+        type: string
+        description: role_code is the role to grant.
+      reason:
+        type: string
+        description: reason explains the grant; it is audited.
+    description: GrantUserRoleRequest grants a role to a user (administrators only).
+  CoreServiceRevokeUserRoleBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the revocation; it is audited.
+    description: |-
+      RevokeUserRoleRequest revokes a role held by a user (administrators only);
+      the last administrator cannot be revoked.
   CoreServiceUpdateRelationshipTypeBody:
     type: object
     properties:
@@ -3704,6 +3845,24 @@ definitions:
        - ADDRESS_TYPE_BILLING: ADDRESS_TYPE_BILLING is where invoices are sent.
        - ADDRESS_TYPE_RESIDENCE: ADDRESS_TYPE_RESIDENCE is a person's home (domicile).
        - ADDRESS_TYPE_OTHER: ADDRESS_TYPE_OTHER is any other role; label should describe it.
+  v1AppRole:
+    type: object
+    properties:
+      code:
+        type: string
+        description: code is the stable identifier (upper case, e.g. ADMIN).
+      label:
+        type: string
+        description: label is the human name.
+      description:
+        type: string
+        description: description tells what the role allows.
+      isActive:
+        type: boolean
+        description: is_active is false for a role that can no longer be granted.
+    description: |-
+      AppRole is an application role stored in Goéland (GLD-047). ADMIN is the role
+      behind the goeland:admin scope.
   v1AssignBusinessRefResponse:
     type: object
     properties:
@@ -5107,7 +5266,9 @@ definitions:
         type: array
         items:
           type: string
-        description: scopes are the scopes granted to the caller's token.
+        description: |-
+          scopes are the caller's effective scopes: those of its token, plus
+          goeland:admin when the user holds the ADMIN role (never from the token).
     description: GetCurrentUserResponse describes the authenticated caller.
   v1GetDocumentResponse:
     type: object
@@ -5208,6 +5369,16 @@ definitions:
         $ref: '#/definitions/v1TimelineEntry'
         description: entry is the entry with its documents.
     description: GetTimelineEntryResponse returns the entry.
+  v1GrantUserRoleResponse:
+    type: object
+    properties:
+      role:
+        $ref: '#/definitions/v1UserRole'
+        description: role is the assignment.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the USER_ROLE_GRANTED event on the user's subject.
+    description: GrantUserRoleResponse returns the new assignment and its audit event.
   v1LinkDocumentResponse:
     type: object
     properties:
@@ -5262,6 +5433,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: link_event is the TIMELINE_DOCUMENT_LINKED audit event.
     description: LinkTimelineDocumentResponse returns the entry with the new link.
+  v1ListAppRolesResponse:
+    type: object
+    properties:
+      roles:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AppRole'
+        description: roles are the application roles.
+    description: ListAppRolesResponse returns the catalogue, by code.
   v1ListAuditEventsResponse:
     type: object
     properties:
@@ -5433,6 +5614,16 @@ definitions:
         format: int32
         description: total_size is the number of matching edges across all pages.
     description: ListRelationshipsResponse is one page of edges.
+  v1ListRoleHoldersResponse:
+    type: object
+    properties:
+      users:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1User'
+        description: users are the users holding the role.
+    description: ListRoleHoldersResponse returns the holders, by name.
   v1ListTaskTypesResponse:
     type: object
     properties:
@@ -5476,6 +5667,16 @@ definitions:
           draft_count is the number of drafts of the case, whatever the filters (a
           case with drafts cannot be closed).
     description: ListTimelineEntriesResponse is one page of timeline entries.
+  v1ListUserRolesResponse:
+    type: object
+    properties:
+      roles:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1UserRole'
+        description: roles are the assignments.
+    description: ListUserRolesResponse returns the assignments, newest first.
   v1LockTimelineEntryResponse:
     type: object
     properties:
@@ -5875,6 +6076,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: response_event is the CIRCULATION_RESPONDED audit event.
     description: RespondToCirculationResponse returns the circulation after the answer.
+  v1RevokeUserRoleResponse:
+    type: object
+    properties:
+      role:
+        $ref: '#/definitions/v1UserRole'
+        description: role is the assignment, now revoked.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the USER_ROLE_REVOKED event on the user's subject.
+    description: RevokeUserRoleResponse returns the revoked assignment and its audit event.
   v1Salutation:
     type: string
     enum:
@@ -6777,7 +6988,9 @@ definitions:
         readOnly: true
       isAdmin:
         type: boolean
-        description: is_admin reports whether the user's last token granted goeland:admin.
+        description: |-
+          is_admin reports whether the user currently holds the ADMIN application
+          role (the goeland:admin scope); the token never decides it.
         readOnly: true
       firstSeenAt:
         type: string
@@ -6789,10 +7002,53 @@ definitions:
         format: date-time
         description: last_seen_at is when the user was last recorded.
         readOnly: true
+      roles:
+        type: array
+        items:
+          type: string
+        description: roles are the codes of the application roles the user currently holds, sorted.
+        readOnly: true
     description: |-
       User is an internal, authenticated user (an employee), recorded from its
       verified token; never an external ACTOR. Governance and audit fields that
       hold an operator id (created_by, actor_user_id, ...) refer to User.id.
+  v1UserRole:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the assignment.
+      userId:
+        type: string
+        description: user_id is the internal user (User.id).
+      roleCode:
+        type: string
+        description: role_code is the assigned role.
+      grantedAt:
+        type: string
+        format: date-time
+        description: granted_at is when the role was granted.
+      grantedBy:
+        type: string
+        description: |-
+          granted_by is the operator who granted it, or "system:bootstrap" /
+          "system:migration".
+      grantReason:
+        type: string
+        description: grant_reason explains the grant.
+      revokedAt:
+        type: string
+        format: date-time
+        description: revoked_at is when the role was revoked; unset while it is held.
+      revokedBy:
+        type: string
+        description: revoked_by is the operator who revoked it; empty while it is held.
+      revokeReason:
+        type: string
+        description: revoke_reason explains the revocation.
+    description: |-
+      UserRole is one assignment of a role to a user; a revoked assignment is kept
+      as history.
   v1ValidateTimelineEntryResponse:
     type: object
     properties:

@@ -43,9 +43,9 @@ func TestRecordUserLifecycle(t *testing.T) {
 		t.Fatalf("an unchanged profile must not be audited, got %d events", n)
 	}
 
-	profile.DisplayName, profile.IsAdmin = "Ada Lovelace", true
+	profile.DisplayName = "Ada Lovelace"
 	changed, err := env.coreRepo.RecordUser(env.ctx, profile)
-	if err != nil || changed.DisplayName != "Ada Lovelace" || !changed.IsAdmin {
+	if err != nil || changed.DisplayName != "Ada Lovelace" || changed.IsAdmin || len(changed.Roles) != 0 {
 		t.Fatalf("profile change: %+v (%v)", changed, err)
 	}
 	if ref, _ := env.coreRepo.GetSubject(env.ctx, first.SubjectID); ref.DisplayLabel != "Ada Lovelace" {

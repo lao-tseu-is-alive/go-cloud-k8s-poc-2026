@@ -1,4 +1,32 @@
 {
+  "roles": {
+    "tab": "Rôles",
+    "empty": "Personne ne détient ce rôle.",
+    "current": "En cours",
+    "pickUser": "Rechercher un utilisateur",
+    "signedInOnly": "Seuls les utilisateurs qui se sont déjà connectés à Goéland apparaissent.",
+    "lastAdmin": "Le dernier administrateur ne peut pas être retiré : attribuez d'abord le rôle à quelqu'un d'autre.",
+    "grantTitle": "Attribuer le rôle « {role} »",
+    "revokeTitle": "Retirer le rôle « {role} » à {user}",
+    "historyTitle": "Historique des rôles de {user}",
+    "actions": {
+      "grant": "Attribuer",
+      "revoke": "Retirer",
+      "history": "Historique"
+    },
+    "fields": {
+      "role": "Rôle",
+      "user": "Utilisateur",
+      "email": "E-mail",
+      "reason": "Motif",
+      "granted": "Attribué",
+      "revoked": "Retiré"
+    },
+    "messages": {
+      "granted": "Rôle attribué.",
+      "revoked": "Rôle retiré."
+    }
+  },
   "circulations": {
     "empty": "Aucune circulation.",
     "badge": "Circulation",
@@ -263,7 +291,7 @@
       "create": { "title": "Créer un acteur" }
     },
     "admin": {
-      "title": "Administration des référentiels"
+      "title": "Administration"
     },
     "things": {
       "list": {
@@ -815,7 +843,7 @@
     },
     "reference": {
       "saved": "Référentiel enregistré.",
-      "adminOnly": "Cette page est réservée aux administrateurs (droit goeland:admin).",
+      "adminOnly": "Cette page est réservée aux administrateurs (rôle Administrateur).",
       "codeHint": "Majuscules, chiffres et _ (p. ex. OPC_DEMANDE_PC) ; ne peut plus changer ensuite.",
       "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
       "hint": {

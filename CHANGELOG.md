@@ -8,6 +8,22 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-047** (in progress) — Application roles stored in Goéland, the first step of real
+  authorization (GLD-017): migration `0022` (`app_role` with ADMIN, `app_user_role` history),
+  `CoreService.ListAppRoles`, `ListRoleHolders`, `ListUserRoles`, `GrantUserRole` and
+  `RevokeUserRole` (REST under `/api/app-roles` and `/api/users/{user_id}/roles`); grants and
+  revocations need a reason, are audited on the user (`USER_ROLE_GRANTED` / `USER_ROLE_REVOKED`)
+  and kept as history; the last administrator cannot be revoked. SPA: Administration → Rôles.
+
+### Changed
+
+- **Breaking:** `goeland:admin` now comes from the ADMIN role stored in Goéland; the auth server's
+  `IsAdmin` flag is ignored. Current administrators keep the role (migrated from the last recorded
+  flag); new ones come from `GOELAND_BOOTSTRAP_ADMINS` (user ids) or an administrator.
+  `GOELAND_DEV_USER_ADMIN=true` bootstraps the dev user. `User.roles` lists a user's roles.
+
 ## [0.9.2] - 2026-09-30
 
 This release applies the second review of 2026-09-30 (**GLD-044**): the database integration and

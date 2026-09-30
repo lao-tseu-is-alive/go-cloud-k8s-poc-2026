@@ -398,12 +398,15 @@ message User {
   string display_name = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   // email is the e-mail address from the token; empty when it carried none.
   string email = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // is_admin reports whether the user's last token granted goeland:admin.
+  // is_admin reports whether the user currently holds the ADMIN application
+  // role (the goeland:admin scope); the token never decides it.
   bool is_admin = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
   // first_seen_at is when the user was first recorded.
   google.protobuf.Timestamp first_seen_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   // last_seen_at is when the user was last recorded.
   google.protobuf.Timestamp last_seen_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // roles are the codes of the application roles the user currently holds, sorted.
+  repeated string roles = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // GetCurrentUserRequest asks who the caller is; it has no fields.
@@ -413,7 +416,8 @@ message GetCurrentUserRequest {}
 message GetCurrentUserResponse {
   // user is the caller as recorded from its token.
   User user = 1;
-  // scopes are the scopes granted to the caller's token.
+  // scopes are the caller's effective scopes: those of its token, plus
+  // goeland:admin when the user holds the ADMIN role (never from the token).
   repeated string scopes = 2;
 }
 
@@ -454,6 +458,139 @@ message SearchUsersRequest {
 message SearchUsersResponse {
   // users are the matching users.
   repeated User users = 1;
+}
+
+// AppRole is an application role stored in Goéland (GLD-047). ADMIN is the role
+// behind the goeland:admin scope.
+message AppRole {
+  // code is the stable identifier (upper case, e.g. ADMIN).
+  string code = 1;
+  // label is the human name.
+  string label = 2;
+  // description tells what the role allows.
+  string description = 3;
+  // is_active is false for a role that can no longer be granted.
+  bool is_active = 4;
+}
+
+// UserRole is one assignment of a role to a user; a revoked assignment is kept
+// as history.
+message UserRole {
+  // id identifies the assignment.
+  string id = 1;
+  // user_id is the internal user (User.id).
+  string user_id = 2;
+  // role_code is the assigned role.
+  string role_code = 3;
+  // granted_at is when the role was granted.
+  google.protobuf.Timestamp granted_at = 4;
+  // granted_by is the operator who granted it, or "system:bootstrap" /
+  // "system:migration".
+  string granted_by = 5;
+  // grant_reason explains the grant.
+  string grant_reason = 6;
+  // revoked_at is when the role was revoked; unset while it is held.
+  google.protobuf.Timestamp revoked_at = 7;
+  // revoked_by is the operator who revoked it; empty while it is held.
+  string revoked_by = 8;
+  // revoke_reason explains the revocation.
+  string revoke_reason = 9;
+}
+
+// ListAppRolesRequest lists the application role catalogue; it has no fields.
+message ListAppRolesRequest {}
+
+// ListAppRolesResponse returns the catalogue, by code.
+message ListAppRolesResponse {
+  // roles are the application roles.
+  repeated AppRole roles = 1;
+}
+
+// ListRoleHoldersRequest lists the users currently holding a role.
+message ListRoleHoldersRequest {
+  // role_code is the role.
+  string role_code = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+}
+
+// ListRoleHoldersResponse returns the holders, by name.
+message ListRoleHoldersResponse {
+  // users are the users holding the role.
+  repeated User users = 1;
+}
+
+// ListUserRolesRequest lists a user's role assignments.
+message ListUserRolesRequest {
+  // user_id is the internal user (User.id).
+  string user_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // include_revoked also returns revoked assignments (history).
+  bool include_revoked = 2;
+}
+
+// ListUserRolesResponse returns the assignments, newest first.
+message ListUserRolesResponse {
+  // roles are the assignments.
+  repeated UserRole roles = 1;
+}
+
+// GrantUserRoleRequest grants a role to a user (administrators only).
+message GrantUserRoleRequest {
+  // user_id is the internal user (User.id); it must have signed in once.
+  string user_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // role_code is the role to grant.
+  string role_code = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  // reason explains the grant; it is audited.
+  string reason = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// GrantUserRoleResponse returns the new assignment and its audit event.
+message GrantUserRoleResponse {
+  // role is the assignment.
+  UserRole role = 1;
+  // audit_event is the USER_ROLE_GRANTED event on the user's subject.
+  AuditEvent audit_event = 2;
+}
+
+// RevokeUserRoleRequest revokes a role held by a user (administrators only);
+// the last administrator cannot be revoked.
+message RevokeUserRoleRequest {
+  // user_id is the internal user (User.id).
+  string user_id = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // role_code is the role to revoke.
+  string role_code = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 100
+  }];
+  // reason explains the revocation; it is audited.
+  string reason = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// RevokeUserRoleResponse returns the revoked assignment and its audit event.
+message RevokeUserRoleResponse {
+  // role is the assignment, now revoked.
+  UserRole role = 1;
+  // audit_event is the USER_ROLE_REVOKED event on the user's subject.
+  AuditEvent audit_event = 2;
 }
 
 // LinkSubjectsRequest creates a typed edge between two existing subjects.
@@ -783,6 +920,39 @@ service CoreService {
   // Find internal users by name or e-mail. Requires goeland:read.
   rpc SearchUsers(SearchUsersRequest) returns (SearchUsersResponse) {
     option (google.api.http) = {get: "/api/users/search"};
+  }
+
+  // List the application role catalogue. Requires goeland:read.
+  rpc ListAppRoles(ListAppRolesRequest) returns (ListAppRolesResponse) {
+    option (google.api.http) = {get: "/api/app-roles"};
+  }
+
+  // List the users currently holding a role. Requires goeland:read.
+  rpc ListRoleHolders(ListRoleHoldersRequest) returns (ListRoleHoldersResponse) {
+    option (google.api.http) = {get: "/api/app-roles/{role_code}/holders"};
+  }
+
+  // List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
+  rpc ListUserRoles(ListUserRolesRequest) returns (ListUserRolesResponse) {
+    option (google.api.http) = {get: "/api/users/{user_id}/roles"};
+  }
+
+  // Grant an application role to a user, audited on the user's subject.
+  // Requires goeland:admin.
+  rpc GrantUserRole(GrantUserRoleRequest) returns (GrantUserRoleResponse) {
+    option (google.api.http) = {
+      post: "/api/users/{user_id}/roles"
+      body: "*"
+    };
+  }
+
+  // Revoke an application role (kept as history, audited); refused for the
+  // last administrator. Requires goeland:admin.
+  rpc RevokeUserRole(RevokeUserRoleRequest) returns (RevokeUserRoleResponse) {
+    option (google.api.http) = {
+      post: "/api/users/{user_id}/roles/{role_code}/revoke"
+      body: "*"
+    };
   }
 
   // Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).

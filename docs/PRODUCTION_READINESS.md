@@ -80,13 +80,20 @@ roadmap item — see [IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_S
   accepts PATs introspected against `AUTH_SERVER_URL`. Requires the JWT settings:
   `JWT_SECRET`, `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`, `JWT_DURATION_MINUTES`.
 - `dev` (local only): accepts one static token. Requires `GOELAND_DEV_TOKEN` (startup
-  fails without it) and the `GOELAND_DEV_USER_*` identity fields (`GOELAND_DEV_USER_ADMIN`
-  grants `goeland:admin`). **Never enable in production.**
+  fails without it) and the `GOELAND_DEV_USER_*` identity fields (`GOELAND_DEV_USER_ADMIN=true`
+  bootstraps the dev user as administrator). **Never enable in production.**
 
-Every verified caller is recorded in `app_user` (operator id, display name, e-mail, admin flag,
-first/last seen) so governance and audit can show names: employee personal data, mirrored from
-the auth service and never edited here; the audit log records name and admin changes, not
-e-mail addresses.
+Every verified caller is recorded in `app_user` (operator id, display name, e-mail, first/last
+seen) so governance and audit can show names: employee personal data, mirrored from the auth
+service and never edited here; the audit log records name changes, not e-mail addresses.
+
+**Administrators are decided in Goéland (GLD-047).** The token only authenticates: the
+`goeland:admin` scope comes from the ADMIN application role (`app_user_role`, granted and revoked
+with a reason, audited on the user, kept as history), and the auth server's `IsAdmin` flag is
+ignored. The first administrators come from `GOELAND_BOOTSTRAP_ADMINS` (comma-separated user ids,
+granted ADMIN on their next request as `system:bootstrap`); it is also the recovery path, since the
+last administrator cannot be revoked. Role changes apply at once on the replica that made them and
+within 30 s on the others (role cache).
 
 `AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect), and HTTPS
 unless its host is loopback: personal access tokens would otherwise travel in clear.
@@ -124,6 +131,7 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` | `60`            | Startup retries an unreachable database this long (0–600; 0 = one attempt); migrations and wiring then get 60 s more. SIGTERM stops a waiting startup. |
 | `LOG_LEVEL`                         | `info`           | `debug` / `info` / `warn` / `error`. |
 | `GOELAND_ALLOW_INSECURE_AUTH_URL`   | `false`          | Accept a plain-http `AUTH_SERVER_URL` outside loopback (§4). |
+| `GOELAND_BOOTSTRAP_ADMINS`          | —                | User ids granted the ADMIN role on their next request (§4); at most 20. |
 
 ## 7. Secrets
 

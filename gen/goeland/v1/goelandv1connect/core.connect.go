@@ -83,6 +83,21 @@ const (
 	CoreServiceBatchGetUsersProcedure = "/goeland.v1.CoreService/BatchGetUsers"
 	// CoreServiceSearchUsersProcedure is the fully-qualified name of the CoreService's SearchUsers RPC.
 	CoreServiceSearchUsersProcedure = "/goeland.v1.CoreService/SearchUsers"
+	// CoreServiceListAppRolesProcedure is the fully-qualified name of the CoreService's ListAppRoles
+	// RPC.
+	CoreServiceListAppRolesProcedure = "/goeland.v1.CoreService/ListAppRoles"
+	// CoreServiceListRoleHoldersProcedure is the fully-qualified name of the CoreService's
+	// ListRoleHolders RPC.
+	CoreServiceListRoleHoldersProcedure = "/goeland.v1.CoreService/ListRoleHolders"
+	// CoreServiceListUserRolesProcedure is the fully-qualified name of the CoreService's ListUserRoles
+	// RPC.
+	CoreServiceListUserRolesProcedure = "/goeland.v1.CoreService/ListUserRoles"
+	// CoreServiceGrantUserRoleProcedure is the fully-qualified name of the CoreService's GrantUserRole
+	// RPC.
+	CoreServiceGrantUserRoleProcedure = "/goeland.v1.CoreService/GrantUserRole"
+	// CoreServiceRevokeUserRoleProcedure is the fully-qualified name of the CoreService's
+	// RevokeUserRole RPC.
+	CoreServiceRevokeUserRoleProcedure = "/goeland.v1.CoreService/RevokeUserRole"
 	// CoreServiceLinkSubjectsProcedure is the fully-qualified name of the CoreService's LinkSubjects
 	// RPC.
 	CoreServiceLinkSubjectsProcedure = "/goeland.v1.CoreService/LinkSubjects"
@@ -137,6 +152,18 @@ type CoreServiceClient interface {
 	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
 	// Find internal users by name or e-mail. Requires goeland:read.
 	SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error)
+	// List the application role catalogue. Requires goeland:read.
+	ListAppRoles(context.Context, *connect.Request[v1.ListAppRolesRequest]) (*connect.Response[v1.ListAppRolesResponse], error)
+	// List the users currently holding a role. Requires goeland:read.
+	ListRoleHolders(context.Context, *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error)
+	// List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
+	ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error)
+	// Grant an application role to a user, audited on the user's subject.
+	// Requires goeland:admin.
+	GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error)
+	// Revoke an application role (kept as history, audited); refused for the
+	// last administrator. Requires goeland:admin.
+	RevokeUserRole(context.Context, *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -225,6 +252,36 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("SearchUsers")),
 			connect.WithClientOptions(opts...),
 		),
+		listAppRoles: connect.NewClient[v1.ListAppRolesRequest, v1.ListAppRolesResponse](
+			httpClient,
+			baseURL+CoreServiceListAppRolesProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ListAppRoles")),
+			connect.WithClientOptions(opts...),
+		),
+		listRoleHolders: connect.NewClient[v1.ListRoleHoldersRequest, v1.ListRoleHoldersResponse](
+			httpClient,
+			baseURL+CoreServiceListRoleHoldersProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ListRoleHolders")),
+			connect.WithClientOptions(opts...),
+		),
+		listUserRoles: connect.NewClient[v1.ListUserRolesRequest, v1.ListUserRolesResponse](
+			httpClient,
+			baseURL+CoreServiceListUserRolesProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ListUserRoles")),
+			connect.WithClientOptions(opts...),
+		),
+		grantUserRole: connect.NewClient[v1.GrantUserRoleRequest, v1.GrantUserRoleResponse](
+			httpClient,
+			baseURL+CoreServiceGrantUserRoleProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("GrantUserRole")),
+			connect.WithClientOptions(opts...),
+		),
+		revokeUserRole: connect.NewClient[v1.RevokeUserRoleRequest, v1.RevokeUserRoleResponse](
+			httpClient,
+			baseURL+CoreServiceRevokeUserRoleProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("RevokeUserRole")),
+			connect.WithClientOptions(opts...),
+		),
 		linkSubjects: connect.NewClient[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse](
 			httpClient,
 			baseURL+CoreServiceLinkSubjectsProcedure,
@@ -291,6 +348,11 @@ type coreServiceClient struct {
 	getCurrentUser         *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
 	batchGetUsers          *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
 	searchUsers            *connect.Client[v1.SearchUsersRequest, v1.SearchUsersResponse]
+	listAppRoles           *connect.Client[v1.ListAppRolesRequest, v1.ListAppRolesResponse]
+	listRoleHolders        *connect.Client[v1.ListRoleHoldersRequest, v1.ListRoleHoldersResponse]
+	listUserRoles          *connect.Client[v1.ListUserRolesRequest, v1.ListUserRolesResponse]
+	grantUserRole          *connect.Client[v1.GrantUserRoleRequest, v1.GrantUserRoleResponse]
+	revokeUserRole         *connect.Client[v1.RevokeUserRoleRequest, v1.RevokeUserRoleResponse]
 	linkSubjects           *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
 	unlinkSubjects         *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
 	endRelationship        *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
@@ -335,6 +397,31 @@ func (c *coreServiceClient) BatchGetUsers(ctx context.Context, req *connect.Requ
 // SearchUsers calls goeland.v1.CoreService.SearchUsers.
 func (c *coreServiceClient) SearchUsers(ctx context.Context, req *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error) {
 	return c.searchUsers.CallUnary(ctx, req)
+}
+
+// ListAppRoles calls goeland.v1.CoreService.ListAppRoles.
+func (c *coreServiceClient) ListAppRoles(ctx context.Context, req *connect.Request[v1.ListAppRolesRequest]) (*connect.Response[v1.ListAppRolesResponse], error) {
+	return c.listAppRoles.CallUnary(ctx, req)
+}
+
+// ListRoleHolders calls goeland.v1.CoreService.ListRoleHolders.
+func (c *coreServiceClient) ListRoleHolders(ctx context.Context, req *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error) {
+	return c.listRoleHolders.CallUnary(ctx, req)
+}
+
+// ListUserRoles calls goeland.v1.CoreService.ListUserRoles.
+func (c *coreServiceClient) ListUserRoles(ctx context.Context, req *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error) {
+	return c.listUserRoles.CallUnary(ctx, req)
+}
+
+// GrantUserRole calls goeland.v1.CoreService.GrantUserRole.
+func (c *coreServiceClient) GrantUserRole(ctx context.Context, req *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error) {
+	return c.grantUserRole.CallUnary(ctx, req)
+}
+
+// RevokeUserRole calls goeland.v1.CoreService.RevokeUserRole.
+func (c *coreServiceClient) RevokeUserRole(ctx context.Context, req *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error) {
+	return c.revokeUserRole.CallUnary(ctx, req)
 }
 
 // LinkSubjects calls goeland.v1.CoreService.LinkSubjects.
@@ -407,6 +494,18 @@ type CoreServiceHandler interface {
 	BatchGetUsers(context.Context, *connect.Request[v1.BatchGetUsersRequest]) (*connect.Response[v1.BatchGetUsersResponse], error)
 	// Find internal users by name or e-mail. Requires goeland:read.
 	SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error)
+	// List the application role catalogue. Requires goeland:read.
+	ListAppRoles(context.Context, *connect.Request[v1.ListAppRolesRequest]) (*connect.Response[v1.ListAppRolesResponse], error)
+	// List the users currently holding a role. Requires goeland:read.
+	ListRoleHolders(context.Context, *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error)
+	// List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
+	ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error)
+	// Grant an application role to a user, audited on the user's subject.
+	// Requires goeland:admin.
+	GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error)
+	// Revoke an application role (kept as history, audited); refused for the
+	// last administrator. Requires goeland:admin.
+	RevokeUserRole(context.Context, *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
 	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
@@ -491,6 +590,36 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("SearchUsers")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceListAppRolesHandler := connect.NewUnaryHandler(
+		CoreServiceListAppRolesProcedure,
+		svc.ListAppRoles,
+		connect.WithSchema(coreServiceMethods.ByName("ListAppRoles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceListRoleHoldersHandler := connect.NewUnaryHandler(
+		CoreServiceListRoleHoldersProcedure,
+		svc.ListRoleHolders,
+		connect.WithSchema(coreServiceMethods.ByName("ListRoleHolders")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceListUserRolesHandler := connect.NewUnaryHandler(
+		CoreServiceListUserRolesProcedure,
+		svc.ListUserRoles,
+		connect.WithSchema(coreServiceMethods.ByName("ListUserRoles")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceGrantUserRoleHandler := connect.NewUnaryHandler(
+		CoreServiceGrantUserRoleProcedure,
+		svc.GrantUserRole,
+		connect.WithSchema(coreServiceMethods.ByName("GrantUserRole")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceRevokeUserRoleHandler := connect.NewUnaryHandler(
+		CoreServiceRevokeUserRoleProcedure,
+		svc.RevokeUserRole,
+		connect.WithSchema(coreServiceMethods.ByName("RevokeUserRole")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceLinkSubjectsHandler := connect.NewUnaryHandler(
 		CoreServiceLinkSubjectsProcedure,
 		svc.LinkSubjects,
@@ -561,6 +690,16 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceBatchGetUsersHandler.ServeHTTP(w, r)
 		case CoreServiceSearchUsersProcedure:
 			coreServiceSearchUsersHandler.ServeHTTP(w, r)
+		case CoreServiceListAppRolesProcedure:
+			coreServiceListAppRolesHandler.ServeHTTP(w, r)
+		case CoreServiceListRoleHoldersProcedure:
+			coreServiceListRoleHoldersHandler.ServeHTTP(w, r)
+		case CoreServiceListUserRolesProcedure:
+			coreServiceListUserRolesHandler.ServeHTTP(w, r)
+		case CoreServiceGrantUserRoleProcedure:
+			coreServiceGrantUserRoleHandler.ServeHTTP(w, r)
+		case CoreServiceRevokeUserRoleProcedure:
+			coreServiceRevokeUserRoleHandler.ServeHTTP(w, r)
 		case CoreServiceLinkSubjectsProcedure:
 			coreServiceLinkSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceUnlinkSubjectsProcedure:
@@ -614,6 +753,26 @@ func (UnimplementedCoreServiceHandler) BatchGetUsers(context.Context, *connect.R
 
 func (UnimplementedCoreServiceHandler) SearchUsers(context.Context, *connect.Request[v1.SearchUsersRequest]) (*connect.Response[v1.SearchUsersResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.SearchUsers is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ListAppRoles(context.Context, *connect.Request[v1.ListAppRolesRequest]) (*connect.Response[v1.ListAppRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListAppRoles is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ListRoleHolders(context.Context, *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListRoleHolders is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListUserRoles is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.GrantUserRole is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) RevokeUserRole(context.Context, *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.RevokeUserRole is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error) {

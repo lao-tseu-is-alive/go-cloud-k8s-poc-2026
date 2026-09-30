@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -11,7 +12,7 @@ import (
 // (an empty value counts as unset) before applying a case, so a developer's
 // exported .env never leaks into these tests.
 var configEnv = []string{
-	"AUTH_SERVER_URL", "DATABASE_URL", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
+	"AUTH_SERVER_URL", "DATABASE_URL", "GOELAND_BOOTSTRAP_ADMINS", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
 	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
 	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS",
@@ -93,6 +94,7 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"not a boolean", map[string]string{"GOELAND_DEV_USER_ADMIN": "yes please"}, "must be a boolean"},
 		{"auth url scheme", map[string]string{"AUTH_SERVER_URL": "ftp://auth.example.ch"}, "valid http(s) URL"},
 		{"plain http auth url", map[string]string{"AUTH_SERVER_URL": "http://auth.example.ch"}, "must use https outside loopback"},
+		{"too many bootstrap admins", map[string]string{"GOELAND_BOOTSTRAP_ADMINS": strings.Repeat("1,", maxBootstrapAdmins+1)}, "more than 20 user ids"},
 	}
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
@@ -122,5 +124,22 @@ func TestAuthServerURLHTTPRules(t *testing.T) {
 		if _, err := authServerURLFromEnv(); (err == nil) != c.ok {
 			t.Fatalf("AUTH_SERVER_URL=%s allow=%q: ok=%v, err=%v", c.url, c.allow, c.ok, err)
 		}
+	}
+}
+
+func TestBootstrapAdmins(t *testing.T) {
+	setConfigEnv(t, map[string]string{"GOELAND_BOOTSTRAP_ADMINS": " 42 , ,7,"})
+	cfg, err := loadConfig()
+	if err != nil || !slices.Equal(cfg.bootstrapAdmins(), []string{"42", "7"}) {
+		t.Fatalf("ids trimmed, blanks ignored: %v (%v)", cfg.BootstrapAdmins, err)
+	}
+	setConfigEnv(t, map[string]string{"GOELAND_AUTH_MODE": "dev", "GOELAND_DEV_TOKEN": "<dev-token>", "GOELAND_DEV_USER_ID": "9", "GOELAND_DEV_USER_ADMIN": "true"})
+	cfg, err = loadConfig()
+	if err != nil || !slices.Equal(cfg.bootstrapAdmins(), []string{"9"}) {
+		t.Fatalf("the dev administrator is bootstrapped: %v (%v)", cfg.bootstrapAdmins(), err)
+	}
+	setConfigEnv(t, map[string]string{"GOELAND_DEV_USER_ID": "9", "GOELAND_DEV_USER_ADMIN": "true"})
+	if cfg, _ := loadConfig(); len(cfg.bootstrapAdmins()) != 0 {
+		t.Fatal("GOELAND_DEV_USER_ADMIN has no effect outside dev mode")
 	}
 }

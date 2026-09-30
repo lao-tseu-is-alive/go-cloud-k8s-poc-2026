@@ -28,8 +28,9 @@ Phases follow v2 §48; "v2 §N" cites
 Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shipped in
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
-(GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Next is
-Phase 6, security (GLD-017 real authorization, GLD-033 sensitive read audit).
+(GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
+security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050, starting with
+application roles), then the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -230,28 +231,38 @@ covered by an integration test.
 
 ## Phase 6 — Security (v2 §32, §34)
 
-- [ ] **GLD-017 — Real authorization**: `Can(ctx, user, action, subject)` over
-  scope, role, group, org unit, ownership, case participation, typed
-  relationships and confidentiality, deny by default (Casbin/OpenFGA evaluated
-  behind the interface). Must revisit the automatic document reuse of GLD-023
-  against read rights (§3g). Today every authenticated caller gets both
-  `goeland:read` and `goeland:write`. Application roles, administrator
-  included, are decided, configured and stored in Goéland (on `app_user`,
-  GLD-025), every grant and revocation audited; the token then only
-  authenticates. Decided 2026-09-29: today `goeland:admin` comes from the
-  auth server's `IsAdmin` flag; the first administrators' bootstrap
-  (auth-server flag kept as break-glass, or ids in a `GOELAND_*` setting) is
-  decided within this task. Also in scope (decided 2026-09-30): the two
-  go-cloud-k8s-auth findings this task relies on — accounts linked by e-mail
-  without checking the identity provider's `email_verified`, and the user list
-  visible to every authenticated user — are fixed or explicitly accepted in that
-  repository; and unknown fields in a JSON request body, silently ignored today
-  (proto-JSON default) while unknown query parameters answer 400 (GLD-043), are
-  either rejected or kept lenient by an explicit decision. From the 2026-09-30
-  review: downloads go through a document or version and the access policy
-  instead of a raw `?ref=` storage reference, and the search confidentiality
-  ceiling is derived server-side from the caller's rights instead of taken
-  from the request.
+- [~] **GLD-017 — Real authorization** (umbrella of GLD-047 to GLD-050; model decided
+  2026-09-30 from the profile of the legacy rights, see IMPLEMENTATION_STATUS §3j): levels
+  READ < CONTRIBUTE < MANAGE < FULL_CONTROL, no deny level; grants on any subject (CASE,
+  DOCUMENT, ACTOR, THING, ORG_UNIT) to a USER, a GROUP or an ORG_UNIT (covering its sub-units);
+  the most specific grant wins — personal, then the caller's groups (highest), then the nearest
+  unit, then an application role covering a kind, then the baseline (READ unless confidential,
+  `confidentiality_level` >= 2, where no administrator bypass applies); a subject always keeps
+  a FULL_CONTROL grant. No live inheritance between a case and its documents: attaching a
+  document needs READ on it and CONTRIBUTE on the case and never changes its confidentiality; a
+  document deposited from a case copies the case's grants and level once. `Can(ctx, user,
+  action, subject)` behind a `core` interface (Casbin/OpenFGA may sit behind it later).
+- [~] **GLD-047 — Application roles in Goéland**: `app_role` (ADMIN seeded) and an audited,
+  non-destructive `app_user_role` history; `goeland:admin` comes from the ADMIN role, never
+  from the token (the auth server's `IsAdmin` is ignored); first administrators from
+  `GOELAND_BOOTSTRAP_ADMINS` (user ids, applied on their next request, audited); the last
+  administrator cannot be revoked; role administration in the SPA.
+- [ ] **GLD-048 — Grants and groups**: `access_grant` (typed grantee, level, grantor, reason,
+  revocation kept as history, audited on the subject), GROUP subjects with members, the
+  `Authorizer` evaluating the precedence above, checks on every mutation and single read of
+  the five subject kinds, creator FULL_CONTROL and owner unit MANAGE at creation (backfilled
+  for existing subjects), kind-wide roles (ACTOR_MANAGER, THING_MANAGER), "Accès" panel.
+- [ ] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
+  SQL access predicate (pagination stays exact), confidentiality applied, the search ceiling
+  derived server-side, downloads through a document or version instead of a raw `?ref=`,
+  timeline visibility applied (INTERNAL needs CONTRIBUTE, RESTRICTED needs MANAGE), the
+  automatic document reuse of GLD-023 revisited against read rights (§3g).
+- [ ] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
+  creator and creator's unit); the two go-cloud-k8s-auth findings fixed or explicitly
+  accepted in that repository (accounts linked by e-mail without the identity provider's
+  `email_verified`, user list visible to every authenticated user); unknown JSON body fields
+  rejected or kept lenient by an explicit decision (unknown query parameters answer 400,
+  GLD-043).
 - [ ] **GLD-033 — Sensitive read audit**: `access_audit_event` for
   READ_SENSITIVE, DOWNLOAD and EXPORT on sensitive scopes, distinct from the
   mutation audit.

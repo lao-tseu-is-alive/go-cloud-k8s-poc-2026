@@ -174,14 +174,16 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/reference_admin_test.go` — Tests that reference administration needs `goeland:admin` and the code rule.
 - `pkg/core/reference_relationship.go` — Relationship type administration (create, update, kinds immutable) and the change log listing.
 - `pkg/core/repository.go` — Core persistence interface.
+- `pkg/core/roles.go` — Application roles (GLD-047): ADMIN, role and assignment models, grant / revoke validation and the role-change listener.
+- `pkg/core/storage_roles.go` — PostgreSQL storage of roles: catalogue, holders, history, audited grant and revocation, last-administrator guard.
 - `pkg/core/requestctx.go` — Request ID propagation through the context.
 - `pkg/core/service.go` — Core business rules: subject creation, typed linking, audit listing.
 - `pkg/core/sql.go` — Raw SQL and alias-prefixed column projections for core tables.
 - `pkg/core/storage_postgres.go` — pgx implementation of the core repository.
 - `pkg/core/storage_users.go` — pgx persistence of internal users: first-sight registration (USER subject, governance, audit), profile updates, batch lookup.
 - `pkg/core/tx.go` — Exported transaction-scoped helpers reused by sibling domains for atomic identity, governance and audit.
-- `pkg/core/user.go` — Internal user model, token profile, admin scope and the `RecordingVerifier` that records every verified caller.
-- `pkg/core/user_test.go` — Tests token profiles, labels and the recording verifier (change-only writes, best effort, invalid tokens).
+- `pkg/core/user.go` — Internal user model, token profile and the `RecordingVerifier` that records every verified caller and sets its scopes from its stored roles (bootstrap administrators, role cache).
+- `pkg/core/user_test.go` — Tests token profiles, labels and the recording verifier (change-only writes, best effort, invalid tokens, admin scope from roles, role cache, bootstrap, fail closed).
 - `pkg/core/users_service_test.go` — Tests `BatchGetUsers` validation (blank, too many, repeated ids).
 - `pkg/core/wire.go` — Wire helpers shared by every ConnectRPC adapter: UUID parsing, `structpb` conversion, domain error to Connect error.
 - `pkg/core/module/migrate.go` — Embedded dbmate-format migrator serialized by a PostgreSQL advisory lock.
@@ -201,6 +203,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0019_task.sql` — Schema migration: `task_type` (5 seeded types), `case_task` (lifecycle stamps, one assignee, origin), `case_task_assignment` history, `USER_MEMBER_OF_ORG_UNIT`.
 - `pkg/core/module/db/migrations/0020_circulation.sql` — Schema migration: `case_circulation` (steps, status stamps) and `case_circulation_recipient` (one user or unit, task, response, timeline entry), CIRCULATION_RESPONSE task type.
 - `pkg/core/module/db/migrations/0021_append_only_logs.sql` — Schema migration: triggers making `audit_event` and `reference_change` refuse UPDATE, DELETE and TRUNCATE.
+- `pkg/core/module/db/migrations/0022_app_roles.sql` — Schema migration: `app_role` (ADMIN seeded) and the `app_user_role` history; the former admin flag migrated, `app_user.is_admin` dropped.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -325,6 +328,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/append_only_test.go` — DB test: the audit trail and the reference change log refuse UPDATE, DELETE and TRUNCATE.
+- `pkg/integration/roles_test.go` — DB test: roles granted and revoked with reasons, audited on the user, kept as history, derived admin flag and refusals.
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
@@ -357,6 +361,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/roleClient.ts` — REST calls of the application roles: catalogue, holders, a user's history, grant and revoke.
 - `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
 - `cmd/goeland-server/goeland-front/src/api/timelineClient.ts` — REST client for `TimelineService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/orgUnitClient.ts` — REST client for `OrgUnitService` bindings.
@@ -374,6 +379,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
+- `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
@@ -398,6 +404,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
+- `cmd/goeland-server/goeland-front/src/components/core/UserPicker.vue` — Internal user search (debounced, by name or e-mail) bound to an operator id.
 - `cmd/goeland-server/goeland-front/src/components/core/UserLabel.vue` — Internal user shown by name (admin icon, e-mail and id in the tooltip) from an operator id.
 - `cmd/goeland-server/goeland-front/src/components/timeline/CaseTimelinePanel.vue` — Case timeline panel: type filters, withdrawn toggle, paging, entry dialog and status confirmations; reports the draft count.
 - `cmd/goeland-server/goeland-front/src/components/timeline/TimelineEntryCard.vue` — One timeline entry: type, status, business date, author, cited documents with pinned version, correction links and draft actions.
@@ -406,7 +413,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/orgunit/OrgUnitFormDialog.vue` — Create or edit a unit: name, abbreviation, type, parent (subject picker), mailbox, mission.
 - `cmd/goeland-server/goeland-front/src/components/orgunit/OrgUnitLabel.vue` — An org unit shown by name, linking to its page (used for the owning unit).
 - `cmd/goeland-server/goeland-front/src/components/orgunit/orgUnitForm.ts` — Unit form model and request mapping, display label, tree building and a label cache.
-- `cmd/goeland-server/goeland-front/src/components/task/AssigneePicker.vue` — Chooses a task assignee: an internal user (searched), a live org unit or nobody.
+- `cmd/goeland-server/goeland-front/src/components/task/AssigneePicker.vue` — Chooses a task assignee: an internal user (`UserPicker`), a live org unit or nobody.
 - `cmd/goeland-server/goeland-front/src/components/task/CaseTasksPanel.vue` — Case tasks panel: pending or all tasks, creation, open count for the closure rule.
 - `cmd/goeland-server/goeland-front/src/components/task/TaskDialogs.vue` — Every task dialog (create, edit, assign, status moves, assignment history) behind exposed openers.
 - `cmd/goeland-server/goeland-front/src/components/task/TaskTable.vue` — Task table: assignee, deadline with overdue highlight, status and the actions it allows.
@@ -435,7 +442,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
-- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Reference data administration page (one tab per catalogue plus the change log), for administrators.
+- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log and the application roles.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.

@@ -93,6 +93,36 @@ func (StubRepository) SearchUsers(context.Context, string, int) ([]*core.AppUser
 	return nil, nil
 }
 
+// ListAppRoles returns no roles.
+func (StubRepository) ListAppRoles(context.Context) ([]*core.AppRole, error) {
+	return nil, nil
+}
+
+// ListRoleHolders returns no users.
+func (StubRepository) ListRoleHolders(context.Context, string) ([]*core.AppUser, error) {
+	return nil, nil
+}
+
+// ListUserRoles returns no assignments.
+func (StubRepository) ListUserRoles(context.Context, string, bool) ([]*core.UserRole, error) {
+	return nil, nil
+}
+
+// ActiveRoles returns no roles.
+func (StubRepository) ActiveRoles(context.Context, string) ([]string, error) {
+	return nil, nil
+}
+
+// GrantUserRole returns zero values.
+func (StubRepository) GrantUserRole(context.Context, core.RoleChangeInput) (*core.UserRole, *core.AuditEvent, error) {
+	return nil, nil, nil
+}
+
+// RevokeUserRole returns zero values.
+func (StubRepository) RevokeUserRole(context.Context, core.RoleChangeInput) (*core.UserRole, *core.AuditEvent, error) {
+	return nil, nil, nil
+}
+
 // EndRelationship returns zero values.
 func (StubRepository) EndRelationship(context.Context, core.EndInput) (*core.SubjectRelationship, *core.AuditEvent, error) {
 	return nil, nil, nil

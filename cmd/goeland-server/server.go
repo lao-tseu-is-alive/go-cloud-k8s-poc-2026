@@ -96,6 +96,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err != nil {
 		return nil, fmt.Errorf("core module: %w", err)
 	}
+	// A role granted or revoked through this process takes effect at once.
+	coreMod.Service().OnRolesChanged(verifier.ForgetRoles)
 	docMod, err := documentmodule.New(ctx, documentmodule.Config{RequestTimeout: config.RequestTimeout}, documentmodule.Deps{
 		Pool:        pool,
 		Verifier:    verifier,
@@ -273,7 +275,7 @@ func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.
 // is recorded as an internal USER (GLD-025) and governance and audit can show
 // names; wrapping the verifier covers the Connect interceptors and the
 // out-of-proto HTTP endpoints alike.
-func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.Logger) (authadapter.TokenVerifier, error) {
+func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.Logger) (*core.RecordingVerifier, error) {
 	base, err := buildTokenVerifier(config, log)
 	if err != nil {
 		return nil, err
@@ -282,7 +284,7 @@ func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.L
 	if err != nil {
 		return nil, fmt.Errorf("user repository: %w", err)
 	}
-	verifier, err := core.NewRecordingVerifier(base, users, log)
+	verifier, err := core.NewRecordingVerifier(base, users, config.bootstrapAdmins(), log)
 	if err != nil {
 		return nil, fmt.Errorf("user recording verifier: %w", err)
 	}
@@ -296,7 +298,7 @@ func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.Toke
 			AppUserID:   config.DevUserID,
 			Email:       config.DevUserEmail,
 			DisplayName: config.DevDisplayName,
-			Scopes:      devScopes(config.DevUserAdmin),
+			Scopes:      slices.Clone(authScopes),
 		})
 	}
 	checker, err := goHttpEcho.GetNewJwtCheckerFromConfig(version.AppName, 60, log)
@@ -486,13 +488,4 @@ func recoverMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 		}()
 		next.ServeHTTP(writer, request)
 	})
-}
-
-// devScopes are the dev-mode user's scopes, plus goeland:admin when requested.
-func devScopes(admin bool) []string {
-	scopes := slices.Clone(authScopes)
-	if admin {
-		scopes = append(scopes, core.ScopeAdmin)
-	}
-	return scopes
 }

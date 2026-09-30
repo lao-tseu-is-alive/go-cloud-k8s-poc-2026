@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-09-30**, app version **0.9.2** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0021` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-09-30**, app version **0.9.2** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0022` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -50,6 +50,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | v2 §8 `subject_ref.business_ref` + namespace + allocator | ✅ `0007` | ✅ `CoreService.CreateSubjectRef{businessRef}` / `AssignBusinessRef` / `LookupSubjects` | ✅ | unique per namespace; free references without namespace; `YYYY-NNNNNN` per namespace and Europe/Zurich year |
 | Reference data administration (case types, relationship types, organization categories, document types) | ✅ `0015` | ✅ `Create*/Update*` per catalogue + `CoreService.ListReferenceChanges` | ✅ | GLD-040: `goeland:admin` only; immutable codes, deactivation instead of deletion; every change in the append-only `reference_change` log; SPA administration page |
 | v2 §5.7 / §28 internal USER (`app_user`) | ✅ `0012` | ✅ `CoreService.GetCurrentUser/BatchGetUsers` | ✅ | GLD-025: recorded from verified tokens by a verifier decorator (USER subject, audited profile changes); names shown in governance and audit; admin flag and scopes visible in the SPA; ORG_UNIT split to GLD-041 |
+| v2 §32 application roles (`app_role`, `app_user_role`) | ✅ `0022` | ✅ `CoreService.ListAppRoles/ListRoleHolders/ListUserRoles/GrantUserRole/RevokeUserRole` | ✅ | GLD-047: `goeland:admin` from the ADMIN role, never the token; bootstrap by `GOELAND_BOOTSTRAP_ADMINS`; reasons, audit on the USER subject, history kept, last administrator protected; SPA Administration → Rôles |
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
@@ -357,6 +358,32 @@ Deferred: rate limiting (ingress, see PRODUCTION_READINESS) and the k8s smoke te
 
 Planned from the same review: governed downloads and a server-side confidentiality ceiling
 (GLD-017), orphan upload collection (GLD-045), migration/runtime separation (GLD-046).
+
+### 3j. Authorization model (decided 2026-09-30, GLD-017, from the legacy rights profile)
+
+The legacy grants rights per case to an employee, an org unit or a security group (2.4M rows on
+512k cases: 78% to units, 22% to employees, median 3 per case), on the scale Contrôle total /
+Edition / Ajout suivis-documents / Consultation / Aucun accès; non-confidential cases are readable
+by every employee; about 120 security groups act as application roles; documents use a separate
+0-6 confidentiality level relative to the poster's unit and 436k per-document group grants.
+Decisions for the POC (v2 §32):
+
+- 🚀 **One model for every subject** (CASE, DOCUMENT, ACTOR, THING, ORG_UNIT) — the legacy could not
+  protect actors or things, a known pain point.
+- **Levels** READ < CONTRIBUTE < MANAGE < FULL_CONTROL; **no deny level** (63 legacy rows): a
+  restriction is a more specific, lower grant.
+- **Most specific grant wins**: personal, then the caller's groups (highest among them), then the
+  nearest org unit (a unit grant covers its sub-units), then a kind-wide application role, then
+  the baseline — READ when `confidentiality_level` < 2, nothing otherwise, and no administrator
+  bypass on confidential subjects. The legacy's first-match order is dropped.
+- **Groups** are GROUP subjects (named sets of users, not nested at first) — needed for the
+  cross-unit audiences of sensitive documents.
+- **No live inheritance** between a case and its documents: linking never changes a document's
+  confidentiality or widens its readers (READ on the document and CONTRIBUTE on the case are
+  required); depositing a document from a case copies the case's grants and level once.
+- 🚀 **Grants carry grantor, date and reason and keep their history** (the legacy overwrites in
+  place); application roles live in Goéland (`goeland:admin` from the ADMIN role, not the token);
+  first administrators from `GOELAND_BOOTSTRAP_ADMINS`.
 
 ---
 

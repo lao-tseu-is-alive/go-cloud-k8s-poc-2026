@@ -219,46 +219,105 @@ LIMIT @limit OFFSET @offset;`
 
 // --- app_user ------------------------------------------------------------------
 
+// appUserColumns projects an app_user row (alias u) with its current roles:
+// is_admin and roles are derived from app_user_role, never stored on the user.
 const appUserColumns = `
-user_id, subject_id, display_name, email, is_admin, first_seen_at, last_seen_at`
+u.user_id, u.subject_id, u.display_name, u.email, u.first_seen_at, u.last_seen_at,
+EXISTS (SELECT 1 FROM app_user_role r WHERE r.user_id = u.user_id AND r.role_code = 'ADMIN' AND r.revoked_at IS NULL) AS is_admin,
+ARRAY(SELECT r.role_code FROM app_user_role r WHERE r.user_id = u.user_id AND r.revoked_at IS NULL ORDER BY r.role_code) AS roles`
 
 // lockAppUserSQL serializes the first recording of a user across concurrent
 // requests (no row exists yet to lock) for the rest of the transaction.
 const lockAppUserSQL = `SELECT pg_advisory_xact_lock(hashtextextended('goeland:app_user:' || @user_id, 0));`
 
 const getAppUserForUpdateSQL = `
-SELECT ` + appUserColumns + `
-FROM app_user
-WHERE user_id = @user_id
+SELECT u.user_id, u.subject_id, u.display_name, u.email, u.first_seen_at, u.last_seen_at
+FROM app_user u
+WHERE u.user_id = @user_id
 FOR UPDATE;`
 
 const insertAppUserSQL = `
-INSERT INTO app_user (user_id, subject_id, display_name, email, is_admin)
-VALUES (@user_id, @subject_id, @display_name, @email, @is_admin)
+INSERT INTO app_user AS u (user_id, subject_id, display_name, email)
+VALUES (@user_id, @subject_id, @display_name, @email)
 RETURNING ` + appUserColumns + `;`
 
 const updateAppUserSQL = `
-UPDATE app_user
-SET display_name = @display_name, email = @email, is_admin = @is_admin, last_seen_at = now()
-WHERE user_id = @user_id
+UPDATE app_user AS u
+SET display_name = @display_name, email = @email, last_seen_at = now()
+WHERE u.user_id = @user_id
 RETURNING ` + appUserColumns + `;`
 
 const getAppUsersSQL = `
 SELECT ` + appUserColumns + `
-FROM app_user
-WHERE user_id = ANY(@user_ids::text[])
-ORDER BY user_id;`
+FROM app_user u
+WHERE u.user_id = ANY(@user_ids::text[])
+ORDER BY u.user_id;`
 
 // searchAppUsersSQL matches the name (accent-insensitively) or the e-mail
 // address by substring, ordered by name.
 const searchAppUsersSQL = `
 SELECT ` + appUserColumns + `
-FROM app_user
+FROM app_user u
 WHERE @query = ''
-   OR immutable_unaccent(lower(display_name)) LIKE '%' || immutable_unaccent(lower(@query)) || '%'
-   OR lower(email) LIKE '%' || lower(@query) || '%'
-ORDER BY lower(display_name), user_id
+   OR immutable_unaccent(lower(u.display_name)) LIKE '%' || immutable_unaccent(lower(@query)) || '%'
+   OR lower(u.email) LIKE '%' || lower(@query) || '%'
+ORDER BY lower(u.display_name), u.user_id
 LIMIT @limit;`
+
+// --- application roles (GLD-047) ------------------------------------------------------
+
+const appRoleColumns = `ar.code, ar.label, ar.description, ar.is_active`
+
+const listAppRolesSQL = `
+SELECT ` + appRoleColumns + `
+FROM app_role ar
+ORDER BY ar.code;`
+
+const getAppRoleSQL = `
+SELECT ` + appRoleColumns + `
+FROM app_role ar
+WHERE ar.code = @code;`
+
+const userRoleColumns = `
+ur.id, ur.user_id, ur.role_code, ur.granted_at, ur.granted_by, ur.grant_reason,
+ur.revoked_at, ur.revoked_by, ur.revoke_reason`
+
+const listUserRolesSQL = `
+SELECT ` + userRoleColumns + `
+FROM app_user_role ur
+WHERE ur.user_id = @user_id AND (@include_revoked OR ur.revoked_at IS NULL)
+ORDER BY ur.granted_at DESC, ur.id;`
+
+const listRoleHoldersSQL = `
+SELECT ` + appUserColumns + `
+FROM app_user u
+WHERE EXISTS (SELECT 1 FROM app_user_role r WHERE r.user_id = u.user_id AND r.role_code = @role_code AND r.revoked_at IS NULL)
+ORDER BY lower(u.display_name), u.user_id;`
+
+const activeRoleCodesSQL = `
+SELECT ur.role_code
+FROM app_user_role ur
+WHERE ur.user_id = @user_id AND ur.revoked_at IS NULL
+ORDER BY ur.role_code;`
+
+// lockRoleSQL serializes the changes of one role, so two concurrent
+// revocations cannot both pass the "last administrator" check.
+const lockRoleSQL = `SELECT pg_advisory_xact_lock(hashtextextended('goeland:app_role:' || @role_code, 0));`
+
+const insertUserRoleSQL = `
+INSERT INTO app_user_role AS ur (user_id, role_code, granted_by, grant_reason)
+VALUES (@user_id, @role_code, @granted_by, @grant_reason)
+RETURNING ` + userRoleColumns + `;`
+
+const revokeUserRoleSQL = `
+UPDATE app_user_role AS ur
+SET revoked_at = now(), revoked_by = @revoked_by, revoke_reason = @revoke_reason
+WHERE ur.user_id = @user_id AND ur.role_code = @role_code AND ur.revoked_at IS NULL
+RETURNING ` + userRoleColumns + `;`
+
+const countRoleHoldersSQL = `
+SELECT count(*) FROM app_user_role
+WHERE role_code = @role_code AND revoked_at IS NULL;`
 
 // --- reference_change ------------------------------------------------------------
 

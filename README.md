@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0021 (dbmate format)
+      └── db/migrations/  0001..0022 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -176,7 +176,8 @@ go run ./cmd/goeland-server
 
 Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: `/readiness`.
 Add `GOELAND_DEV_USER_NAME='Jane Doe' GOELAND_DEV_USER_ADMIN=true` to sign in as a named
-administrator; governance and audit then show that name (users are recorded from their token).
+administrator (the dev user is bootstrapped with the ADMIN role); governance and audit then show
+that name (users are recorded from their token).
 
 ## Running locally with SSO (jwt auth)
 
@@ -197,6 +198,9 @@ JWTs from `<AUTH_SERVER_URL>/auth/token` (cookie sent with `credentials: include
    allowlist, CORS and cookies. The sign-in panel detects this mismatch and offers the right link.
 
 Scopes: reads need `goeland:read`, mutations `goeland:write` (granted by the auth service).
+Administrators are decided in Goéland, not by the auth server: set `GOELAND_BOOTSTRAP_ADMINS` to
+your user id (shown by `GET /api/me`) for the first administrator, then manage the others in
+**Administration → Rôles**.
 
 ## Running on a local Kubernetes cluster (smoke test)
 
@@ -232,7 +236,7 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
   and SVG preview), detail with computed area and a map.geo.admin.ch link, edit,
   link/end/unlink, soft-delete.
 - **My tasks** (including those of the caller's units), the **org unit tree** and, for
-  administrators, the reference data administration page.
+  administrators, the administration page: reference data and the users' application roles.
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
@@ -355,6 +359,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0019_task.sql                task_type + case_task (lifecycle, one assignee, origin) + case_task_assignment history + unit membership
 0020_circulation.sql         case_circulation (steps) + case_circulation_recipient (task, answer, timeline entry)
 0021_append_only_logs.sql    audit_event and reference_change refuse UPDATE, DELETE and TRUNCATE
+0022_app_roles.sql           app_role (ADMIN) + app_user_role history; is_admin now derived from the ADMIN role
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

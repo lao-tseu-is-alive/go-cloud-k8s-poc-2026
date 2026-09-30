@@ -59,7 +59,6 @@ func registerUserTx(ctx context.Context, q Querier, profile UserProfile) (*AppUs
 		"subject_id":   ref.ID,
 		"display_name": profile.DisplayName,
 		"email":        profile.Email,
-		"is_admin":     profile.IsAdmin,
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("insert app_user: %w", err)
@@ -68,7 +67,7 @@ func registerUserTx(ctx context.Context, q Querier, profile UserProfile) (*AppUs
 		SubjectID:   ref.ID,
 		EventType:   "USER_REGISTERED",
 		ActorUserID: profile.UserID,
-		AfterState:  userAuditState(user.DisplayName, user.IsAdmin),
+		AfterState:  userAuditState(user.DisplayName),
 	}); err != nil {
 		return nil, fmt.Errorf("insert audit_event: %w", err)
 	}
@@ -82,7 +81,6 @@ func refreshUserTx(ctx context.Context, q Querier, current *AppUser, profile Use
 		"user_id":      profile.UserID,
 		"display_name": profile.DisplayName,
 		"email":        profile.Email,
-		"is_admin":     profile.IsAdmin,
 	}))
 	if err != nil {
 		return nil, fmt.Errorf("update app_user: %w", err)
@@ -93,13 +91,13 @@ func refreshUserTx(ctx context.Context, q Querier, current *AppUser, profile Use
 	if err := UpdateSubjectLabelTx(ctx, q, user.SubjectID, profile.label()); err != nil {
 		return nil, fmt.Errorf("rename user subject: %w", err)
 	}
-	after := userAuditState(user.DisplayName, user.IsAdmin)
+	after := userAuditState(user.DisplayName)
 	after["email_changed"] = current.Email != user.Email
 	if _, err := InsertAuditEventTx(ctx, q, AuditEvent{
 		SubjectID:   user.SubjectID,
 		EventType:   "USER_PROFILE_UPDATED",
 		ActorUserID: profile.UserID,
-		BeforeState: userAuditState(current.DisplayName, current.IsAdmin),
+		BeforeState: userAuditState(current.DisplayName),
 		AfterState:  after,
 	}); err != nil {
 		return nil, fmt.Errorf("insert audit_event: %w", err)
@@ -108,9 +106,9 @@ func refreshUserTx(ctx context.Context, q Querier, current *AppUser, profile Use
 }
 
 // userAuditState is the audited part of a profile; the e-mail address itself
-// is kept out of the append-only log.
-func userAuditState(displayName string, isAdmin bool) map[string]any {
-	return map[string]any{"display_name": displayName, "is_admin": isAdmin}
+// is kept out of the append-only log, and roles have their own events.
+func userAuditState(displayName string) map[string]any {
+	return map[string]any{"display_name": displayName}
 }
 
 // GetUsers returns the known users among userIDs, ordered by id; unknown ids

@@ -492,6 +492,46 @@ export interface User {
   isAdmin?: boolean
   firstSeenAt?: string
   lastSeenAt?: string
+  /** Codes of the application roles currently held (GLD-047), sorted. */
+  roles?: string[]
+}
+
+/** An application role of the catalogue (ADMIN is the role behind goeland:admin). */
+export interface AppRole {
+  code: string
+  label?: string
+  description?: string
+  isActive?: boolean
+}
+
+/** One assignment of a role to a user; a revoked one is kept as history. */
+export interface UserRole {
+  id: string
+  userId: string
+  roleCode: string
+  grantedAt?: string
+  grantedBy?: string
+  grantReason?: string
+  revokedAt?: string
+  revokedBy?: string
+  revokeReason?: string
+}
+
+export interface ListAppRolesResponse {
+  roles?: AppRole[]
+}
+
+export interface ListRoleHoldersResponse {
+  users?: User[]
+}
+
+export interface ListUserRolesResponse {
+  roles?: UserRole[]
+}
+
+export interface UserRoleChangeResponse {
+  role?: UserRole
+  auditEvent?: AuditEvent
 }
 
 export interface GetCurrentUserResponse {

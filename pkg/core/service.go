@@ -18,6 +18,8 @@ const recentAuditLimit = 10
 type Service struct {
 	repo Repository
 	log  *slog.Logger
+	// rolesListener is told whose roles changed (set once at wiring, see OnRolesChanged).
+	rolesListener func(userID string)
 }
 
 // NewService constructs a Service backed by the given repository. A nil logger falls back to slog.Default.

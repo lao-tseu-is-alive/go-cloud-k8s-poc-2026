@@ -6,13 +6,15 @@
   import ReferenceCatalogPanel from '@/components/admin/ReferenceCatalogPanel.vue'
   import { CATALOGUES } from '@/components/admin/referenceCatalogues'
   import ReferenceChangesPanel from '@/components/admin/ReferenceChangesPanel.vue'
+  import RolesAdminPanel from '@/components/admin/RolesAdminPanel.vue'
   import { useAuthStore } from '@/stores/auth'
 
-  // Reference data administration (GLD-040), for goeland:admin users only; the
-  // server enforces the scope on every call, this page only hides what cannot work.
+  // Administration, for holders of the ADMIN role only: reference data (GLD-040)
+  // and the application roles of the users (GLD-047). The server enforces the
+  // role on every call; this page only hides what cannot work.
   const { t } = useI18n()
   const { isAdmin } = storeToRefs(useAuthStore())
-  const tab = ref<ReferenceCatalogue | 'log'>('case_type')
+  const tab = ref<ReferenceCatalogue | 'log' | 'roles'>('case_type')
   const log = ref<InstanceType<typeof ReferenceChangesPanel>>()
 </script>
 
@@ -26,6 +28,7 @@
       <v-tabs v-model="tab" show-arrows>
         <v-tab v-for="c in CATALOGUES" :key="c.catalogue" :value="c.catalogue">{{ t(`sections.reference.${c.catalogue}`) }}</v-tab>
         <v-tab prepend-icon="mdi-history" value="log">{{ t('sections.reference.log') }}</v-tab>
+        <v-tab prepend-icon="mdi-shield-account-outline" value="roles">{{ t('roles.tab') }}</v-tab>
       </v-tabs>
 
       <v-card-text>
@@ -36,6 +39,10 @@
 
           <v-window-item value="log">
             <ReferenceChangesPanel ref="log" />
+          </v-window-item>
+
+          <v-window-item value="roles">
+            <RolesAdminPanel />
           </v-window-item>
         </v-window>
       </v-card-text>

@@ -26,5 +26,11 @@ type Repository interface {
 	RecordUser(ctx context.Context, profile UserProfile) (*AppUser, error)
 	GetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error)
 	SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error)
+	ListAppRoles(ctx context.Context) ([]*AppRole, error)
+	ListRoleHolders(ctx context.Context, roleCode string) ([]*AppUser, error)
+	ListUserRoles(ctx context.Context, userID string, includeRevoked bool) ([]*UserRole, error)
+	ActiveRoles(ctx context.Context, userID string) ([]string, error)
+	GrantUserRole(ctx context.Context, in RoleChangeInput) (*UserRole, *AuditEvent, error)
+	RevokeUserRole(ctx context.Context, in RoleChangeInput) (*UserRole, *AuditEvent, error)
 	ListAuditEvents(ctx context.Context, filter AuditFilter) (AuditResult, error)
 }

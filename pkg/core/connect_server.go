@@ -304,11 +304,7 @@ func (s *ConnectServer) BatchGetUsers(ctx context.Context, req *connect.Request[
 	if err != nil {
 		return nil, s.mapError(err)
 	}
-	out := make([]*goelandv1.User, len(users))
-	for i, u := range users {
-		out[i] = DomainUserToProto(u)
-	}
-	return connect.NewResponse(&goelandv1.BatchGetUsersResponse{Users: out}), nil
+	return connect.NewResponse(&goelandv1.BatchGetUsersResponse{Users: DomainUsersToProto(users)}), nil
 }
 
 // SearchUsers finds internal users by name or e-mail.
@@ -320,11 +316,84 @@ func (s *ConnectServer) SearchUsers(ctx context.Context, req *connect.Request[go
 	if err != nil {
 		return nil, s.mapError(err)
 	}
-	out := make([]*goelandv1.User, len(users))
-	for i, u := range users {
-		out[i] = DomainUserToProto(u)
+	return connect.NewResponse(&goelandv1.SearchUsersResponse{Users: DomainUsersToProto(users)}), nil
+}
+
+// ListAppRoles lists the application role catalogue.
+func (s *ConnectServer) ListAppRoles(ctx context.Context, _ *connect.Request[goelandv1.ListAppRolesRequest]) (*connect.Response[goelandv1.ListAppRolesResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
 	}
-	return connect.NewResponse(&goelandv1.SearchUsersResponse{Users: out}), nil
+	roles, err := s.service.ListAppRoles(ctx)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.AppRole, len(roles))
+	for i, r := range roles {
+		out[i] = DomainAppRoleToProto(r)
+	}
+	return connect.NewResponse(&goelandv1.ListAppRolesResponse{Roles: out}), nil
+}
+
+// ListRoleHolders lists the users currently holding a role.
+func (s *ConnectServer) ListRoleHolders(ctx context.Context, req *connect.Request[goelandv1.ListRoleHoldersRequest]) (*connect.Response[goelandv1.ListRoleHoldersResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
+	}
+	users, err := s.service.ListRoleHolders(ctx, req.Msg.RoleCode)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.ListRoleHoldersResponse{Users: DomainUsersToProto(users)}), nil
+}
+
+// ListUserRoles lists a user's role assignments.
+func (s *ConnectServer) ListUserRoles(ctx context.Context, req *connect.Request[goelandv1.ListUserRolesRequest]) (*connect.Response[goelandv1.ListUserRolesResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+		return nil, err
+	}
+	roles, err := s.service.ListUserRoles(ctx, req.Msg.UserId, req.Msg.IncludeRevoked)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.ListUserRolesResponse{Roles: userRolesToProto(roles)}), nil
+}
+
+// GrantUserRole grants an application role (administrators only).
+func (s *ConnectServer) GrantUserRole(ctx context.Context, req *connect.Request[goelandv1.GrantUserRoleRequest]) (*connect.Response[goelandv1.GrantUserRoleResponse], error) {
+	user, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	role, ev, err := s.service.GrantUserRole(ctx, RoleChangeInput{UserID: m.UserId, RoleCode: m.RoleCode, Reason: m.Reason, OperatorID: OperatorID(user)})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.GrantUserRoleResponse{Role: DomainUserRoleToProto(role), AuditEvent: DomainAuditEventToProto(ev)}), nil
+}
+
+// RevokeUserRole revokes an application role (administrators only).
+func (s *ConnectServer) RevokeUserRole(ctx context.Context, req *connect.Request[goelandv1.RevokeUserRoleRequest]) (*connect.Response[goelandv1.RevokeUserRoleResponse], error) {
+	user, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	role, ev, err := s.service.RevokeUserRole(ctx, RoleChangeInput{UserID: m.UserId, RoleCode: m.RoleCode, Reason: m.Reason, OperatorID: OperatorID(user)})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.RevokeUserRoleResponse{Role: DomainUserRoleToProto(role), AuditEvent: DomainAuditEventToProto(ev)}), nil
+}
+
+// userRolesToProto converts a list of role assignments.
+func userRolesToProto(roles []*UserRole) []*goelandv1.UserRole {
+	out := make([]*goelandv1.UserRole, len(roles))
+	for i, r := range roles {
+		out[i] = DomainUserRoleToProto(r)
+	}
+	return out
 }
 
 // CreateRelationshipType adds a relationship type (administrators only).

@@ -144,7 +144,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0021 (dbmate format)
+  │   └── db/migrations/     0001..0022 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -241,7 +241,16 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
   `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`); `pat_` tokens introspected against
   `<AUTH_SERVER_URL>/goapi/v1/auth/introspect` (cached ~60s).
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
-  (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` adds `goeland:admin`).
+  (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` bootstraps it as
+  administrator).
+
+**Application roles (GLD-047):** administrators are decided in Goéland, never by the token.
+`core.RecordingVerifier` strips `goeland:admin` from what the token says and adds it back for a
+holder of the ADMIN role (`app_role` / `app_user_role`, cached 30 s, forgotten at once on a change
+made through the core service). `GOELAND_BOOTSTRAP_ADMINS` lists user ids granted ADMIN on their
+next request (`system:bootstrap`); the last administrator cannot be revoked. Grants and
+revocations need a reason and are audited on the user's USER subject (`USER_ROLE_GRANTED` /
+`USER_ROLE_REVOKED`); a revocation keeps the row as history.
 
 **Reference data administration (GLD-040):** each domain administers its catalogue with
 `Create*` / `Update*` RPCs that require `goeland:admin` (case types, relationship types,
@@ -254,7 +263,7 @@ every verified caller is recorded in `app_user` (a USER subject; created on firs
 `USER_PROFILE_UPDATED` on change, otherwise at most one `last_seen_at` write per 15 min;
 best effort, never fails authentication). Governance/audit keep storing the operator id;
 the SPA resolves ids to names through `BatchGetUsers` (`stores/users.ts`, `UserLabel.vue`)
-and reads the caller, its scopes and admin flag from `GetCurrentUser` (`GET /api/me`).
+and reads the caller, its effective scopes, roles and admin flag from `GetCurrentUser` (`GET /api/me`).
 
 Scopes: `goeland:read` (read RPCs), `goeland:write` (mutations). Env vars are
 `GOELAND_*`; DB vars are `DB_*` / `DATABASE_URL`.
