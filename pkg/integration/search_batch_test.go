@@ -6,8 +6,6 @@ import (
 	"io"
 	"log/slog"
 	"math/rand/v2"
-	"os"
-	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -16,6 +14,7 @@ import (
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
@@ -36,7 +35,7 @@ func (c *queryCounter) TraceQueryEnd(context.Context, *pgx.Conn, pgx.TraceQueryE
 // countingPool opens a second pool on the test database whose queries are counted.
 func countingPool(t *testing.T, env *testEnv) (*pgxpool.Pool, *queryCounter) {
 	t.Helper()
-	cfg, err := pgxpool.ParseConfig(strings.TrimSpace(os.Getenv(testDatabaseURLEnv)))
+	cfg, err := pgxpool.ParseConfig(coretest.TestDatabaseURL(t, "DB integration tests"))
 	if err != nil {
 		t.Fatalf("parse dsn: %v", err)
 	}

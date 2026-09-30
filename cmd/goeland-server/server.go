@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"runtime/debug"
 	"slices"
+	"strings"
 	"time"
 
 	"connectrpc.com/vanguard"
@@ -395,19 +396,38 @@ func writeJSON(writer http.ResponseWriter, status int, value any) {
 	_ = json.NewEncoder(writer).Encode(value)
 }
 
+// maxRequestIDLength bounds a client-supplied X-Request-ID (it is logged and
+// stored on every audit_event).
+const maxRequestIDLength = 128
+
 // requestIDMiddleware ensures every request has an X-Request-ID and stores it in
 // the context (via the shared core key) so the value reaches the service layer and
-// is stamped onto every audit_event.
+// is stamped onto every audit_event. A client value is kept only when it is a
+// short token of safe characters; otherwise a fresh id replaces it.
 func requestIDMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(writer http.ResponseWriter, request *http.Request) {
 		id := request.Header.Get("X-Request-ID")
-		if id == "" {
+		if !validRequestID(id) {
 			id = uuid.NewString()
 		}
 		writer.Header().Set("X-Request-ID", id)
 		ctx := core.WithRequestID(request.Context(), id)
 		next.ServeHTTP(writer, request.WithContext(ctx))
 	})
+}
+
+// validRequestID reports whether a client request id is 1-128 characters of
+// letters, digits and "-_.:" (UUIDs, trace ids, ...).
+func validRequestID(id string) bool {
+	if id == "" || len(id) > maxRequestIDLength {
+		return false
+	}
+	for _, r := range id {
+		if !(r >= 'a' && r <= 'z' || r >= 'A' && r <= 'Z' || r >= '0' && r <= '9' || strings.ContainsRune("-_.:", r)) {
+			return false
+		}
+	}
+	return true
 }
 
 // statusRecorder captures the response status and byte count for access logging.

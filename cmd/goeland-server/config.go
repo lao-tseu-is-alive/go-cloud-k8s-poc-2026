@@ -153,14 +153,35 @@ func loadConfig() (serverConfig, error) {
 }
 
 // authServerURLFromEnv reads AUTH_SERVER_URL, which must be an http(s) URL; a
-// trailing slash is removed.
+// trailing slash is removed. Personal access tokens are sent there in clear, so
+// plain http is accepted only for a loopback host, or anywhere when
+// GOELAND_ALLOW_INSECURE_AUTH_URL=true (e.g. a service-mesh encrypted cluster).
 func authServerURLFromEnv() (string, error) {
 	authServerURL := strings.TrimRight(envOrDefault("AUTH_SERVER_URL", defaultAuthServerURL), "/")
 	parsed, err := url.Parse(authServerURL)
 	if err != nil || (parsed.Scheme != "http" && parsed.Scheme != "https") || parsed.Host == "" {
 		return "", fmt.Errorf("AUTH_SERVER_URL must be a valid http(s) URL")
 	}
+	if parsed.Scheme == "https" || isLoopbackHost(parsed.Hostname()) {
+		return authServerURL, nil
+	}
+	allowInsecure, err := envBool("GOELAND_ALLOW_INSECURE_AUTH_URL", false)
+	if err != nil {
+		return "", err
+	}
+	if !allowInsecure {
+		return "", fmt.Errorf("AUTH_SERVER_URL must use https outside loopback (tokens are sent to it); set GOELAND_ALLOW_INSECURE_AUTH_URL=true to accept http")
+	}
 	return authServerURL, nil
+}
+
+// isLoopbackHost reports whether host is localhost or a loopback IP address.
+func isLoopbackHost(host string) bool {
+	if strings.EqualFold(host, "localhost") {
+		return true
+	}
+	ip := net.ParseIP(host)
+	return ip != nil && ip.IsLoopback()
 }
 
 // envInt64InRange reads an integer environment variable (fallback when unset)

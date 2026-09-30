@@ -106,7 +106,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/doccheck/main.go` — Documentation checker: GoDoc coverage and exact atlas inventory, parameterized by flags.
 - `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
 - `cmd/goeland-server/api_surface_test.go` — Calls over REST every RPC the §50 scenario does not reach (reads, searches, updates, deletions, catalogues, not-found mapping); env-gated on `GOELAND_TEST_DATABASE_URL`.
-- `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation.
+- `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation (HTTPS auth server outside loopback).
+- `cmd/goeland-server/config_test.go` — Tests the configuration defaults, valid settings, every rejection and the auth server HTTP rules.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
@@ -132,7 +133,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/authadapter/interceptor.go` — `TokenVerifier` interface and the Connect authentication interceptor.
 - `pkg/authadapter/interceptor_test.go` — Tests the interceptor, admin scope wildcard and composite nil handling.
 - `pkg/authadapter/pat_verifier.go` — Personal access token verification by cached introspection against the auth server.
-- `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure and prefix routing.
+- `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure, prefix routing and the bounded cache.
 - `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
 - `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
 
@@ -157,6 +158,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
+- `pkg/core/coretest/database.go` — `TestDatabaseURL`: the test database DSN, skipping without one or failing when `GOELAND_REQUIRE_DB_TESTS=true` (CI).
 - `pkg/core/coretest/coretest.go` — Test helpers: a no-op `core.Repository` stub and a core service built on it for sibling-domain unit tests.
 - `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
 - `pkg/core/database.go` — Shared database helpers: `InTx` (begin, commit, rollback), SQLSTATE constants, `PgErrorWithCode` and the `MapDBError` base each domain's error translation builds on.
@@ -198,6 +200,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0018_org_unit.sql` — Schema migration: `org_unit_type` (7 seeded types), `org_unit` (tree without cycles, sibling-unique labels, external reference, dissolution), typed `owner_org_id`, case ↔ unit roles.
 - `pkg/core/module/db/migrations/0019_task.sql` — Schema migration: `task_type` (5 seeded types), `case_task` (lifecycle stamps, one assignee, origin), `case_task_assignment` history, `USER_MEMBER_OF_ORG_UNIT`.
 - `pkg/core/module/db/migrations/0020_circulation.sql` — Schema migration: `case_circulation` (steps, status stamps) and `case_circulation_recipient` (one user or unit, task, response, timeline entry), CIRCULATION_RESPONSE task type.
+- `pkg/core/module/db/migrations/0021_append_only_logs.sql` — Schema migration: triggers making `audit_event` and `reference_change` refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -321,6 +324,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
+- `pkg/integration/append_only_test.go` — DB test: the audit trail and the reference change log refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.

@@ -4,7 +4,6 @@ import (
 	"context"
 	"io"
 	"log/slog"
-	"os"
 	"strings"
 	"testing"
 	"time"
@@ -17,6 +16,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
@@ -24,9 +24,6 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
-
-// testDatabaseURLEnv names the DSN env var that enables the DB integration tests.
-const testDatabaseURLEnv = "GOELAND_TEST_DATABASE_URL"
 
 // testEnv bundles the wired-up services and pool for one integration test.
 type testEnv struct {
@@ -64,10 +61,7 @@ type testEnv struct {
 func newTestEnv(t *testing.T) *testEnv {
 	t.Helper()
 
-	dsn := strings.TrimSpace(os.Getenv(testDatabaseURLEnv))
-	if dsn == "" {
-		t.Skipf("set %s to run DB integration tests (needs PostGIS, pgcrypto, pg_trgm, unaccent)", testDatabaseURLEnv)
-	}
+	dsn := coretest.TestDatabaseURL(t, "DB integration tests")
 
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	t.Cleanup(cancel)

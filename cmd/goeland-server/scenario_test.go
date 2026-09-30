@@ -11,12 +11,12 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
-	"os"
 	"strings"
 	"testing"
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
 )
 
 // The end-to-end scenario of spec v2 §50, played over HTTP against the real
@@ -47,10 +47,7 @@ type e2e struct {
 // administrator, one whose dev user only reads and writes.
 func newE2E(t *testing.T) *e2e {
 	t.Helper()
-	dsn := strings.TrimSpace(os.Getenv("GOELAND_TEST_DATABASE_URL"))
-	if dsn == "" {
-		t.Skip("set GOELAND_TEST_DATABASE_URL to run the end-to-end scenario (needs PostGIS)")
-	}
+	dsn := coretest.TestDatabaseURL(t, "end-to-end tests")
 	start := func(token string, userID int64, name string, admin bool) *httptest.Server {
 		cfg := serverConfig{
 			DatabaseURL: dsn, AuthMode: "dev", DevToken: token, DevUserID: userID, DevUserEmail: name + "@e2e.test",

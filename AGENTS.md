@@ -127,9 +127,10 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-A real permission/confidentiality engine, storage (MinIO),
-search (Meilisearch), workflow. The Actor domain continues too (addresses, and the
-full production role vocabulary mapped onto `relationship_type` with Case/Thing).
+A real permission/confidentiality engine (GLD-017), storage (MinIO),
+search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
+domain continues too (the full production role vocabulary mapped onto
+`relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
 
 ## Key paths
@@ -143,7 +144,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0020 (dbmate format)
+  │   └── db/migrations/     0001..0021 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -206,7 +207,9 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   `cmd/goeland-server/api_surface_test.go` (every RPC the scenario does not reach, once, with
   its not-found mapping): run both with
   `go test ./cmd/goeland-server -run 'TestScenarioV2|TestAPISurface'` after every slice that
-  changes an API, and add each new RPC to one of them.
+  changes an API, and add each new RPC to one of them. CI runs all of them against a PostGIS
+  service with `GOELAND_REQUIRE_DB_TESTS=true`, which turns a missing database into a failure
+  (`coretest.TestDatabaseURL`); use that helper in any new database test.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,

@@ -70,15 +70,20 @@ binary:
 	@echo "  >  Building your app binary inside bin directory..."
 	CGO_ENABLED=0 go build ${LDFLAGS} -a -o bin/$(APP_EXECUTABLE) ./cmd/$(APP_EXECUTABLE)
 
+.PHONY: front-dist
+## front-dist:	build the embedded frontend only when dist/ is missing (clean checkout)
+front-dist:
+	test -f $(FRONTEND_DIR)/dist/index.html || $(MAKE) front-build
+
 .PHONY: test
-## test:	run all Go tests with the race detector + coverage
-test: mod-download
+## test:	run all Go tests with the race detector + coverage (builds dist/ on a clean checkout)
+test: mod-download front-dist
 	@echo "  >  Running all tests..."
 	go test -race -coverprofile coverage.out -coverpkg=$(COVER_PACKAGES) $(PACKAGES)
 
 .PHONY: lint
 ## lint:	run go vet + buf lint
-lint:
+lint: front-dist
 	go vet $(PACKAGES)
 	buf lint
 

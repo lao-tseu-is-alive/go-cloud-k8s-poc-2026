@@ -20,6 +20,26 @@ jobs:
   release-check:
     name: make release-check
     runs-on: ubuntu-latest
+    # A disposable PostGIS so the database integration tests, the spec v2 §50
+    # scenario and the API surface test run here too; GOELAND_REQUIRE_DB_TESTS
+    # makes them fail rather than skip if the database is ever missing.
+    services:
+      postgis:
+        image: postgis/postgis:17-3.5
+        env:
+          POSTGRES_DB: goeland_ci
+          # Ephemeral CI container reachable only from this job: no password.
+          POSTGRES_HOST_AUTH_METHOD: trust
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U postgres -d goeland_ci"
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 20
+    env:
+      GOELAND_TEST_DATABASE_URL: postgres://postgres@localhost:5432/goeland_ci?sslmode=disable
+      GOELAND_REQUIRE_DB_TESTS: "true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
@@ -47,7 +67,7 @@ jobs:
           checksum: e2bbcdd324da09c16a15963dc2dae0525c955c05dc118223cf732f4f7509c5e6
           setup_only: true
 
-      # release-check = check (frontend, format, lint, race tests, docs-check)
-      # + version/changelog/scripts consistency + binary build.
+      # release-check = check (frontend, format, lint, race tests including the
+      # database ones, docs-check) + version/changelog/scripts consistency + binary build.
       - name: Release gate
         run: make release-check

@@ -8,6 +8,7 @@ import (
 	"net/http/httptest"
 	"sync/atomic"
 	"testing"
+	"time"
 )
 
 // newIntrospectionServer fakes the auth service introspection REST route.
@@ -136,5 +137,27 @@ func TestCompositeVerifierRoutesByPrefix(t *testing.T) {
 	user, err = composite.VerifyBearerToken(ctx, "eyJhbGci.x.y")
 	if err != nil || user.AppUserID != 1 || jwtStub.seen != "eyJhbGci.x.y" {
 		t.Fatalf("jwt token was not routed to the jwt verifier: user=%+v err=%v", user, err)
+	}
+}
+
+func TestPatCacheStaysBounded(t *testing.T) {
+	v := &PatVerifier{cacheTTL: time.Minute, maxEntries: 3, cache: make(map[[32]byte]patCacheEntry)}
+	key := func(i byte) [32]byte { return [32]byte{i} }
+	past, future := time.Now().Add(-time.Second), time.Now().Add(time.Minute)
+
+	v.store(key(1), patCacheEntry{expiresAt: past})
+	v.store(key(2), patCacheEntry{expiresAt: future})
+	v.store(key(3), patCacheEntry{expiresAt: future})
+	v.store(key(4), patCacheEntry{expiresAt: future})
+	if _, stale := v.cache[key(1)]; stale || len(v.cache) != 3 {
+		t.Fatalf("at the limit the expired entry is swept first: %d entries, stale kept=%v", len(v.cache), stale)
+	}
+
+	v.store(key(5), patCacheEntry{expiresAt: future})
+	if len(v.cache) != 1 {
+		t.Fatalf("a full cache of live entries is emptied rather than grown: %d entries", len(v.cache))
+	}
+	if _, ok := v.cache[key(5)]; !ok {
+		t.Fatal("the new entry is kept")
 	}
 }

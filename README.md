@@ -17,11 +17,13 @@ administrative case management) as a clean, durable domain model:
 > animated by chronological history, protected by rights, and made trustworthy by
 > **auditability**.
 
-This first slice implements the **transversal core** (subjects, governance,
-relationships, audit), the **Document** component (a modern GED entity) and the
-**Actor** component (external persons & organizations), keeping the proto-first Go /
-gRPC / ConnectRPC / PostgreSQL approach and the structural conventions of
-`go-cloud-k8s-thing` + `go-mcp-markdown-notes`.
+It implements the **transversal core** (subjects, governance, relationships, audit,
+internal users, reference data administration) and nine domains built on it: **Document**
+(a modern GED entity), **Actor** (external persons & organizations), **Case** (the affaire),
+**Thing** (parcels, buildings… with LV95 PostGIS geometry), **Timeline** (case follow-ups),
+**Org units**, **Tasks** and **Circulations** — keeping the proto-first Go / gRPC /
+ConnectRPC / PostgreSQL approach and the structural conventions of `go-cloud-k8s-thing` +
+`go-mcp-markdown-notes`. The spec v2 §50 scenario runs end to end.
 
 The [documentation quality contract](docs/DOCUMENTATION.md) applies to human and agent
 contributors alike: GoDoc and Protobuf contract comments, a file-by-file repository atlas
@@ -30,8 +32,8 @@ release gate.
 
 ## Architecture at a glance
 
-- **Proto-first** API defined in `proto/goeland/v1/` (`core.proto`, `document.proto`,
-  `actor.proto`), generated with **buf** into `gen/`.
+- **Proto-first** API defined in `proto/goeland/v1/` (one `.proto` per domain: core, document,
+  actor, case, thing, timeline, orgunit, task, circulation), generated with **buf** into `gen/`.
 - **ConnectRPC + Vanguard**: each service is a Connect handler wrapped in a Vanguard
   transcoder — reachable over Connect, gRPC and gRPC-Web on the RPC path, **and** as
   REST/JSON via `google.api.http` annotations (documented in the generated OpenAPI).
@@ -41,16 +43,16 @@ release gate.
   `VanguardServices()` so it can run standalone or be composed into one shared
   `http.Server` / DB pool / transcoder / auth verifier.
 - **Embedded, dbmate-compatible migrations** (numbered, commented).
-- **PostGIS-ready** from the first migration (extension enabled up-front for the
-  future THING component; no geometry columns yet).
+- **PostGIS** from the first migration: things carry a `geometry(Geometry, 2056)` (LV95)
+  column with a GIST index (migration `0016`).
 - **Auth** reuses the ecosystem's `authadapter` (JWT from `go-cloud-k8s-auth` +
   personal access token introspection, plus a `dev` mode).
 - **Embedded web UI**: a **Vue 3 + Vuetify 4** SPA (`cmd/goeland-server/goeland-front`,
-  Vite/bun) `//go:embed`ded into the binary and served at `/` — the Document and
-  Actor modules are exercisable end-to-end from the browser (search/create/detail/edit
-  + lifecycle actions, plus read-only governance & audit).
+  Vite/bun) `//go:embed`ded into the binary and served at `/` — every domain is exercisable
+  end-to-end from the browser (search/create/detail/edit + lifecycle actions, plus read-only
+  governance & audit); see "Web UI" below.
 
-## Domain model (this slice)
+## Domain model
 
 Transversal core (`pkg/core`):
 
@@ -110,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0020 (dbmate format)
+      └── db/migrations/  0001..0021 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -215,16 +217,24 @@ troubleshooting: [deployments/k8s/README.md](deployments/k8s/README.md).
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
-(`cmd/goeland-server/goeland-front`). It exposes vertical slices of four modules plus administration:
-the **Case** module — search/list, open (reference allocated in the type namespace), detail,
-edit, status transitions with reasons, link/end/unlink subjects, soft-delete — the **Document** module — search/list, create (with file upload), detail, edit metadata,
-finalize, verify integrity, link/unlink subjects, soft-delete — and the **Actor** module
-— search/list, create (person/organization with typed contacts), detail, edit,
-activate/deactivate, soft-delete, addresses and relationships in both directions — and the
-**Thing** module — search/list, create (parcel, building or generic, with an LV95 GeoJSON
-geometry and SVG preview), detail with computed area and a map.geo.admin.ch link, edit,
-link/end/unlink, soft-delete. Administrators also get the reference data administration page. All add
-read-only governance and audit panels. Bilingual (fr-CH default, en).
+(`cmd/goeland-server/goeland-front`). It exposes a vertical slice of every domain:
+
+- **Cases** — search/list, open (reference allocated in the type namespace), detail, edit,
+  status transitions with reasons, link/end/unlink subjects, soft-delete; in the detail, the
+  **timeline** (entries, validation, lock, withdrawal, corrections, cited documents), the
+  **tasks** (assignment to a user or a unit, lifecycle) and the **circulations** (recipients by
+  step, answers).
+- **Documents** — search/list, create (with file upload), detail, edit metadata, finalize,
+  verify integrity, link/unlink subjects, soft-delete.
+- **Actors** — search/list, create (person/organization with typed contacts), detail, edit,
+  activate/deactivate, soft-delete, addresses and relationships in both directions.
+- **Things** — search/list, create (parcel, building or generic, with an LV95 GeoJSON geometry
+  and SVG preview), detail with computed area and a map.geo.admin.ch link, edit,
+  link/end/unlink, soft-delete.
+- **My tasks** (including those of the caller's units), the **org unit tree** and, for
+  administrators, the reference data administration page.
+
+All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
 - The SPA reads `GET /config` → `{authMode, authBaseUrl}` and drives either `dev`
   (manual static token) or `jwt` (silent-mint from the `go-cloud-k8s-auth` SSO
@@ -344,11 +354,12 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0018_org_unit.sql            org_unit_type + org_unit (tree without cycles, dissolution) + typed owner_org_id + case ↔ unit roles
 0019_task.sql                task_type + case_task (lifecycle, one assignee, origin) + case_task_assignment history + unit membership
 0020_circulation.sql         case_circulation (steps) + case_circulation_recipient (task, answer, timeline entry)
+0021_append_only_logs.sql    audit_event and reference_change refuse UPDATE, DELETE and TRUNCATE
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
-and actor tables have foreign keys into the core tables. As the POC grows (Case, Thing),
-migrations can be split per module.
+and domain tables have foreign keys into the core tables. Migrations can be split per module
+later.
 
 ```bash
 make db-status   # dbmate status
@@ -394,7 +405,8 @@ have Vitest unit tests (`bun run test` in `cmd/goeland-server/goeland-front`, pa
 (`pkg/actor/testdata/contact_values.json`).
 
 CI lives in [`.github/workflows`](.github/workflows): `ci` (runs `make release-check` on
-every push/PR to `main`, the same gate as locally), `cve-trivy-scan` (image CVE scan on
+every push/PR to `main`, the same gate as locally, with a PostGIS service so the database
+integration and end-to-end tests run too), `cve-trivy-scan` (image CVE scan on
 push/PR to `main` **and a weekly schedule**), `docker-publish` (unit tests + build/scan/publish
 the image on version tags), and `release` (cross-compiled binaries on version tags). Both Trivy
 jobs upload SARIF to the Security tab **and fail on fixable HIGH/CRITICAL findings** — in
@@ -444,9 +456,8 @@ implementation order with `GLD-NNN` tasks is [`docs/ROADMAP.md`](docs/ROADMAP.md
 deployment (required extensions, migrations, storage, auth, probes, secrets, and the known
 POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md).
 
-### Out of scope for this slice
+### Not built yet
 
-Case timeline + circulation, a real permission/confidentiality engine, MinIO storage, Meilisearch, and
-workflow integration — all designed to sit on top of the same subject/relationship/
-audit foundation. (The **Actor** domain and its addresses/role-relationship wiring beyond
-this identity+contacts slice also continue on the same foundation.)
+A real permission/confidentiality engine (GLD-017), MinIO storage, Meilisearch, provenance and
+outbox, export, AI proposals and workflow integration — all designed to sit on top of the same
+subject/relationship/audit foundation. The order lives in [`docs/ROADMAP.md`](docs/ROADMAP.md).

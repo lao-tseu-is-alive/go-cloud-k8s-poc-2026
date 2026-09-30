@@ -5,8 +5,13 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http"
+	"net/http/httptest"
+	"strings"
 	"testing"
 	"time"
+
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
 func TestWaitForDatabaseRetriesUntilReachable(t *testing.T) {
@@ -34,5 +39,31 @@ func TestWaitForDatabaseGivesUp(t *testing.T) {
 	cancel()
 	if err := waitForDatabase(ctx, down, time.Minute, log); !errors.Is(err, context.Canceled) {
 		t.Fatalf("a cancelled context stops the wait, got %v", err)
+	}
+}
+
+func TestRequestIDMiddlewareKeepsOnlySafeClientIDs(t *testing.T) {
+	var seen string
+	handler := requestIDMiddleware(http.HandlerFunc(func(_ http.ResponseWriter, r *http.Request) {
+		seen = core.RequestIDFromContext(r.Context())
+	}))
+	for _, c := range []struct {
+		header string
+		kept   bool
+	}{
+		{"3f2a9c1e-5b7d-4e8a-9c21-7d4e5f6a8b90", true},
+		{"trace:abc.def_1", true},
+		{"", false},
+		{strings.Repeat("a", maxRequestIDLength+1), false},
+		{"bad id\nX-Injected: 1", false},
+		{"<script>", false},
+	} {
+		req := httptest.NewRequest(http.MethodGet, "/health", nil)
+		req.Header.Set("X-Request-ID", c.header)
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, req)
+		if (seen == c.header) != c.kept || seen == "" || rec.Header().Get("X-Request-ID") != seen {
+			t.Fatalf("X-Request-ID %q: context %q, response %q, want kept=%v", c.header, seen, rec.Header().Get("X-Request-ID"), c.kept)
+		}
 	}
 }

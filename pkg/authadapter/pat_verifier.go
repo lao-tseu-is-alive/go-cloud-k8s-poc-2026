@@ -22,6 +22,8 @@ const PatTokenPrefix = "pat_"
 const (
 	defaultIntrospectionTimeout = 5 * time.Second
 	defaultPatCacheTTL          = 60 * time.Second
+	// defaultPatCacheEntries bounds the number of cached tokens.
+	defaultPatCacheEntries = 1024
 )
 
 // introspectRequest / introspectResponse mirror the REST shape of the
@@ -58,6 +60,9 @@ type PatVerifier struct {
 	introspectURL string
 	client        *http.Client
 	cacheTTL      time.Duration
+	// maxEntries bounds the cache: at the limit expired entries are swept, and
+	// the cache is emptied when that is not enough (costs a re-introspection).
+	maxEntries int
 
 	mu    sync.RWMutex
 	cache map[[32]byte]patCacheEntry
@@ -74,6 +79,7 @@ func NewPatVerifier(authServerURL string) (*PatVerifier, error) {
 		introspectURL: base + "/goapi/v1/auth/introspect",
 		client:        &http.Client{Timeout: defaultIntrospectionTimeout},
 		cacheTTL:      defaultPatCacheTTL,
+		maxEntries:    defaultPatCacheEntries,
 		cache:         make(map[[32]byte]patCacheEntry),
 	}, nil
 }
@@ -103,13 +109,29 @@ func (v *PatVerifier) VerifyBearerToken(ctx context.Context, token string) (*Aut
 		DisplayName: result.Name,
 		Scopes:      slices.Clone(result.Scopes),
 	}
-	v.mu.Lock()
-	v.cache[key] = patCacheEntry{user: user, expiresAt: time.Now().Add(v.cacheTTL)}
-	v.mu.Unlock()
+	v.store(key, patCacheEntry{user: user, expiresAt: time.Now().Add(v.cacheTTL)})
 
 	copied := user
 	copied.Scopes = slices.Clone(user.Scopes)
 	return &copied, nil
+}
+
+// store caches a positive result, keeping the cache within maxEntries.
+func (v *PatVerifier) store(key [32]byte, entry patCacheEntry) {
+	v.mu.Lock()
+	defer v.mu.Unlock()
+	if len(v.cache) >= v.maxEntries {
+		now := time.Now()
+		for k, e := range v.cache {
+			if now.After(e.expiresAt) {
+				delete(v.cache, k)
+			}
+		}
+		if len(v.cache) >= v.maxEntries {
+			clear(v.cache)
+		}
+	}
+	v.cache[key] = entry
 }
 
 // cachedUser performs a read-lock lookup and returns a copy with an independent Scopes slice to prevent mutation of cached state.

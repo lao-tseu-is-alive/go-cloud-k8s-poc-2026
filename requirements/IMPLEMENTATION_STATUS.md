@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-09-30**, app version **0.9.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0020` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-09-30**, app version **0.9.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0021` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -37,11 +37,11 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 |-----------|--------|---------------|-------|-------|
 | §5.2–5.3 `subject_kind`, `subject_ref` | ✅ `0001` | ✅ `CoreService.CreateSubjectRef/GetSubjectRef` | ✅ | canonical identity, composite `(id,kind)` FK used to pin document kind |
 | §5.4 `record_metadata` (governance) | ✅ `0001` | ✅ via Core (create/lock/soft-delete helpers) | ✅ | ownership/confidentiality/locking/versioning; non-destructive |
-| §5.5 `audit_event` (append-only) | ✅ `0001` | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx |
+| §5.5 `audit_event` (append-only) | ✅ `0001` (+ `0021`) | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx; the database refuses UPDATE, DELETE and TRUNCATE (`0021`, also on `reference_change`) |
 | §7 `relationship_type` + `subject_relationship` | ✅ `0002` (+ `0011`) | ✅ `CoreService.LinkSubjects/EndRelationship/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated; one open edge per (source, target, type); ended edges kept as history (GLD-034); unlink = soft delete of a mistake |
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
-| §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | 🟡 | Document, Actor and Case modules as full slices in the browser; core panels read-only; Thing UI pending its service |
+| §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | ✅ | every domain as a full slice in the browser (documents, actors, cases with timeline, tasks and circulations, things with geometry preview, org units, my tasks, reference data administration); core panels read-only |
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 / v2 §26-27 `case_timeline_entry` + `timeline_document_link` | ✅ `0017` | ✅ `TimelineService.*` (9 RPCs) | ✅ | GLD-012: DRAFT → VALIDATED / LOCKED / WITHDRAWN, immutable once out of draft (DB trigger too), corrections as new entries, documents cited by logical id with the version pinned on validation, case status changes as SYSTEM entries, audited on the CASE subject; SPA "Suivis" panel in the case detail |
@@ -341,6 +341,22 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   checked against the request message of the matched binding instead of the transcoder's 500.
 
 Deferred: rate limiting (ingress, see PRODUCTION_READINESS) and the k8s smoke test in CI.
+
+### 3i. Review quick-wins applied (2026-09-30, from `reports/report_20260930_gpt-5.md`, GLD-044)
+
+- 🧪 **Database tests in CI** — a PostGIS service runs the integration tests, the §50 scenario and
+  the API surface test in the same `make release-check`; `GOELAND_REQUIRE_DB_TESTS=true` makes a
+  missing database a failure, so a green CI can no longer mean "skipped".
+- 🔐 **Append-only logs in the database** (`0021`): `audit_event` and `reference_change` refuse
+  UPDATE, DELETE and TRUNCATE; separating the DDL role from the runtime is GLD-046.
+- 🔐 **Auth hardening** — bounded PAT cache; HTTPS required for `AUTH_SERVER_URL` outside
+  loopback (opt-in for mesh-encrypted clusters); bounded, validated `X-Request-ID`.
+- 🧹 **Developer experience** — `make test` / `make lint` work on a clean checkout; configuration
+  tests; stale documentation corrected. CI pinning rule reworded (third-party actions by SHA,
+  GitHub's own on their major tag).
+
+Planned from the same review: governed downloads and a server-side confidentiality ceiling
+(GLD-017), orphan upload collection (GLD-045), migration/runtime separation (GLD-046).
 
 ---
 

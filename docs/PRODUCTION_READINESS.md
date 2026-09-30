@@ -23,7 +23,7 @@ Migration `0001_subject_core.sql` runs `CREATE EXTENSION IF NOT EXISTS` for:
 | `pgcrypto` | `gen_random_uuid()` for subject/document identifiers |
 | `pg_trgm`  | trigram indexing for search                          |
 | `unaccent` | accent-insensitive full-text search (migration 0005) |
-| `postgis`  | geometry columns for future territorial objects      |
+| `postgis`  | LV95 geometry of things (`thing.geometry`, GIST index) |
 
 `CREATE EXTENSION` requires a role with sufficient privileges (superuser for PostGIS), so
 **the extensions must be installable on the target instance** — use a PostGIS-enabled image
@@ -88,9 +88,11 @@ first/last seen) so governance and audit can show names: employee personal data,
 the auth service and never edited here; the audit log records name and admin changes, not
 e-mail addresses.
 
-`AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect). The auth
-service must list the SPA's public origin in its redirect allowlist and CORS origins (README,
-"Running locally with SSO").
+`AUTH_SERVER_URL` must be a valid `http(s)` URL (PAT introspection + login redirect), and HTTPS
+unless its host is loopback: personal access tokens would otherwise travel in clear.
+`GOELAND_ALLOW_INSECURE_AUTH_URL=true` accepts plain http elsewhere (for example inside a cluster
+whose service mesh encrypts the traffic). The auth service must list the SPA's public origin in
+its redirect allowlist and CORS origins (README, "Running locally with SSO").
 
 Every response carries browser security headers (`cmd/goeland-server/headers.go`): a
 Content-Security-Policy (`'self'` only, inline styles for Vuetify, the `AUTH_SERVER_URL` origin
@@ -121,6 +123,7 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_SHUTDOWN_TIMEOUT_SECONDS`  | `10`             | Graceful drain window (1–300).     |
 | `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` | `60`            | Startup retries an unreachable database this long (0–600; 0 = one attempt); migrations and wiring then get 60 s more. SIGTERM stops a waiting startup. |
 | `LOG_LEVEL`                         | `info`           | `debug` / `info` / `warn` / `error`. |
+| `GOELAND_ALLOW_INSECURE_AUTH_URL`   | `false`          | Accept a plain-http `AUTH_SERVER_URL` outside loopback (§4). |
 
 ## 7. Secrets
 

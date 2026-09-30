@@ -8,6 +8,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-044** (in progress) — Second review hardening: the database integration tests, the §50
+  scenario and the API surface test run in CI against a PostGIS service (`GOELAND_REQUIRE_DB_TESTS`
+  makes a missing database fail instead of skip); migration `0021` makes `audit_event` and
+  `reference_change` refuse UPDATE, DELETE and TRUNCATE; the PAT cache is bounded (1024 entries,
+  expired ones swept); `AUTH_SERVER_URL` must use HTTPS outside loopback unless
+  `GOELAND_ALLOW_INSECURE_AUTH_URL=true`; a client `X-Request-ID` is kept only when short and made
+  of safe characters; server configuration tests; `make test` and `make lint` build the frontend
+  on a clean checkout; stale README, PRODUCTION_READINESS and IMPLEMENTATION_STATUS passages
+  corrected.
+
 ## [0.9.1] - 2026-09-30
 
 This release applies the post-audit hardening of 2026-09-29 (**GLD-042**, **GLD-043**): browser
