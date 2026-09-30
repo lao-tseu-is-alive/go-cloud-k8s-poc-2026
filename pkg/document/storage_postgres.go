@@ -5,6 +5,8 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"maps"
+	"slices"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -311,12 +313,7 @@ func (r *PostgresRepository) ListVersions(ctx context.Context, documentID uuid.U
 	if err != nil {
 		return nil, fmt.Errorf("read versions: %w", err)
 	}
-	for _, v := range versions {
-		if err := hydrateVersion(ctx, r.pool, v); err != nil {
-			return nil, err
-		}
-	}
-	return versions, nil
+	return versions, hydrateVersions(ctx, r.pool, versions)
 }
 
 // RegisterBlob stores the metadata of freshly written content, or returns the
@@ -592,12 +589,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Documents[i] = &doc
 		result.TotalSize = listRows[i].TotalSize
 	}
-	for _, doc := range result.Documents {
-		if err := r.hydrate(ctx, doc); err != nil {
-			return SearchResult{}, err
-		}
-	}
-	return result, nil
+	return result, r.hydrateAll(ctx, result.Documents)
 }
 
 // ListTypes returns the document type catalogue.
@@ -615,54 +607,60 @@ func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]
 
 // hydrate fills Subject, RecordMetadata, Type and CurrentVersion on a document.
 func (r *PostgresRepository) hydrate(ctx context.Context, doc *Document) error {
-	ref, err := core.GetSubjectRefTx(ctx, r.pool, doc.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate subject: %w", err)
-	}
-	md, err := core.GetRecordMetadataTx(ctx, r.pool, doc.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate metadata: %w", err)
-	}
-	docType, err := getDocumentTypeByID(ctx, r.pool, doc.DocumentTypeID)
-	if err != nil {
-		return fmt.Errorf("hydrate type: %w", err)
-	}
-	doc.Subject = ref
-	doc.RecordMetadata = md
-	doc.Type = docType
-	if doc.CurrentVersionID != nil {
-		version, err := getVersion(ctx, r.pool, *doc.CurrentVersionID)
-		if err != nil {
-			return fmt.Errorf("hydrate current version: %w", err)
-		}
-		doc.CurrentVersion = version
-	}
-	return nil
+	return r.hydrateAll(ctx, []*Document{doc})
 }
 
-// getVersion loads a version with its content using q.
-func getVersion(ctx context.Context, q core.Querier, id uuid.UUID) (*Version, error) {
-	rows, err := q.Query(ctx, getVersionSQL, pgx.NamedArgs{"id": id})
-	if err != nil {
-		return nil, err
-	}
-	v, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Version])
-	if err != nil {
-		return nil, mapDBError(err)
-	}
-	return v, hydrateVersion(ctx, q, v)
-}
-
-// hydrateVersion fills the content blob of a version, if any.
-func hydrateVersion(ctx context.Context, q core.Querier, v *Version) error {
-	if v.ContentBlobID == nil {
+// hydrateAll fills Subject, RecordMetadata, Type and CurrentVersion (with its
+// content) on a page of documents in at most five queries, whatever the page size.
+func (r *PostgresRepository) hydrateAll(ctx context.Context, docs []*Document) error {
+	if len(docs) == 0 {
 		return nil
 	}
-	blob, err := getBlob(ctx, q, *v.ContentBlobID)
+	headers, err := core.GetSubjectHeadersTx(ctx, r.pool, core.IDsOf(docs, func(d *Document) uuid.UUID { return d.ID }))
+	if err != nil {
+		return fmt.Errorf("hydrate documents: %w", err)
+	}
+	types, err := core.CollectIndexedTx(ctx, r.pool, getDocumentTypesByIDsSQL,
+		core.IDsOf(docs, func(d *Document) uuid.UUID { return d.DocumentTypeID }), func(t *DocumentType) uuid.UUID { return t.ID })
+	if err != nil {
+		return fmt.Errorf("hydrate document types: %w", err)
+	}
+	var versionIDs []uuid.UUID
+	for _, doc := range docs {
+		if doc.CurrentVersionID != nil {
+			versionIDs = append(versionIDs, *doc.CurrentVersionID)
+		}
+	}
+	versions, err := core.CollectIndexedTx(ctx, r.pool, getVersionsByIDsSQL, versionIDs, func(v *Version) uuid.UUID { return v.ID })
+	if err != nil {
+		return fmt.Errorf("hydrate current versions: %w", err)
+	}
+	for _, doc := range docs {
+		doc.Subject, doc.RecordMetadata, doc.Type = headers.Refs[doc.ID], headers.Metadata[doc.ID], types[doc.DocumentTypeID]
+		if doc.CurrentVersionID != nil {
+			doc.CurrentVersion = versions[*doc.CurrentVersionID]
+		}
+	}
+	return hydrateVersions(ctx, r.pool, slices.Collect(maps.Values(versions)))
+}
+
+// hydrateVersions fills the content blob of every version that has one, in one query.
+func hydrateVersions(ctx context.Context, q core.Querier, versions []*Version) error {
+	var blobIDs []uuid.UUID
+	for _, v := range versions {
+		if v.ContentBlobID != nil {
+			blobIDs = append(blobIDs, *v.ContentBlobID)
+		}
+	}
+	blobs, err := core.CollectIndexedTx(ctx, q, getBlobsByIDsSQL, blobIDs, func(b *ContentBlob) uuid.UUID { return b.ID })
 	if err != nil {
 		return fmt.Errorf("hydrate content: %w", err)
 	}
-	v.Content = blob
+	for _, v := range versions {
+		if v.ContentBlobID != nil {
+			v.Content = blobs[*v.ContentBlobID]
+		}
+	}
 	return nil
 }
 
@@ -698,19 +696,6 @@ func findReusableDocument(ctx context.Context, q core.Querier, blobID uuid.UUID)
 // getDocumentTypeByCode loads a document type by code using q. Returns ErrNotFound when unknown.
 func getDocumentTypeByCode(ctx context.Context, q core.Querier, code string) (*DocumentType, error) {
 	rows, err := q.Query(ctx, getDocumentTypeByCodeSQL, pgx.NamedArgs{"code": code})
-	if err != nil {
-		return nil, err
-	}
-	dt, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[DocumentType])
-	if err != nil {
-		return nil, mapDBError(err)
-	}
-	return dt, nil
-}
-
-// getDocumentTypeByID loads a document type by id using q.
-func getDocumentTypeByID(ctx context.Context, q core.Querier, id uuid.UUID) (*DocumentType, error) {
-	rows, err := q.Query(ctx, getDocumentTypesByIDsSQL, pgx.NamedArgs{"ids": []uuid.UUID{id}})
 	if err != nil {
 		return nil, err
 	}

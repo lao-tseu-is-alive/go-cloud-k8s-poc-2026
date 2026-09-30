@@ -55,10 +55,10 @@ ON CONFLICT (thing_id) DO UPDATE
 SET commune_ofs = EXCLUDED.commune_ofs, parcel_number = EXCLUDED.parcel_number,
     egrid = EXCLUDED.egrid, surface_m2 = EXCLUDED.surface_m2;`
 
-const getParcelSQL = `
-SELECT commune_ofs, parcel_number, egrid, surface_m2::float8 AS surface_m2
+const getParcelsSQL = `
+SELECT thing_id, commune_ofs, parcel_number, egrid, surface_m2::float8 AS surface_m2
 FROM thing_parcel
-WHERE thing_id = @thing_id;`
+WHERE thing_id = ANY(@ids::uuid[]);`
 
 const upsertBuildingSQL = `
 INSERT INTO thing_building (thing_id, egid, eca_number, construction_year, building_status)
@@ -67,10 +67,10 @@ ON CONFLICT (thing_id) DO UPDATE
 SET egid = EXCLUDED.egid, eca_number = EXCLUDED.eca_number,
     construction_year = EXCLUDED.construction_year, building_status = EXCLUDED.building_status;`
 
-const getBuildingSQL = `
-SELECT egid, eca_number, construction_year, building_status
+const getBuildingsSQL = `
+SELECT thing_id, egid, eca_number, construction_year, building_status
 FROM thing_building
-WHERE thing_id = @thing_id;`
+WHERE thing_id = ANY(@ids::uuid[]);`
 
 // --- thing_type ----------------------------------------------------------------------
 
@@ -81,10 +81,10 @@ SELECT ` + thingTypeColumns + `
 FROM thing_type
 WHERE code = @code;`
 
-const getThingTypeByIDSQL = `
+const getThingTypesByIDsSQL = `
 SELECT ` + thingTypeColumns + `
 FROM thing_type
-WHERE id = @id;`
+WHERE id = ANY(@ids::uuid[]);`
 
 const listThingTypesSQL = `
 SELECT ` + thingTypeColumns + `

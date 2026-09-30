@@ -263,12 +263,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Actors[i] = &act
 		result.TotalSize = listRows[i].TotalSize
 	}
-	for _, act := range result.Actors {
-		if err := r.hydrate(ctx, act); err != nil {
-			return SearchResult{}, err
-		}
-	}
-	return result, nil
+	return result, r.hydrateAll(ctx, result.Actors)
 }
 
 // SoftDelete logically deletes the actor via its governance record and writes an audit event.
@@ -316,37 +311,45 @@ func (r *PostgresRepository) ListCategories(ctx context.Context, onlyActive bool
 
 // hydrate fills Subject, RecordMetadata, Category and Contacts on an actor.
 func (r *PostgresRepository) hydrate(ctx context.Context, act *Actor) error {
-	if act.Subject == nil {
-		ref, err := core.GetSubjectRefTx(ctx, r.pool, act.ID)
-		if err != nil {
-			return fmt.Errorf("hydrate subject: %w", err)
-		}
-		act.Subject = ref
+	return r.hydrateAll(ctx, []*Actor{act})
+}
+
+// hydrateAll fills Subject, RecordMetadata, Category, Contacts and Addresses on a
+// page of actors in at most five queries, whatever the page size.
+func (r *PostgresRepository) hydrateAll(ctx context.Context, actors []*Actor) error {
+	if len(actors) == 0 {
+		return nil
 	}
-	if act.RecordMetadata == nil {
-		md, err := core.GetRecordMetadataTx(ctx, r.pool, act.ID)
-		if err != nil {
-			return fmt.Errorf("hydrate metadata: %w", err)
-		}
-		act.RecordMetadata = md
+	ids := core.IDsOf(actors, func(a *Actor) uuid.UUID { return a.ID })
+	headers, err := core.GetSubjectHeadersTx(ctx, r.pool, ids)
+	if err != nil {
+		return fmt.Errorf("hydrate actors: %w", err)
 	}
-	if act.CategoryID != nil {
-		cat, err := getCategoryByID(ctx, r.pool, *act.CategoryID)
-		if err != nil {
-			return fmt.Errorf("hydrate category: %w", err)
+	var categoryIDs []uuid.UUID
+	for _, act := range actors {
+		if act.CategoryID != nil {
+			categoryIDs = append(categoryIDs, *act.CategoryID)
 		}
-		act.Category = cat
 	}
-	contacts, err := listContacts(ctx, r.pool, act.ID)
+	categories, err := core.CollectIndexedTx(ctx, r.pool, getCategoriesByIDsSQL, categoryIDs, func(c *OrganizationCategory) uuid.UUID { return c.ID })
+	if err != nil {
+		return fmt.Errorf("hydrate categories: %w", err)
+	}
+	contacts, err := core.CollectGroupedTx(ctx, r.pool, listContactsByActorsSQL, ids, func(c *Contact) uuid.UUID { return c.ActorID })
 	if err != nil {
 		return fmt.Errorf("hydrate contacts: %w", err)
 	}
-	act.Contacts = contacts
-	addresses, err := listAddresses(ctx, r.pool, act.ID)
+	addresses, err := core.CollectGroupedTx(ctx, r.pool, listAddressesByActorsSQL, ids, func(a *Address) uuid.UUID { return a.ActorID })
 	if err != nil {
 		return fmt.Errorf("hydrate addresses: %w", err)
 	}
-	act.Addresses = addresses
+	for _, act := range actors {
+		act.Subject, act.RecordMetadata = headers.Refs[act.ID], headers.Metadata[act.ID]
+		if act.CategoryID != nil {
+			act.Category = categories[*act.CategoryID]
+		}
+		act.Contacts, act.Addresses = contacts[act.ID], addresses[act.ID]
+	}
 	return nil
 }
 
@@ -382,18 +385,6 @@ func getCategoryByCode(ctx context.Context, q core.Querier, code string) (*Organ
 	return cat, nil
 }
 
-func getCategoryByID(ctx context.Context, q core.Querier, id uuid.UUID) (*OrganizationCategory, error) {
-	rows, err := q.Query(ctx, getCategoryByIDSQL, pgx.NamedArgs{"id": id})
-	if err != nil {
-		return nil, err
-	}
-	cat, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[OrganizationCategory])
-	if err != nil {
-		return nil, mapDBError(err)
-	}
-	return cat, nil
-}
-
 // insertContacts writes the given contacts for an actor using q.
 func insertContacts(ctx context.Context, q core.Querier, actorID uuid.UUID, contacts []ContactInput) error {
 	for _, c := range contacts {
@@ -408,14 +399,6 @@ func insertContacts(ctx context.Context, q core.Querier, actorID uuid.UUID, cont
 		}
 	}
 	return nil
-}
-
-func listContacts(ctx context.Context, q core.Querier, actorID uuid.UUID) ([]*Contact, error) {
-	rows, err := q.Query(ctx, listContactsSQL, pgx.NamedArgs{"actor_id": actorID})
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[Contact])
 }
 
 // nameForSearch normalizes a display name into the stored search accelerator.
@@ -502,14 +485,6 @@ func replaceAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID, ad
 		return fmt.Errorf("end actor addresses: %w", err)
 	}
 	return insertAddresses(ctx, q, actorID, addresses, operatorID)
-}
-
-func listAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID) ([]*Address, error) {
-	rows, err := q.Query(ctx, listActorAddressesSQL, pgx.NamedArgs{"actor_id": actorID})
-	if err != nil {
-		return nil, err
-	}
-	return pgx.CollectRows(rows, pgx.RowToAddrOfStructByNameLax[Address])
 }
 
 // updateAuditState is the actor's audited identity plus which collections the

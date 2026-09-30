@@ -57,11 +57,11 @@ const insertContactSQL = `
 INSERT INTO actor_contact (actor_id, contact_type, value, is_primary, label)
 VALUES (@actor_id, @contact_type, @value, @is_primary, @label);`
 
-const listContactsSQL = `
+const listContactsByActorsSQL = `
 SELECT ` + contactColumns + `
 FROM actor_contact
-WHERE actor_id = @actor_id
-ORDER BY contact_type, created_at;`
+WHERE actor_id = ANY(@ids::uuid[])
+ORDER BY actor_id, contact_type, created_at;`
 
 const deleteContactsSQL = `DELETE FROM actor_contact WHERE actor_id = @actor_id;`
 
@@ -74,10 +74,10 @@ SELECT ` + categoryColumns + `
 FROM organization_category
 WHERE code = @code;`
 
-const getCategoryByIDSQL = `
+const getCategoriesByIDsSQL = `
 SELECT ` + categoryColumns + `
 FROM organization_category
-WHERE id = @id;`
+WHERE id = ANY(@ids::uuid[]);`
 
 const listCategoriesSQL = `
 SELECT ` + categoryColumns + `
@@ -122,13 +122,13 @@ UPDATE actor_address
 SET ended_at = now(), ended_by = @operator_id
 WHERE actor_id = @actor_id AND ended_at IS NULL;`
 
-const listActorAddressesSQL = `
+const listAddressesByActorsSQL = `
 SELECT aa.id, aa.actor_id, aa.address_id, aa.address_type, aa.is_principal, aa.label, aa.created_at,
        ad.street, ad.house_number, ad.address_line2, ad.postal_code, ad.locality, ad.country_code
 FROM actor_address aa
 JOIN address ad ON ad.id = aa.address_id
-WHERE aa.actor_id = @actor_id AND aa.ended_at IS NULL
-ORDER BY aa.is_principal DESC, aa.created_at, aa.id;`
+WHERE aa.actor_id = ANY(@ids::uuid[]) AND aa.ended_at IS NULL
+ORDER BY aa.actor_id, aa.is_principal DESC, aa.created_at, aa.id;`
 
 // --- organization_category administration (GLD-040) ---------------------------------------------
 

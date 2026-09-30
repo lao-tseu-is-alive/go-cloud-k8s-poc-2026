@@ -81,6 +81,11 @@ SELECT ` + recordMetadataColumns + `
 FROM record_metadata
 WHERE subject_id = @subject_id;`
 
+const getRecordMetadataByIDsSQL = `
+SELECT ` + recordMetadataColumns + `
+FROM record_metadata
+WHERE subject_id = ANY(@ids::uuid[]);`
+
 // getRecordMetadataForUpdateSQL locks the governance row for the duration of the
 // transaction so a check-then-mutate (lock/deleted guard) is atomic against races.
 const getRecordMetadataForUpdateSQL = `

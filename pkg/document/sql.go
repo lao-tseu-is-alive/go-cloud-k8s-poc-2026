@@ -81,10 +81,10 @@ INSERT INTO document_version AS v (
 )
 RETURNING ` + versionColumns + `;`
 
-const getVersionSQL = `
+const getVersionsByIDsSQL = `
 SELECT ` + versionColumns + `
 FROM document_version v
-WHERE v.id = @id;`
+WHERE v.id = ANY(@ids::uuid[]);`
 
 const listVersionsSQL = `
 SELECT ` + versionColumns + `
@@ -123,6 +123,11 @@ const getBlobSQL = `
 SELECT ` + blobColumns + `
 FROM content_blob b
 WHERE b.id = @id;`
+
+const getBlobsByIDsSQL = `
+SELECT ` + blobColumns + `
+FROM content_blob b
+WHERE b.id = ANY(@ids::uuid[]);`
 
 // --- document_type -----------------------------------------------------------
 

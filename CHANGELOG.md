@@ -19,6 +19,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   (CSP with the auth server origin in `jwt` mode, nosniff, no framing, referrer, opener and
   permissions policies); a shared `core.InTx` and `core.MapDBError` base (SQLSTATE constants,
   `PgErrorWithCode`) replacing the per-domain copies while each domain keeps its messages;
+  the case, actor, document, thing and org unit searches hydrate a page in a fixed number of
+  queries (`core` batch loaders) instead of three to five per row;
   `AGENTS.md` frontend entry brought up to date.
 
 ### Changed

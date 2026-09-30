@@ -149,6 +149,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Core domain (`pkg/core`)
 
+- `pkg/core/batch.go` — Batch loading for list pages: `GetSubjectHeadersTx`, `CollectIndexedTx`, `CollectGroupedTx`, `IDsOf`, `UniqueIDs` (one query per related kind instead of per row).
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
@@ -321,6 +322,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
+- `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.

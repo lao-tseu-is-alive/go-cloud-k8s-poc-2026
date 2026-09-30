@@ -305,11 +305,8 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		u := listRows[i].OrgUnit
 		result.Units[i] = &u
 		result.TotalSize = listRows[i].TotalSize
-		if err := r.hydrate(ctx, &u); err != nil {
-			return SearchResult{}, err
-		}
 	}
-	return result, nil
+	return result, r.hydrateAll(ctx, result.Units)
 }
 
 // ListTypes returns the unit type catalogue by sort order then code.
@@ -327,19 +324,27 @@ func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]
 
 // hydrate fills Subject, RecordMetadata and Type on a unit.
 func (r *PostgresRepository) hydrate(ctx context.Context, u *OrgUnit) error {
-	ref, err := core.GetSubjectRefTx(ctx, r.pool, u.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate subject: %w", err)
+	return r.hydrateAll(ctx, []*OrgUnit{u})
+}
+
+// hydrateAll fills Subject, RecordMetadata and Type on a page of units in three
+// queries, whatever the page size.
+func (r *PostgresRepository) hydrateAll(ctx context.Context, units []*OrgUnit) error {
+	if len(units) == 0 {
+		return nil
 	}
-	md, err := core.GetRecordMetadataTx(ctx, r.pool, u.ID)
+	headers, err := core.GetSubjectHeadersTx(ctx, r.pool, core.IDsOf(units, func(u *OrgUnit) uuid.UUID { return u.ID }))
 	if err != nil {
-		return fmt.Errorf("hydrate metadata: %w", err)
+		return fmt.Errorf("hydrate org units: %w", err)
 	}
-	unitType, err := getType(ctx, r.pool, getTypeByIDSQL, pgx.NamedArgs{"id": u.TypeID})
+	types, err := core.CollectIndexedTx(ctx, r.pool, getTypesByIDsSQL,
+		core.IDsOf(units, func(u *OrgUnit) uuid.UUID { return u.TypeID }), func(t *OrgUnitType) uuid.UUID { return t.ID })
 	if err != nil {
-		return fmt.Errorf("hydrate type: %w", err)
+		return fmt.Errorf("hydrate org unit types: %w", err)
 	}
-	u.Subject, u.RecordMetadata, u.Type = ref, md, unitType
+	for _, u := range units {
+		u.Subject, u.RecordMetadata, u.Type = headers.Refs[u.ID], headers.Metadata[u.ID], types[u.TypeID]
+	}
 	return nil
 }
 

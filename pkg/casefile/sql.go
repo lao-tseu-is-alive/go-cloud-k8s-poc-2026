@@ -51,10 +51,10 @@ SELECT ` + caseTypeColumns + `
 FROM case_type
 WHERE code = @code;`
 
-const getCaseTypeByIDSQL = `
+const getCaseTypesByIDsSQL = `
 SELECT ` + caseTypeColumns + `
 FROM case_type
-WHERE id = @id;`
+WHERE id = ANY(@ids::uuid[]);`
 
 const listCaseTypesSQL = `
 SELECT ` + caseTypeColumns + `

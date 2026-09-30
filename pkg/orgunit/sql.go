@@ -112,6 +112,11 @@ SELECT ` + typeColumns + `
 FROM org_unit_type
 WHERE id = @id;`
 
+const getTypesByIDsSQL = `
+SELECT ` + typeColumns + `
+FROM org_unit_type
+WHERE id = ANY(@ids::uuid[]);`
+
 const listTypesSQL = `
 SELECT ` + typeColumns + `
 FROM org_unit_type

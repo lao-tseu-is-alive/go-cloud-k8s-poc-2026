@@ -290,11 +290,8 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		c := listRows[i].Case
 		result.Cases[i] = &c
 		result.TotalSize = listRows[i].TotalSize
-		if err := r.hydrate(ctx, &c); err != nil {
-			return SearchResult{}, err
-		}
 	}
-	return result, nil
+	return result, r.hydrateAll(ctx, result.Cases)
 }
 
 // ListTypes returns the case type catalogue ordered by code.
@@ -312,19 +309,27 @@ func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]
 
 // hydrate fills Subject, RecordMetadata and Type on a case.
 func (r *PostgresRepository) hydrate(ctx context.Context, c *Case) error {
-	ref, err := core.GetSubjectRefTx(ctx, r.pool, c.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate subject: %w", err)
+	return r.hydrateAll(ctx, []*Case{c})
+}
+
+// hydrateAll fills Subject, RecordMetadata and Type on a page of cases in three
+// queries, whatever the page size.
+func (r *PostgresRepository) hydrateAll(ctx context.Context, cases []*Case) error {
+	if len(cases) == 0 {
+		return nil
 	}
-	md, err := core.GetRecordMetadataTx(ctx, r.pool, c.ID)
+	headers, err := core.GetSubjectHeadersTx(ctx, r.pool, core.IDsOf(cases, func(c *Case) uuid.UUID { return c.ID }))
 	if err != nil {
-		return fmt.Errorf("hydrate metadata: %w", err)
+		return fmt.Errorf("hydrate cases: %w", err)
 	}
-	caseType, err := getCaseType(ctx, r.pool, getCaseTypeByIDSQL, pgx.NamedArgs{"id": c.CaseTypeID})
+	types, err := core.CollectIndexedTx(ctx, r.pool, getCaseTypesByIDsSQL,
+		core.IDsOf(cases, func(c *Case) uuid.UUID { return c.CaseTypeID }), func(t *CaseType) uuid.UUID { return t.ID })
 	if err != nil {
-		return fmt.Errorf("hydrate type: %w", err)
+		return fmt.Errorf("hydrate case types: %w", err)
 	}
-	c.Subject, c.RecordMetadata, c.Type = ref, md, caseType
+	for _, c := range cases {
+		c.Subject, c.RecordMetadata, c.Type = headers.Refs[c.ID], headers.Metadata[c.ID], types[c.CaseTypeID]
+	}
 	return nil
 }
 

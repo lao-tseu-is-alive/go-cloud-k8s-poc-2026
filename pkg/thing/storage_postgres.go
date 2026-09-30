@@ -202,11 +202,8 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		t := listRows[i].Thing
 		result.Things[i] = &t
 		result.TotalSize = listRows[i].TotalSize
-		if err := r.hydrate(ctx, &t); err != nil {
-			return SearchResult{}, err
-		}
 	}
-	return result, nil
+	return result, r.hydrateAll(ctx, result.Things)
 }
 
 // ListTypes returns the thing type catalogue ordered by code.
@@ -250,41 +247,70 @@ func mapDetailConflict(err error, message string) error {
 
 // hydrate fills Subject, RecordMetadata, Type and the detail block of a thing.
 func (r *PostgresRepository) hydrate(ctx context.Context, t *Thing) error {
-	ref, err := core.GetSubjectRefTx(ctx, r.pool, t.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate subject: %w", err)
-	}
-	md, err := core.GetRecordMetadataTx(ctx, r.pool, t.ID)
-	if err != nil {
-		return fmt.Errorf("hydrate metadata: %w", err)
-	}
-	thingType, err := getThingType(ctx, r.pool, getThingTypeByIDSQL, pgx.NamedArgs{"id": t.TypeID})
-	if err != nil {
-		return fmt.Errorf("hydrate type: %w", err)
-	}
-	t.Subject, t.RecordMetadata, t.Type = ref, md, thingType
-	switch thingType.Specialization {
-	case SpecializationParcel:
-		t.Parcel, err = collectOptional[Parcel](r.pool.Query(ctx, getParcelSQL, pgx.NamedArgs{"thing_id": t.ID}))
-	case SpecializationBuilding:
-		t.Building, err = collectOptional[Building](r.pool.Query(ctx, getBuildingSQL, pgx.NamedArgs{"thing_id": t.ID}))
-	}
-	if err != nil {
-		return fmt.Errorf("hydrate details: %w", err)
-	}
-	return nil
+	return r.hydrateAll(ctx, []*Thing{t})
 }
 
-// collectOptional reads at most one row; no row yields nil.
-func collectOptional[T any](rows pgx.Rows, err error) (*T, error) {
+// parcelRow and buildingRow are detail rows keyed by their thing, for batch loading.
+type parcelRow struct {
+	// ThingID is the parcel's thing.
+	ThingID uuid.UUID `db:"thing_id"`
+	Parcel
+}
+
+type buildingRow struct {
+	// ThingID is the building's thing.
+	ThingID uuid.UUID `db:"thing_id"`
+	Building
+}
+
+// hydrateAll fills Subject, RecordMetadata, Type and the parcel or building
+// details on a page of things in at most five queries, whatever the page size.
+func (r *PostgresRepository) hydrateAll(ctx context.Context, things []*Thing) error {
+	if len(things) == 0 {
+		return nil
+	}
+	headers, err := core.GetSubjectHeadersTx(ctx, r.pool, core.IDsOf(things, func(t *Thing) uuid.UUID { return t.ID }))
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("hydrate things: %w", err)
 	}
-	row, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[T])
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, nil
+	types, err := core.CollectIndexedTx(ctx, r.pool, getThingTypesByIDsSQL,
+		core.IDsOf(things, func(t *Thing) uuid.UUID { return t.TypeID }), func(tt *ThingType) uuid.UUID { return tt.ID })
+	if err != nil {
+		return fmt.Errorf("hydrate thing types: %w", err)
 	}
-	return row, err
+	var parcelIDs, buildingIDs []uuid.UUID
+	for _, t := range things {
+		t.Subject, t.RecordMetadata, t.Type = headers.Refs[t.ID], headers.Metadata[t.ID], types[t.TypeID]
+		switch t.Type.Specialization {
+		case SpecializationParcel:
+			parcelIDs = append(parcelIDs, t.ID)
+		case SpecializationBuilding:
+			buildingIDs = append(buildingIDs, t.ID)
+		}
+	}
+	return r.hydrateDetails(ctx, things, parcelIDs, buildingIDs)
+}
+
+// hydrateDetails attaches the parcel and building rows (one query each) to the
+// things of the matching specialization.
+func (r *PostgresRepository) hydrateDetails(ctx context.Context, things []*Thing, parcelIDs, buildingIDs []uuid.UUID) error {
+	parcels, err := core.CollectGroupedTx(ctx, r.pool, getParcelsSQL, parcelIDs, func(p *parcelRow) uuid.UUID { return p.ThingID })
+	if err != nil {
+		return fmt.Errorf("hydrate parcels: %w", err)
+	}
+	buildings, err := core.CollectGroupedTx(ctx, r.pool, getBuildingsSQL, buildingIDs, func(b *buildingRow) uuid.UUID { return b.ThingID })
+	if err != nil {
+		return fmt.Errorf("hydrate buildings: %w", err)
+	}
+	for _, t := range things {
+		if rows := parcels[t.ID]; len(rows) > 0 {
+			t.Parcel = &rows[0].Parcel
+		}
+		if rows := buildings[t.ID]; len(rows) > 0 {
+			t.Building = &rows[0].Building
+		}
+	}
+	return nil
 }
 
 // collectThing reads exactly one thing row from a query result.
