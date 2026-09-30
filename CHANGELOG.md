@@ -22,7 +22,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   the case, actor, document, thing and org unit searches hydrate a page in a fixed number of
   queries (`core` batch loaders) instead of three to five per row; an API surface test calls
   every RPC the §50 scenario does not reach over REST (Connect adapters from 13-56 % to
-  72-79 % covered, 74.8 % overall);
+  72-79 % covered, 74.8 % overall); Vitest unit tests of the SPA's pure modules in
+  `make front-check`, the contact rules checked against the server's own cases
+  (`pkg/actor/testdata/contact_values.json`, first step of GLD-009);
   `AGENTS.md` frontend entry brought up to date.
 
 ### Changed

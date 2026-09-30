@@ -143,8 +143,8 @@ the repository:
   `node_modules/` are git-ignored build outputs;
 - `src/api/types.ts` is hand-maintained against the proto contract and MUST be
   updated in the same change as any RPC the SPA uses;
-- `make front-check` (frozen install, `vue-tsc` type-check, ESLint, build) is
-  part of `make check`.
+- `make front-check` (frozen install, `vue-tsc` type-check, ESLint, Vitest unit
+  tests, build) is part of `make check`.
 
 ## Repository atlas contract
 

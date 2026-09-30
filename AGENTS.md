@@ -68,7 +68,8 @@ whenever a task starts, completes, changes scope or order.
   — no birth date, AVS number or civil-registry data. Typed complements
   ("contacts": phone, e-mail, IDE, VAT, ...) are validated and stored normalized per type
   by `pkg/actor/contacts.go` (E.164 phones, IDE check digit, ...); the SPA mirrors the rules
-  in `utils/contactRules.ts` — change both together. Addresses (GLD-014) are `address` rows
+  in `utils/contactRules.ts` — change both together (both test suites read the shared cases in
+  `pkg/actor/testdata/contact_values.json`, so a one-sided change fails `make check`). Addresses (GLD-014) are `address` rows
   linked M:N by `actor_address` with a role (head office, branch, correspondence, billing,
   residence, other) and one principal; replacing them ends the old links. A branch acting as a
   distinct party or a contact person is another actor linked by `ACTOR_BRANCH_OF_ACTOR` /
@@ -355,7 +356,8 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   and `GOELAND_MAX_UPLOAD_BYTES` (default 100 MiB).
 
 When you add or change an RPC the SPA uses, update `src/api/types.ts` and the
-relevant `src/api/*` client + component, then `bun run type-check && bun run lint`.
+relevant `src/api/*` client + component, then `bun run type-check && bun run lint && bun run test`
+(Vitest unit tests of the pure modules live in `src/utils/__tests__/`).
 
 ## Generated code and protobuf
 

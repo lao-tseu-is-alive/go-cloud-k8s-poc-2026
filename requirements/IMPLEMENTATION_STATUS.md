@@ -321,6 +321,25 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
 - **v2 SQL snippets are illustrative** — implementations follow repo conventions
   (`NOT NULL DEFAULT ''` strings, enum-backed `SMALLINT` statuses, alias-prefixed projections).
 
+### 3h. Review quick-wins applied (2026-09-30, from `reports/report_20260929_opus-5.5.md`, GLD-042)
+
+- 🔐 **Browser security headers** on every response (`cmd/goeland-server/headers.go`): CSP
+  limited to the own origin (inline styles for Vuetify, the auth server in `connect-src` in jwt
+  mode), nosniff, no framing, referrer, opener and permissions policies; checked in Chrome on
+  every SPA page without a violation. HSTS stays with the TLS terminator.
+- 🧹 **Shared database plumbing** — `core.InTx` and a `core.MapDBError` base (SQLSTATE
+  constants, `PgErrorWithCode`) replace the per-domain copies; each domain keeps its messages.
+- ⚡ **Batched search hydration** — case, actor, document, thing and org unit searches load a
+  page's related rows in a fixed number of queries (`core` batch loaders), guarded by a
+  query-counting integration test (was three to five queries per row).
+- 🧪 **API surface test** — every RPC the §50 scenario does not reach is called once over REST;
+  Connect adapters 72-79 % covered (were 13-56 %), 74.8 % overall. It found GLD-043 (an unknown
+  query parameter answers 500).
+- 🧪 **SPA unit tests** — Vitest on the pure `utils/` modules in `make front-check`; the contact
+  rules run against the server's own cases (`pkg/actor/testdata/contact_values.json`).
+
+Deferred: rate limiting (ingress, see PRODUCTION_READINESS) and the k8s smoke test in CI.
+
 ---
 
 ## 4. Tests
@@ -350,11 +369,13 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
 - ✅ **End-to-end scenario** (`cmd/goeland-server/scenario_test.go`, 2026-09-29): v2 §50 over HTTP
   against the real handler (REST JSON through Vanguard, dev tokens), covering authentication (401),
   scopes (403 without `goeland:admin`), protovalidate (400), error mapping (FAILED_PRECONDITION on
-  a closed case) and the module wiring. Combined coverage with the integration tests: 62.6%.
+  a closed case) and the module wiring. The **API surface test** (`api_surface_test.go`,
+  2026-09-30) calls every other RPC once. Combined coverage with the integration tests: 74.8%.
 - ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /
   security) — add alongside each new domain, following the `pkg/integration` pattern.
-- 🟡 Frontend has no unit tests yet; the gate is `bun run type-check` + `bun run lint`
-  + `bun run build` (green). Add component/e2e tests as the UI grows.
+- 🟡 Frontend: Vitest unit tests of the pure `utils/` modules (44 tests, contact rules shared
+  with the server) in `make front-check`, beside type-check, lint and build; component tests
+  are still to come (GLD-009).
 - ✅ CI (`.github/workflows`): Trivy image CVE scan on push/PR to `main`; unit tests +
   image build/scan/publish on version tags; cross-compiled binary release on version tags.
 

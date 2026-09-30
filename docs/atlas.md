@@ -226,7 +226,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/actor/addresses_test.go` — Tests address defaults (country, principal) and rejected addresses.
 - `pkg/actor/connect_server.go` — `ActorService` ConnectRPC adapter over the actor service.
 - `pkg/actor/contacts.go` — Per-type validation and normalization of typed complements (E.164 phones, e-mail, website, postal box, IDE check digit, VAT, ABACUS, register).
-- `pkg/actor/contacts_test.go` — Accepted/normalized and rejected values for every complement type, and the OTHER label rule.
+- `pkg/actor/contacts_test.go` — Checks the shared contact cases (accepted with their normalized form, rejected) and the OTHER label rule.
+- `pkg/actor/testdata/contact_values.json` — Contact values shared by the server and SPA test suites, so the two rule sets cannot drift apart.
 - `pkg/actor/doc.go` — Package documentation for the external persons and organizations domain.
 - `pkg/actor/mappers.go` — Actor domain ↔ proto mappers.
 - `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contact types and their names, categories, inputs, filter.
@@ -345,7 +346,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/env.d.ts` — Vite client type references.
 - `cmd/goeland-server/goeland-front/eslint.config.js` — ESLint configuration (Vuetify preset, TypeScript).
 - `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point; declares the Vuetify cascade layer order before any stylesheet.
-- `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint).
+- `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint, test).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
@@ -458,6 +459,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
 - `cmd/goeland-server/goeland-front/src/utils/address.ts` — Postal code and country rules mirroring the server, address display lines and map link.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/geometry.test.ts` — GeoJSON parsing, the geometry rule (type, Swiss extent) and the SVG projection.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/i18nStub.ts` — Translate stub returning the message key, for asserting rules without i18n.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/validation.test.ts` — The required, length and SHA-256 form rules.
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
@@ -467,4 +473,6 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.
 - `cmd/goeland-server/goeland-front/tsconfig.json` — TypeScript project references root.
 - `cmd/goeland-server/goeland-front/tsconfig.node.json` — TypeScript configuration for Node-side tooling config files.
+- `cmd/goeland-server/goeland-front/tsconfig.vitest.json` — TypeScript configuration type-checking the unit tests and the modules they cover.
 - `cmd/goeland-server/goeland-front/vite.config.mts` — Vite build configuration (Vue, Vuetify, fonts, aliases).
+- `cmd/goeland-server/goeland-front/vitest.config.mts` — Vitest configuration for the unit tests of the pure modules (node environment).

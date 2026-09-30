@@ -387,6 +387,12 @@ GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmo
     go test ./pkg/integration/...
 ```
 
+The same variable enables the end-to-end tests of `cmd/goeland-server` (the spec v2 §50
+scenario and the API surface test, over HTTP against the real handler). The SPA's pure modules
+have Vitest unit tests (`bun run test` in `cmd/goeland-server/goeland-front`, part of
+`make front-check`); the contact rules are checked against the same cases as the server
+(`pkg/actor/testdata/contact_values.json`).
+
 CI lives in [`.github/workflows`](.github/workflows): `ci` (runs `make release-check` on
 every push/PR to `main`, the same gate as locally), `cve-trivy-scan` (image CVE scan on
 push/PR to `main` **and a weekly schedule**), `docker-publish` (unit tests + build/scan/publish

@@ -60,8 +60,9 @@ read audit).
 - [ ] **GLD-008 — Generated-code reproducibility gate**: add a
   `generated-check` (regenerate, diff `gen/` and `api/openapi/`) to
   `make release-check`; needs network access for the remote OpenAPI plugin.
-- [ ] **GLD-009 — Frontend tests**: add unit/component tests to the SPA; the
-  gate is currently type-check, lint and build only.
+- [~] **GLD-009 — Frontend tests**: add unit/component tests to the SPA. Started with
+  GLD-042: Vitest on the pure `utils/` modules in `make front-check`, the contact rules checked
+  against the server's own cases (shared fixture); component tests remain.
 - [ ] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces.
 - [~] **GLD-042 — Post-audit hardening** (audit of 2026-09-29, decided 2026-09-30): security
   headers on every response; a shared `core` transaction helper and pgx error-mapping base

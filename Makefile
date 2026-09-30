@@ -105,10 +105,10 @@ vuln-check:
 	go tool govulncheck $(PACKAGES)
 
 .PHONY: front-check
-## front-check:	frozen bun install + vue-tsc type-check + eslint + vite build (dist/)
+## front-check:	frozen bun install + vue-tsc type-check + eslint + vitest + vite build (dist/)
 front-check:
 	@echo "  >  Checking embedded frontend in $(FRONTEND_DIR) ..."
-	cd $(FRONTEND_DIR) && bun install --frozen-lockfile && bun run type-check && bun run lint && bun run build-only
+	cd $(FRONTEND_DIR) && bun install --frozen-lockfile && bun run type-check && bun run lint && bun run test && bun run build-only
 
 # --- Documentation contract (docs/DOCUMENTATION.md) ---------------------------
 
