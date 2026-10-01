@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.9.2**.
+Tracked version: **v0.10.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -29,8 +29,8 @@ Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shi
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
 (GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
-security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050, starting with
-application roles), then the sensitive read audit (GLD-033).
+security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050; roles and grants
+shipped in v0.10.0, filtering next with GLD-049), then the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -242,12 +242,12 @@ covered by an integration test.
   document needs READ on it and CONTRIBUTE on the case and never changes its confidentiality; a
   document deposited from a case copies the case's grants and level once. `Can(ctx, user,
   action, subject)` behind a `core` interface (Casbin/OpenFGA may sit behind it later).
-- [~] **GLD-047 — Application roles in Goéland**: `app_role` (ADMIN seeded) and an audited,
+- [x] **GLD-047 — Application roles in Goéland**: `app_role` (ADMIN seeded) and an audited,
   non-destructive `app_user_role` history; `goeland:admin` comes from the ADMIN role, never
   from the token (the auth server's `IsAdmin` is ignored); first administrators from
   `GOELAND_BOOTSTRAP_ADMINS` (user ids, applied on their next request, audited); the last
   administrator cannot be revoked; role administration in the SPA.
-- [~] **GLD-048 — Grants and groups**: `access_grant` (typed grantee, level, grantor, reason,
+- [x] **GLD-048 — Grants and groups**: `access_grant` (typed grantee, level, grantor, reason,
   revocation kept as history, audited on the subject), GROUP subjects with members, the
   `Authorizer` evaluating the precedence above, checks on every mutation and single read of
   the five subject kinds, creator FULL_CONTROL and owner unit MANAGE at creation (backfilled

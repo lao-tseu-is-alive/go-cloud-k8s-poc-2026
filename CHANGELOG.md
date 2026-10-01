@@ -8,15 +8,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.10.0] - 2026-10-01
+
+This release makes authorization real (Phase 6, first two steps): application roles stored in
+Goéland (**GLD-047**) and grants with security groups enforced on every subject (**GLD-048**).
+Migrations `0022` and `0023` apply automatically at startup; current administrators keep their
+role and every subject's creator gets FULL_CONTROL. **Breaking:** `goeland:admin` no longer comes
+from the token, and a mutation now needs a level on its subject. Searches and lists are not
+filtered yet.
+
 ### Added
 
-- **GLD-047** (in progress) — Application roles stored in Goéland, the first step of real
-  authorization (GLD-017): migration `0022` (`app_role` with ADMIN, `app_user_role` history),
+- **GLD-047** — Application roles stored in Goéland, the first step of real
+  authorization : migration `0022` (`app_role` with ADMIN, `app_user_role` history),
   `CoreService.ListAppRoles`, `ListRoleHolders`, `ListUserRoles`, `GrantUserRole` and
   `RevokeUserRole` (REST under `/api/app-roles` and `/api/users/{user_id}/roles`); grants and
   revocations need a reason, are audited on the user (`USER_ROLE_GRANTED` / `USER_ROLE_REVOKED`)
   and kept as history; the last administrator cannot be revoked. SPA: Administration → Rôles.
-- **GLD-048** (in progress) — Grants and security groups: `AccessService` (`GetMyAccess`,
+- **GLD-048** — Grants and security groups: `AccessService` (`GetMyAccess`,
   `ListGrants`, `SetGrant`, `RevokeGrant`, `ListGroups`, `GetGroup`, `CreateGroup`, `UpdateGroup`,
   `ArchiveGroup`, `AddGroupMember`, `RemoveGroupMember`) over migration `0023` (`access_grant` with
   history, `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles ACTOR_MANAGER and
