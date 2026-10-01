@@ -50,6 +50,10 @@ const (
 	GranteeKind_GRANTEE_KIND_GROUP GranteeKind = 2
 	// GRANTEE_KIND_ORG_UNIT is an org unit and its sub-units (its subject id).
 	GranteeKind_GRANTEE_KIND_ORG_UNIT GranteeKind = 3
+	// GRANTEE_KIND_CREATOR_UNITS stands, in a case type's default grants only,
+	// for the units the creator is a direct member of (resolved at creation);
+	// SetGrant refuses it.
+	GranteeKind_GRANTEE_KIND_CREATOR_UNITS GranteeKind = 4
 )
 
 // Enum value maps for GranteeKind.
@@ -59,12 +63,14 @@ var (
 		1: "GRANTEE_KIND_USER",
 		2: "GRANTEE_KIND_GROUP",
 		3: "GRANTEE_KIND_ORG_UNIT",
+		4: "GRANTEE_KIND_CREATOR_UNITS",
 	}
 	GranteeKind_value = map[string]int32{
-		"GRANTEE_KIND_UNSPECIFIED": 0,
-		"GRANTEE_KIND_USER":        1,
-		"GRANTEE_KIND_GROUP":       2,
-		"GRANTEE_KIND_ORG_UNIT":    3,
+		"GRANTEE_KIND_UNSPECIFIED":   0,
+		"GRANTEE_KIND_USER":          1,
+		"GRANTEE_KIND_GROUP":         2,
+		"GRANTEE_KIND_ORG_UNIT":      3,
+		"GRANTEE_KIND_CREATOR_UNITS": 4,
 	}
 )
 
@@ -1812,12 +1818,11 @@ const file_goeland_v1_access_proto_rawDesc = "" +
 	"subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12'\n" +
 	"\x0finclude_revoked\x18\x02 \x01(\bR\x0eincludeRevoked\"E\n" +
 	"\x12ListGrantsResponse\x12/\n" +
-	"\x06grants\x18\x01 \x03(\v2\x17.goeland.v1.AccessGrantR\x06grants\"\x91\x02\n" +
+	"\x06grants\x18\x01 \x03(\v2\x17.goeland.v1.AccessGrantR\x06grants\"\x95\x02\n" +
 	"\x0fSetGrantRequest\x12'\n" +
 	"\n" +
-	"subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12F\n" +
-	"\fgrantee_kind\x18\x02 \x01(\x0e2\x17.goeland.v1.GranteeKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vgranteeKind\x12)\n" +
+	"subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12J\n" +
+	"\fgrantee_kind\x18\x02 \x01(\x0e2\x17.goeland.v1.GranteeKindB\x0e\xbaH\v\x82\x01\b\x10\x01\x18\x01\x18\x02\x18\x03R\vgranteeKind\x12)\n" +
 	"\n" +
 	"grantee_id\x18\x03 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\tgranteeId\x12>\n" +
@@ -1888,12 +1893,13 @@ const file_goeland_v1_access_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"T\n" +
 	"\x19RemoveGroupMemberResponse\x127\n" +
 	"\vaudit_event\x18\x01 \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent*u\n" +
+	"auditEvent*\x95\x01\n" +
 	"\vGranteeKind\x12\x1c\n" +
 	"\x18GRANTEE_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11GRANTEE_KIND_USER\x10\x01\x12\x16\n" +
 	"\x12GRANTEE_KIND_GROUP\x10\x02\x12\x19\n" +
-	"\x15GRANTEE_KIND_ORG_UNIT\x10\x03*\xb2\x01\n" +
+	"\x15GRANTEE_KIND_ORG_UNIT\x10\x03\x12\x1e\n" +
+	"\x1aGRANTEE_KIND_CREATOR_UNITS\x10\x04*\xb2\x01\n" +
 	"\fAccessSource\x12\x1d\n" +
 	"\x19ACCESS_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
 	"\x16ACCESS_SOURCE_PERSONAL\x10\x01\x12\x17\n" +

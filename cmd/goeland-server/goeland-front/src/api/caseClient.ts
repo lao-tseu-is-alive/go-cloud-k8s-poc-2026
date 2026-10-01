@@ -1,6 +1,7 @@
 import type {
   CaseStatus,
   CaseType,
+  CaseTypeDefaultGrant,
   CreateCaseRequest,
   GetCaseResponse,
   GoCase,
@@ -54,4 +55,13 @@ export function deleteCase (id: string, reason: string): Promise<unknown> {
 export async function listCaseTypes (onlyActive = true): Promise<CaseType[]> {
   const res = await apiFetch<{ caseTypes?: CaseType[] }>('/api/case-types', { query: { onlyActive } })
   return res.caseTypes ?? []
+}
+
+/** Replaces the default grants copied onto new cases of a type (administrators only). */
+export async function setCaseTypeDefaultGrants (code: string, grants: CaseTypeDefaultGrant[], reason: string): Promise<CaseType | undefined> {
+  const res = await apiFetch<{ caseType?: CaseType }>(`/api/case-types/${encodeURIComponent(code)}/default-grants`, {
+    method: 'POST',
+    body: { grants: grants.map(g => ({ granteeKind: g.granteeKind, granteeId: g.granteeId || undefined, level: g.level })), reason: reason || undefined },
+  })
+  return res.caseType
 }

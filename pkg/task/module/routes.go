@@ -23,13 +23,14 @@ import (
 
 const maxRequestBodyBytes = 8 << 20 // 8 MiB
 
-// connectOption builds the standard interceptor chain: timeout → auth → proto validation.
+// connectOption builds the strict JSON codec (core.StrictJSONOption) and the
+// standard interceptor chain: timeout → auth → proto validation.
 func (m *Module) connectOption() connect.Option {
-	return connect.WithInterceptors(
+	return connect.WithOptions(core.StrictJSONOption(), connect.WithInterceptors(
 		core.NewTimeoutInterceptor(m.cfg.requestTimeout()),
 		authadapter.NewInterceptor(m.deps.Verifier, m.deps.Logger),
 		connectvalidate.NewInterceptor(),
-	)
+	))
 }
 
 // VanguardServices returns the Vanguard services exposed by this module.
@@ -48,7 +49,7 @@ func (m *Module) ServiceNames() []string {
 // RegisterRoutes mounts this module's transcoder on mux for standalone mode.
 // Bundle callers use VanguardServices() + one shared transcoder instead.
 func (m *Module) RegisterRoutes(mux *http.ServeMux) error {
-	transcoder, err := vanguard.NewTranscoder(m.VanguardServices())
+	transcoder, err := vanguard.NewTranscoder(m.VanguardServices(), vanguard.WithCodec(core.NewStrictJSONCodec))
 	if err != nil {
 		return fmt.Errorf("task module: build transcoder: %w", err)
 	}

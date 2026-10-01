@@ -132,7 +132,7 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-Default grants per case type (GLD-050), storage (MinIO),
+The sensitive read audit (GLD-033), storage (MinIO),
 search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
@@ -281,6 +281,17 @@ timeline entry's visibility needs READ (participants), CONTRIBUTE (internal) or 
 downloaded through `GET /api/documents/{id}/content[?versionId=]` (READ on the document), and the
 automatic reuse of identical content only picks a document the caller may read. New lists must
 apply the predicate.
+
+**Default access per case type (GLD-050):** `case_type.default_confidentiality_level` is a minimum
+for new cases and `case_type_default_grant` a template (users, groups, units, `CREATOR_UNITS`)
+copied once by `core.ApplyDefaultGrantsTx` in the case creation transaction (highest level kept
+per grantee; archived groups and dissolved units skipped); `SetCaseTypeDefaultGrants` replaces a
+template and logs it in `reference_change`. Existing cases never follow a template change.
+
+**Strict JSON (GLD-050):** request bodies with an unknown field answer 400 on both surfaces: every
+module adds `core.StrictJSONOption()` to its Connect handler options and every transcoder is built
+with `vanguard.WithCodec(core.NewStrictJSONCodec)` (the bundle in `server.go` too). Keep both when
+adding a module; the SPA must send only fields of the request message.
 
 **Application roles (GLD-047):** administrators are decided in Goéland, never by the token.
 `core.RecordingVerifier` strips `goeland:admin` from what the token says and adds it back for a

@@ -1,4 +1,21 @@
 {
+  "caseTypeDefaults": {
+    "open": "Default access",
+    "title": "Default access — {type}",
+    "hint": "These grants are copied once onto every new case of this type, besides the full control of its creator and the management by its owning unit. Changing them leaves existing cases unchanged.",
+    "empty": "No default access.",
+    "grantee": "Grantee",
+    "kinds": {
+      "creatorUnits": "Creator's units",
+      "user": "User",
+      "group": "Group",
+      "unit": "Unit"
+    },
+    "creatorUnitsHint": "The units the creator is a direct member of when the case is created (and their sub-units).",
+    "add": "Add",
+    "remove": "Remove",
+    "saved": "Default access saved."
+  },
   "groups": {
     "title": "Security groups",
     "intro": "A group brings together users of several units (a committee, a project) to give them a common access. A personal access wins over a group's, which wins over a unit's.",
@@ -540,6 +557,8 @@
       "country_code": "Country"
     },
     "reference": {
+      "confidentialLevel": "{level} — confidential",
+      "defaultConfidentialityLevel": "Default confidentiality",
       "code": "Code",
       "label": "Label",
       "description": "Description",

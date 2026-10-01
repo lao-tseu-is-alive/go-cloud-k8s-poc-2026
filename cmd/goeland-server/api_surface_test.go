@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"math/rand/v2"
+	"net/http"
 	"net/url"
 	"slices"
 	"strings"
@@ -71,6 +72,49 @@ func (s *surface) catalogues() {
 		s.fails(codeNotFound, "PATCH", path+"/NO_SUCH_CODE", map[string]any{"label": "x", "reason": "test"})
 	}
 	s.ok("GET", "/api/relationship-types", nil)
+	s.caseTypeDefaults()
+	s.strictJSON()
+}
+
+// caseTypeDefaults covers the default access of a case type (GLD-050).
+func (s *surface) caseTypeDefaults() {
+	code := s.code("E2EDEF")
+	s.ok("POST", "/api/case-types", map[string]any{"code": code, "label": "Défauts E2E", "defaultConfidentialityLevel": 2, "reason": "test"})
+	set := s.ok("POST", "/api/case-types/"+code+"/default-grants", map[string]any{
+		"grants": []any{map[string]any{"granteeKind": "GRANTEE_KIND_CREATOR_UNITS", "level": "PERMISSION_CONTRIBUTE"}}, "reason": "modèle",
+	})
+	if grants := list(set["caseType"].(map[string]any), "defaultGrants"); len(grants) != 1 {
+		s.t.Fatalf("the template is returned: %v", set)
+	}
+	s.fails(codeNotFound, "POST", "/api/case-types/NO_SUCH_CODE/default-grants", map[string]any{"reason": "x"})
+	s.fails(codeInvalidArgument, "POST", "/api/case-types/"+code+"/default-grants", map[string]any{
+		"grants": []any{map[string]any{"granteeKind": "GRANTEE_KIND_GROUP", "granteeId": uuid.NewString(), "level": "PERMISSION_READ"}},
+	})
+	s.fails(codeInvalidArgument, "POST", "/api/subjects/"+uuid.NewString()+"/grants", map[string]any{
+		"granteeKind": "GRANTEE_KIND_CREATOR_UNITS", "granteeId": "x", "level": "PERMISSION_READ", "reason": "x",
+	})
+	created := s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": code, "title": "Défauts " + s.token})
+	if lvl, _ := created["case"].(map[string]any)["recordMetadata"].(map[string]any)["confidentialityLevel"].(float64); lvl != 2 {
+		s.t.Fatalf("the type's minimum confidentiality applies: %v", created)
+	}
+}
+
+// strictJSON checks that a body naming an unknown field is refused on both
+// surfaces (GLD-050) instead of being applied without it.
+func (s *surface) strictJSON() {
+	s.fails(codeInvalidArgument, "POST", "/api/cases", map[string]any{
+		"caseTypeCode": "GENERIC_REQUEST", "title": "Faute de frappe", "initialGovernance": map[string]any{"confidentialityLevl": 2},
+	})
+	req, err := http.NewRequest("POST", s.admin.URL+"/goeland.v1.CaseService/ListCaseTypes", strings.NewReader(`{"onlyActive":true,"onlyActiv":true}`))
+	if err != nil {
+		s.t.Fatal(err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Connect-Protocol-Version", "1")
+	req.Header.Set("Authorization", "Bearer "+adminToken)
+	if r := s.send(req); r.status != http.StatusBadRequest || r.body["code"] != "invalid_argument" {
+		s.t.Fatalf("an unknown field on the Connect path: HTTP %d %v", r.status, r.body)
+	}
 }
 
 // core covers subjects, business references, lookups, relationships and users.

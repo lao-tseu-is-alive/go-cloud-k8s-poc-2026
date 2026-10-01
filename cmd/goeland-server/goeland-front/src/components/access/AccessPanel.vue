@@ -3,6 +3,7 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listGrants, revokeGrant, setGrant } from '@/api/accessClient'
+  import { GRANTEE_ICONS, LEVEL_COLORS, LEVELS } from '@/components/access/grantees'
   import GroupPicker from '@/components/access/GroupPicker.vue'
   import SubjectPicker from '@/components/core/SubjectPicker.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
@@ -24,17 +25,6 @@
   const { enumLabel } = useI18nEnum()
   const { report } = useApiErrors()
   const ui = useUiStore()
-
-  const LEVELS: Permission[] = ['PERMISSION_READ', 'PERMISSION_CONTRIBUTE', 'PERMISSION_MANAGE', 'PERMISSION_FULL_CONTROL']
-  const LEVEL_COLORS: Partial<Record<Permission, string>> = {
-    PERMISSION_READ: 'grey', PERMISSION_CONTRIBUTE: 'info', PERMISSION_MANAGE: 'primary', PERMISSION_FULL_CONTROL: 'deep-purple',
-  }
-  const GRANTEE_ICONS: Record<GranteeKind, string> = {
-    GRANTEE_KIND_UNSPECIFIED: 'mdi-help-circle-outline',
-    GRANTEE_KIND_USER: 'mdi-account-circle-outline',
-    GRANTEE_KIND_GROUP: 'mdi-account-group-outline',
-    GRANTEE_KIND_ORG_UNIT: 'mdi-sitemap-outline',
-  }
 
   const grants = ref<AccessGrant[]>([])
   const showHistory = ref(false)

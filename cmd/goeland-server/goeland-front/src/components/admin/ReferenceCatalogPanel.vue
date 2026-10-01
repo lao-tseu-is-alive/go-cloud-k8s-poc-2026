@@ -7,10 +7,11 @@
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { useUiStore } from '@/stores/ui'
   import { maxLength, required } from '@/utils/validation'
-  import { REFERENCE_CODE, SUBJECT_KINDS } from './referenceCatalogues'
+  import { CONFIDENTIAL_LEVEL, CONFIDENTIALITY_LEVELS, REFERENCE_CODE, SUBJECT_KINDS } from './referenceCatalogues'
 
   // Generic editor of one reference catalogue: list (active and inactive),
   // create, edit and (de)activate. Codes are immutable; entries are never deleted.
+  // The row-actions slot adds catalogue-specific actions (case type default grants).
   const props = defineProps<{ config: CatalogueConfig }>()
   const emit = defineEmits<{ changed: [] }>()
 
@@ -30,6 +31,11 @@
 
   const columns = computed(() => props.config.fields.filter(f => f.column))
   const kindItems = computed(() => SUBJECT_KINDS.map(k => ({ value: k, title: enumLabel('SubjectKind', k) })))
+  const confidentialityItems = computed(() => CONFIDENTIALITY_LEVELS.map(level => ({ value: level, title: confidentialityLabel(level) })))
+
+  function confidentialityLabel (level: number): string {
+    return level >= CONFIDENTIAL_LEVEL ? t('fields.reference.confidentialLevel', { level }) : String(level)
+  }
 
   async function load () {
     loading.value = true
@@ -42,10 +48,11 @@
     }
   }
   onMounted(load)
+  defineExpose({ reload: load })
 
   function openCreate () {
     editing.value = null
-    draft.value = { code: '', isActive: true, isDirected: true }
+    draft.value = { code: '', isActive: true, isDirected: true, defaultConfidentialityLevel: 0 }
     reason.value = ''
     dialogOpen.value = true
   }
@@ -109,6 +116,7 @@
   function cell (entry: CatalogueEntry, field: CatalogueField): string {
     const value = entry[field.key]
     if (field.kind === 'subjectKind') return enumLabel('SubjectKind', typeof value === 'string' ? value : undefined)
+    if (field.kind === 'confidentiality') return confidentialityLabel(typeof value === 'number' ? value : 0)
     return typeof value === 'string' && value !== '' ? value : '—'
   }
 </script>
@@ -153,7 +161,9 @@
             </v-chip>
           </td>
 
-          <td class="text-right">
+          <td class="text-right text-no-wrap">
+            <slot :entry="entry" name="row-actions" />
+
             <v-btn
               :aria-label="t('actions.reference.edit')"
               icon="mdi-pencil"
@@ -193,6 +203,16 @@
                 :items="kindItems"
                 :label="t(`fields.reference.${field.key}`)"
                 :rules="rules(field)"
+              />
+
+              <v-select
+                v-else-if="field.kind === 'confidentiality'"
+                v-model="draft[field.key]"
+                class="mt-2"
+                item-title="title"
+                item-value="value"
+                :items="confidentialityItems"
+                :label="t(`fields.reference.${field.key}`)"
               />
 
               <v-checkbox

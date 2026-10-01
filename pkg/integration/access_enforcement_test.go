@@ -40,7 +40,7 @@ func TestCaseWorkNeedsAccess(t *testing.T) {
 	note := timeline.CreateInput{CaseID: c.ID, Type: timeline.TypeComment, Body: "note", OperatorID: x.UserID}
 	_, _, err := env.timelineSvc.Create(ctx, note)
 	denied(t, "a timeline entry with READ only", err)
-	grant(t, env, c.ID, access.GranteeUser, x.UserID, core.LevelContribute)
+	grant(t, env, c.ID, core.GranteeUser, x.UserID, core.LevelContribute)
 	entry, _, err := env.timelineSvc.Create(ctx, note)
 	if err != nil {
 		t.Fatalf("a timeline entry with CONTRIBUTE: %v", err)
@@ -89,7 +89,7 @@ func TestRelationshipsNeedAccess(t *testing.T) {
 	link := core.LinkInput{SourceSubjectID: c.ID, TargetSubjectID: a.ID, RelationshipTypeCode: "CASE_HAS_ACTOR_REQUESTER", OperatorID: x.UserID}
 	_, _, err := env.coreSvc.LinkSubjects(ctx, link)
 	denied(t, "linking from a case with READ", err)
-	grant(t, env, c.ID, access.GranteeUser, x.UserID, core.LevelManage)
+	grant(t, env, c.ID, core.GranteeUser, x.UserID, core.LevelManage)
 	if _, _, err := env.coreSvc.LinkSubjects(ctx, link); err != nil {
 		t.Fatalf("linking with MANAGE on the case and READ on the actor: %v", err)
 	}
@@ -115,8 +115,8 @@ func TestDepositFromCaseCopiesAccess(t *testing.T) {
 	if err != nil {
 		t.Fatalf("create confidential case: %v", err)
 	}
-	grant(t, env, c.ID, access.GranteeUser, x.UserID, core.LevelContribute)
-	grant(t, env, c.ID, access.GranteeUser, reader.UserID, core.LevelRead)
+	grant(t, env, c.ID, core.GranteeUser, x.UserID, core.LevelContribute)
+	grant(t, env, c.ID, core.GranteeUser, reader.UserID, core.LevelRead)
 
 	blob := ingest(t, env, "dépôt "+uniqueToken()).Blob
 	deposited, err := env.docSvc.Create(ctx, document.CreateInput{

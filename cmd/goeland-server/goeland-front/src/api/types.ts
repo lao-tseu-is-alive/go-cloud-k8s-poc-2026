@@ -426,6 +426,18 @@ export interface CaseType {
   /** When set, CreateCase allocates the business reference in this namespace. */
   businessRefNamespace?: string
   isActive?: boolean
+  /** Minimum confidentiality of new cases of this type (GLD-050). */
+  defaultConfidentialityLevel?: number
+  /** Grants copied once onto every new case of this type (GLD-050). */
+  defaultGrants?: CaseTypeDefaultGrant[]
+}
+
+/** One line of a case type's default grants; granteeId is empty for the creator's units. */
+export interface CaseTypeDefaultGrant {
+  granteeKind: GranteeKind
+  granteeId?: string
+  granteeLabel?: string
+  level: Permission
 }
 
 export interface GoCase {
@@ -1020,7 +1032,8 @@ export interface CreateCirculationRequest {
 
 // ---- Access: grants and security groups (GLD-048) ------------------------------------
 
-export type GranteeKind = 'GRANTEE_KIND_UNSPECIFIED' | 'GRANTEE_KIND_USER' | 'GRANTEE_KIND_GROUP' | 'GRANTEE_KIND_ORG_UNIT'
+/** CREATOR_UNITS only appears in a case type's default grants (the creator's units, resolved at creation). */
+export type GranteeKind = 'GRANTEE_KIND_UNSPECIFIED' | 'GRANTEE_KIND_USER' | 'GRANTEE_KIND_GROUP' | 'GRANTEE_KIND_ORG_UNIT' | 'GRANTEE_KIND_CREATOR_UNITS'
 
 export type AccessSource
   = | 'ACCESS_SOURCE_UNSPECIFIED'

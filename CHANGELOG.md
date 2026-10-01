@@ -17,6 +17,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   Timeline entries follow their visibility: participants with READ on the case, internal with
   CONTRIBUTE, restricted with MANAGE, and always their author; writing for an audience needs the
   same level.
+- **GLD-050** — Default access per case type: a minimum confidentiality
+  (`defaultConfidentialityLevel` on `CreateCaseType` / `UpdateCaseType`) and default grants
+  (`SetCaseTypeDefaultGrants`, `POST /api/case-types/{code}/default-grants`; users, groups, units
+  and `GRANTEE_KIND_CREATOR_UNITS`, the creator's direct units), copied once onto every new case
+  of the type; migration `0024`. SPA: Administration → Types d'affaire → "Accès par défaut".
 
 ### Changed
 
@@ -25,6 +30,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `GET /api/documents/download?ref=` is removed. The SPA uses the new endpoint.
 - The automatic reuse of a document with identical content only picks a document the caller may
   read; otherwise a new document is created on the same content.
+- **Breaking:** a request body naming an unknown field now answers 400 INVALID_ARGUMENT, on the
+  REST bindings and on the Connect path, instead of being applied without it.
 
 ## [0.10.0] - 2026-10-01
 

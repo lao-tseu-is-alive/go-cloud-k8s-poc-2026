@@ -94,8 +94,8 @@ func (s *ConnectServer) SetGrant(ctx context.Context, req *connect.Request[goela
 	}
 	m := req.Msg
 	g, ev, err := s.service.SetGrant(ctx, SetGrantInput{
-		SubjectID: id, GranteeKind: GranteeKindFromProto(m.GranteeKind), GranteeID: m.GranteeId,
-		Level: LevelFromProto(m.Level), Reason: m.Reason, OperatorID: operator,
+		SubjectID: id, GranteeKind: core.GranteeKindFromProto(m.GranteeKind), GranteeID: m.GranteeId,
+		Level: core.LevelFromProto(m.Level), Reason: m.Reason, OperatorID: operator,
 	})
 	if err != nil {
 		return nil, s.mapError(err)

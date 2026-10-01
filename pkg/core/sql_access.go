@@ -105,3 +105,41 @@ FROM subject_relationship r
 JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_MEMBER_OF_GROUP'
 JOIN security_group sg ON sg.id = r.target_subject_id AND sg.archived_at IS NULL
 WHERE r.source_subject_id = (SELECT subject_id FROM me) AND r.deleted_at IS NULL AND r.valid_to IS NULL;`
+
+// --- default grants (GLD-050) ---------------------------------------------------------
+
+// upsertDefaultUserGrantSQL gives a template level to a user, raising an
+// existing current grant (the creator's) only when the template is higher.
+const upsertDefaultUserGrantSQL = `
+INSERT INTO access_grant AS g (subject_id, grantee_kind, grantee_user_id, level, granted_by, grant_reason)
+VALUES (@subject_id, 'USER', @user_id, @level, @granted_by, @reason)
+ON CONFLICT (subject_id, grantee_user_id) WHERE revoked_at IS NULL AND grantee_kind = 'USER'
+DO UPDATE SET level = EXCLUDED.level, grant_reason = EXCLUDED.grant_reason
+WHERE g.level < EXCLUDED.level;`
+
+// upsertDefaultSubjectGrantSQL gives a template level to a live group or unit,
+// raising an existing current grant (the owning unit's) only when higher.
+const upsertDefaultSubjectGrantSQL = `
+INSERT INTO access_grant AS g (subject_id, grantee_kind, grantee_subject_id, level, granted_by, grant_reason)
+SELECT @subject_id, @grantee_kind, @grantee_subject_id::uuid, @level, @granted_by, @reason
+WHERE NOT EXISTS (SELECT 1 FROM security_group sg WHERE sg.id = @grantee_subject_id::uuid AND sg.archived_at IS NOT NULL)
+  AND NOT EXISTS (SELECT 1 FROM org_unit ou WHERE ou.id = @grantee_subject_id::uuid AND ou.dissolved_at IS NOT NULL)
+ON CONFLICT (subject_id, grantee_subject_id) WHERE revoked_at IS NULL AND grantee_kind <> 'USER'
+DO UPDATE SET level = EXCLUDED.level, grant_reason = EXCLUDED.grant_reason
+WHERE g.level < EXCLUDED.level;`
+
+// creatorUnitsSQL lists the live units a user is a direct member of.
+const creatorUnitsSQL = `
+SELECT r.target_subject_id
+FROM app_user u
+JOIN subject_relationship r ON r.source_subject_id = u.subject_id AND r.deleted_at IS NULL AND r.valid_to IS NULL
+JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_MEMBER_OF_ORG_UNIT'
+JOIN org_unit ou ON ou.id = r.target_subject_id AND ou.dissolved_at IS NULL
+WHERE u.user_id = @user_id
+ORDER BY r.target_subject_id;`
+
+const knownUserSQL = `SELECT EXISTS (SELECT 1 FROM app_user WHERE user_id = @user_id);`
+
+const liveGroupGranteeSQL = `SELECT EXISTS (SELECT 1 FROM security_group WHERE id = @id AND archived_at IS NULL);`
+
+const liveUnitGranteeSQL = `SELECT EXISTS (SELECT 1 FROM org_unit WHERE id = @id AND dissolved_at IS NULL);`

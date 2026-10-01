@@ -12,7 +12,8 @@ import { listOrgUnitTypes } from '@/api/orgUnitClient'
 import { listTaskTypes } from '@/api/taskClient'
 import { listThingTypes } from '@/api/thingClient'
 
-export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean'
+/** confidentiality is a level 0-5 (from 2 a grant is needed to read). */
+export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean' | 'confidentiality'
 
 export interface CatalogueField {
   /** Proto3-JSON field name, also the i18n key under fields.reference. */
@@ -45,7 +46,12 @@ export const SUBJECT_KINDS: SubjectKind[] = [
 export const CATALOGUES: CatalogueConfig[] = [
   {
     catalogue: 'case_type',
-    fields: [LABEL, { key: 'businessRefNamespace', kind: 'text', max: 32, column: true }, DESCRIPTION],
+    fields: [
+      LABEL,
+      { key: 'businessRefNamespace', kind: 'text', max: 32, column: true },
+      { key: 'defaultConfidentialityLevel', kind: 'confidentiality', column: true },
+      DESCRIPTION,
+    ],
     list: async () => (await listCaseTypes(false)) as unknown as CatalogueEntry[],
   },
   {
@@ -88,6 +94,10 @@ export const CATALOGUES: CatalogueConfig[] = [
     list: async () => (await listTaskTypes(false)) as unknown as CatalogueEntry[],
   },
 ]
+
+/** Confidentiality levels; from CONFIDENTIAL_LEVEL a subject is read only with a grant. */
+export const CONFIDENTIALITY_LEVELS = [0, 1, 2, 3, 4, 5]
+export const CONFIDENTIAL_LEVEL = 2
 
 /** The code rule of new entries, mirroring the server. */
 export const REFERENCE_CODE = /^[A-Z][A-Z0-9_]{1,99}$/

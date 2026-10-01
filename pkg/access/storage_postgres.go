@@ -96,7 +96,7 @@ func lockGrantChangeTx(ctx context.Context, tx pgx.Tx, in SetGrantInput) (*strin
 	if _, err := tx.Exec(ctx, lockSubjectGrantsSQL, pgx.NamedArgs{"subject_id": in.SubjectID}); err != nil {
 		return nil, nil, fmt.Errorf("lock grants: %w", err)
 	}
-	if in.GranteeKind == GranteeUser {
+	if in.GranteeKind == core.GranteeUser {
 		var known bool
 		if err := tx.QueryRow(ctx, userKnownSQL, pgx.NamedArgs{"user_id": in.GranteeID}).Scan(&known); err != nil {
 			return nil, nil, fmt.Errorf("check user: %w", err)
@@ -110,7 +110,7 @@ func lockGrantChangeTx(ctx context.Context, tx pgx.Tx, in SetGrantInput) (*strin
 	if err != nil {
 		return nil, nil, fmt.Errorf("%w: grantee id must be a UUID", core.ErrInvalidInput)
 	}
-	if in.GranteeKind == GranteeOrgUnit {
+	if in.GranteeKind == core.GranteeOrgUnit {
 		return nil, &id, core.EnsureLiveOrgUnitTx(ctx, tx, id)
 	}
 	return nil, &id, ensureLiveGroupTx(ctx, tx, id)

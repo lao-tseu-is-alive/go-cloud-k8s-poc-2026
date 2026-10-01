@@ -58,7 +58,7 @@ func (s *Service) ListGrants(ctx context.Context, operatorID string, subjectID u
 func (s *Service) SetGrant(ctx context.Context, in SetGrantInput) (*Grant, *core.AuditEvent, error) {
 	in.GranteeID, in.Reason = strings.TrimSpace(in.GranteeID), strings.TrimSpace(in.Reason)
 	switch {
-	case in.GranteeKind != GranteeUser && in.GranteeKind != GranteeGroup && in.GranteeKind != GranteeOrgUnit:
+	case in.GranteeKind != core.GranteeUser && in.GranteeKind != core.GranteeGroup && in.GranteeKind != core.GranteeOrgUnit:
 		return nil, nil, fmt.Errorf("%w: unknown grantee kind %q", core.ErrInvalidInput, in.GranteeKind)
 	case in.GranteeID == "":
 		return nil, nil, fmt.Errorf("%w: grantee id is required", core.ErrInvalidInput)

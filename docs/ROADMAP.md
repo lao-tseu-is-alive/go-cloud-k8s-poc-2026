@@ -30,7 +30,7 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
 (GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
 security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050; roles and grants
-shipped in v0.10.0, filtering done with GLD-049, follow-ups in GLD-050), then the sensitive read audit (GLD-033).
+shipped in v0.10.0, filtering (GLD-049) and follow-ups (GLD-050) done for the next release), then the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -263,12 +263,19 @@ covered by an integration test.
   tree), group, business-reference and relationship lists; `GET /api/documents/{id}/content`
   (`?versionId=`) replaces `/api/documents/download?ref=`. Left as they are: the labels of the
   ancestors and children on an org unit page and of the documents cited by a timeline entry.
-- [ ] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
+- [~] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
   creator and creator's unit); the two go-cloud-k8s-auth findings fixed or explicitly
   accepted in that repository (accounts linked by e-mail without the identity provider's
   `email_verified`, user list visible to every authenticated user); unknown JSON body fields
   rejected or kept lenient by an explicit decision (unknown query parameters answer 400,
-  GLD-043).
+  GLD-043). Done 2026-10-01 (decided with the user): a case type carries a minimum
+  confidentiality and a template of grants (users, groups, units, and CREATOR_UNITS — the
+  creator's direct units), copied once at creation (`core.ApplyDefaultGrantsTx`, migration
+  `0024`, `SetCaseTypeDefaultGrants`, SPA Administration → Types d'affaire); go-cloud-k8s-auth (0a829b5)
+  links by e-mail only when the provider asserts it verified (never for Microsoft) and refuses
+  the login otherwise, and keeps the user directory for administrators; request bodies with an
+  unknown field answer 400 on REST and Connect (`core.StrictJSONOption`,
+  `core.NewStrictJSONCodec`).
 - [ ] **GLD-033 — Sensitive read audit**: `access_audit_event` for
   READ_SENSITIVE, DOWNLOAD and EXPORT on sensitive scopes, distinct from the
   mutation audit.

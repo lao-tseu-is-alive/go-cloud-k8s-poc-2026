@@ -53,8 +53,9 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Case,
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert subject_ref: %w", err)
 	}
-	if _, err := core.InsertRecordMetadataTx(ctx, tx, in.Governance, ref.ID); err != nil {
-		return nil, nil, fmt.Errorf("insert record_metadata: %w", err)
+	defaultGrants, err := applyTypeDefaultsTx(ctx, tx, caseType, &in, ref.ID)
+	if err != nil {
+		return nil, nil, err
 	}
 	if req := businessRefFor(in.BusinessRef, caseType); !req.IsZero() {
 		if ref, err = core.AssignBusinessRefTx(ctx, tx, ref.ID, req); err != nil {
@@ -81,6 +82,8 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Case,
 			"case_type":              caseType.Code,
 			"business_ref":           ref.BusinessRef,
 			"business_ref_namespace": ref.BusinessRefNamespace,
+			"confidentiality_level":  in.Governance.ConfidentialityLevel,
+			"default_grants":         defaultGrants,
 		},
 	})
 	if err != nil {
@@ -90,6 +93,20 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Case,
 		return nil, nil, fmt.Errorf("commit create case: %w", err)
 	}
 	return c, ev, r.hydrate(ctx, c)
+}
+
+// applyTypeDefaultsTx writes the case's governance with the type's minimum
+// confidentiality, then copies the type's default grants (GLD-050); it
+// returns the grants written, for the creation event.
+func applyTypeDefaultsTx(ctx context.Context, tx pgx.Tx, caseType *CaseType, in *CreateInput, caseID uuid.UUID) ([]map[string]any, error) {
+	in.Governance.ConfidentialityLevel = max(in.Governance.ConfidentialityLevel, caseType.DefaultConfidentialityLevel)
+	if _, err := core.InsertRecordMetadataTx(ctx, tx, in.Governance, caseID); err != nil {
+		return nil, fmt.Errorf("insert record_metadata: %w", err)
+	}
+	if err := hydrateDefaultGrantsTx(ctx, tx, []*CaseType{caseType}); err != nil {
+		return nil, err
+	}
+	return core.ApplyDefaultGrantsTx(ctx, tx, caseID, in.OperatorID, "default grant of case type "+caseType.Code, caseType.DefaultGrants)
 }
 
 // businessRefFor returns the explicit request, or an allocation in the case
@@ -304,7 +321,7 @@ func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]
 	if err != nil {
 		return nil, fmt.Errorf("read case types: %w", err)
 	}
-	return types, nil
+	return types, hydrateDefaultGrantsTx(ctx, r.pool, types)
 }
 
 // hydrate fills Subject, RecordMetadata and Type on a case.

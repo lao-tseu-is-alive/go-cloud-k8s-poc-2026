@@ -1,8 +1,9 @@
 <script setup lang="ts">
-  import type { ReferenceCatalogue } from '@/api/types'
+  import type { CaseType, ReferenceCatalogue } from '@/api/types'
   import { storeToRefs } from 'pinia'
   import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import CaseTypeDefaultGrantsDialog from '@/components/admin/CaseTypeDefaultGrantsDialog.vue'
   import ReferenceCatalogPanel from '@/components/admin/ReferenceCatalogPanel.vue'
   import { CATALOGUES } from '@/components/admin/referenceCatalogues'
   import ReferenceChangesPanel from '@/components/admin/ReferenceChangesPanel.vue'
@@ -16,6 +17,14 @@
   const { isAdmin } = storeToRefs(useAuthStore())
   const tab = ref<ReferenceCatalogue | 'log' | 'roles'>('case_type')
   const log = ref<InstanceType<typeof ReferenceChangesPanel>>()
+  const caseTypes = ref<InstanceType<typeof ReferenceCatalogPanel>[]>([])
+  const defaultsOf = ref<CaseType | null>(null) // the case type whose default grants are edited
+
+  function defaultsSaved () {
+    defaultsOf.value = null
+    for (const panel of caseTypes.value) void panel.reload()
+    log.value?.reload()
+  }
 </script>
 
 <template>
@@ -34,7 +43,20 @@
       <v-card-text>
         <v-window v-model="tab">
           <v-window-item v-for="c in CATALOGUES" :key="c.catalogue" :value="c.catalogue">
-            <ReferenceCatalogPanel :config="c" @changed="log?.reload()" />
+            <ReferenceCatalogPanel v-if="c.catalogue === 'case_type'" ref="caseTypes" :config="c" @changed="log?.reload()">
+              <template #row-actions="{ entry }">
+                <v-btn
+                  :aria-label="t('caseTypeDefaults.open')"
+                  icon="mdi-shield-key-outline"
+                  size="small"
+                  :title="t('caseTypeDefaults.open')"
+                  variant="text"
+                  @click="defaultsOf = entry as unknown as CaseType"
+                />
+              </template>
+            </ReferenceCatalogPanel>
+
+            <ReferenceCatalogPanel v-else :config="c" @changed="log?.reload()" />
           </v-window-item>
 
           <v-window-item value="log">
@@ -47,5 +69,7 @@
         </v-window>
       </v-card-text>
     </v-card>
+
+    <CaseTypeDefaultGrantsDialog :case-type="defaultsOf" @close="defaultsOf = null" @saved="defaultsSaved" />
   </v-container>
 </template>

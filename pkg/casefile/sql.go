@@ -46,7 +46,7 @@ RETURNING ` + caseColumns + `;`
 
 // --- case_type -------------------------------------------------------------------
 
-const caseTypeColumns = `id, code, label, description, business_ref_namespace, is_active`
+const caseTypeColumns = `id, code, label, description, business_ref_namespace, is_active, default_confidentiality_level`
 
 const getCaseTypeByCodeSQL = `
 SELECT ` + caseTypeColumns + `
@@ -87,8 +87,8 @@ LIMIT @limit OFFSET @offset;`
 // --- case_type administration (GLD-040) ---------------------------------------------
 
 const insertCaseTypeSQL = `
-INSERT INTO case_type (code, label, description, business_ref_namespace)
-VALUES (@code, @label, @description, @business_ref_namespace)
+INSERT INTO case_type (code, label, description, business_ref_namespace, default_confidentiality_level)
+VALUES (@code, @label, @description, @business_ref_namespace, @default_confidentiality_level)
 RETURNING ` + caseTypeColumns + `;`
 
 const getCaseTypeForUpdateSQL = `
@@ -104,6 +104,26 @@ UPDATE case_type
 SET label = coalesce(@label::text, label),
     description = coalesce(@description::text, description),
     business_ref_namespace = coalesce(@business_ref_namespace::text, business_ref_namespace),
-    is_active = coalesce(@is_active::boolean, is_active)
+    is_active = coalesce(@is_active::boolean, is_active),
+    default_confidentiality_level = coalesce(@default_confidentiality_level::smallint, default_confidentiality_level)
 WHERE code = @code
 RETURNING ` + caseTypeColumns + `;`
+
+// --- case type default grants (GLD-050) -----------------------------------------------
+
+// listDefaultGrantsSQL returns the template lines of several case types with
+// their grantee labels, in their order of definition.
+const listDefaultGrantsSQL = `
+SELECT g.case_type_id, g.grantee_kind, g.grantee_user_id, g.grantee_subject_id, g.level,
+       coalesce(u.display_name, sr.display_label, '') AS grantee_label
+FROM case_type_default_grant g
+LEFT JOIN app_user u ON u.user_id = g.grantee_user_id
+LEFT JOIN subject_ref sr ON sr.id = g.grantee_subject_id
+WHERE g.case_type_id = ANY(@ids::uuid[])
+ORDER BY g.created_at, g.id;`
+
+const deleteDefaultGrantsSQL = `DELETE FROM case_type_default_grant WHERE case_type_id = @case_type_id;`
+
+const insertDefaultGrantSQL = `
+INSERT INTO case_type_default_grant (case_type_id, grantee_kind, grantee_user_id, grantee_subject_id, level, created_by)
+VALUES (@case_type_id, @grantee_kind, @grantee_user_id, @grantee_subject_id, @level, @created_by);`

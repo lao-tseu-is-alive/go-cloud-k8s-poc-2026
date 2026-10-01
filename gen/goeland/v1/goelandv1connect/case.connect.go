@@ -68,6 +68,9 @@ const (
 	// CaseServiceUpdateCaseTypeProcedure is the fully-qualified name of the CaseService's
 	// UpdateCaseType RPC.
 	CaseServiceUpdateCaseTypeProcedure = "/goeland.v1.CaseService/UpdateCaseType"
+	// CaseServiceSetCaseTypeDefaultGrantsProcedure is the fully-qualified name of the CaseService's
+	// SetCaseTypeDefaultGrants RPC.
+	CaseServiceSetCaseTypeDefaultGrantsProcedure = "/goeland.v1.CaseService/SetCaseTypeDefaultGrants"
 )
 
 // CaseServiceClient is a client for the goeland.v1.CaseService service.
@@ -101,6 +104,10 @@ type CaseServiceClient interface {
 	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
 	// unknown code.
 	UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error)
+	// Replace the default grants copied onto new cases of a type (GLD-050).
+	// Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an unknown
+	// code, INVALID_ARGUMENT for an unknown or inactive grantee or a repeated one.
+	SetCaseTypeDefaultGrants(context.Context, *connect.Request[v1.SetCaseTypeDefaultGrantsRequest]) (*connect.Response[v1.SetCaseTypeDefaultGrantsResponse], error)
 }
 
 // NewCaseServiceClient constructs a client for the goeland.v1.CaseService service. By default, it
@@ -168,20 +175,27 @@ func NewCaseServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(caseServiceMethods.ByName("UpdateCaseType")),
 			connect.WithClientOptions(opts...),
 		),
+		setCaseTypeDefaultGrants: connect.NewClient[v1.SetCaseTypeDefaultGrantsRequest, v1.SetCaseTypeDefaultGrantsResponse](
+			httpClient,
+			baseURL+CaseServiceSetCaseTypeDefaultGrantsProcedure,
+			connect.WithSchema(caseServiceMethods.ByName("SetCaseTypeDefaultGrants")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // caseServiceClient implements CaseServiceClient.
 type caseServiceClient struct {
-	createCase     *connect.Client[v1.CreateCaseRequest, v1.CreateCaseResponse]
-	getCase        *connect.Client[v1.GetCaseRequest, v1.GetCaseResponse]
-	updateCase     *connect.Client[v1.UpdateCaseRequest, v1.UpdateCaseResponse]
-	transitionCase *connect.Client[v1.TransitionCaseRequest, v1.TransitionCaseResponse]
-	searchCases    *connect.Client[v1.SearchCasesRequest, v1.SearchCasesResponse]
-	deleteCase     *connect.Client[v1.DeleteCaseRequest, v1.DeleteCaseResponse]
-	listCaseTypes  *connect.Client[v1.ListCaseTypesRequest, v1.ListCaseTypesResponse]
-	createCaseType *connect.Client[v1.CreateCaseTypeRequest, v1.CreateCaseTypeResponse]
-	updateCaseType *connect.Client[v1.UpdateCaseTypeRequest, v1.UpdateCaseTypeResponse]
+	createCase               *connect.Client[v1.CreateCaseRequest, v1.CreateCaseResponse]
+	getCase                  *connect.Client[v1.GetCaseRequest, v1.GetCaseResponse]
+	updateCase               *connect.Client[v1.UpdateCaseRequest, v1.UpdateCaseResponse]
+	transitionCase           *connect.Client[v1.TransitionCaseRequest, v1.TransitionCaseResponse]
+	searchCases              *connect.Client[v1.SearchCasesRequest, v1.SearchCasesResponse]
+	deleteCase               *connect.Client[v1.DeleteCaseRequest, v1.DeleteCaseResponse]
+	listCaseTypes            *connect.Client[v1.ListCaseTypesRequest, v1.ListCaseTypesResponse]
+	createCaseType           *connect.Client[v1.CreateCaseTypeRequest, v1.CreateCaseTypeResponse]
+	updateCaseType           *connect.Client[v1.UpdateCaseTypeRequest, v1.UpdateCaseTypeResponse]
+	setCaseTypeDefaultGrants *connect.Client[v1.SetCaseTypeDefaultGrantsRequest, v1.SetCaseTypeDefaultGrantsResponse]
 }
 
 // CreateCase calls goeland.v1.CaseService.CreateCase.
@@ -229,6 +243,11 @@ func (c *caseServiceClient) UpdateCaseType(ctx context.Context, req *connect.Req
 	return c.updateCaseType.CallUnary(ctx, req)
 }
 
+// SetCaseTypeDefaultGrants calls goeland.v1.CaseService.SetCaseTypeDefaultGrants.
+func (c *caseServiceClient) SetCaseTypeDefaultGrants(ctx context.Context, req *connect.Request[v1.SetCaseTypeDefaultGrantsRequest]) (*connect.Response[v1.SetCaseTypeDefaultGrantsResponse], error) {
+	return c.setCaseTypeDefaultGrants.CallUnary(ctx, req)
+}
+
 // CaseServiceHandler is an implementation of the goeland.v1.CaseService service.
 type CaseServiceHandler interface {
 	// Open a case. SubjectRef + RecordMetadata via Core, business reference
@@ -260,6 +279,10 @@ type CaseServiceHandler interface {
 	// immutable. Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an
 	// unknown code.
 	UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error)
+	// Replace the default grants copied onto new cases of a type (GLD-050).
+	// Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an unknown
+	// code, INVALID_ARGUMENT for an unknown or inactive grantee or a repeated one.
+	SetCaseTypeDefaultGrants(context.Context, *connect.Request[v1.SetCaseTypeDefaultGrantsRequest]) (*connect.Response[v1.SetCaseTypeDefaultGrantsResponse], error)
 }
 
 // NewCaseServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -323,6 +346,12 @@ func NewCaseServiceHandler(svc CaseServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(caseServiceMethods.ByName("UpdateCaseType")),
 		connect.WithHandlerOptions(opts...),
 	)
+	caseServiceSetCaseTypeDefaultGrantsHandler := connect.NewUnaryHandler(
+		CaseServiceSetCaseTypeDefaultGrantsProcedure,
+		svc.SetCaseTypeDefaultGrants,
+		connect.WithSchema(caseServiceMethods.ByName("SetCaseTypeDefaultGrants")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.CaseService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CaseServiceCreateCaseProcedure:
@@ -343,6 +372,8 @@ func NewCaseServiceHandler(svc CaseServiceHandler, opts ...connect.HandlerOption
 			caseServiceCreateCaseTypeHandler.ServeHTTP(w, r)
 		case CaseServiceUpdateCaseTypeProcedure:
 			caseServiceUpdateCaseTypeHandler.ServeHTTP(w, r)
+		case CaseServiceSetCaseTypeDefaultGrantsProcedure:
+			caseServiceSetCaseTypeDefaultGrantsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -386,4 +417,8 @@ func (UnimplementedCaseServiceHandler) CreateCaseType(context.Context, *connect.
 
 func (UnimplementedCaseServiceHandler) UpdateCaseType(context.Context, *connect.Request[v1.UpdateCaseTypeRequest]) (*connect.Response[v1.UpdateCaseTypeResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CaseService.UpdateCaseType is not implemented"))
+}
+
+func (UnimplementedCaseServiceHandler) SetCaseTypeDefaultGrants(context.Context, *connect.Request[v1.SetCaseTypeDefaultGrantsRequest]) (*connect.Response[v1.SetCaseTypeDefaultGrantsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CaseService.SetCaseTypeDefaultGrants is not implemented"))
 }

@@ -70,6 +70,12 @@ type CaseType struct {
 	BusinessRefNamespace string `db:"business_ref_namespace"`
 	// IsActive reports whether the type is offered for new cases.
 	IsActive bool `db:"is_active"`
+	// DefaultConfidentialityLevel is the minimum confidentiality of a new case
+	// of this type (GLD-050).
+	DefaultConfidentialityLevel int32 `db:"default_confidentiality_level"`
+	// DefaultGrants are copied once onto every new case of this type; hydrated
+	// on the catalogue paths only.
+	DefaultGrants []core.DefaultGrant `db:"-"`
 }
 
 // Case is the case-specific projection (1:1 with a CASE subject_ref). The

@@ -362,6 +362,35 @@ paths:
             $ref: '#/definitions/CaseServiceUpdateCaseTypeBody'
       tags:
         - CaseService
+  /api/case-types/{code}/default-grants:
+    post:
+      summary: |-
+        Replace the default grants copied onto new cases of a type (GLD-050).
+        Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an unknown
+        code, INVALID_ARGUMENT for an unknown or inactive grantee or a repeated one.
+      operationId: SetCaseTypeDefaultGrants
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SetCaseTypeDefaultGrantsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the case type.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CaseServiceSetCaseTypeDefaultGrantsBody'
+      tags:
+        - CaseService
   /api/cases:
     post:
       summary: |-
@@ -3376,6 +3405,19 @@ definitions:
     description: |-
       UpdateOrganizationCategoryRequest changes a organization category (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  CaseServiceSetCaseTypeDefaultGrantsBody:
+    type: object
+    properties:
+      grants:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CaseTypeDefaultGrant'
+        description: grants is the whole new template (empty clears it; at most 50 lines, one per grantee).
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: SetCaseTypeDefaultGrantsRequest replaces the default grants of a case type.
   CaseServiceTransitionCaseBody:
     type: object
     properties:
@@ -3430,6 +3472,12 @@ definitions:
       reason:
         type: string
         description: reason is the justification recorded in the reference change log (at most 2000 characters).
+      defaultConfidentialityLevel:
+        type: integer
+        format: int32
+        description: |-
+          default_confidentiality_level replaces the minimum confidentiality of
+          future cases when present (0-5).
     description: |-
       UpdateCaseTypeRequest changes a case type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
@@ -4574,11 +4622,48 @@ definitions:
       isActive:
         type: boolean
         description: is_active reports whether the type is offered for new cases.
+      defaultConfidentialityLevel:
+        type: integer
+        format: int32
+        description: |-
+          default_confidentiality_level is the minimum confidentiality of a new
+          case of this type (0-5; from 2 the case needs a grant to be read). A
+          creation asking for a lower level gets this one (GLD-050).
+      defaultGrants:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CaseTypeDefaultGrant'
+        description: |-
+          default_grants are copied once onto every new case of this type, besides
+          the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
+          changes of the template leave existing cases unchanged.
     description: |-
       CaseType is a controlled classification of cases (e.g. OPC_DEMANDE_PC).
       Types are seeded reference data; a case's type is fixed at creation.
     required:
       - code
+  v1CaseTypeDefaultGrant:
+    type: object
+    properties:
+      granteeKind:
+        $ref: '#/definitions/v1GranteeKind'
+        description: |-
+          grantee_kind is a user, a group, an org unit (with its sub-units) or
+          GRANTEE_KIND_CREATOR_UNITS, the units the creator is a direct member of.
+      granteeId:
+        type: string
+        description: |-
+          grantee_id is the user id, or the group or org unit subject id; empty for
+          GRANTEE_KIND_CREATOR_UNITS.
+      granteeLabel:
+        type: string
+        description: grantee_label is the grantee's display name.
+        readOnly: true
+      level:
+        $ref: '#/definitions/v1Permission'
+        description: level is the level given (READ to FULL_CONTROL).
+    description: CaseTypeDefaultGrant is one line of a case type's default grants.
   v1Circulation:
     type: object
     properties:
@@ -4948,6 +5033,10 @@ definitions:
       reason:
         type: string
         description: reason is the justification recorded in the reference change log (at most 2000 characters).
+      defaultConfidentialityLevel:
+        type: integer
+        format: int32
+        description: default_confidentiality_level is the minimum confidentiality of its new cases (0-5).
     description: CreateCaseTypeRequest adds a case type (administrators only).
     required:
       - code
@@ -5874,6 +5963,7 @@ definitions:
       - GRANTEE_KIND_USER
       - GRANTEE_KIND_GROUP
       - GRANTEE_KIND_ORG_UNIT
+      - GRANTEE_KIND_CREATOR_UNITS
     default: GRANTEE_KIND_UNSPECIFIED
     description: |-
       GranteeKind is who a grant is given to.
@@ -5882,6 +5972,9 @@ definitions:
        - GRANTEE_KIND_USER: GRANTEE_KIND_USER is an internal user (User.id).
        - GRANTEE_KIND_GROUP: GRANTEE_KIND_GROUP is a security group (its subject id).
        - GRANTEE_KIND_ORG_UNIT: GRANTEE_KIND_ORG_UNIT is an org unit and its sub-units (its subject id).
+       - GRANTEE_KIND_CREATOR_UNITS: GRANTEE_KIND_CREATOR_UNITS stands, in a case type's default grants only,
+      for the units the creator is a direct member of (resolved at creation);
+      SetGrant refuses it.
   v1GroupMember:
     type: object
     properties:
@@ -6798,6 +6891,16 @@ definitions:
     description: |-
       SecurityGroup is a named set of internal users, given grants like a user or a
       unit; a GROUP subject. Archived groups grant nothing.
+  v1SetCaseTypeDefaultGrantsResponse:
+    type: object
+    properties:
+      caseType:
+        $ref: '#/definitions/v1CaseType'
+        description: case_type is the updated entry with its new template.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED log entry.
+    description: SetCaseTypeDefaultGrantsResponse returns the case type and its log entry.
   v1SetGrantResponse:
     type: object
     properties:

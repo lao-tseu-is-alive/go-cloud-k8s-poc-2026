@@ -1,4 +1,21 @@
 {
+  "caseTypeDefaults": {
+    "open": "Accès par défaut",
+    "title": "Accès par défaut — {type}",
+    "hint": "Ces accès sont copiés une fois sur chaque nouvelle affaire de ce type, en plus du contrôle total de son créateur et de la gestion par son unité propriétaire. Les modifier ne change pas les affaires existantes.",
+    "empty": "Aucun accès par défaut.",
+    "grantee": "Bénéficiaire",
+    "kinds": {
+      "creatorUnits": "Unités du créateur",
+      "user": "Utilisateur",
+      "group": "Groupe",
+      "unit": "Unité"
+    },
+    "creatorUnitsHint": "Les unités dont le créateur est membre direct au moment de la création (et leurs sous-unités).",
+    "add": "Ajouter",
+    "remove": "Retirer",
+    "saved": "Accès par défaut enregistrés."
+  },
   "groups": {
     "title": "Groupes de sécurité",
     "intro": "Un groupe réunit des utilisateurs de plusieurs unités (une commission, un projet) pour leur donner un accès commun. Un accès personnel l'emporte sur celui d'un groupe, qui l'emporte sur celui d'une unité.",
@@ -540,6 +557,8 @@
       "country_code": "Pays"
     },
     "reference": {
+      "confidentialLevel": "{level} — confidentiel",
+      "defaultConfidentialityLevel": "Confidentialité par défaut",
       "code": "Code",
       "label": "Libellé",
       "description": "Description",

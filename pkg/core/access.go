@@ -253,6 +253,23 @@ func EnsureAssigneeOrAccessTx(ctx context.Context, q Querier, userID string, cas
 	return EnsureAccessTx(ctx, q, userID, caseID, need)
 }
 
+// GranteeKind is who a grant is given to; it mirrors access_grant.grantee_kind.
+type GranteeKind string
+
+// Grantee kinds.
+const (
+	// GranteeUser is an internal user (operator id).
+	GranteeUser GranteeKind = "USER"
+	// GranteeGroup is a security group (its subject id).
+	GranteeGroup GranteeKind = "GROUP"
+	// GranteeOrgUnit is an org unit and its sub-units (its subject id).
+	GranteeOrgUnit GranteeKind = "ORG_UNIT"
+	// GranteeCreatorUnits stands, in a default grant template, for the units
+	// the creator is a direct member of; it is resolved at creation and never
+	// stored on a subject (GLD-050).
+	GranteeCreatorUnits GranteeKind = "CREATOR_UNITS"
+)
+
 // Viewer is who reads a search or a list (GLD-049): the user and its
 // principals — its live groups, its units and their ancestors — resolved once
 // per request, so ReadableSQL filters inside the query and pagination stays exact.

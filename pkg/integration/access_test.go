@@ -12,7 +12,7 @@ import (
 )
 
 // grant gives a level on subject as the test operator (its creator) and fails on error.
-func grant(t *testing.T, env *testEnv, subject uuid.UUID, kind access.GranteeKind, grantee string, level core.Level) *access.Grant {
+func grant(t *testing.T, env *testEnv, subject uuid.UUID, kind core.GranteeKind, grantee string, level core.Level) *access.Grant {
 	t.Helper()
 	g, _, err := env.accessSvc.SetGrant(env.ctx, access.SetGrantInput{
 		SubjectID: subject, GranteeKind: kind, GranteeID: grantee, Level: level, Reason: "test", OperatorID: testOperator,
@@ -55,9 +55,9 @@ func TestAccessPrecedence(t *testing.T) {
 
 	expectAccess(t, env, testOperator, c.ID, core.LevelFullControl, core.SourcePersonal)
 	expectAccess(t, env, x.UserID, c.ID, core.LevelRead, core.SourceBaseline)
-	grant(t, env, c.ID, access.GranteeOrgUnit, direction.ID.String(), core.LevelManage)
+	grant(t, env, c.ID, core.GranteeOrgUnit, direction.ID.String(), core.LevelManage)
 	expectAccess(t, env, x.UserID, c.ID, core.LevelManage, core.SourceOrgUnit) // a unit grant covers its sub-units
-	grant(t, env, c.ID, access.GranteeOrgUnit, service.ID.String(), core.LevelRead)
+	grant(t, env, c.ID, core.GranteeOrgUnit, service.ID.String(), core.LevelRead)
 	expectAccess(t, env, x.UserID, c.ID, core.LevelRead, core.SourceOrgUnit) // the nearest unit wins, even lower
 
 	group, _, err := env.accessSvc.CreateGroup(env.ctx, access.GroupInput{Name: "Commission " + uniqueToken(), OperatorID: testOperator})
@@ -67,9 +67,9 @@ func TestAccessPrecedence(t *testing.T) {
 	if _, _, err := env.accessSvc.AddMember(env.ctx, access.MemberInput{GroupID: group.ID, UserID: x.UserID, OperatorID: testOperator}); err != nil {
 		t.Fatalf("add member: %v", err)
 	}
-	grant(t, env, c.ID, access.GranteeGroup, group.ID.String(), core.LevelContribute)
+	grant(t, env, c.ID, core.GranteeGroup, group.ID.String(), core.LevelContribute)
 	expectAccess(t, env, x.UserID, c.ID, core.LevelContribute, core.SourceGroup) // groups before units
-	personal := grant(t, env, c.ID, access.GranteeUser, x.UserID, core.LevelRead)
+	personal := grant(t, env, c.ID, core.GranteeUser, x.UserID, core.LevelRead)
 	expectAccess(t, env, x.UserID, c.ID, core.LevelRead, core.SourcePersonal) // personal before everything
 
 	if _, _, err := env.accessSvc.RevokeGrant(env.ctx, personal.ID, testOperator, "fin"); err != nil {
@@ -117,17 +117,17 @@ func TestGrantRules(t *testing.T) {
 	c := openCase(t, env, "Règles d'accès "+uniqueToken())
 	x := newUser(t, env, "Xénia Règles")
 
-	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: access.GranteeUser, GranteeID: x.UserID, Level: core.LevelFullControl, Reason: "moi", OperatorID: x.UserID}); !errors.Is(err, core.ErrPermissionDenied) {
+	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: core.GranteeUser, GranteeID: x.UserID, Level: core.LevelFullControl, Reason: "moi", OperatorID: x.UserID}); !errors.Is(err, core.ErrPermissionDenied) {
 		t.Fatalf("granting without FULL_CONTROL: want ErrPermissionDenied, got %v", err)
 	}
-	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: access.GranteeUser, GranteeID: "it-never-seen", Level: core.LevelRead, Reason: "x", OperatorID: testOperator}); !errors.Is(err, core.ErrNotFound) {
+	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: core.GranteeUser, GranteeID: "it-never-seen", Level: core.LevelRead, Reason: "x", OperatorID: testOperator}); !errors.Is(err, core.ErrNotFound) {
 		t.Fatalf("a user who never signed in: want ErrNotFound, got %v", err)
 	}
-	grant(t, env, c.ID, access.GranteeUser, x.UserID, core.LevelRead)
-	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: access.GranteeUser, GranteeID: x.UserID, Level: core.LevelRead, Reason: "encore", OperatorID: testOperator}); !errors.Is(err, core.ErrConflict) {
+	grant(t, env, c.ID, core.GranteeUser, x.UserID, core.LevelRead)
+	if _, _, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: core.GranteeUser, GranteeID: x.UserID, Level: core.LevelRead, Reason: "encore", OperatorID: testOperator}); !errors.Is(err, core.ErrConflict) {
 		t.Fatalf("the same level again: want ErrConflict, got %v", err)
 	}
-	changed, ev, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: access.GranteeUser, GranteeID: x.UserID, Level: core.LevelFullControl, Reason: "co-responsable", OperatorID: testOperator})
+	changed, ev, err := env.accessSvc.SetGrant(ctx, access.SetGrantInput{SubjectID: c.ID, GranteeKind: core.GranteeUser, GranteeID: x.UserID, Level: core.LevelFullControl, Reason: "co-responsable", OperatorID: testOperator})
 	if err != nil || ev.EventType != access.EventAccessChanged || changed.Level != core.LevelFullControl {
 		t.Fatalf("change a level: %+v %+v (%v)", changed, ev, err)
 	}

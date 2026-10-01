@@ -54,7 +54,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
-| §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | ✅ | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; GLD-049: searches and lists filtered in SQL (`core.ReadableSQL`, exact pagination), downloads through the document (`GET /api/documents/{id}/content`), timeline visibility by level, document reuse only among readable documents; default grants per case type in GLD-050 |
+| §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | ✅ | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; GLD-049: searches and lists filtered in SQL (`core.ReadableSQL`, exact pagination), downloads through the document (`GET /api/documents/{id}/content`), timeline visibility by level, document reuse only among readable documents; GLD-050: a case type's minimum confidentiality and default grants (CREATOR_UNITS) copied once at creation |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
 ---
@@ -155,8 +155,8 @@ Not betterments, just a different-but-equivalent option chosen for consistency:
 ### 3c. Known gaps (LESS than the spec — backlog, not enhancements)
 
 - **Authorization follow-ups** — per-subject grants, confidentiality and filtered lists are
-  enforced (GLD-048, GLD-049); default grants per case type (GLD-050) and the sensitive read
-  audit (GLD-033) are not built yet. The labels of an org unit's ancestors and children and of
+  enforced (GLD-048, GLD-049) and case types carry default access (GLD-050); the sensitive
+  read audit (GLD-033) is not built yet. The labels of an org unit's ancestors and children and of
   the documents cited by a timeline entry are shown without a read check.
 
 ### 3d. Review quick-wins applied (2026-07-07, from `reports/report_20260707_codex.md`)
@@ -388,6 +388,20 @@ Decisions for the POC (v2 §32):
 - 🚀 **Grants carry grantor, date and reason and keep their history** (the legacy overwrites in
   place); application roles live in Goéland (`goeland:admin` from the ADMIN role, not the token);
   first administrators from `GOELAND_BOOTSTRAP_ADMINS`.
+- **Default access per case type (GLD-050)** — a minimum confidentiality and a template of grants
+  (users, groups, units and CREATOR_UNITS, the creator's direct units at creation), copied once
+  onto each new case next to the creator's FULL_CONTROL and the owning unit's MANAGE (the highest
+  level kept per grantee); changing a template leaves existing cases unchanged (no live
+  inheritance), and template changes are logged in `reference_change`. The legacy gives most
+  cases grants to the creator's unit (78% of its grants go to units), which CREATOR_UNITS covers.
+- **Strict JSON bodies (GLD-050)** — a request body naming an unknown field answers 400
+  INVALID_ARGUMENT on REST and Connect: a misspelt field (inside `initialGovernance`, say) was
+  otherwise dropped in silence and the request applied without it. The SPA ships with the server,
+  so there is no client of another version to stay lenient for (unknown query parameters: GLD-043).
+- **Identity provider (go-cloud-k8s-auth, GLD-050)** — a login is linked to an existing account by
+  e-mail only when the provider asserts the e-mail verified (Google `verified_email`, a verified
+  GitHub address; Microsoft Graph never), otherwise it is refused instead of taking that account
+  (and its Goéland identity) over; the user directory is for administrators.
 
 ---
 

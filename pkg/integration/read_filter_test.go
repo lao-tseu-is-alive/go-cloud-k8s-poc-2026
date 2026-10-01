@@ -5,7 +5,6 @@ import (
 
 	"github.com/google/uuid"
 
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
@@ -61,7 +60,7 @@ func TestListsHideUnreadable(t *testing.T) {
 		t.Fatalf("the public actor must not reveal the confidential case: %d (%v)", len(rels), err)
 	}
 
-	grant(t, env, c.ID, access.GranteeOrgUnit, unit.ID.String(), core.LevelRead)
+	grant(t, env, c.ID, core.GranteeOrgUnit, unit.ID.String(), core.LevelRead)
 	if res := searchCases(t, env, token, viewerOf(t, env, x.UserID)); len(res.Cases) != 1 {
 		t.Fatalf("a grant to the user's unit makes it searchable: %d", len(res.Cases))
 	}
@@ -122,7 +121,7 @@ func TestTimelineVisibility(t *testing.T) {
 	env := newTestEnv(t)
 	c := openCase(t, env, "Audiences "+uniqueToken())
 	reader, contributor := newUser(t, env, "Rita Audience"), newUser(t, env, "Carl Audience")
-	grant(t, env, c.ID, access.GranteeUser, contributor.UserID, core.LevelContribute)
+	grant(t, env, c.ID, core.GranteeUser, contributor.UserID, core.LevelContribute)
 
 	entry := func(operator string, v timeline.Visibility) (*timeline.Entry, error) {
 		e, _, err := env.timelineSvc.Create(env.ctx, timeline.CreateInput{CaseID: c.ID, Type: timeline.TypeComment, Body: "note", Visibility: v, OperatorID: operator})

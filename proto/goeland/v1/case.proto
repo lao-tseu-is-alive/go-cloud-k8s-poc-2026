@@ -16,6 +16,7 @@ syntax = "proto3";
 package goeland.v1;
 
 import "buf/validate/validate.proto";
+import "goeland/v1/access.proto";
 import "goeland/v1/core.proto";
 import "google/api/annotations.proto";
 import "google/api/field_behavior.proto";
@@ -64,6 +65,39 @@ message CaseType {
   string business_ref_namespace = 5;
   // is_active reports whether the type is offered for new cases.
   bool is_active = 6;
+  // default_confidentiality_level is the minimum confidentiality of a new
+  // case of this type (0-5; from 2 the case needs a grant to be read). A
+  // creation asking for a lower level gets this one (GLD-050).
+  int32 default_confidentiality_level = 7;
+  // default_grants are copied once onto every new case of this type, besides
+  // the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
+  // changes of the template leave existing cases unchanged.
+  repeated CaseTypeDefaultGrant default_grants = 8;
+}
+
+// CaseTypeDefaultGrant is one line of a case type's default grants.
+message CaseTypeDefaultGrant {
+  // grantee_kind is a user, a group, an org unit (with its sub-units) or
+  // GRANTEE_KIND_CREATOR_UNITS, the units the creator is a direct member of.
+  GranteeKind grantee_kind = 1 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // grantee_id is the user id, or the group or org unit subject id; empty for
+  // GRANTEE_KIND_CREATOR_UNITS.
+  string grantee_id = 2 [(buf.validate.field).string.max_len = 200];
+  // grantee_label is the grantee's display name.
+  string grantee_label = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // level is the level given (READ to FULL_CONTROL).
+  Permission level = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    in: [
+      2,
+      3,
+      4,
+      5
+    ]
+  }];
 }
 
 // Case is an administrative business file, 1:1 with SubjectRef (id == subject id).
@@ -296,6 +330,11 @@ message CreateCaseTypeRequest {
   string business_ref_namespace = 4 [(buf.validate.field).string.pattern = "^$|^[A-Z][A-Z0-9_]{0,31}$"];
   // reason is the justification recorded in the reference change log (at most 2000 characters).
   string reason = 5 [(buf.validate.field).string.max_len = 2000];
+  // default_confidentiality_level is the minimum confidentiality of its new cases (0-5).
+  int32 default_confidentiality_level = 6 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 5
+  }];
 }
 
 // CreateCaseTypeResponse returns the new case type and its log entry.
@@ -330,6 +369,34 @@ message UpdateCaseTypeRequest {
   optional bool is_active = 5;
   // reason is the justification recorded in the reference change log (at most 2000 characters).
   string reason = 6 [(buf.validate.field).string.max_len = 2000];
+  // default_confidentiality_level replaces the minimum confidentiality of
+  // future cases when present (0-5).
+  optional int32 default_confidentiality_level = 7 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 5
+  }];
+}
+
+// SetCaseTypeDefaultGrantsRequest replaces the default grants of a case type.
+message SetCaseTypeDefaultGrantsRequest {
+  // code selects the case type.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // grants is the whole new template (empty clears it; at most 50 lines, one per grantee).
+  repeated CaseTypeDefaultGrant grants = 2 [(buf.validate.field).repeated.max_items = 50];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// SetCaseTypeDefaultGrantsResponse returns the case type and its log entry.
+message SetCaseTypeDefaultGrantsResponse {
+  // case_type is the updated entry with its new template.
+  CaseType case_type = 1;
+  // change is the REFERENCE_UPDATED log entry.
+  ReferenceChange change = 2;
 }
 
 // UpdateCaseTypeResponse returns the updated case type and its log entry.
@@ -415,6 +482,16 @@ service CaseService {
   rpc UpdateCaseType(UpdateCaseTypeRequest) returns (UpdateCaseTypeResponse) {
     option (google.api.http) = {
       patch: "/api/case-types/{code}"
+      body: "*"
+    };
+  }
+
+  // Replace the default grants copied onto new cases of a type (GLD-050).
+  // Requires goeland:admin; logs REFERENCE_UPDATED. NOT_FOUND for an unknown
+  // code, INVALID_ARGUMENT for an unknown or inactive grantee or a repeated one.
+  rpc SetCaseTypeDefaultGrants(SetCaseTypeDefaultGrantsRequest) returns (SetCaseTypeDefaultGrantsResponse) {
+    option (google.api.http) = {
+      post: "/api/case-types/{code}/default-grants"
       body: "*"
     };
   }

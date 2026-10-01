@@ -173,6 +173,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/access.go` — Access levels, the effective level (most specific grant wins) and `EnsureAccessTx`, creator grants, link and relationship-change rules, grant copy, assignee checks.
+- `pkg/core/access_mappers.go` — Proto mappings of grantee kinds and access levels, shared by the access and case domains.
+- `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
+- `pkg/core/strictjson.go` — Strict JSON codecs (Connect and Vanguard REST) refusing request bodies with unknown fields.
 - `pkg/core/access_test.go` — Tests the precedence rule of the effective level (personal, group, unit, role, baseline, confidentiality).
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
@@ -224,6 +227,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0021_append_only_logs.sql` — Schema migration: triggers making `audit_event` and `reference_change` refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/core/module/db/migrations/0022_app_roles.sql` — Schema migration: `app_role` (ADMIN seeded) and the `app_user_role` history; the former admin flag migrated, `app_user.is_admin` dropped.
 - `pkg/core/module/db/migrations/0023_access_grants.sql` — Schema migration: GROUP kind and `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles (ACTOR_MANAGER, THING_MANAGER), `access_grant` with history, grants backfilled for existing subjects.
+- `pkg/core/module/db/migrations/0024_case_type_defaults.sql` — Schema migration: a case type's default confidentiality and `case_type_default_grant` template lines.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -363,6 +367,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
+- `pkg/integration/case_type_defaults_test.go` — DB test: a case type's minimum confidentiality and default grants applied once (creator units, highest level kept), template checks and changes.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
 - `pkg/integration/document_versions_test.go` — DB test: deduplication (incl. concurrent), automatic reuse across cases, versions sharing a blob, immutability trigger, lock guard.
 - `pkg/integration/circulation_test.go` — Circulations: two steps with user and unit recipients, managed tasks, answers and next step, completion summary, closure rules, cancellation.
@@ -403,10 +408,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
+- `cmd/goeland-server/goeland-front/src/components/admin/CaseTypeDefaultGrantsDialog.vue` — Editor of a case type's default grants (users, groups, units, the creator's units) with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
 - `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders.
+- `cmd/goeland-server/goeland-front/src/components/access/grantees.ts` — Shared presentation of grantees and access levels (icons, colors, level list).
 - `cmd/goeland-server/goeland-front/src/components/access/GroupPicker.vue` — Security group search (debounced, by name) bound to the group's subject id.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesPanel.vue` — Read-only address cards (role, principal, formatted lines, map.geo.admin.ch link).

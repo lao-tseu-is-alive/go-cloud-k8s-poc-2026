@@ -11,13 +11,40 @@ func TypeToProto(t *CaseType) *goelandv1.CaseType {
 		return nil
 	}
 	return &goelandv1.CaseType{
-		Id:                   t.ID.String(),
-		Code:                 t.Code,
-		Label:                t.Label,
-		Description:          t.Description,
-		BusinessRefNamespace: t.BusinessRefNamespace,
-		IsActive:             t.IsActive,
+		Id:                          t.ID.String(),
+		Code:                        t.Code,
+		Label:                       t.Label,
+		Description:                 t.Description,
+		BusinessRefNamespace:        t.BusinessRefNamespace,
+		IsActive:                    t.IsActive,
+		DefaultConfidentialityLevel: t.DefaultConfidentialityLevel,
+		DefaultGrants:               DefaultGrantsToProto(t.DefaultGrants),
 	}
+}
+
+// DefaultGrantsToProto converts a default grant template.
+func DefaultGrantsToProto(grants []core.DefaultGrant) []*goelandv1.CaseTypeDefaultGrant {
+	out := make([]*goelandv1.CaseTypeDefaultGrant, len(grants))
+	for i, g := range grants {
+		out[i] = &goelandv1.CaseTypeDefaultGrant{
+			GranteeKind: core.GranteeKindToProto(g.GranteeKind), GranteeId: g.GranteeID(),
+			GranteeLabel: g.GranteeLabel, Level: core.LevelToProto(g.Level),
+		}
+	}
+	return out
+}
+
+// DefaultGrantsFromProto converts and checks the shape of a template.
+func DefaultGrantsFromProto(grants []*goelandv1.CaseTypeDefaultGrant) ([]core.DefaultGrant, error) {
+	out := make([]core.DefaultGrant, 0, len(grants))
+	for _, g := range grants {
+		line, err := core.NewDefaultGrant(core.GranteeKindFromProto(g.GranteeKind), g.GranteeId, core.LevelFromProto(g.Level))
+		if err != nil {
+			return nil, err
+		}
+		out = append(out, line)
+	}
+	return out, nil
 }
 
 // DomainToProto converts a case (with hydrated associations) to its proto representation.

@@ -117,7 +117,15 @@ type CaseType struct {
 	// business reference in this namespace (e.g. OPC → 2026-000042).
 	BusinessRefNamespace string `protobuf:"bytes,5,opt,name=business_ref_namespace,json=businessRefNamespace,proto3" json:"business_ref_namespace,omitempty"`
 	// is_active reports whether the type is offered for new cases.
-	IsActive      bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	IsActive bool `protobuf:"varint,6,opt,name=is_active,json=isActive,proto3" json:"is_active,omitempty"`
+	// default_confidentiality_level is the minimum confidentiality of a new
+	// case of this type (0-5; from 2 the case needs a grant to be read). A
+	// creation asking for a lower level gets this one (GLD-050).
+	DefaultConfidentialityLevel int32 `protobuf:"varint,7,opt,name=default_confidentiality_level,json=defaultConfidentialityLevel,proto3" json:"default_confidentiality_level,omitempty"`
+	// default_grants are copied once onto every new case of this type, besides
+	// the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
+	// changes of the template leave existing cases unchanged.
+	DefaultGrants []*CaseTypeDefaultGrant `protobuf:"bytes,8,rep,name=default_grants,json=defaultGrants,proto3" json:"default_grants,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -194,6 +202,95 @@ func (x *CaseType) GetIsActive() bool {
 	return false
 }
 
+func (x *CaseType) GetDefaultConfidentialityLevel() int32 {
+	if x != nil {
+		return x.DefaultConfidentialityLevel
+	}
+	return 0
+}
+
+func (x *CaseType) GetDefaultGrants() []*CaseTypeDefaultGrant {
+	if x != nil {
+		return x.DefaultGrants
+	}
+	return nil
+}
+
+// CaseTypeDefaultGrant is one line of a case type's default grants.
+type CaseTypeDefaultGrant struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// grantee_kind is a user, a group, an org unit (with its sub-units) or
+	// GRANTEE_KIND_CREATOR_UNITS, the units the creator is a direct member of.
+	GranteeKind GranteeKind `protobuf:"varint,1,opt,name=grantee_kind,json=granteeKind,proto3,enum=goeland.v1.GranteeKind" json:"grantee_kind,omitempty"`
+	// grantee_id is the user id, or the group or org unit subject id; empty for
+	// GRANTEE_KIND_CREATOR_UNITS.
+	GranteeId string `protobuf:"bytes,2,opt,name=grantee_id,json=granteeId,proto3" json:"grantee_id,omitempty"`
+	// grantee_label is the grantee's display name.
+	GranteeLabel string `protobuf:"bytes,3,opt,name=grantee_label,json=granteeLabel,proto3" json:"grantee_label,omitempty"`
+	// level is the level given (READ to FULL_CONTROL).
+	Level         Permission `protobuf:"varint,4,opt,name=level,proto3,enum=goeland.v1.Permission" json:"level,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CaseTypeDefaultGrant) Reset() {
+	*x = CaseTypeDefaultGrant{}
+	mi := &file_goeland_v1_case_proto_msgTypes[1]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CaseTypeDefaultGrant) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CaseTypeDefaultGrant) ProtoMessage() {}
+
+func (x *CaseTypeDefaultGrant) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[1]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CaseTypeDefaultGrant.ProtoReflect.Descriptor instead.
+func (*CaseTypeDefaultGrant) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{1}
+}
+
+func (x *CaseTypeDefaultGrant) GetGranteeKind() GranteeKind {
+	if x != nil {
+		return x.GranteeKind
+	}
+	return GranteeKind_GRANTEE_KIND_UNSPECIFIED
+}
+
+func (x *CaseTypeDefaultGrant) GetGranteeId() string {
+	if x != nil {
+		return x.GranteeId
+	}
+	return ""
+}
+
+func (x *CaseTypeDefaultGrant) GetGranteeLabel() string {
+	if x != nil {
+		return x.GranteeLabel
+	}
+	return ""
+}
+
+func (x *CaseTypeDefaultGrant) GetLevel() Permission {
+	if x != nil {
+		return x.Level
+	}
+	return Permission_PERMISSION_UNSPECIFIED
+}
+
 // Case is an administrative business file, 1:1 with SubjectRef (id == subject id).
 type Case struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -232,7 +329,7 @@ type Case struct {
 
 func (x *Case) Reset() {
 	*x = Case{}
-	mi := &file_goeland_v1_case_proto_msgTypes[1]
+	mi := &file_goeland_v1_case_proto_msgTypes[2]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -244,7 +341,7 @@ func (x *Case) String() string {
 func (*Case) ProtoMessage() {}
 
 func (x *Case) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[1]
+	mi := &file_goeland_v1_case_proto_msgTypes[2]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -257,7 +354,7 @@ func (x *Case) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use Case.ProtoReflect.Descriptor instead.
 func (*Case) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{1}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{2}
 }
 
 func (x *Case) GetSubjectRef() *SubjectRef {
@@ -385,7 +482,7 @@ type CreateCaseRequest struct {
 
 func (x *CreateCaseRequest) Reset() {
 	*x = CreateCaseRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[2]
+	mi := &file_goeland_v1_case_proto_msgTypes[3]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -397,7 +494,7 @@ func (x *CreateCaseRequest) String() string {
 func (*CreateCaseRequest) ProtoMessage() {}
 
 func (x *CreateCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[2]
+	mi := &file_goeland_v1_case_proto_msgTypes[3]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -410,7 +507,7 @@ func (x *CreateCaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCaseRequest.ProtoReflect.Descriptor instead.
 func (*CreateCaseRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{2}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{3}
 }
 
 func (x *CreateCaseRequest) GetCaseTypeCode() string {
@@ -468,7 +565,7 @@ type CreateCaseResponse struct {
 
 func (x *CreateCaseResponse) Reset() {
 	*x = CreateCaseResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[3]
+	mi := &file_goeland_v1_case_proto_msgTypes[4]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -480,7 +577,7 @@ func (x *CreateCaseResponse) String() string {
 func (*CreateCaseResponse) ProtoMessage() {}
 
 func (x *CreateCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[3]
+	mi := &file_goeland_v1_case_proto_msgTypes[4]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -493,7 +590,7 @@ func (x *CreateCaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCaseResponse.ProtoReflect.Descriptor instead.
 func (*CreateCaseResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{3}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{4}
 }
 
 func (x *CreateCaseResponse) GetCase() *Case {
@@ -526,7 +623,7 @@ type GetCaseRequest struct {
 
 func (x *GetCaseRequest) Reset() {
 	*x = GetCaseRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[4]
+	mi := &file_goeland_v1_case_proto_msgTypes[5]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -538,7 +635,7 @@ func (x *GetCaseRequest) String() string {
 func (*GetCaseRequest) ProtoMessage() {}
 
 func (x *GetCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[4]
+	mi := &file_goeland_v1_case_proto_msgTypes[5]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -551,7 +648,7 @@ func (x *GetCaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCaseRequest.ProtoReflect.Descriptor instead.
 func (*GetCaseRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{4}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{5}
 }
 
 func (x *GetCaseRequest) GetId() string {
@@ -590,7 +687,7 @@ type GetCaseResponse struct {
 
 func (x *GetCaseResponse) Reset() {
 	*x = GetCaseResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[5]
+	mi := &file_goeland_v1_case_proto_msgTypes[6]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -602,7 +699,7 @@ func (x *GetCaseResponse) String() string {
 func (*GetCaseResponse) ProtoMessage() {}
 
 func (x *GetCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[5]
+	mi := &file_goeland_v1_case_proto_msgTypes[6]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -615,7 +712,7 @@ func (x *GetCaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use GetCaseResponse.ProtoReflect.Descriptor instead.
 func (*GetCaseResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{5}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{6}
 }
 
 func (x *GetCaseResponse) GetCase() *Case {
@@ -659,7 +756,7 @@ type UpdateCaseRequest struct {
 
 func (x *UpdateCaseRequest) Reset() {
 	*x = UpdateCaseRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[6]
+	mi := &file_goeland_v1_case_proto_msgTypes[7]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -671,7 +768,7 @@ func (x *UpdateCaseRequest) String() string {
 func (*UpdateCaseRequest) ProtoMessage() {}
 
 func (x *UpdateCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[6]
+	mi := &file_goeland_v1_case_proto_msgTypes[7]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -684,7 +781,7 @@ func (x *UpdateCaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCaseRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCaseRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{6}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{7}
 }
 
 func (x *UpdateCaseRequest) GetId() string {
@@ -735,7 +832,7 @@ type UpdateCaseResponse struct {
 
 func (x *UpdateCaseResponse) Reset() {
 	*x = UpdateCaseResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[7]
+	mi := &file_goeland_v1_case_proto_msgTypes[8]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -747,7 +844,7 @@ func (x *UpdateCaseResponse) String() string {
 func (*UpdateCaseResponse) ProtoMessage() {}
 
 func (x *UpdateCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[7]
+	mi := &file_goeland_v1_case_proto_msgTypes[8]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -760,7 +857,7 @@ func (x *UpdateCaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCaseResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCaseResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{7}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{8}
 }
 
 func (x *UpdateCaseResponse) GetCase() *Case {
@@ -795,7 +892,7 @@ type TransitionCaseRequest struct {
 
 func (x *TransitionCaseRequest) Reset() {
 	*x = TransitionCaseRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[8]
+	mi := &file_goeland_v1_case_proto_msgTypes[9]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -807,7 +904,7 @@ func (x *TransitionCaseRequest) String() string {
 func (*TransitionCaseRequest) ProtoMessage() {}
 
 func (x *TransitionCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[8]
+	mi := &file_goeland_v1_case_proto_msgTypes[9]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -820,7 +917,7 @@ func (x *TransitionCaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransitionCaseRequest.ProtoReflect.Descriptor instead.
 func (*TransitionCaseRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{8}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{9}
 }
 
 func (x *TransitionCaseRequest) GetId() string {
@@ -857,7 +954,7 @@ type TransitionCaseResponse struct {
 
 func (x *TransitionCaseResponse) Reset() {
 	*x = TransitionCaseResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[9]
+	mi := &file_goeland_v1_case_proto_msgTypes[10]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -869,7 +966,7 @@ func (x *TransitionCaseResponse) String() string {
 func (*TransitionCaseResponse) ProtoMessage() {}
 
 func (x *TransitionCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[9]
+	mi := &file_goeland_v1_case_proto_msgTypes[10]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -882,7 +979,7 @@ func (x *TransitionCaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use TransitionCaseResponse.ProtoReflect.Descriptor instead.
 func (*TransitionCaseResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{9}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{10}
 }
 
 func (x *TransitionCaseResponse) GetCase() *Case {
@@ -922,7 +1019,7 @@ type SearchCasesRequest struct {
 
 func (x *SearchCasesRequest) Reset() {
 	*x = SearchCasesRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[10]
+	mi := &file_goeland_v1_case_proto_msgTypes[11]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -934,7 +1031,7 @@ func (x *SearchCasesRequest) String() string {
 func (*SearchCasesRequest) ProtoMessage() {}
 
 func (x *SearchCasesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[10]
+	mi := &file_goeland_v1_case_proto_msgTypes[11]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -947,7 +1044,7 @@ func (x *SearchCasesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCasesRequest.ProtoReflect.Descriptor instead.
 func (*SearchCasesRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{10}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{11}
 }
 
 func (x *SearchCasesRequest) GetQuery() string {
@@ -1007,7 +1104,7 @@ type SearchCasesResponse struct {
 
 func (x *SearchCasesResponse) Reset() {
 	*x = SearchCasesResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[11]
+	mi := &file_goeland_v1_case_proto_msgTypes[12]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1019,7 +1116,7 @@ func (x *SearchCasesResponse) String() string {
 func (*SearchCasesResponse) ProtoMessage() {}
 
 func (x *SearchCasesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[11]
+	mi := &file_goeland_v1_case_proto_msgTypes[12]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1032,7 +1129,7 @@ func (x *SearchCasesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchCasesResponse.ProtoReflect.Descriptor instead.
 func (*SearchCasesResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{11}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{12}
 }
 
 func (x *SearchCasesResponse) GetCases() []*Case {
@@ -1069,7 +1166,7 @@ type DeleteCaseRequest struct {
 
 func (x *DeleteCaseRequest) Reset() {
 	*x = DeleteCaseRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[12]
+	mi := &file_goeland_v1_case_proto_msgTypes[13]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1081,7 +1178,7 @@ func (x *DeleteCaseRequest) String() string {
 func (*DeleteCaseRequest) ProtoMessage() {}
 
 func (x *DeleteCaseRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[12]
+	mi := &file_goeland_v1_case_proto_msgTypes[13]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1094,7 +1191,7 @@ func (x *DeleteCaseRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCaseRequest.ProtoReflect.Descriptor instead.
 func (*DeleteCaseRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{12}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{13}
 }
 
 func (x *DeleteCaseRequest) GetId() string {
@@ -1124,7 +1221,7 @@ type DeleteCaseResponse struct {
 
 func (x *DeleteCaseResponse) Reset() {
 	*x = DeleteCaseResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[13]
+	mi := &file_goeland_v1_case_proto_msgTypes[14]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1136,7 +1233,7 @@ func (x *DeleteCaseResponse) String() string {
 func (*DeleteCaseResponse) ProtoMessage() {}
 
 func (x *DeleteCaseResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[13]
+	mi := &file_goeland_v1_case_proto_msgTypes[14]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1149,7 +1246,7 @@ func (x *DeleteCaseResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteCaseResponse.ProtoReflect.Descriptor instead.
 func (*DeleteCaseResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{13}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{14}
 }
 
 func (x *DeleteCaseResponse) GetDeletedCaseId() string {
@@ -1177,7 +1274,7 @@ type ListCaseTypesRequest struct {
 
 func (x *ListCaseTypesRequest) Reset() {
 	*x = ListCaseTypesRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[14]
+	mi := &file_goeland_v1_case_proto_msgTypes[15]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1189,7 +1286,7 @@ func (x *ListCaseTypesRequest) String() string {
 func (*ListCaseTypesRequest) ProtoMessage() {}
 
 func (x *ListCaseTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[14]
+	mi := &file_goeland_v1_case_proto_msgTypes[15]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1202,7 +1299,7 @@ func (x *ListCaseTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCaseTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListCaseTypesRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{14}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{15}
 }
 
 func (x *ListCaseTypesRequest) GetOnlyActive() bool {
@@ -1223,7 +1320,7 @@ type ListCaseTypesResponse struct {
 
 func (x *ListCaseTypesResponse) Reset() {
 	*x = ListCaseTypesResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[15]
+	mi := &file_goeland_v1_case_proto_msgTypes[16]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1235,7 +1332,7 @@ func (x *ListCaseTypesResponse) String() string {
 func (*ListCaseTypesResponse) ProtoMessage() {}
 
 func (x *ListCaseTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[15]
+	mi := &file_goeland_v1_case_proto_msgTypes[16]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1248,7 +1345,7 @@ func (x *ListCaseTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListCaseTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListCaseTypesResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{15}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{16}
 }
 
 func (x *ListCaseTypesResponse) GetCaseTypes() []*CaseType {
@@ -1272,14 +1369,16 @@ type CreateCaseTypeRequest struct {
 	// their reference (empty: none allocated), e.g. OPC.
 	BusinessRefNamespace string `protobuf:"bytes,4,opt,name=business_ref_namespace,json=businessRefNamespace,proto3" json:"business_ref_namespace,omitempty"`
 	// reason is the justification recorded in the reference change log (at most 2000 characters).
-	Reason        string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Reason string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
+	// default_confidentiality_level is the minimum confidentiality of its new cases (0-5).
+	DefaultConfidentialityLevel int32 `protobuf:"varint,6,opt,name=default_confidentiality_level,json=defaultConfidentialityLevel,proto3" json:"default_confidentiality_level,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *CreateCaseTypeRequest) Reset() {
 	*x = CreateCaseTypeRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[16]
+	mi := &file_goeland_v1_case_proto_msgTypes[17]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1291,7 +1390,7 @@ func (x *CreateCaseTypeRequest) String() string {
 func (*CreateCaseTypeRequest) ProtoMessage() {}
 
 func (x *CreateCaseTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[16]
+	mi := &file_goeland_v1_case_proto_msgTypes[17]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1304,7 +1403,7 @@ func (x *CreateCaseTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCaseTypeRequest.ProtoReflect.Descriptor instead.
 func (*CreateCaseTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{16}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{17}
 }
 
 func (x *CreateCaseTypeRequest) GetCode() string {
@@ -1342,6 +1441,13 @@ func (x *CreateCaseTypeRequest) GetReason() string {
 	return ""
 }
 
+func (x *CreateCaseTypeRequest) GetDefaultConfidentialityLevel() int32 {
+	if x != nil {
+		return x.DefaultConfidentialityLevel
+	}
+	return 0
+}
+
 // CreateCaseTypeResponse returns the new case type and its log entry.
 type CreateCaseTypeResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1355,7 +1461,7 @@ type CreateCaseTypeResponse struct {
 
 func (x *CreateCaseTypeResponse) Reset() {
 	*x = CreateCaseTypeResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[17]
+	mi := &file_goeland_v1_case_proto_msgTypes[18]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1367,7 +1473,7 @@ func (x *CreateCaseTypeResponse) String() string {
 func (*CreateCaseTypeResponse) ProtoMessage() {}
 
 func (x *CreateCaseTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[17]
+	mi := &file_goeland_v1_case_proto_msgTypes[18]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1380,7 +1486,7 @@ func (x *CreateCaseTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateCaseTypeResponse.ProtoReflect.Descriptor instead.
 func (*CreateCaseTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{17}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{18}
 }
 
 func (x *CreateCaseTypeResponse) GetCaseType() *CaseType {
@@ -1414,14 +1520,17 @@ type UpdateCaseTypeRequest struct {
 	// entry stays valid for existing data but is no longer offered.
 	IsActive *bool `protobuf:"varint,5,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	// reason is the justification recorded in the reference change log (at most 2000 characters).
-	Reason        string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	Reason string `protobuf:"bytes,6,opt,name=reason,proto3" json:"reason,omitempty"`
+	// default_confidentiality_level replaces the minimum confidentiality of
+	// future cases when present (0-5).
+	DefaultConfidentialityLevel *int32 `protobuf:"varint,7,opt,name=default_confidentiality_level,json=defaultConfidentialityLevel,proto3,oneof" json:"default_confidentiality_level,omitempty"`
+	unknownFields               protoimpl.UnknownFields
+	sizeCache                   protoimpl.SizeCache
 }
 
 func (x *UpdateCaseTypeRequest) Reset() {
 	*x = UpdateCaseTypeRequest{}
-	mi := &file_goeland_v1_case_proto_msgTypes[18]
+	mi := &file_goeland_v1_case_proto_msgTypes[19]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1433,7 +1542,7 @@ func (x *UpdateCaseTypeRequest) String() string {
 func (*UpdateCaseTypeRequest) ProtoMessage() {}
 
 func (x *UpdateCaseTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[18]
+	mi := &file_goeland_v1_case_proto_msgTypes[19]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1446,7 +1555,7 @@ func (x *UpdateCaseTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCaseTypeRequest.ProtoReflect.Descriptor instead.
 func (*UpdateCaseTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{18}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{19}
 }
 
 func (x *UpdateCaseTypeRequest) GetCode() string {
@@ -1491,6 +1600,132 @@ func (x *UpdateCaseTypeRequest) GetReason() string {
 	return ""
 }
 
+func (x *UpdateCaseTypeRequest) GetDefaultConfidentialityLevel() int32 {
+	if x != nil && x.DefaultConfidentialityLevel != nil {
+		return *x.DefaultConfidentialityLevel
+	}
+	return 0
+}
+
+// SetCaseTypeDefaultGrantsRequest replaces the default grants of a case type.
+type SetCaseTypeDefaultGrantsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// code selects the case type.
+	Code string `protobuf:"bytes,1,opt,name=code,proto3" json:"code,omitempty"`
+	// grants is the whole new template (empty clears it; at most 50 lines, one per grantee).
+	Grants []*CaseTypeDefaultGrant `protobuf:"bytes,2,rep,name=grants,proto3" json:"grants,omitempty"`
+	// reason is the justification recorded in the reference change log (at most 2000 characters).
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCaseTypeDefaultGrantsRequest) Reset() {
+	*x = SetCaseTypeDefaultGrantsRequest{}
+	mi := &file_goeland_v1_case_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCaseTypeDefaultGrantsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCaseTypeDefaultGrantsRequest) ProtoMessage() {}
+
+func (x *SetCaseTypeDefaultGrantsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCaseTypeDefaultGrantsRequest.ProtoReflect.Descriptor instead.
+func (*SetCaseTypeDefaultGrantsRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *SetCaseTypeDefaultGrantsRequest) GetCode() string {
+	if x != nil {
+		return x.Code
+	}
+	return ""
+}
+
+func (x *SetCaseTypeDefaultGrantsRequest) GetGrants() []*CaseTypeDefaultGrant {
+	if x != nil {
+		return x.Grants
+	}
+	return nil
+}
+
+func (x *SetCaseTypeDefaultGrantsRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// SetCaseTypeDefaultGrantsResponse returns the case type and its log entry.
+type SetCaseTypeDefaultGrantsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// case_type is the updated entry with its new template.
+	CaseType *CaseType `protobuf:"bytes,1,opt,name=case_type,json=caseType,proto3" json:"case_type,omitempty"`
+	// change is the REFERENCE_UPDATED log entry.
+	Change        *ReferenceChange `protobuf:"bytes,2,opt,name=change,proto3" json:"change,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SetCaseTypeDefaultGrantsResponse) Reset() {
+	*x = SetCaseTypeDefaultGrantsResponse{}
+	mi := &file_goeland_v1_case_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SetCaseTypeDefaultGrantsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SetCaseTypeDefaultGrantsResponse) ProtoMessage() {}
+
+func (x *SetCaseTypeDefaultGrantsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_case_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SetCaseTypeDefaultGrantsResponse.ProtoReflect.Descriptor instead.
+func (*SetCaseTypeDefaultGrantsResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *SetCaseTypeDefaultGrantsResponse) GetCaseType() *CaseType {
+	if x != nil {
+		return x.CaseType
+	}
+	return nil
+}
+
+func (x *SetCaseTypeDefaultGrantsResponse) GetChange() *ReferenceChange {
+	if x != nil {
+		return x.Change
+	}
+	return nil
+}
+
 // UpdateCaseTypeResponse returns the updated case type and its log entry.
 type UpdateCaseTypeResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1504,7 +1739,7 @@ type UpdateCaseTypeResponse struct {
 
 func (x *UpdateCaseTypeResponse) Reset() {
 	*x = UpdateCaseTypeResponse{}
-	mi := &file_goeland_v1_case_proto_msgTypes[19]
+	mi := &file_goeland_v1_case_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1516,7 +1751,7 @@ func (x *UpdateCaseTypeResponse) String() string {
 func (*UpdateCaseTypeResponse) ProtoMessage() {}
 
 func (x *UpdateCaseTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_case_proto_msgTypes[19]
+	mi := &file_goeland_v1_case_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1529,7 +1764,7 @@ func (x *UpdateCaseTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateCaseTypeResponse.ProtoReflect.Descriptor instead.
 func (*UpdateCaseTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_case_proto_rawDescGZIP(), []int{19}
+	return file_goeland_v1_case_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *UpdateCaseTypeResponse) GetCaseType() *CaseType {
@@ -1551,14 +1786,24 @@ var File_goeland_v1_case_proto protoreflect.FileDescriptor
 const file_goeland_v1_case_proto_rawDesc = "" +
 	"\n" +
 	"\x15goeland/v1/case.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe5\x01\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17goeland/v1/access.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x02\n" +
 	"\bCaseType\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x124\n" +
 	"\x16business_ref_namespace\x18\x05 \x01(\tR\x14businessRefNamespace\x12\x1b\n" +
-	"\tis_active\x18\x06 \x01(\bR\bisActive\"\xcc\x05\n" +
+	"\tis_active\x18\x06 \x01(\bR\bisActive\x12B\n" +
+	"\x1ddefault_confidentiality_level\x18\a \x01(\x05R\x1bdefaultConfidentialityLevel\x12G\n" +
+	"\x0edefault_grants\x18\b \x03(\v2 .goeland.v1.CaseTypeDefaultGrantR\rdefaultGrants\"\xf1\x01\n" +
+	"\x14CaseTypeDefaultGrant\x12F\n" +
+	"\fgrantee_kind\x18\x01 \x01(\x0e2\x17.goeland.v1.GranteeKindB\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vgranteeKind\x12'\n" +
+	"\n" +
+	"grantee_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tgranteeId\x12(\n" +
+	"\rgrantee_label\x18\x03 \x01(\tB\x03\xe0A\x03R\fgranteeLabel\x12>\n" +
+	"\x05level\x18\x04 \x01(\x0e2\x16.goeland.v1.PermissionB\x10\xbaH\r\x82\x01\n" +
+	"\x10\x01\x18\x02\x18\x03\x18\x04\x18\x05R\x05level\"\xcc\x05\n" +
 	"\x04Case\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x121\n" +
@@ -1640,16 +1885,17 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"onlyActive\"L\n" +
 	"\x15ListCaseTypesResponse\x123\n" +
 	"\n" +
-	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\x98\x02\n" +
+	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\xe7\x02\n" +
 	"\x15CreateCaseTypeRequest\x124\n" +
 	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
 	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12V\n" +
 	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\x14businessRefNamespace\x12 \n" +
-	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x80\x01\n" +
+	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12M\n" +
+	"\x1ddefault_confidentiality_level\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x1bdefaultConfidentialityLevel\"\x80\x01\n" +
 	"\x16CreateCaseTypeResponse\x121\n" +
 	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xf5\x02\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xeb\x03\n" +
 	"\x15UpdateCaseTypeRequest\x12 \n" +
 	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
@@ -1657,12 +1903,21 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12[\n" +
 	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$H\x02R\x14businessRefNamespace\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\x05 \x01(\bH\x03R\bisActive\x88\x01\x01\x12 \n" +
-	"\x06reason\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reasonB\b\n" +
+	"\x06reason\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12R\n" +
+	"\x1ddefault_confidentiality_level\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00H\x04R\x1bdefaultConfidentialityLevel\x88\x01\x01B\b\n" +
 	"\x06_labelB\x0e\n" +
 	"\f_descriptionB\x19\n" +
 	"\x17_business_ref_namespaceB\f\n" +
 	"\n" +
-	"_is_active\"\x80\x01\n" +
+	"_is_activeB \n" +
+	"\x1e_default_confidentiality_level\"\xa9\x01\n" +
+	"\x1fSetCaseTypeDefaultGrantsRequest\x12 \n" +
+	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12B\n" +
+	"\x06grants\x18\x02 \x03(\v2 .goeland.v1.CaseTypeDefaultGrantB\b\xbaH\x05\x92\x01\x02\x102R\x06grants\x12 \n" +
+	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x8a\x01\n" +
+	" SetCaseTypeDefaultGrantsResponse\x121\n" +
+	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x80\x01\n" +
 	"\x16UpdateCaseTypeResponse\x121\n" +
 	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
 	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change*\x8f\x01\n" +
@@ -1672,7 +1927,7 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x10CASE_STATUS_OPEN\x10\x01\x12\x1b\n" +
 	"\x17CASE_STATUS_IN_PROGRESS\x10\x02\x12\x19\n" +
 	"\x15CASE_STATUS_SUSPENDED\x10\x03\x12\x16\n" +
-	"\x12CASE_STATUS_CLOSED\x10\x042\xe8\a\n" +
+	"\x12CASE_STATUS_CLOSED\x10\x042\x92\t\n" +
 	"\vCaseService\x12b\n" +
 	"\n" +
 	"CreateCase\x12\x1d.goeland.v1.CreateCaseRequest\x1a\x1e.goeland.v1.CreateCaseResponse\"\x15\x82\xd3\xe4\x93\x02\x0f:\x01*\"\n" +
@@ -1686,7 +1941,8 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"DeleteCase\x12\x1d.goeland.v1.DeleteCaseRequest\x1a\x1e.goeland.v1.DeleteCaseResponse\"\x17\x82\xd3\xe4\x93\x02\x11*\x0f/api/cases/{id}\x12m\n" +
 	"\rListCaseTypes\x12 .goeland.v1.ListCaseTypesRequest\x1a!.goeland.v1.ListCaseTypesResponse\"\x17\x82\xd3\xe4\x93\x02\x11\x12\x0f/api/case-types\x12s\n" +
 	"\x0eCreateCaseType\x12!.goeland.v1.CreateCaseTypeRequest\x1a\".goeland.v1.CreateCaseTypeResponse\"\x1a\x82\xd3\xe4\x93\x02\x14:\x01*\"\x0f/api/case-types\x12z\n" +
-	"\x0eUpdateCaseType\x12!.goeland.v1.UpdateCaseTypeRequest\x1a\".goeland.v1.UpdateCaseTypeResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*2\x16/api/case-types/{code}B\xb1\x01\n" +
+	"\x0eUpdateCaseType\x12!.goeland.v1.UpdateCaseTypeRequest\x1a\".goeland.v1.UpdateCaseTypeResponse\"!\x82\xd3\xe4\x93\x02\x1b:\x01*2\x16/api/case-types/{code}\x12\xa7\x01\n" +
+	"\x18SetCaseTypeDefaultGrants\x12+.goeland.v1.SetCaseTypeDefaultGrantsRequest\x1a,.goeland.v1.SetCaseTypeDefaultGrantsResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/case-types/{code}/default-grantsB\xb1\x01\n" +
 	"\x0ecom.goeland.v1B\tCaseProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"
@@ -1704,93 +1960,106 @@ func file_goeland_v1_case_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_case_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_goeland_v1_case_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_goeland_v1_case_proto_msgTypes = make([]protoimpl.MessageInfo, 23)
 var file_goeland_v1_case_proto_goTypes = []any{
-	(CaseStatus)(0),                // 0: goeland.v1.CaseStatus
-	(*CaseType)(nil),               // 1: goeland.v1.CaseType
-	(*Case)(nil),                   // 2: goeland.v1.Case
-	(*CreateCaseRequest)(nil),      // 3: goeland.v1.CreateCaseRequest
-	(*CreateCaseResponse)(nil),     // 4: goeland.v1.CreateCaseResponse
-	(*GetCaseRequest)(nil),         // 5: goeland.v1.GetCaseRequest
-	(*GetCaseResponse)(nil),        // 6: goeland.v1.GetCaseResponse
-	(*UpdateCaseRequest)(nil),      // 7: goeland.v1.UpdateCaseRequest
-	(*UpdateCaseResponse)(nil),     // 8: goeland.v1.UpdateCaseResponse
-	(*TransitionCaseRequest)(nil),  // 9: goeland.v1.TransitionCaseRequest
-	(*TransitionCaseResponse)(nil), // 10: goeland.v1.TransitionCaseResponse
-	(*SearchCasesRequest)(nil),     // 11: goeland.v1.SearchCasesRequest
-	(*SearchCasesResponse)(nil),    // 12: goeland.v1.SearchCasesResponse
-	(*DeleteCaseRequest)(nil),      // 13: goeland.v1.DeleteCaseRequest
-	(*DeleteCaseResponse)(nil),     // 14: goeland.v1.DeleteCaseResponse
-	(*ListCaseTypesRequest)(nil),   // 15: goeland.v1.ListCaseTypesRequest
-	(*ListCaseTypesResponse)(nil),  // 16: goeland.v1.ListCaseTypesResponse
-	(*CreateCaseTypeRequest)(nil),  // 17: goeland.v1.CreateCaseTypeRequest
-	(*CreateCaseTypeResponse)(nil), // 18: goeland.v1.CreateCaseTypeResponse
-	(*UpdateCaseTypeRequest)(nil),  // 19: goeland.v1.UpdateCaseTypeRequest
-	(*UpdateCaseTypeResponse)(nil), // 20: goeland.v1.UpdateCaseTypeResponse
-	(*SubjectRef)(nil),             // 21: goeland.v1.SubjectRef
-	(*timestamppb.Timestamp)(nil),  // 22: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),        // 23: google.protobuf.Struct
-	(*RecordMetadata)(nil),         // 24: goeland.v1.RecordMetadata
-	(*BusinessRefRequest)(nil),     // 25: goeland.v1.BusinessRefRequest
-	(*AuditEvent)(nil),             // 26: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),    // 27: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),        // 28: goeland.v1.ReferenceChange
+	(CaseStatus)(0),                          // 0: goeland.v1.CaseStatus
+	(*CaseType)(nil),                         // 1: goeland.v1.CaseType
+	(*CaseTypeDefaultGrant)(nil),             // 2: goeland.v1.CaseTypeDefaultGrant
+	(*Case)(nil),                             // 3: goeland.v1.Case
+	(*CreateCaseRequest)(nil),                // 4: goeland.v1.CreateCaseRequest
+	(*CreateCaseResponse)(nil),               // 5: goeland.v1.CreateCaseResponse
+	(*GetCaseRequest)(nil),                   // 6: goeland.v1.GetCaseRequest
+	(*GetCaseResponse)(nil),                  // 7: goeland.v1.GetCaseResponse
+	(*UpdateCaseRequest)(nil),                // 8: goeland.v1.UpdateCaseRequest
+	(*UpdateCaseResponse)(nil),               // 9: goeland.v1.UpdateCaseResponse
+	(*TransitionCaseRequest)(nil),            // 10: goeland.v1.TransitionCaseRequest
+	(*TransitionCaseResponse)(nil),           // 11: goeland.v1.TransitionCaseResponse
+	(*SearchCasesRequest)(nil),               // 12: goeland.v1.SearchCasesRequest
+	(*SearchCasesResponse)(nil),              // 13: goeland.v1.SearchCasesResponse
+	(*DeleteCaseRequest)(nil),                // 14: goeland.v1.DeleteCaseRequest
+	(*DeleteCaseResponse)(nil),               // 15: goeland.v1.DeleteCaseResponse
+	(*ListCaseTypesRequest)(nil),             // 16: goeland.v1.ListCaseTypesRequest
+	(*ListCaseTypesResponse)(nil),            // 17: goeland.v1.ListCaseTypesResponse
+	(*CreateCaseTypeRequest)(nil),            // 18: goeland.v1.CreateCaseTypeRequest
+	(*CreateCaseTypeResponse)(nil),           // 19: goeland.v1.CreateCaseTypeResponse
+	(*UpdateCaseTypeRequest)(nil),            // 20: goeland.v1.UpdateCaseTypeRequest
+	(*SetCaseTypeDefaultGrantsRequest)(nil),  // 21: goeland.v1.SetCaseTypeDefaultGrantsRequest
+	(*SetCaseTypeDefaultGrantsResponse)(nil), // 22: goeland.v1.SetCaseTypeDefaultGrantsResponse
+	(*UpdateCaseTypeResponse)(nil),           // 23: goeland.v1.UpdateCaseTypeResponse
+	(GranteeKind)(0),                         // 24: goeland.v1.GranteeKind
+	(Permission)(0),                          // 25: goeland.v1.Permission
+	(*SubjectRef)(nil),                       // 26: goeland.v1.SubjectRef
+	(*timestamppb.Timestamp)(nil),            // 27: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                  // 28: google.protobuf.Struct
+	(*RecordMetadata)(nil),                   // 29: goeland.v1.RecordMetadata
+	(*BusinessRefRequest)(nil),               // 30: goeland.v1.BusinessRefRequest
+	(*AuditEvent)(nil),                       // 31: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),              // 32: goeland.v1.SubjectRelationship
+	(*ReferenceChange)(nil),                  // 33: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_case_proto_depIdxs = []int32{
-	21, // 0: goeland.v1.Case.subject_ref:type_name -> goeland.v1.SubjectRef
-	1,  // 1: goeland.v1.Case.case_type:type_name -> goeland.v1.CaseType
-	0,  // 2: goeland.v1.Case.status:type_name -> goeland.v1.CaseStatus
-	22, // 3: goeland.v1.Case.opened_at:type_name -> google.protobuf.Timestamp
-	22, // 4: goeland.v1.Case.closed_at:type_name -> google.protobuf.Timestamp
-	23, // 5: goeland.v1.Case.metadata:type_name -> google.protobuf.Struct
-	22, // 6: goeland.v1.Case.created_at:type_name -> google.protobuf.Timestamp
-	22, // 7: goeland.v1.Case.updated_at:type_name -> google.protobuf.Timestamp
-	24, // 8: goeland.v1.Case.record_metadata:type_name -> goeland.v1.RecordMetadata
-	23, // 9: goeland.v1.CreateCaseRequest.metadata:type_name -> google.protobuf.Struct
-	25, // 10: goeland.v1.CreateCaseRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
-	24, // 11: goeland.v1.CreateCaseRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
-	2,  // 12: goeland.v1.CreateCaseResponse.case:type_name -> goeland.v1.Case
-	26, // 13: goeland.v1.CreateCaseResponse.created_event:type_name -> goeland.v1.AuditEvent
-	2,  // 14: goeland.v1.GetCaseResponse.case:type_name -> goeland.v1.Case
-	27, // 15: goeland.v1.GetCaseResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	26, // 16: goeland.v1.GetCaseResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	23, // 17: goeland.v1.UpdateCaseRequest.metadata:type_name -> google.protobuf.Struct
-	2,  // 18: goeland.v1.UpdateCaseResponse.case:type_name -> goeland.v1.Case
-	26, // 19: goeland.v1.UpdateCaseResponse.update_event:type_name -> goeland.v1.AuditEvent
-	0,  // 20: goeland.v1.TransitionCaseRequest.target_status:type_name -> goeland.v1.CaseStatus
-	2,  // 21: goeland.v1.TransitionCaseResponse.case:type_name -> goeland.v1.Case
-	26, // 22: goeland.v1.TransitionCaseResponse.transition_event:type_name -> goeland.v1.AuditEvent
-	0,  // 23: goeland.v1.SearchCasesRequest.status:type_name -> goeland.v1.CaseStatus
-	2,  // 24: goeland.v1.SearchCasesResponse.cases:type_name -> goeland.v1.Case
-	26, // 25: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	1,  // 26: goeland.v1.ListCaseTypesResponse.case_types:type_name -> goeland.v1.CaseType
-	1,  // 27: goeland.v1.CreateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
-	28, // 28: goeland.v1.CreateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	1,  // 29: goeland.v1.UpdateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
-	28, // 30: goeland.v1.UpdateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	3,  // 31: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
-	5,  // 32: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
-	7,  // 33: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
-	9,  // 34: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
-	11, // 35: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
-	13, // 36: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
-	15, // 37: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
-	17, // 38: goeland.v1.CaseService.CreateCaseType:input_type -> goeland.v1.CreateCaseTypeRequest
-	19, // 39: goeland.v1.CaseService.UpdateCaseType:input_type -> goeland.v1.UpdateCaseTypeRequest
-	4,  // 40: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
-	6,  // 41: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
-	8,  // 42: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
-	10, // 43: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
-	12, // 44: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
-	14, // 45: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
-	16, // 46: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
-	18, // 47: goeland.v1.CaseService.CreateCaseType:output_type -> goeland.v1.CreateCaseTypeResponse
-	20, // 48: goeland.v1.CaseService.UpdateCaseType:output_type -> goeland.v1.UpdateCaseTypeResponse
-	40, // [40:49] is the sub-list for method output_type
-	31, // [31:40] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	2,  // 0: goeland.v1.CaseType.default_grants:type_name -> goeland.v1.CaseTypeDefaultGrant
+	24, // 1: goeland.v1.CaseTypeDefaultGrant.grantee_kind:type_name -> goeland.v1.GranteeKind
+	25, // 2: goeland.v1.CaseTypeDefaultGrant.level:type_name -> goeland.v1.Permission
+	26, // 3: goeland.v1.Case.subject_ref:type_name -> goeland.v1.SubjectRef
+	1,  // 4: goeland.v1.Case.case_type:type_name -> goeland.v1.CaseType
+	0,  // 5: goeland.v1.Case.status:type_name -> goeland.v1.CaseStatus
+	27, // 6: goeland.v1.Case.opened_at:type_name -> google.protobuf.Timestamp
+	27, // 7: goeland.v1.Case.closed_at:type_name -> google.protobuf.Timestamp
+	28, // 8: goeland.v1.Case.metadata:type_name -> google.protobuf.Struct
+	27, // 9: goeland.v1.Case.created_at:type_name -> google.protobuf.Timestamp
+	27, // 10: goeland.v1.Case.updated_at:type_name -> google.protobuf.Timestamp
+	29, // 11: goeland.v1.Case.record_metadata:type_name -> goeland.v1.RecordMetadata
+	28, // 12: goeland.v1.CreateCaseRequest.metadata:type_name -> google.protobuf.Struct
+	30, // 13: goeland.v1.CreateCaseRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
+	29, // 14: goeland.v1.CreateCaseRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	3,  // 15: goeland.v1.CreateCaseResponse.case:type_name -> goeland.v1.Case
+	31, // 16: goeland.v1.CreateCaseResponse.created_event:type_name -> goeland.v1.AuditEvent
+	3,  // 17: goeland.v1.GetCaseResponse.case:type_name -> goeland.v1.Case
+	32, // 18: goeland.v1.GetCaseResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	31, // 19: goeland.v1.GetCaseResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	28, // 20: goeland.v1.UpdateCaseRequest.metadata:type_name -> google.protobuf.Struct
+	3,  // 21: goeland.v1.UpdateCaseResponse.case:type_name -> goeland.v1.Case
+	31, // 22: goeland.v1.UpdateCaseResponse.update_event:type_name -> goeland.v1.AuditEvent
+	0,  // 23: goeland.v1.TransitionCaseRequest.target_status:type_name -> goeland.v1.CaseStatus
+	3,  // 24: goeland.v1.TransitionCaseResponse.case:type_name -> goeland.v1.Case
+	31, // 25: goeland.v1.TransitionCaseResponse.transition_event:type_name -> goeland.v1.AuditEvent
+	0,  // 26: goeland.v1.SearchCasesRequest.status:type_name -> goeland.v1.CaseStatus
+	3,  // 27: goeland.v1.SearchCasesResponse.cases:type_name -> goeland.v1.Case
+	31, // 28: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	1,  // 29: goeland.v1.ListCaseTypesResponse.case_types:type_name -> goeland.v1.CaseType
+	1,  // 30: goeland.v1.CreateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	33, // 31: goeland.v1.CreateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	2,  // 32: goeland.v1.SetCaseTypeDefaultGrantsRequest.grants:type_name -> goeland.v1.CaseTypeDefaultGrant
+	1,  // 33: goeland.v1.SetCaseTypeDefaultGrantsResponse.case_type:type_name -> goeland.v1.CaseType
+	33, // 34: goeland.v1.SetCaseTypeDefaultGrantsResponse.change:type_name -> goeland.v1.ReferenceChange
+	1,  // 35: goeland.v1.UpdateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	33, // 36: goeland.v1.UpdateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 37: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
+	6,  // 38: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
+	8,  // 39: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
+	10, // 40: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
+	12, // 41: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
+	14, // 42: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
+	16, // 43: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
+	18, // 44: goeland.v1.CaseService.CreateCaseType:input_type -> goeland.v1.CreateCaseTypeRequest
+	20, // 45: goeland.v1.CaseService.UpdateCaseType:input_type -> goeland.v1.UpdateCaseTypeRequest
+	21, // 46: goeland.v1.CaseService.SetCaseTypeDefaultGrants:input_type -> goeland.v1.SetCaseTypeDefaultGrantsRequest
+	5,  // 47: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
+	7,  // 48: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
+	9,  // 49: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
+	11, // 50: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
+	13, // 51: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
+	15, // 52: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
+	17, // 53: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
+	19, // 54: goeland.v1.CaseService.CreateCaseType:output_type -> goeland.v1.CreateCaseTypeResponse
+	23, // 55: goeland.v1.CaseService.UpdateCaseType:output_type -> goeland.v1.UpdateCaseTypeResponse
+	22, // 56: goeland.v1.CaseService.SetCaseTypeDefaultGrants:output_type -> goeland.v1.SetCaseTypeDefaultGrantsResponse
+	47, // [47:57] is the sub-list for method output_type
+	37, // [37:47] is the sub-list for method input_type
+	37, // [37:37] is the sub-list for extension type_name
+	37, // [37:37] is the sub-list for extension extendee
+	0,  // [0:37] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_case_proto_init() }
@@ -1798,15 +2067,16 @@ func file_goeland_v1_case_proto_init() {
 	if File_goeland_v1_case_proto != nil {
 		return
 	}
+	file_goeland_v1_access_proto_init()
 	file_goeland_v1_core_proto_init()
-	file_goeland_v1_case_proto_msgTypes[18].OneofWrappers = []any{}
+	file_goeland_v1_case_proto_msgTypes[19].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_case_proto_rawDesc), len(file_goeland_v1_case_proto_rawDesc)),
 			NumEnums:      1,
-			NumMessages:   20,
+			NumMessages:   23,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

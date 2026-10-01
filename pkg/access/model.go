@@ -8,19 +8,6 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
-// GranteeKind is who a grant is given to; it mirrors access_grant.grantee_kind.
-type GranteeKind string
-
-// Grantee kinds.
-const (
-	// GranteeUser is an internal user (operator id).
-	GranteeUser GranteeKind = "USER"
-	// GranteeGroup is a security group (its subject id).
-	GranteeGroup GranteeKind = "GROUP"
-	// GranteeOrgUnit is an org unit and its sub-units (its subject id).
-	GranteeOrgUnit GranteeKind = "ORG_UNIT"
-)
-
 // Audit event types written on the subject of a grant, or on a group.
 const (
 	// EventAccessGranted records a new grant.
@@ -44,7 +31,7 @@ type Grant struct {
 	// SubjectID is the subject the grant is on.
 	SubjectID uuid.UUID `db:"subject_id"`
 	// GranteeKind is who the grant is given to.
-	GranteeKind GranteeKind `db:"grantee_kind"`
+	GranteeKind core.GranteeKind `db:"grantee_kind"`
 	// GranteeUserID is the user of a USER grant.
 	GranteeUserID *string `db:"grantee_user_id"`
 	// GranteeSubjectID is the group or unit of a GROUP or ORG_UNIT grant.
@@ -83,7 +70,7 @@ type SetGrantInput struct {
 	// SubjectID is the subject.
 	SubjectID uuid.UUID
 	// GranteeKind is who the grant is given to.
-	GranteeKind GranteeKind
+	GranteeKind core.GranteeKind
 	// GranteeID is the user id, or the group or unit subject id.
 	GranteeID string
 	// Level is the level to give (READ to FULL_CONTROL).

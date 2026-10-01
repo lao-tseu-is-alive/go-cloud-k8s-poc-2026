@@ -212,7 +212,10 @@ func (s *ConnectServer) CreateCaseType(ctx context.Context, req *connect.Request
 		return nil, err
 	}
 	m := req.Msg
-	entry, change, err := s.service.CreateCaseType(ctx, CaseTypeInput{Code: m.Code, Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	entry, change, err := s.service.CreateCaseType(ctx, CaseTypeInput{
+		Code: m.Code, Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace,
+		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, OperatorID: core.OperatorID(user), Reason: m.Reason,
+	})
 	if err != nil {
 		return nil, s.mapError(err)
 	}
@@ -226,9 +229,29 @@ func (s *ConnectServer) UpdateCaseType(ctx context.Context, req *connect.Request
 		return nil, err
 	}
 	m := req.Msg
-	entry, change, err := s.service.UpdateCaseType(ctx, m.Code, CaseTypeUpdate{Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, IsActive: m.IsActive, OperatorID: core.OperatorID(user), Reason: m.Reason})
+	entry, change, err := s.service.UpdateCaseType(ctx, m.Code, CaseTypeUpdate{
+		Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, IsActive: m.IsActive,
+		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, OperatorID: core.OperatorID(user), Reason: m.Reason,
+	})
 	if err != nil {
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.UpdateCaseTypeResponse{CaseType: TypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}
+
+// SetCaseTypeDefaultGrants replaces the default grants of a case type (administrators only).
+func (s *ConnectServer) SetCaseTypeDefaultGrants(ctx context.Context, req *connect.Request[goelandv1.SetCaseTypeDefaultGrantsRequest]) (*connect.Response[goelandv1.SetCaseTypeDefaultGrantsResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	grants, err := DefaultGrantsFromProto(req.Msg.Grants)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	entry, change, err := s.service.SetDefaultGrants(ctx, req.Msg.Code, DefaultGrantsInput{Grants: grants, OperatorID: core.OperatorID(user), Reason: req.Msg.Reason})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.SetCaseTypeDefaultGrantsResponse{CaseType: TypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
 }

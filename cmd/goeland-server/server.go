@@ -122,7 +122,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		services = append(services, m.VanguardServices()...)
 		serviceNames = append(serviceNames, m.ServiceNames()...)
 	}
-	transcoder, err := vanguard.NewTranscoder(services)
+	transcoder, err := vanguard.NewTranscoder(services, vanguard.WithCodec(core.NewStrictJSONCodec))
 	if err != nil {
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
 	}

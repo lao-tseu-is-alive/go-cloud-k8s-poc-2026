@@ -20,4 +20,5 @@ type Repository interface {
 	ListTypes(ctx context.Context, onlyActive bool) ([]*CaseType, error)
 	CreateCaseType(ctx context.Context, in CaseTypeInput) (*CaseType, *core.ReferenceChange, error)
 	UpdateCaseType(ctx context.Context, code string, in CaseTypeUpdate) (*CaseType, *core.ReferenceChange, error)
+	SetDefaultGrants(ctx context.Context, code string, in DefaultGrantsInput) (*CaseType, *core.ReferenceChange, error)
 }
