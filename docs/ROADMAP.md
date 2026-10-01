@@ -31,7 +31,8 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 (GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
 security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050) is complete —
 roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD-050) in v0.11.0;
-next is the sensitive read audit (GLD-033).
+next is the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on
+production data), then the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -283,7 +284,7 @@ covered by an integration test.
 
 ## Phase 7 — Provenance, outbox, export (v2 §36-38, §51)
 
-- [ ] **GLD-027 — Provenance**: `subject_provenance` (source system, source
+- [~] **GLD-027 — Provenance**: `subject_provenance` (source system, source
   id, import batch); legacy IDs are provenance, never the new UUIDs. May be
   pulled forward with GLD-019.
 - [ ] **GLD-028 — Transactional outbox**: `outbox_event` written in the same
@@ -324,7 +325,21 @@ stays out of scope unless a real need appears, and then only through opaque refe
 Loading the POC is a transform from the legacy-shape replica, not a copy.
 Subject IDs are deterministic (`UUIDv5(namespace, "<kind>:<legacyId>")`) so
 reruns are idempotent and relationships can be rebuilt later; GLD-027 records
-the legacy IDs as provenance. Profiling stays aggregates-only.
+the legacy IDs as provenance. Profiling stays aggregates-only. The rules and the
+runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
+
+- [~] **GLD-051 — Import framework** (started 2026-10-01): `cmd/goeland-import` from the
+  replica into a brand-new local database rebuilt on every run (`scripts/import_rebuild.sh`),
+  deterministic UUIDv5 ids, provenance and one `import_batch` marker per run (GLD-027 pulled
+  forward), set-based loading, a counts-only rejects report, dry run by default.
+- [~] **GLD-052 — Import wave 1**: employees (`app_user`, unit membership), org units, security
+  groups, case types, cases with status and confidentiality, grants, actors with contacts and a
+  correspondence address, and the actor, employee and unit roles on cases.
+- [ ] **GLD-053 — Behaviour at production volume**: measure searches, the read filter, pagination
+  totals and detail pages on the imported data (~610k subjects, ~2.4M grants, ~2.8M
+  relationships) and fix what does not hold (indexes, estimated totals, ...).
+- [ ] **GLD-054 — Import wave 2**: timeline entries, document metadata (external reference, no
+  bytes), things, links between cases.
 
 - [ ] **GLD-018 — Synthetic actor fixture**: a deterministic, fixed-seed
   generator of fake actors matching the profiled real distributions (kind

@@ -8,6 +8,23 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-051** — Legacy data import framework: `cmd/goeland-import` loads a brand-new local
+  database from the read-only legacy replica in one transaction (dry run by default, the full
+  run rolled back), set-based (COPY), with deterministic UUIDv5 ids, provenance and one import
+  marker per run (migration `0025`: `import_batch`, `subject_provenance`; GLD-027), counts-only
+  reports, and `scripts/import_rebuild.sh` to rebuild and rerun. Rules and runbook in
+  `docs/IMPORT_MAPPING.md`.
+- **GLD-052** — Import wave 1: employees as users with their unit, security groups and
+  members, case types (default confidentiality), cases (status, confidentiality, legacy number
+  as business reference `GOELAND`), grants, actors with checked contacts and a correspondence
+  address, and the actor, employee and unit roles on cases.
+
+### Changed
+
+- `cmd/goeland-import-orgunits` shares its unit mapping with the new import (`pkg/legacyimport`).
+
 ## [0.11.0] - 2026-10-01
 
 This release completes real authorization (**GLD-017**): searches, lists, downloads and the

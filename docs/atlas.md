@@ -22,6 +22,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `Makefile` — Reproducible entry point for generation, run, build, quality gates (`check`, `release-check`) and dbmate.
 - `README.md` — Project overview, operator walkthrough and current-version banner.
 - `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
+- `docs/IMPORT_MAPPING.md` — Legacy data import: principles, runbook (rebuild and rerun), wave 1 mapping and decisions; rules and orders of magnitude only, never real values.
 - `docs/ROADMAP.md` — Authoritative implementation order and `GLD-NNN` task state; version-bannered, traced against the changelog.
 - `docs/PRODUCTION_READINESS.md` — Deployment contract: extensions, migrations, storage, auth, probes, secrets, limits.
 - `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.
@@ -51,6 +52,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
 - `scripts/k8s_smoke_test.sh` — Deploys the published image with a disposable PostGIS on a local cluster and checks rollout, probes, version, SPA and API.
+- `scripts/import_rebuild.sh` — Drops and recreates a local `goeland_import*` database (owner from `.env`, extensions as superuser) and runs the legacy import; never prints credentials.
 - `scripts/create_k8s_configmap_from_env.sh` — Renders a Kubernetes ConfigMap from `.env` as a dry run.
 - `scripts/execWithEnv.sh` — Runs a compiled binary with a dotenv file loaded.
 - `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
@@ -112,6 +114,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation (HTTPS auth server outside loopback).
 - `cmd/goeland-server/config_test.go` — Tests the configuration defaults, valid settings, every rejection and the auth server HTTP rules.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
+- `cmd/goeland-import/main.go` — Legacy data import command: migrates a brand-new target and runs `pkg/legacyimport` in one transaction; dry run unless `-apply`, counts only.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
@@ -139,6 +142,18 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure, prefix routing and the bounded cache.
 - `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
 - `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
+- `pkg/legacyimport/actors.go` — Import stages of the actors (person minimal identity, organization), their typed contacts checked by the API rules, and their correspondence address.
+- `pkg/legacyimport/cases.go` — Import stages of the case types (default confidentiality), cases (status, confidentiality, legacy number as business reference) and case grants (level mapping).
+- `pkg/legacyimport/doc.go` — Package documentation of the legacy data import: one transaction, set-based loading, deterministic ids, provenance and one batch marker.
+- `pkg/legacyimport/ids.go` — Deterministic UUIDv5 ids of imported rows and the import's source system and operator names.
+- `pkg/legacyimport/importer.go` — Import run: target checks, import batch, stage order, transaction (rolled back in a dry run), statistics, COPY helpers.
+- `pkg/legacyimport/legacyimport_test.go` — Unit tests of the import rules: ids, role codes, unit tree, case status, grants, contacts and addresses.
+- `pkg/legacyimport/orgunits.go` — Legacy org unit mapping shared with `cmd/goeland-import-orgunits` and the set-based unit stage (tree order, live units, sibling labels).
+- `pkg/legacyimport/report.go` — Counts of an import by stage: rows read, written, left out and adjusted, by reason; printed, and stored on the batch.
+- `pkg/legacyimport/roles.go` — Import stages of the actor, employee and unit roles on cases: relationship types created from the legacy roles, periods, open-edge uniqueness.
+- `pkg/legacyimport/sql.go` — Target statements and the legacy source queries of wave 1 (structural and minimal columns only).
+- `pkg/legacyimport/subjects.go` — Writes the `subject_ref`, `record_metadata` and provenance rows of imported subjects with their legacy dates and creators.
+- `pkg/legacyimport/users.go` — Import stages of the employees as users, their unit and group memberships, and the security groups.
 
 ## Access domain (`pkg/access`)
 
@@ -228,6 +243,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0022_app_roles.sql` — Schema migration: `app_role` (ADMIN seeded) and the `app_user_role` history; the former admin flag migrated, `app_user.is_admin` dropped.
 - `pkg/core/module/db/migrations/0023_access_grants.sql` — Schema migration: GROUP kind and `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles (ACTOR_MANAGER, THING_MANAGER), `access_grant` with history, grants backfilled for existing subjects.
 - `pkg/core/module/db/migrations/0024_case_type_defaults.sql` — Schema migration: a case type's default confidentiality and `case_type_default_grant` template lines.
+- `pkg/core/module/db/migrations/0025_import_provenance.sql` — Schema migration: `import_batch` (one marker per import run, with its counts) and `subject_provenance` (source system, table and id of an imported subject).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.

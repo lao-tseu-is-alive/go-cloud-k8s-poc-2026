@@ -133,10 +133,11 @@ pkg/timeline/            case timeline (suivis): drafts, validation, corrections
   └── module/            bundleable module (schema owned by core)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
-  ├── upload.go          out-of-proto POST /upload + GET /download endpoints
+  ├── upload.go          out-of-proto POST /upload + GET /{id}/content endpoints
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/            documentation checker (GoDoc coverage + exact atlas inventory)
 cmd/goeland-import-orgunits/  optional import of the legacy org unit tree (structure only, dry run by default)
+cmd/goeland-import/      one-shot legacy data import into a brand-new local database (pkg/legacyimport, docs/IMPORT_MAPPING.md)
 .github/workflows/       CI gate, Trivy CVE scan, image build/scan/publish, binary release
 docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract)
 ```
@@ -455,6 +456,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `changelog_section.sh <version>` | Print one CHANGELOG section (GitHub release notes)                                                     |
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
+| `import_rebuild.sh <goeland_import…> [--dry-run]` | Recreate a local import database and load it from the legacy replica (`docs/IMPORT_MAPPING.md`) |
 | `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
 
 ## Design rules honoured

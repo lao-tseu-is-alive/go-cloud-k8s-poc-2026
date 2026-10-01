@@ -34,58 +34,16 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/legacyimport"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
 )
 
 const (
 	// operatorID is recorded as the author of the imported units.
 	operatorID = "import:goeland"
-	// externalRefPrefix prefixes the legacy IdOrgUnit in external_ref.
-	externalRefPrefix = "goeland:"
-	// dissolutionReason is used when the source has no reason for an inactive unit.
-	dissolutionReason = "Inactive dans Goéland (import)"
 	// importTimeout bounds the whole run.
 	importTimeout = 10 * time.Minute
 )
-
-// typeCodes maps the legacy TypeOrgUnit names to the seeded POC type codes.
-var typeCodes = map[string]string{
-	"Entreprise": "ENTERPRISE",
-	"Direction":  "DIRECTION",
-	"Service":    "SERVICE",
-	"Office":     "OFFICE",
-	"Division":   "DIVISION",
-	"Bureau":     "BUREAU",
-	"Unité":      "UNIT",
-}
-
-// sourceSQL reads the structural columns only (never e-mails, managers, phones).
-const sourceSQL = `
-SELECT o.idorgunit AS id, o.idparent AS parent_id, t.name AS type_name, btrim(o.name) AS label,
-       -- a few legacy rows hold the literal text NULL instead of a missing sigle
-       CASE WHEN upper(btrim(o.abreviation)) = 'NULL' THEN '' ELSE coalesce(btrim(o.abreviation), '') END AS abbreviation,
-       o.isactive AS active,
-       coalesce(btrim(o.reasondeath), '') AS reason
-FROM org_unit o
-JOIN type_org_unit t ON t.idtypeorgunit = o.idtypeorgunit;`
-
-// sourceUnit is one legacy unit.
-type sourceUnit struct {
-	// ID is the legacy IdOrgUnit.
-	ID int64 `db:"id"`
-	// ParentID is the legacy parent id; nil for a root.
-	ParentID *int64 `db:"parent_id"`
-	// TypeName is the legacy type name (e.g. Service).
-	TypeName string `db:"type_name"`
-	// Label is the unit name.
-	Label string `db:"label"`
-	// Abbreviation is the unit sigle.
-	Abbreviation string `db:"abbreviation"`
-	// Active reports whether the unit is active in the source.
-	Active bool `db:"active"`
-	// Reason is the legacy dissolution reason.
-	Reason string `db:"reason"`
-}
 
 // report counts what the import did or would do.
 type report struct {
@@ -147,12 +105,12 @@ func connect(ctx context.Context, env string) (*pgxpool.Pool, error) {
 }
 
 // readSource loads the legacy units.
-func readSource(ctx context.Context, source *pgxpool.Pool) ([]*sourceUnit, error) {
-	rows, err := source.Query(ctx, sourceSQL)
+func readSource(ctx context.Context, source *pgxpool.Pool) ([]*legacyimport.SourceUnit, error) {
+	rows, err := source.Query(ctx, legacyimport.UnitSourceSQL)
 	if err != nil {
 		return nil, fmt.Errorf("read source units: %w", err)
 	}
-	units, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[sourceUnit])
+	units, err := pgx.CollectRows(rows, pgx.RowToAddrOfStructByName[legacyimport.SourceUnit])
 	if err != nil {
 		return nil, fmt.Errorf("scan source units: %w", err)
 	}
@@ -193,12 +151,12 @@ func newImporter(target *pgxpool.Pool, apply bool) (*importer, error) {
 
 // importTree creates the units parents first, then dissolves the inactive ones
 // children first (a unit is dissolved only once it has no live sub-unit).
-func (imp *importer) importTree(ctx context.Context, units []*sourceUnit) (report, error) {
+func (imp *importer) importTree(ctx context.Context, units []*legacyimport.SourceUnit) (report, error) {
 	imp.rep.read = len(units)
-	ordered := topDown(units)
+	ordered := legacyimport.TopDown(units)
 	for _, u := range ordered {
 		if err := imp.importUnit(ctx, u); err != nil {
-			return imp.rep, fmt.Errorf("import unit %s%d: %w", externalRefPrefix, u.ID, err)
+			return imp.rep, fmt.Errorf("import unit %s%d: %w", legacyimport.UnitExternalRefPrefix, u.ID, err)
 		}
 	}
 	// Children come before their parents in reverse order, so the number of
@@ -208,7 +166,7 @@ func (imp *importer) importTree(ctx context.Context, units []*sourceUnit) (repor
 		u := ordered[i]
 		live, err := imp.settle(ctx, u, liveChildren[u.ID])
 		if err != nil {
-			return imp.rep, fmt.Errorf("dissolve unit %s%d: %w", externalRefPrefix, u.ID, err)
+			return imp.rep, fmt.Errorf("dissolve unit %s%d: %w", legacyimport.UnitExternalRefPrefix, u.ID, err)
 		}
 		if live && u.ParentID != nil {
 			liveChildren[*u.ParentID]++
@@ -217,47 +175,10 @@ func (imp *importer) importTree(ctx context.Context, units []*sourceUnit) (repor
 	return imp.rep, nil
 }
 
-// topDown orders units parents first; among siblings, active units come first
-// so they keep their label when an inactive homonym must be renamed. A unit
-// whose parent is missing from the source becomes a root.
-func topDown(units []*sourceUnit) []*sourceUnit {
-	byID := make(map[int64]bool, len(units))
-	for _, u := range units {
-		byID[u.ID] = true
-	}
-	children := map[int64][]*sourceUnit{}
-	var queue []*sourceUnit
-	for _, u := range units {
-		if u.ParentID == nil || !byID[*u.ParentID] {
-			queue = append(queue, u)
-		} else {
-			children[*u.ParentID] = append(children[*u.ParentID], u)
-		}
-	}
-	queue = activeFirst(queue)
-	for i := 0; i < len(queue); i++ {
-		queue = append(queue, activeFirst(children[queue[i].ID])...)
-	}
-	return queue
-}
-
-// activeFirst returns units with the active ones first, keeping their order.
-func activeFirst(units []*sourceUnit) []*sourceUnit {
-	out := make([]*sourceUnit, 0, len(units))
-	for _, active := range []bool{true, false} {
-		for _, u := range units {
-			if u.Active == active {
-				out = append(out, u)
-			}
-		}
-	}
-	return out
-}
-
 // importUnit creates one unit unless it was imported before. An inactive unit
 // whose label is taken by a live sibling gets its legacy id appended.
-func (imp *importer) importUnit(ctx context.Context, u *sourceUnit) error {
-	ref := externalRefPrefix + strconv.FormatInt(u.ID, 10)
+func (imp *importer) importUnit(ctx context.Context, u *legacyimport.SourceUnit) error {
+	ref := legacyimport.UnitExternalRefPrefix + strconv.FormatInt(u.ID, 10)
 	existing, err := imp.findByRef(ctx, ref)
 	if err != nil {
 		return err
@@ -288,16 +209,13 @@ func (imp *importer) importUnit(ctx context.Context, u *sourceUnit) error {
 }
 
 // createInput maps a legacy unit to a POC creation request.
-func (imp *importer) createInput(u *sourceUnit, ref string) orgunit.CreateInput {
-	typeCode, ok := typeCodes[u.TypeName]
+func (imp *importer) createInput(u *legacyimport.SourceUnit, ref string) orgunit.CreateInput {
+	typeCode, ok := legacyimport.UnitTypeCodes[u.TypeName]
 	if !ok {
 		typeCode = "UNIT"
 		imp.rep.unknownType++
 	}
-	label := u.Label
-	if label == "" {
-		label = fmt.Sprintf("Unité %d", u.ID)
-	}
+	label := legacyimport.UnitLabel(u)
 	in := orgunit.CreateInput{
 		ExternalRef: ref,
 		Input:       orgunit.Input{TypeCode: typeCode, Abbreviation: u.Abbreviation, Label: label, OperatorID: operatorID},
@@ -313,7 +231,7 @@ func (imp *importer) createInput(u *sourceUnit, ref string) orgunit.CreateInput 
 // settle gives a unit its final state and reports whether it stays live: an
 // active unit does, and so does an inactive one that still has live sub-units
 // (the POC only dissolves a unit without live sub-units; those are counted).
-func (imp *importer) settle(ctx context.Context, u *sourceUnit, liveChildren int) (bool, error) {
+func (imp *importer) settle(ctx context.Context, u *legacyimport.SourceUnit, liveChildren int) (bool, error) {
 	switch {
 	case u.Active:
 		return true, nil
@@ -325,7 +243,7 @@ func (imp *importer) settle(ctx context.Context, u *sourceUnit, liveChildren int
 }
 
 // dissolve dissolves an inactive unit that has no live sub-unit left.
-func (imp *importer) dissolve(ctx context.Context, u *sourceUnit) error {
+func (imp *importer) dissolve(ctx context.Context, u *legacyimport.SourceUnit) error {
 	if !imp.apply {
 		imp.rep.dissolved++
 		return nil
@@ -340,7 +258,7 @@ func (imp *importer) dissolve(ctx context.Context, u *sourceUnit) error {
 	}
 	reason := u.Reason
 	if reason == "" {
-		reason = dissolutionReason
+		reason = legacyimport.UnitDissolutionReason
 	}
 	if _, _, err := imp.svc.Dissolve(ctx, id, operatorID, reason); err != nil {
 		return err

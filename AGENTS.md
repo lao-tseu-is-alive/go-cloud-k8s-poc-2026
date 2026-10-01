@@ -138,6 +138,15 @@ domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
 
+**Legacy data import (GLD-051, GLD-052):** `cmd/goeland-import` (`pkg/legacyimport`) loads a
+brand-new local database from the read-only legacy replica in one transaction (dry run = full run
+rolled back), set-based with COPY, deterministic UUIDv5 ids, a `subject_provenance` row per
+subject and one `import_batch` marker instead of per-row audit; it bypasses the domain services on
+purpose, so it must keep their invariants by construction (one open edge per type, live units and
+groups, CHECK rules, `actor.NormalizeContactValue` for contacts). Real data never leaves the
+machine: print counts only, never values, and keep screenshots of imported data out of the
+conversation. Rules and runbook: `docs/IMPORT_MAPPING.md`; rebuild with `scripts/import_rebuild.sh`.
+
 ## Key paths
 
 ```text
@@ -149,7 +158,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0024 (dbmate format)
+  │   └── db/migrations/     0001..0025 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -179,6 +188,7 @@ cmd/goeland-server/          server: pool → migrate → wire the modules → o
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas inventory)
 cmd/goeland-import-orgunits/ optional import of the legacy org unit tree from a read-only replica (structure only)
+cmd/goeland-import/          one-shot legacy data import (pkg/legacyimport) into a brand-new local database
 .github/workflows/           CI: ci (make release-check), cve-trivy-scan, docker-publish, release
 docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.md (GLD-NNN tasks), atlas.md, PRODUCTION_READINESS.md
 ```
