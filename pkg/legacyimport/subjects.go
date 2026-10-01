@@ -43,17 +43,7 @@ func (imp *Importer) writeSubjects(ctx context.Context, subjects []subject) erro
 	metadata := make([][]any, len(subjects))
 	provenance := make([][]any, len(subjects))
 	for i, s := range subjects {
-		created := imp.now
-		if s.createdAt != nil {
-			created = *s.createdAt
-		}
-		createdBy := s.createdBy
-		if createdBy == "" {
-			createdBy = OperatorID
-		}
-		refs[i] = []any{s.id, string(s.kind), s.label, created, s.businessRef, s.businessRefNS}
-		metadata[i] = []any{s.id, created, createdBy, s.updatedAt, s.confidentiality}
-		provenance[i] = []any{s.id, SourceSystem, s.sourceTable, strconv.FormatInt(s.sourceID, 10), imp.batchID}
+		refs[i], metadata[i], provenance[i] = imp.subjectRefRow(s), imp.metadataRow(s), imp.provenanceRow(s)
 		imp.subjects[s.id] = s.kind
 	}
 	if err := imp.copyRows(ctx, "subject_ref", subjectRefColumns, refs); err != nil {
@@ -63,4 +53,21 @@ func (imp *Importer) writeSubjects(ctx context.Context, subjects []subject) erro
 		return err
 	}
 	return imp.copyRows(ctx, "subject_provenance", provenanceColumns, provenance)
+}
+
+// subjectRefRow, metadataRow and provenanceRow are the rows of one subject.
+func (imp *Importer) subjectRefRow(s subject) []any {
+	return []any{s.id, string(s.kind), s.label, *firstTime(s.createdAt, &imp.now), s.businessRef, s.businessRefNS}
+}
+
+func (imp *Importer) metadataRow(s subject) []any {
+	createdBy := s.createdBy
+	if createdBy == "" {
+		createdBy = OperatorID
+	}
+	return []any{s.id, *firstTime(s.createdAt, &imp.now), createdBy, s.updatedAt, s.confidentiality}
+}
+
+func (imp *Importer) provenanceRow(s subject) []any {
+	return []any{s.id, SourceSystem, s.sourceTable, strconv.FormatInt(s.sourceID, 10), imp.batchID}
 }

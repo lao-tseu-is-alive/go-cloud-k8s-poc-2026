@@ -145,6 +145,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/legacyimport/actors.go` — Import stages of the actors (person minimal identity, organization), their typed contacts checked by the API rules, and their correspondence address.
 - `pkg/legacyimport/cases.go` — Import stages of the case types (default confidentiality), cases (status, confidentiality, legacy number as business reference) and case grants (level mapping).
 - `pkg/legacyimport/doc.go` — Package documentation of the legacy data import: one transaction, set-based loading, deterministic ids, provenance and one batch marker.
+- `pkg/legacyimport/documents.go` — Import stages of the documents (streamed metadata, one version known by its digest, current version) and of the readers of the confidential ones.
 - `pkg/legacyimport/ids.go` — Deterministic UUIDv5 ids of imported rows and the import's source system and operator names.
 - `pkg/legacyimport/importer.go` — Import run: target checks, import batch, stage order, transaction (rolled back in a dry run), statistics, COPY helpers.
 - `pkg/legacyimport/legacyimport_test.go` — Unit tests of the import rules: ids, role codes, unit tree, case status, grants, contacts and addresses.
@@ -153,6 +154,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/legacyimport/roles.go` — Import stages of the actor, employee and unit roles on cases: relationship types created from the legacy roles, periods, open-edge uniqueness.
 - `pkg/legacyimport/sql.go` — Target statements and the legacy source queries of wave 1 (structural and minimal columns only).
 - `pkg/legacyimport/subjects.go` — Writes the `subject_ref`, `record_metadata` and provenance rows of imported subjects with their legacy dates and creators.
+- `pkg/legacyimport/things.go` — Import stages of the thing types and things (approximate LV95 location, parcel and building details).
+- `pkg/legacyimport/timeline.go` — Import stages of the case follow-ups (drafts, cited documents, final status) and the wave 2 link tables and role families.
 - `pkg/legacyimport/users.go` — Import stages of the employees as users, their unit and group memberships, and the security groups.
 
 ## Access domain (`pkg/access`)

@@ -213,21 +213,21 @@ func (imp *Importer) importGrants(ctx context.Context, c *StageCounts) error {
 			return nil, err
 		}
 		c.Read++
-		return imp.grantRow(ID(string(core.SubjectKindCase), caseID), kind, granteeID, right, c), nil
+		return imp.grantRow(ID(string(core.SubjectKindCase), caseID), core.SubjectKindCase, kind, granteeID, right, c), nil
 	})
 	c.Written = n
 	return err
 }
 
 // grantRow maps one legacy grant, or returns nil (counted) to leave it out.
-func (imp *Importer) grantRow(caseID uuid.UUID, kind string, granteeID int64, right int16, c *StageCounts) []any {
+func (imp *Importer) grantRow(caseID uuid.UUID, subjectKind core.SubjectKind, kind string, granteeID int64, right int16, c *StageCounts) []any {
 	level, ok := grantLevels[right]
 	if !ok {
 		c.skip(fmt.Sprintf("right %d (Aucun accès: no deny level)", right))
 		return nil
 	}
-	if !imp.known(caseID, core.SubjectKindCase) {
-		c.skip("case not imported")
+	if !imp.known(caseID, subjectKind) {
+		c.skip("subject not imported")
 		return nil
 	}
 	switch kind {
@@ -238,13 +238,13 @@ func (imp *Importer) grantRow(caseID uuid.UUID, kind string, granteeID int64, ri
 		}
 		return []any{caseID, string(core.GranteeUser), strconv.FormatInt(granteeID, 10), nil, int16(level), OperatorID, grantReason}
 	case "O", "G":
-		subjectKind, granteeKind := core.SubjectKindOrgUnit, core.GranteeOrgUnit
+		granteeSubject, granteeKind := core.SubjectKindOrgUnit, core.GranteeOrgUnit
 		if kind == "G" {
-			subjectKind, granteeKind = core.SubjectKindGroup, core.GranteeGroup
+			granteeSubject, granteeKind = core.SubjectKindGroup, core.GranteeGroup
 		}
-		grantee := ID(string(subjectKind), granteeID)
-		if !imp.known(grantee, subjectKind) {
-			c.skip("unknown " + string(subjectKind))
+		grantee := ID(string(granteeSubject), granteeID)
+		if !imp.known(grantee, granteeSubject) {
+			c.skip("unknown " + string(granteeSubject))
 			return nil
 		}
 		return []any{caseID, string(granteeKind), nil, grantee, int16(level), OperatorID, grantReason}

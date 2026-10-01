@@ -110,10 +110,10 @@ func TestGrantRow(t *testing.T) {
 	imp.subjects[caseID], imp.subjects[unit] = core.SubjectKindCase, core.SubjectKindOrgUnit
 	imp.employees[7] = true
 	c := &StageCounts{}
-	if row := imp.grantRow(caseID, "E", 7, 2, c); row == nil || row[2] != "7" || row[4] != int16(core.LevelManage) {
+	if row := imp.grantRow(caseID, core.SubjectKindCase, "E", 7, 2, c); row == nil || row[2] != "7" || row[4] != int16(core.LevelManage) {
 		t.Fatalf("an employee grant (Edition → MANAGE): %v", row)
 	}
-	if row := imp.grantRow(caseID, "O", 10, 3, c); row == nil || row[3] != unit || row[4] != int16(core.LevelContribute) {
+	if row := imp.grantRow(caseID, core.SubjectKindCase, "O", 10, 3, c); row == nil || row[3] != unit || row[4] != int16(core.LevelContribute) {
 		t.Fatalf("a unit grant (Ajout suivis → CONTRIBUTE): %v", row)
 	}
 	for _, left := range []struct {
@@ -121,7 +121,7 @@ func TestGrantRow(t *testing.T) {
 		id    int64
 		right int16
 	}{{"E", 7, 5}, {"E", 8, 1}, {"O", 11, 1}, {"G", 1, 1}, {"X", 1, 1}} {
-		if row := imp.grantRow(caseID, left.kind, left.id, left.right, c); row != nil {
+		if row := imp.grantRow(caseID, core.SubjectKindCase, left.kind, left.id, left.right, c); row != nil {
 			t.Errorf("%+v must be left out", left)
 		}
 	}

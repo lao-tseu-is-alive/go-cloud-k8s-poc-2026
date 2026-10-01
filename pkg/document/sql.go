@@ -165,13 +165,19 @@ ORDER BY code;`
 // --- search ------------------------------------------------------------------
 
 // searchDocumentsSQL performs full-text search over the generated tsvector plus
-// governance and relationship filters.
+// governance filters, within scope (searchAllDocumentsSQL, ...).
 // The query term is folded through immutable_unaccent() (migration 0005) so it
 // matches the equally accent-folded search_vector: "chateau" finds "château".
-var searchDocumentsSQL = core.CappedPageSQL(`
+func searchDocumentsSQL(scope string) string {
+	return core.CappedPageSQL(documentMatchSQL(scope, "document"), documentColumns, "document", "d", true)
+}
+
+// documentMatchSQL is the match of a document search over from (the table or a window of it).
+func documentMatchSQL(scope, from string) string {
+	return `
 SELECT d.id AS id, d.created_at AS sort_key
-FROM document d
-`+core.MetadataLateralSQL("d.id")+`
+FROM ` + from + ` d
+` + core.MetadataLateralSQL("d.id") + `
 LEFT JOIN document_version cv ON cv.id = d.current_version_id
 WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
   AND (@document_type_code = '' OR d.document_type_id = (SELECT id FROM document_type WHERE code = @document_type_code))
@@ -179,19 +185,33 @@ WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_una
   AND (NOT @only_records OR cv.is_record)
   AND (NOT @only_final OR cv.is_final)
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND (@case_id::uuid IS NULL OR EXISTS (
-        SELECT 1 FROM subject_relationship sr
-        JOIN relationship_type rt ON rt.id = sr.relationship_type_id
-        WHERE sr.deleted_at IS NULL
-          AND sr.target_subject_id = d.id
-          AND sr.source_subject_id = @case_id
-          AND rt.code = 'CASE_HAS_DOCUMENT'))
-  AND (@thing_id::uuid IS NULL OR EXISTS (
-        SELECT 1 FROM subject_relationship sr
-        WHERE sr.deleted_at IS NULL
-          AND sr.source_subject_id = d.id
-          AND sr.target_subject_id = @thing_id))
-  AND `+core.ReadableSQL("d.id", "rm"), documentColumns, "document", "d", true)
+` + scope + `
+  AND ` + core.ReadableSQL("d.id", "rm")
+}
+
+// The scopes of a document search. A case or thing scope is a top-level IN, so
+// the plan starts from the few edges of that subject; nested in an OR with the
+// "no scope" case, PostgreSQL scanned every document (GLD-053: 2 s → 20 ms).
+var (
+	// searchAllDocumentsSQL counts within a window of the newest documents (core.WindowedPageSQL).
+	searchAllDocumentsSQL = core.WindowedPageSQL(documentMatchSQL("", "document"),
+		documentMatchSQL("", "(SELECT * FROM document ORDER BY created_at DESC, id DESC LIMIT @scan_window)"),
+		"document", documentColumns, "document", "d", true)
+	searchCaseDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
+        SELECT sr.target_subject_id FROM subject_relationship sr
+        JOIN relationship_type rt ON rt.id = sr.relationship_type_id AND rt.code = 'CASE_HAS_DOCUMENT'
+        WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @case_id)`)
+	searchThingDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
+        SELECT sr.source_subject_id FROM subject_relationship sr
+        WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @thing_id)`)
+	searchCaseThingDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
+        SELECT sr.target_subject_id FROM subject_relationship sr
+        JOIN relationship_type rt ON rt.id = sr.relationship_type_id AND rt.code = 'CASE_HAS_DOCUMENT'
+        WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @case_id)
+  AND d.id IN (
+        SELECT sr.source_subject_id FROM subject_relationship sr
+        WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @thing_id)`)
+)
 
 // --- document_type administration (GLD-040) ---------------------------------------------
 

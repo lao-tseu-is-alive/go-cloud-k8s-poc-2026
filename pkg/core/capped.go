@@ -41,6 +41,54 @@ func MetadataLateralSQL(idExpr string) string {
 	return `CROSS JOIN LATERAL (SELECT r.deleted_at, r.confidentiality_level FROM record_metadata r WHERE r.subject_id = ` + idExpr + ` LIMIT 1) rm`
 }
 
+// ScanWindow bounds the rows a WindowedPageSQL count examines.
+const ScanWindow = 20000
+
+// WindowedPageSQL is CappedPageSQL for a table where few rows may be readable
+// (GLD-053: ~81% of the documents are confidential, so an administrator
+// without grants reads ~1 in 160 and counting 10 000 of them meant examining
+// 1.6M rows). The page is read from the whole table and stops once full; the
+// total counts the matches among the @scan_window first rows of windowTable in
+// the sort order only (windowMatch is match over that window), so it is a
+// lower bound when the table is larger (window_full, see CapWindowTotal).
+func WindowedPageSQL(match, windowMatch, windowTable, columns, table, alias string, desc bool) string {
+	direction := ""
+	if desc {
+		direction = " DESC"
+	}
+	order := "sort_key" + direction + ", id" + direction
+	return `
+WITH page AS (
+` + match + `
+ORDER BY ` + order + `
+LIMIT @limit OFFSET @offset),
+counted AS (
+SELECT count(*) AS n FROM (
+` + windowMatch + `
+ORDER BY ` + order + `
+LIMIT @count_limit) x)
+SELECT ` + columns + `, (SELECT n FROM counted) AS total_count,
+       (SELECT count(*) FROM (SELECT 1 FROM ` + windowTable + ` LIMIT @scan_window) w) >= @scan_window AS window_full
+FROM page m
+JOIN ` + table + ` ` + alias + ` ON ` + alias + `.id = m.id
+ORDER BY m.sort_key` + direction + `, m.id` + direction + `;`
+}
+
+// CapWindowTotal is CapTotal for a WindowedPageSQL query: when the window did
+// not cover the table, the total is a lower bound, at least what was paged
+// through plus one while the page is full (so paging goes on).
+func CapWindowTotal(total int32, windowFull bool, offset, returned, limit int) (int32, bool) {
+	if !windowFull {
+		return CapTotal(total)
+	}
+	seen := int32(offset + returned)
+	if returned == limit {
+		seen++
+	}
+	total, _ = CapTotal(max(total, seen))
+	return total, true
+}
+
 // CapTotal turns the total of a CappedPageSQL query into the reported total
 // and whether it is a lower bound.
 func CapTotal(total int32) (int32, bool) {

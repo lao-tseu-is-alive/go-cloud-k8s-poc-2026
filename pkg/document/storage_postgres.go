@@ -597,16 +597,32 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, opera
 	return ev, nil
 }
 
+// documentSearchSQL picks the query of the scope of filter (case, thing, both or none).
+func documentSearchSQL(filter SearchFilter) string {
+	switch {
+	case filter.CaseID != nil && filter.ThingID != nil:
+		return searchCaseThingDocumentsSQL
+	case filter.CaseID != nil:
+		return searchCaseDocumentsSQL
+	case filter.ThingID != nil:
+		return searchThingDocumentsSQL
+	default:
+		return searchAllDocumentsSQL
+	}
+}
+
 // documentListRow adds the window total to the document columns for search scanning.
 type documentListRow struct {
 	Document
-	// TotalSize is the COUNT(*) OVER () window total, repeated on every row.
+	// TotalSize is the capped total of the matches, repeated on every row.
 	TotalSize int32 `db:"total_count"`
+	// WindowFull reports that the total was counted within a window smaller than the table.
+	WindowFull bool `db:"window_full"`
 }
 
 // Search runs full-text + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, searchDocumentsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, documentSearchSQL(filter), filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":         core.CountLimit,
 		"query":               filter.Query,
 		"document_type_code":  filter.DocumentTypeCode,
@@ -618,6 +634,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		"thing_id":            filter.ThingID,
 		"limit":               filter.Limit,
 		"offset":              filter.Offset,
+		"scan_window":         core.ScanWindow,
 	}))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search documents: %w", err)
@@ -627,12 +644,13 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		return SearchResult{}, fmt.Errorf("read documents: %w", err)
 	}
 	result := SearchResult{Documents: make([]*Document, len(listRows))}
+	windowFull := false
 	for i := range listRows {
 		doc := listRows[i].Document
 		result.Documents[i] = &doc
-		result.TotalSize = listRows[i].TotalSize
+		result.TotalSize, windowFull = listRows[i].TotalSize, listRows[i].WindowFull
 	}
-	result.TotalSize, result.TotalCapped = core.CapTotal(result.TotalSize)
+	result.TotalSize, result.TotalCapped = core.CapWindowTotal(result.TotalSize, windowFull, filter.Offset, len(listRows), filter.Limit)
 	return result, r.hydrateAll(ctx, result.Documents)
 }
 

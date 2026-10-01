@@ -21,10 +21,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   as business reference `GOELAND`), grants, actors with checked contacts and a correspondence
   address, and the actor, employee and unit roles on cases.
 
+- **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
+  details), their actor roles and cases, links between cases (parent, related), documents as
+  metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),
+  the readers of the confidential documents, their cases, things and actors, and the case
+  follow-ups as timeline entries with their cited documents and final status.
 - **GLD-053** — Production volume: search and relationship totals are counted up to 10 000
   (`totalSizeCapped` on `SearchCases`, `SearchDocuments`, `SearchActors`, `SearchThings` and
   `ListRelationships`; the SPA shows "10 000+"), indexes on the sort keys (migration `0026`), and
-  detail pages load relationships page by page ("Charger plus").
+  detail pages load relationships page by page ("Charger plus"). Document searches scoped to a
+  case or a thing start from its links, and the unscoped one counts within the newest 20 000
+  documents.
 
 ### Changed
 

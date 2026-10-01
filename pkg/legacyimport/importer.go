@@ -47,6 +47,14 @@ type Importer struct {
 	liveGroups map[uuid.UUID]bool
 	// caseTypes maps a legacy IdTypeAffaire to the imported case type id.
 	caseTypes map[int64]uuid.UUID
+	// allEmployeeUnits is the direct unit of every employee (active or not);
+	// unitParents the parent of each legacy unit.
+	allEmployeeUnits map[int64]int64
+	unitParents      map[int64]int64
+	// entries are the imported timeline entries.
+	entries map[uuid.UUID]bool
+	// thingTypes maps a legacy IdTypeThing to the POC thing type id.
+	thingTypes map[int64]uuid.UUID
 	// caseClosedAt holds the closing date of the closed cases.
 	caseClosedAt map[uuid.UUID]time.Time
 	// relTypes maps relationship type codes to their ids in the target.
@@ -78,7 +86,8 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 		source: source, tx: tx, report: &Report{}, now: time.Now(),
 		subjects: map[uuid.UUID]core.SubjectKind{}, employees: map[int64]bool{}, relTypes: map[string]uuid.UUID{},
 		activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{}, liveUnits: map[uuid.UUID]bool{},
-		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{},
+		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{}, thingTypes: map[int64]uuid.UUID{},
+		allEmployeeUnits: map[int64]int64{}, unitParents: map[int64]int64{}, entries: map[uuid.UUID]bool{},
 	}
 	if err := tx.QueryRow(ctx, insertBatchSQL, pgx.NamedArgs{
 		"source_system": SourceSystem, "snapshot_at": snapshot, "started_by": opts.StartedBy,
@@ -110,7 +119,7 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 	return imp.report, nil
 }
 
-// stages lists the wave 1 stages in dependency order.
+// stages lists the stages of waves 1 and 2 in dependency order.
 func (imp *Importer) stages() []stage {
 	return []stage{
 		{"org_units", imp.importOrgUnits},
@@ -127,6 +136,22 @@ func (imp *Importer) stages() []stage {
 		{"case_actor_roles", imp.importCaseActorRoles},
 		{"case_user_roles", imp.importCaseUserRoles},
 		{"case_unit_roles", imp.importCaseUnitRoles},
+		// wave 2
+		{"thing_types", imp.importThingTypes},
+		{"things", imp.importThings},
+		{"thing_actor_roles", imp.roleStage(thingActorRoles)},
+		{"case_things", imp.linkStage(caseThingLink)},
+		{"parent_cases", imp.linkStage(parentCaseLink)},
+		{"related_cases", imp.linkStage(relatedCaseLink)},
+		{"documents", imp.importDocuments},
+		{"document_grants", imp.importDocumentGrants},
+		{"document_access_lists", imp.importDocumentAccessLists},
+		{"case_documents", imp.linkStage(caseDocumentLink)},
+		{"thing_documents", imp.linkStage(thingDocLink)},
+		{"document_actor_roles", imp.roleStage(documentActorRoles)},
+		{"timeline_entries", imp.importTimelineEntries},
+		{"timeline_documents", imp.importTimelineDocuments},
+		{"timeline_status", imp.importTimelineFinalStatus},
 	}
 }
 
@@ -231,4 +256,34 @@ func querySource[T any](ctx context.Context, imp *Importer, query string) ([]*T,
 		return nil, fmt.Errorf("scan source: %w", err)
 	}
 	return out, nil
+}
+
+// copyFromSourceMulti is copyFromSource where one source row may give several
+// target rows (or none).
+func (imp *Importer) copyFromSourceMulti(ctx context.Context, table string, columns []string, query string, convert func(pgx.Rows) ([][]any, error)) (int, error) {
+	rows, err := imp.source.Query(ctx, query)
+	if err != nil {
+		return 0, fmt.Errorf("read source for %s: %w", table, err)
+	}
+	defer rows.Close()
+	var pending [][]any
+	n, err := imp.tx.CopyFrom(ctx, pgx.Identifier{table}, columns, pgx.CopyFromFunc(func() ([]any, error) {
+		for len(pending) == 0 {
+			if !rows.Next() {
+				return nil, rows.Err()
+			}
+			out, err := convert(rows)
+			if err != nil {
+				return nil, err
+			}
+			pending = out
+		}
+		next := pending[0]
+		pending = pending[1:]
+		return next, nil
+	}))
+	if err != nil {
+		return int(n), fmt.Errorf("copy %s: %w", table, err)
+	}
+	return int(n), nil
 }

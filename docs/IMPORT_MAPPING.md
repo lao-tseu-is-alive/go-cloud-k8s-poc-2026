@@ -1,6 +1,6 @@
 # Legacy data import — mapping and runbook
 
-Status: wave 1 in progress (GLD-051, GLD-052), decided with the product owner on 2026-10-01.
+Status: waves 1 and 2 (GLD-051, GLD-052, GLD-054), decided with the product owner on 2026-10-01.
 
 This document describes how the POC is loaded from the legacy Goéland database (a read-only
 PostgreSQL replica of the production MSSQL database): the rules, the decisions and how to run the
@@ -70,9 +70,26 @@ legacy id: the imported grants then apply exactly as in production.
 | `affaire_employe` (~840k, 15 roles) | `CASE_HAS_USER_<ROLE>` | participation roles, distinct from grants |
 | `affaire_org_unit` (~1.7M, 13 roles) | `CASE_HAS_ORG_UNIT_<ROLE>` | existing LEADER, MANAGER, PARTICIPANT reused |
 
-Out of wave 1: the type-specific tables of 172 case types, the timeline (`affaire_suivi`, ~2.2M),
-documents (~2.3M, metadata with an external reference later, never the bytes), things, links
-between cases, tasks and circulations, access logs (GLD-033).
+## Mapping — wave 2
+
+| Legacy | POC | Rules |
+|---|---|---|
+| `type_thing` (~110) | `thing_type` | parcel, building, tree and advertisement to the seeded types, the others generic `LEG_<IdTypeThing>` |
+| `thing` (~180k) + `thing_position` | `thing` | the legacy keeps an extent in LV95 centimetres: an exact point, or the centre of a wider extent (`metadata.legacy_location`); parcels get no geometry (their shape is unknown) |
+| `parcelle` / `thi_building_egid` | `thing_parcel` / `thing_building` | OFS commune, parcel number, EGRID, surface; EGID; a repeated EGRID or EGID keeps its first owner |
+| `acteur_role` on `Thing` | `THING_HAS_ACTOR_<ROLE>` | owner reused, the others created |
+| `lien_thing_affaire` | `CASE_CONCERNS_THING` | |
+| `lien_affaire_affaire` | `CASE_PARENT_OF_CASE`, `CASE_RELATED_TO_CASE` | "Parent": case 1 is the parent of case 2 (the older one in 86% of the rows), "Enfant" is its mirror (not imported); "Lien" is stored both ways (kept once), "Lien unidirectionnel" keeps its direction |
+| `document` (~2.3M) | `document` + one `document_version` + `content_blob` | one generic type "Document Goéland" (the legacy type is a file format, which gives the media type); the current content is known by its SHA-256 only (no storage reference: the bytes stay in the legacy store); definitive → final; earlier versions not imported |
+| confidential documents | `access_grant` | see the decision below |
+| `lien_affaire_document` / `lien_thing_document` | `CASE_HAS_DOCUMENT` / `DOCUMENT_REPRESENTS_THING` | |
+| `acteur_role` on `Document` | `DOCUMENT_AUTHORED_BY_ACTOR`, `DOCUMENT_HAS_ACTOR_<ROLE>` | |
+| `affaire_suivi` (~2.2M) | `case_timeline_entry` (COMMENT, visible to all involved) | validated → VALIDATED; locked (`affaire_suivi_verrou`) or of a closed case → LOCKED; otherwise a draft |
+| `lien_affaire_suivi_document` (~1.5M) | `timeline_document_link` | the single imported version is pinned |
+
+Not imported: the type-specific tables of 172 case types and of the things, the bytes of the
+documents and their earlier versions, tasks and circulations (none in the legacy form), access
+logs (GLD-033).
 
 ## First run (2026-10-01, replica of 2026-05-18)
 
@@ -96,7 +113,30 @@ exact total over ~490k readable cases) and now ~0.04 s with a total capped at 10
 takes ~0.23 s, an actor search ~0.04 s; relationship panels page through up to ~125k incoming
 relationships of a unit (~0.07 s a page) instead of stopping at 200.
 
+## Wave 2 run (2026-10-01)
+
+Loaded in about 28 minutes in all (peak memory about 1.5 GB): ~180k things (~47k located at the
+centre of their extent, parcels without geometry; a few repeated EGID/EGRID left empty), ~94k
+actor roles on things, ~607k case–thing links, ~5k parent and ~135k related case links, ~2.3M
+documents (one version each, ~30k with earlier versions not imported), ~3.3M grants on the
+confidential documents plus ~654k from their access lists, ~2M case–document and ~1.9M
+thing–document links, ~715k document–actor roles, ~2.2M follow-ups (~125k validated, ~1.75M
+locked, ~326k drafts of open cases) and ~1.5M cited documents.
+
+At this volume (GLD-053): a case's documents ~20 ms, a thing's ~90 ms, a case timeline ~10 ms;
+the unscoped document search counts within the 20 000 newest documents (a lower bound) and takes
+~0.26 s for an employee — but ~1.6 s for a user without any grant, who reads only the public ~1 in
+160 documents and must scan far to fill a page. An access-aware search index (Meilisearch, on the
+roadmap) is the remedy.
+
 ## Decisions
+
+- **Document confidentiality (provisional, to be confirmed)**: the legacy marks ~81% of the
+  documents confidential with a level 0-6 relative to the poster's unit and has no dictionary of
+  the levels. Until confirmed: a non-confidential document is public; a confidential one is
+  confidential (level 2) with FULL_CONTROL to its poster, READ to the poster's unit (levels 0-4:
+  the unit level − 1 steps up, covering its sub-units) and READ to its explicit access list
+  (employees, groups, units; levels 5 and 6 nearly always have one and get only it).
 
 - Grants given to inactive employees are imported (no effect, history kept).
 - "Aucun accès" (a few dozen rows) is not imported: the person may then reach the case through

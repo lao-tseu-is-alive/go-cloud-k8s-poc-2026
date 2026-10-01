@@ -12,12 +12,12 @@ import (
 )
 
 // roleFamily describes how the legacy roles of one kind of participant on a
-// case become relationship types and edges.
+// subject (a case, a thing, a document) become relationship types and edges.
 type roleFamily struct {
 	// prefix starts the type codes (CASE_HAS_ACTOR_, ...).
 	prefix string
-	// targetKind is the kind of the participant.
-	targetKind core.SubjectKind
+	// sourceKind is the kind of the subject (CASE when unset); targetKind the participant's.
+	sourceKind, targetKind core.SubjectKind
 	// rolesSQL lists the legacy roles (id, name); edgesSQL the participations.
 	rolesSQL, edgesSQL string
 	// existing maps legacy role names to the seeded types they become.
@@ -42,6 +42,14 @@ var (
 		label:    "Affaire avec unité %s", inverse: "Unité %s de",
 	}
 )
+
+// source is the kind of the subject the participants belong to.
+func (f roleFamily) source() core.SubjectKind {
+	if f.sourceKind == "" {
+		return core.SubjectKindCase
+	}
+	return f.sourceKind
+}
 
 func (imp *Importer) importCaseActorRoles(ctx context.Context, c *StageCounts) error {
 	return imp.importRoles(ctx, actorRoles, c)
@@ -91,9 +99,10 @@ func (imp *Importer) roleRow(f roleFamily, types map[int64]uuid.UUID, open map[[
 		c.skip("unknown role")
 		return nil
 	}
-	source, target := ID(string(core.SubjectKindCase), e.caseID), ID(string(f.targetKind), e.partyID)
-	if !imp.known(source, core.SubjectKindCase) || !imp.known(target, f.targetKind) {
-		c.skip("case or participant not imported")
+	sourceKind := f.source()
+	source, target := ID(string(sourceKind), e.caseID), ID(string(f.targetKind), e.partyID)
+	if !imp.known(source, sourceKind) || !imp.known(target, f.targetKind) {
+		c.skip("subject or participant not imported")
 		return nil
 	}
 	to := e.to
@@ -164,7 +173,7 @@ func (imp *Importer) ensureRelationshipType(ctx context.Context, f roleFamily, c
 	name := strings.ToLower(role)
 	var id uuid.UUID
 	if err := imp.tx.QueryRow(ctx, insertRelationshipTypeSQL, pgx.NamedArgs{
-		"code": code, "label": fmt.Sprintf(f.label, name), "source_kind": string(core.SubjectKindCase),
+		"code": code, "label": fmt.Sprintf(f.label, name), "source_kind": string(f.source()),
 		"target_kind": string(f.targetKind), "inverse_label": fmt.Sprintf(f.inverse, name),
 		"description": "Rôle « " + role + " » de Goéland (import)",
 	}).Scan(&id); err != nil {
@@ -202,4 +211,43 @@ func roleCode(name string, id int64) string {
 		return fmt.Sprintf("ROLE_%d", id)
 	}
 	return code
+}
+
+// link describes a legacy link table that becomes edges of one relationship
+// type: edgesSQL returns (source id, target id) pairs.
+type link struct {
+	typeCode               string
+	sourceKind, targetKind core.SubjectKind
+	edgesSQL               string
+}
+
+// importLink writes one open edge per pair of a link table; pairs naming a
+// subject left out and repeated pairs are counted.
+func (imp *Importer) importLink(ctx context.Context, l link, c *StageCounts) error {
+	typeID, err := imp.relType(l.typeCode)
+	if err != nil {
+		return err
+	}
+	seen := map[[2]uuid.UUID]bool{}
+	n, err := imp.copyFromSource(ctx, "subject_relationship", relationshipColumns, l.edgesSQL, func(rows pgx.Rows) ([]any, error) {
+		var sourceID, targetID int64
+		if err := rows.Scan(&sourceID, &targetID); err != nil {
+			return nil, err
+		}
+		c.Read++
+		source, target := ID(string(l.sourceKind), sourceID), ID(string(l.targetKind), targetID)
+		if !imp.known(source, l.sourceKind) || !imp.known(target, l.targetKind) {
+			c.skip("subject not imported")
+			return nil, nil
+		}
+		key := [2]uuid.UUID{source, target}
+		if seen[key] {
+			c.skip("repeated link")
+			return nil, nil
+		}
+		seen[key] = true
+		return []any{source, target, typeID, nil, nil, imp.now, OperatorID}, nil
+	})
+	c.Written = n
+	return err
 }

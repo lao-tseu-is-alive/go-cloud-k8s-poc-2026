@@ -17,6 +17,60 @@ INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directe
 VALUES (@code, @label, @source_kind, @target_kind, true, @inverse_label, @description)
 RETURNING id;`
 
+// createThingStagingSQL holds the thing rows with their location as EWKT text.
+const createThingStagingSQL = `
+CREATE TEMP TABLE import_thing (
+    id UUID, thing_type_id UUID, name TEXT, description TEXT, external_ref TEXT, geom TEXT,
+    metadata JSONB, created_at TIMESTAMPTZ, created_by TEXT
+) ON COMMIT DROP;`
+
+const insertThingsFromStagingSQL = `
+INSERT INTO thing (id, thing_type_id, name, description, external_ref, geom, metadata, created_at, created_by)
+SELECT id, thing_type_id, name, description, external_ref, ST_GeomFromEWKT(geom), metadata, created_at, created_by
+FROM import_thing;`
+
+const insertLegacyDocumentTypeSQL = `
+INSERT INTO document_type (code, label, description, category)
+VALUES (@code, 'Document Goéland', 'Documents importés de Goéland (le type legacy est un format de fichier)', 'Goéland')
+RETURNING id;`
+
+// setCurrentVersionsSQL points each imported document at its single version.
+const setCurrentVersionsSQL = `
+UPDATE document d SET current_version_id = v.id
+FROM document_version v
+WHERE v.document_id = d.id AND v.version_no = 1 AND d.current_version_id IS NULL
+  AND d.id IN (SELECT subject_id FROM subject_provenance WHERE import_batch_id = @batch_id);`
+
+// createDocumentGrantStagingSQL collects the computed and listed document
+// grants before they are written once per grantee.
+const createDocumentGrantStagingSQL = `
+CREATE TEMP TABLE import_document_grant (
+    subject_id UUID, grantee_kind TEXT, grantee_user_id TEXT, grantee_subject_id UUID,
+    level SMALLINT, granted_by TEXT, grant_reason TEXT
+) ON COMMIT DROP;`
+
+const insertDocumentGrantsFromStagingSQL = `
+INSERT INTO access_grant (subject_id, grantee_kind, grantee_user_id, grantee_subject_id, level, granted_by, grant_reason)
+SELECT DISTINCT ON (subject_id, grantee_kind, coalesce(grantee_user_id, ''), grantee_subject_id)
+       subject_id, grantee_kind, grantee_user_id, grantee_subject_id, level, granted_by, grant_reason
+FROM import_document_grant
+ORDER BY subject_id, grantee_kind, coalesce(grantee_user_id, ''), grantee_subject_id, level DESC;`
+
+const createEntryFinalStagingSQL = `
+CREATE TEMP TABLE import_entry_final (id UUID, status SMALLINT, at TIMESTAMPTZ, by TEXT) ON COMMIT DROP;`
+
+// applyEntryFinalStatusSQL moves the drafts to their final status (an allowed
+// transition: the guard only refuses changes to an entry no longer a draft).
+const applyEntryFinalStatusSQL = `
+UPDATE case_timeline_entry e
+SET status = f.status,
+    validated_at = CASE WHEN f.status = 2 THEN f.at END,
+    validated_by = CASE WHEN f.status = 2 THEN f.by ELSE e.validated_by END,
+    locked_at = CASE WHEN f.status = 3 THEN f.at END,
+    locked_by = CASE WHEN f.status = 3 THEN f.by ELSE e.locked_by END
+FROM import_entry_final f
+WHERE f.id = e.id;`
+
 // --- source (the legacy replica) -------------------------------------------------------------
 
 // snapshotSQL dates the source data: the last change of a case (the instant T).
@@ -126,3 +180,113 @@ SELECT o.idaffaire AS case_id, o.idorgunit AS party_id, o.idroleou AS role_id, N
        o.datebeginparticipate AS valid_from, o.dateendparticipate AS valid_to
 FROM affaire_org_unit o
 ORDER BY o.idaffaire, o.idorgunit, o.idroleou, o.dateendparticipate NULLS FIRST;`
+
+const thingTypesSQL = `
+SELECT t.idtypething AS id, coalesce(btrim(t.name), '') AS name, coalesce(btrim(t.description), '') AS description,
+       coalesce(t.isactive, false) AS active
+FROM type_thing t
+ORDER BY t.idtypething;`
+
+// thingsSQL reads the things with their extent, parcel and building details.
+const thingsSQL = `
+SELECT t.idthing AS id, t.idtypething AS type_id, coalesce(btrim(t.name), '') AS name,
+       coalesce(btrim(t.description), '') AS description, t.datecreated AS created_at, t.idcreator AS creator_id,
+       p.mineo AS min_e, p.maxeo AS max_e, p.minsn AS min_n, p.maxsn AS max_n,
+       pa.idcommune AS commune, coalesce(btrim(pa.numparcelle), '') AS parcel_number,
+       coalesce(upper(btrim(pa.egrid)), '') AS egrid, pa.surface AS surface,
+       (SELECT min(e.egid) FROM thi_building_egid e WHERE e.idthing = t.idthing) AS egid
+FROM thing t
+LEFT JOIN thing_position p ON p.idthing = t.idthing
+LEFT JOIN parcelle pa ON pa.idthing = t.idthing AND t.idtypething = 3
+ORDER BY t.idthing;`
+
+// documentsSQL reads the documents with the metadata of their current content
+// (scanDocument order); the media type comes from the legacy file format.
+const documentsSQL = `
+SELECT d.iddocument, coalesce(btrim(d.doctitle), ''), coalesce(d.docdescription, ''), coalesce(btrim(d.docsubject), ''),
+       coalesce(btrim(d.doccomment), ''), d.docdateofficielle, d.datecreated, d.datelastmodif, d.iduserpost,
+       coalesce(d.docisdefinitive, false), coalesce(d.docisconfidential, false), coalesce(d.doclevelconfidential, 0),
+       coalesce(btrim(d.sha256hash), ''), coalesce(d.docsizeinbyte, 0)::bigint, coalesce(d.nbrpage, 0),
+       coalesce(btrim(t.mimetype), ''), coalesce(btrim(d.locfilename), '') || coalesce(btrim(d.locfileext), ''),
+       coalesce(d.docnumver, 1)
+FROM document d
+LEFT JOIN type_document t ON t.idtypedocument = d.idtypedocument
+ORDER BY d.iddocument;`
+
+const documentGrantsSQL = `
+SELECT d.iddocument, d.iduserpost, coalesce(d.doclevelconfidential, 0)
+FROM document d
+WHERE d.docisconfidential AND d.iduserpost IS NOT NULL
+ORDER BY d.iddocument;`
+
+// documentAccessListsSQL reads the access lists of the confidential documents
+// as (document, E/G/O, grantee).
+const documentAccessListsSQL = `
+SELECT a.iddocument, 'E', a.idemploye FROM document_employe_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential
+UNION ALL
+SELECT a.iddocument, 'G', a.idgroupe FROM document_groupe_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential
+UNION ALL
+SELECT a.iddocument, 'O', a.idorgunit FROM document_org_unit_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential;`
+
+const timelineEntriesSQL = `
+SELECT s.idaffairesuivi, s.idaffaire, s.idcreator, coalesce(s.commentaire, ''), s.dateofficielle, s.datecreated,
+       coalesce(btrim(s.color), '')
+FROM affaire_suivi s
+ORDER BY s.idaffairesuivi;`
+
+const timelineDocumentsSQL = `SELECT idaffairesuivi, iddocument FROM lien_affaire_suivi_document;`
+
+// timelineStatusSQL reads the validation and the first lock of each follow-up.
+const timelineStatusSQL = `
+SELECT s.idaffairesuivi, s.idaffaire, s.datevalidation, s.idvalideur,
+       CASE WHEN v.idaffairesuivi IS NOT NULL THEN coalesce(v.dateverrou, s.datecreated) END, v.idemploye
+FROM affaire_suivi s
+LEFT JOIN LATERAL (
+    SELECT x.idaffairesuivi, x.dateverrou, x.idemploye FROM affaire_suivi_verrou x
+    WHERE x.idaffairesuivi = s.idaffairesuivi ORDER BY x.dateverrou NULLS LAST LIMIT 1) v ON true;`
+
+const caseThingsSQL = `SELECT idaffaire, idthing FROM lien_thing_affaire;`
+
+const caseDocumentsSQL = `SELECT idaffaire, iddocument FROM lien_affaire_document;`
+
+const thingDocumentsSQL = `SELECT iddocument, idthing FROM lien_thing_document;`
+
+// parentCasesSQL: a "Parent" row says that case 1 is the parent of case 2 (it
+// is the older one in 86% of the rows); the "Enfant" rows are its mirror.
+const parentCasesSQL = `
+SELECT l.idaffaire1, l.idaffaire2 FROM lien_affaire_affaire l
+JOIN dico_type_lien_affaire_affaire t ON t.id = l.idtypelien12
+WHERE t.typelien = 'Parent' AND l.idaffaire1 <> l.idaffaire2;`
+
+// relatedCasesSQL: a "Lien" is stored in both directions (kept once), a "Lien
+// unidirectionnel" in its own direction.
+const relatedCasesSQL = `
+SELECT least(l.idaffaire1, l.idaffaire2), greatest(l.idaffaire1, l.idaffaire2) FROM lien_affaire_affaire l
+JOIN dico_type_lien_affaire_affaire t ON t.id = l.idtypelien12
+WHERE t.typelien = 'Lien' AND l.idaffaire1 <> l.idaffaire2
+UNION
+SELECT l.idaffaire1, l.idaffaire2 FROM lien_affaire_affaire l
+JOIN dico_type_lien_affaire_affaire t ON t.id = l.idtypelien12
+WHERE t.typelien = 'Lien unidirectionnel' AND l.idaffaire1 <> l.idaffaire2;`
+
+const thingActorRoleNamesSQL = `
+SELECT d.idrole AS id, btrim(d.role) AS name FROM dico_acteur_role d
+WHERE EXISTS (SELECT 1 FROM acteur_role r WHERE r.objecttablename = 'Thing' AND r.idrole = d.idrole);`
+
+const thingActorRolesSQL = `
+SELECT DISTINCT ON (r.idobject, r.idacteur, r.idrole)
+       r.idobject, r.idacteur, r.idrole, r.datecreated, NULL::timestamp, NULL::timestamp
+FROM acteur_role r
+WHERE r.objecttablename = 'Thing'
+ORDER BY r.idobject, r.idacteur, r.idrole, r.datecreated;`
+
+const documentActorRoleNamesSQL = `
+SELECT d.idrole AS id, btrim(d.role) AS name FROM dico_acteur_role d
+WHERE EXISTS (SELECT 1 FROM acteur_role r WHERE r.objecttablename = 'Document' AND r.idrole = d.idrole);`
+
+const documentActorRolesSQL = `
+SELECT DISTINCT ON (r.idobject, r.idacteur, r.idrole)
+       r.idobject, r.idacteur, r.idrole, r.datecreated, NULL::timestamp, NULL::timestamp
+FROM acteur_role r
+WHERE r.objecttablename = 'Document'
+ORDER BY r.idobject, r.idacteur, r.idrole, r.datecreated;`

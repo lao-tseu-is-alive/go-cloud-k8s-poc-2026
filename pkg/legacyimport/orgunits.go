@@ -144,6 +144,9 @@ func (imp *Importer) importOrgUnits(ctx context.Context, c *StageCounts) error {
 	subjects := make([]subject, 0, len(ordered))
 	rows := make([][]any, 0, len(ordered))
 	for _, u := range ordered {
+		if u.ParentID != nil {
+			imp.unitParents[u.ID] = *u.ParentID
+		}
 		typeCode, ok := UnitTypeCodes[u.TypeName]
 		if !ok {
 			typeCode = "UNIT"

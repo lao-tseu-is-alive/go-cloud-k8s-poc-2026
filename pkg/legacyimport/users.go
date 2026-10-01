@@ -61,6 +61,9 @@ func (imp *Importer) importUsers(ctx context.Context, c *StageCounts) error {
 		subjects = append(subjects, s)
 		users = append(users, []any{strconv.FormatInt(e.ID, 10), s.id, s.label, e.Email})
 		imp.employees[e.ID] = true
+		if e.UnitID != nil {
+			imp.allEmployeeUnits[e.ID] = *e.UnitID
+		}
 		if e.Active {
 			imp.activeEmployees[e.ID] = true
 			if e.UnitID != nil {
