@@ -25,13 +25,15 @@ const (
 	SubjectKindUser SubjectKind = "USER"
 	// SubjectKindOrgUnit identifies an internal organizational unit.
 	SubjectKindOrgUnit SubjectKind = "ORG_UNIT"
+	// SubjectKindGroup identifies a security group of internal users (GLD-048).
+	SubjectKindGroup SubjectKind = "GROUP"
 )
 
 // Valid reports whether k is one of the known subject kinds.
 func (k SubjectKind) Valid() bool {
 	switch k {
 	case SubjectKindCase, SubjectKindDocument, SubjectKindThing,
-		SubjectKindActor, SubjectKindUser, SubjectKindOrgUnit:
+		SubjectKindActor, SubjectKindUser, SubjectKindOrgUnit, SubjectKindGroup:
 		return true
 	default:
 		return false

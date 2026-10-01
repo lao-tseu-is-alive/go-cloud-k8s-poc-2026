@@ -7,6 +7,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { linkSubjects, unlinkSubjects } from '@/api/coreClient'
   import { createOrgUnit, dissolveOrgUnit, getOrgUnit, updateOrgUnit } from '@/api/orgUnitClient'
+  import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
@@ -15,6 +16,7 @@
   import { emptyOrgUnitForm, forgetOrgUnitLabel, nodeLabel, orgUnitToForm } from '@/components/orgunit/orgUnitForm'
   import OrgUnitFormDialog from '@/components/orgunit/OrgUnitFormDialog.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useMyAccess } from '@/composables/useMyAccess'
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
@@ -28,6 +30,8 @@
   const { isAdmin } = storeToRefs(useAuthStore())
 
   const id = computed(() => String(route.params.id))
+  // Grants on a unit (GLD-048); editing the unit itself stays with administrators.
+  const { access, reload: reloadAccess } = useMyAccess(id)
   const unit = ref<OrgUnit | null>(null)
   const ancestors = ref<OrgUnitNode[]>([])
   const children = ref<OrgUnitNode[]>([])
@@ -289,6 +293,11 @@
 
         <v-col cols="12" md="4">
           <SubjectIdentityCard class="mb-4" :subject="unit.subjectRef" />
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>

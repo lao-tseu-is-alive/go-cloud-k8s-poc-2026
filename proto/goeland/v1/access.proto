@@ -1,0 +1,427 @@
+// Goéland POC - Grants and security groups (spec v2 §32, roadmap GLD-048).
+//
+// Proto-first definition for AccessService. Every subject (case, document,
+// actor, thing, org unit, group) may carry grants: a level (READ < CONTRIBUTE <
+// MANAGE < FULL_CONTROL) given to an internal user, a security group or an org
+// unit (a unit grant covers its sub-units). The effective level of a user is the
+// most specific one: personal grant, then the highest grant of the user's
+// groups, then the grant of the nearest unit, then an application role covering
+// the subject's kind (ADMIN covers every kind), then the baseline — READ unless
+// the subject is confidential (confidentiality_level >= 2), where neither roles
+// nor the baseline apply. There is no deny level. A change or a revocation keeps
+// the grant as history and is audited on the subject; a subject never loses its
+// last FULL_CONTROL grant.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// ACCESS ENUMS / MESSAGES
+// =============================================
+
+// GranteeKind is who a grant is given to.
+enum GranteeKind {
+  // GRANTEE_KIND_UNSPECIFIED is the zero value; rejected.
+  GRANTEE_KIND_UNSPECIFIED = 0;
+  // GRANTEE_KIND_USER is an internal user (User.id).
+  GRANTEE_KIND_USER = 1;
+  // GRANTEE_KIND_GROUP is a security group (its subject id).
+  GRANTEE_KIND_GROUP = 2;
+  // GRANTEE_KIND_ORG_UNIT is an org unit and its sub-units (its subject id).
+  GRANTEE_KIND_ORG_UNIT = 3;
+}
+
+// AccessSource tells which rule produced an effective level.
+enum AccessSource {
+  // ACCESS_SOURCE_UNSPECIFIED is the zero value.
+  ACCESS_SOURCE_UNSPECIFIED = 0;
+  // ACCESS_SOURCE_PERSONAL is a grant to the user.
+  ACCESS_SOURCE_PERSONAL = 1;
+  // ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
+  ACCESS_SOURCE_GROUP = 2;
+  // ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
+  ACCESS_SOURCE_ORG_UNIT = 3;
+  // ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
+  ACCESS_SOURCE_ROLE = 4;
+  // ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
+  ACCESS_SOURCE_BASELINE = 5;
+}
+
+// AccessGrant is one grant on a subject; a revoked grant is kept as history.
+message AccessGrant {
+  // id identifies the grant.
+  string id = 1;
+  // subject_id is the subject the grant is on.
+  string subject_id = 2;
+  // grantee_kind is who the grant is given to.
+  GranteeKind grantee_kind = 3;
+  // grantee_id is the user id, or the group or org unit subject id.
+  string grantee_id = 4;
+  // grantee_label is the grantee's display name.
+  string grantee_label = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // level is the granted level.
+  Permission level = 6;
+  // granted_at is when the grant was made.
+  google.protobuf.Timestamp granted_at = 7;
+  // granted_by is the operator who made it.
+  string granted_by = 8;
+  // grant_reason explains it.
+  string grant_reason = 9;
+  // revoked_at is when it was revoked or replaced; unset while current.
+  google.protobuf.Timestamp revoked_at = 10;
+  // revoked_by is the operator who revoked it; empty while current.
+  string revoked_by = 11;
+  // revoke_reason explains the revocation.
+  string revoke_reason = 12;
+}
+
+// Access is the caller's effective level on a subject.
+message Access {
+  // subject_id is the subject.
+  string subject_id = 1;
+  // kind is the subject's kind.
+  SubjectKind kind = 2;
+  // confidential reports confidentiality_level >= 2 (explicit grant required).
+  bool confidential = 3;
+  // level is the effective level (PERMISSION_NONE when none).
+  Permission level = 4;
+  // source is the rule that produced the level.
+  AccessSource source = 5;
+}
+
+// SecurityGroup is a named set of internal users, given grants like a user or a
+// unit; a GROUP subject. Archived groups grant nothing.
+message SecurityGroup {
+  // subject_ref is the group's canonical identity (kind GROUP).
+  SubjectRef subject_ref = 1;
+  // name is the group's name, unique among live groups.
+  string name = 2;
+  // description tells what the group is for.
+  string description = 3;
+  // archived_at is when the group was archived; unset while live.
+  google.protobuf.Timestamp archived_at = 4;
+  // member_count is the number of current members.
+  int32 member_count = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// GroupMember is a current member of a group.
+message GroupMember {
+  // user is the member.
+  User user = 1;
+  // relationship_id is the USER_MEMBER_OF_GROUP relationship.
+  string relationship_id = 2;
+  // since is when the user joined.
+  google.protobuf.Timestamp since = 3;
+  // added_by is the operator who added the user.
+  string added_by = 4;
+}
+
+// --- requests ---------------------------------------------------------------------------
+
+// GetMyAccessRequest asks the caller's effective level on a subject.
+message GetMyAccessRequest {
+  // subject_id is the subject.
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetMyAccessResponse returns it.
+message GetMyAccessResponse {
+  // access is the caller's effective level.
+  Access access = 1;
+}
+
+// ListGrantsRequest lists a subject's grants (READ on the subject).
+message ListGrantsRequest {
+  // subject_id is the subject.
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  // include_revoked also returns revoked and replaced grants (history).
+  bool include_revoked = 2;
+}
+
+// ListGrantsResponse returns the grants, current first, by level.
+message ListGrantsResponse {
+  // grants are the grants.
+  repeated AccessGrant grants = 1;
+}
+
+// SetGrantRequest gives or changes the grant of a grantee on a subject
+// (FULL_CONTROL on the subject); a changed level replaces the current grant,
+// kept as history.
+message SetGrantRequest {
+  // subject_id is the subject.
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+  // grantee_kind is who the grant is given to.
+  GranteeKind grantee_kind = 2 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // grantee_id is the user id, or the group or org unit subject id.
+  string grantee_id = 3 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // level is the level to give (READ to FULL_CONTROL).
+  Permission level = 4 [(buf.validate.field).enum = {
+    defined_only: true
+    in: [
+      2,
+      3,
+      4,
+      5
+    ]
+  }];
+  // reason explains the grant; it is audited.
+  string reason = 5 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// SetGrantResponse returns the current grant and its audit event.
+message SetGrantResponse {
+  // grant is the current grant.
+  AccessGrant grant = 1;
+  // audit_event is the ACCESS_GRANTED or ACCESS_CHANGED event on the subject.
+  AuditEvent audit_event = 2;
+}
+
+// RevokeGrantRequest revokes a current grant (FULL_CONTROL on its subject).
+message RevokeGrantRequest {
+  // grant_id is the grant.
+  string grant_id = 1 [(buf.validate.field).string.uuid = true];
+  // reason explains the revocation; it is audited.
+  string reason = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// RevokeGrantResponse returns the revoked grant and its audit event.
+message RevokeGrantResponse {
+  // grant is the revoked grant.
+  AccessGrant grant = 1;
+  // audit_event is the ACCESS_REVOKED event on the subject.
+  AuditEvent audit_event = 2;
+}
+
+// ListGroupsRequest lists the security groups, by name.
+message ListGroupsRequest {
+  // query filters by name (substring, accent-insensitive); empty lists all.
+  string query = 1 [(buf.validate.field).string.max_len = 200];
+  // include_archived also returns archived groups.
+  bool include_archived = 2;
+}
+
+// ListGroupsResponse returns the groups.
+message ListGroupsResponse {
+  // groups are the matching groups.
+  repeated SecurityGroup groups = 1;
+}
+
+// GetGroupRequest reads a group and its members.
+message GetGroupRequest {
+  // id is the group's subject id.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetGroupResponse returns the group and its current members, by name.
+message GetGroupResponse {
+  // group is the group.
+  SecurityGroup group = 1;
+  // members are its current members.
+  repeated GroupMember members = 2;
+}
+
+// CreateGroupRequest creates a security group; its creator gets FULL_CONTROL.
+message CreateGroupRequest {
+  // name is the group's name, unique among live groups.
+  string name = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description tells what the group is for.
+  string description = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateGroupResponse returns the group and its audit event.
+message CreateGroupResponse {
+  // group is the new group.
+  SecurityGroup group = 1;
+  // audit_event is the GROUP_CREATED event.
+  AuditEvent audit_event = 2;
+}
+
+// UpdateGroupRequest renames or redescribes a live group (MANAGE on it).
+message UpdateGroupRequest {
+  // id is the group's subject id.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // name is the new name.
+  string name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description is the new description.
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // reason explains the change.
+  string reason = 4 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateGroupResponse returns the group and its audit event.
+message UpdateGroupResponse {
+  // group is the updated group.
+  SecurityGroup group = 1;
+  // audit_event is the GROUP_UPDATED event.
+  AuditEvent audit_event = 2;
+}
+
+// ArchiveGroupRequest archives a group (FULL_CONTROL on it); its grants stop applying.
+message ArchiveGroupRequest {
+  // id is the group's subject id.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason explains the archiving.
+  string reason = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// ArchiveGroupResponse returns the group and its audit event.
+message ArchiveGroupResponse {
+  // group is the archived group.
+  SecurityGroup group = 1;
+  // audit_event is the GROUP_ARCHIVED event.
+  AuditEvent audit_event = 2;
+}
+
+// AddGroupMemberRequest adds an internal user to a live group (MANAGE on it).
+message AddGroupMemberRequest {
+  // group_id is the group's subject id.
+  string group_id = 1 [(buf.validate.field).string.uuid = true];
+  // user_id is the user (User.id); it must have signed in once.
+  string user_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+}
+
+// AddGroupMemberResponse returns the membership and its audit event.
+message AddGroupMemberResponse {
+  // member is the new membership.
+  GroupMember member = 1;
+  // audit_event is the RELATIONSHIP_LINKED event on the user's subject.
+  AuditEvent audit_event = 2;
+}
+
+// RemoveGroupMemberRequest removes a member (MANAGE on the group); the
+// membership is ended, kept as history.
+message RemoveGroupMemberRequest {
+  // group_id is the group's subject id.
+  string group_id = 1 [(buf.validate.field).string.uuid = true];
+  // user_id is the member.
+  string user_id = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // reason explains the removal.
+  string reason = 3 [(buf.validate.field).string.max_len = 2000];
+}
+
+// RemoveGroupMemberResponse returns the ended membership event.
+message RemoveGroupMemberResponse {
+  // audit_event is the RELATIONSHIP_ENDED event.
+  AuditEvent audit_event = 1;
+}
+
+// =============================================
+// SERVICE
+// =============================================
+
+// AccessService manages grants and security groups and tells the caller its
+// effective level on a subject. Reads need goeland:read, changes goeland:write
+// plus the level each RPC names.
+service AccessService {
+  // The caller's effective level on a subject and where it comes from.
+  rpc GetMyAccess(GetMyAccessRequest) returns (GetMyAccessResponse) {
+    option (google.api.http) = {get: "/api/subjects/{subject_id}/access"};
+  }
+
+  // List a subject's grants, optionally with the history (READ on the subject).
+  rpc ListGrants(ListGrantsRequest) returns (ListGrantsResponse) {
+    option (google.api.http) = {get: "/api/subjects/{subject_id}/grants"};
+  }
+
+  // Give or change a grant (FULL_CONTROL on the subject), audited on the subject.
+  rpc SetGrant(SetGrantRequest) returns (SetGrantResponse) {
+    option (google.api.http) = {
+      post: "/api/subjects/{subject_id}/grants"
+      body: "*"
+    };
+  }
+
+  // Revoke a grant (FULL_CONTROL on the subject); the last FULL_CONTROL is kept.
+  rpc RevokeGrant(RevokeGrantRequest) returns (RevokeGrantResponse) {
+    option (google.api.http) = {
+      post: "/api/grants/{grant_id}/revoke"
+      body: "*"
+    };
+  }
+
+  // List the security groups by name.
+  rpc ListGroups(ListGroupsRequest) returns (ListGroupsResponse) {
+    option (google.api.http) = {get: "/api/groups"};
+  }
+
+  // Read a group and its current members.
+  rpc GetGroup(GetGroupRequest) returns (GetGroupResponse) {
+    option (google.api.http) = {get: "/api/groups/{id}"};
+  }
+
+  // Create a security group; the creator gets FULL_CONTROL on it.
+  rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse) {
+    option (google.api.http) = {
+      post: "/api/groups"
+      body: "*"
+    };
+  }
+
+  // Rename or redescribe a live group (MANAGE on it).
+  rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse) {
+    option (google.api.http) = {
+      patch: "/api/groups/{id}"
+      body: "*"
+    };
+  }
+
+  // Archive a group (FULL_CONTROL on it); its grants stop applying.
+  rpc ArchiveGroup(ArchiveGroupRequest) returns (ArchiveGroupResponse) {
+    option (google.api.http) = {
+      post: "/api/groups/{id}/archive"
+      body: "*"
+    };
+  }
+
+  // Add an internal user to a live group (MANAGE on it).
+  rpc AddGroupMember(AddGroupMemberRequest) returns (AddGroupMemberResponse) {
+    option (google.api.http) = {
+      post: "/api/groups/{group_id}/members"
+      body: "*"
+    };
+  }
+
+  // Remove a member (MANAGE on the group); the membership is kept as history.
+  rpc RemoveGroupMember(RemoveGroupMemberRequest) returns (RemoveGroupMemberResponse) {
+    option (google.api.http) = {
+      post: "/api/groups/{group_id}/members/{user_id}/remove"
+      body: "*"
+    };
+  }
+}

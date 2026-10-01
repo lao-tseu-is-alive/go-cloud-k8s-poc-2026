@@ -58,15 +58,17 @@ enum SubjectKind {
   // SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
   // never an authenticated operator.
   SUBJECT_KIND_ACTOR = 4;
-  // SUBJECT_KIND_USER is an internal user as a graph subject (future).
+  // SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
   SUBJECT_KIND_USER = 5;
-  // SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+  // SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
   SUBJECT_KIND_ORG_UNIT = 6;
+  // SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
+  SUBJECT_KIND_GROUP = 7;
 }
 
-// Permission is the simple, ordered permission model for the POC.
-// Later replaceable by Casbin/OpenFGA or go-cloud-k8s-user-group integration.
-// It is not yet enforced by any RPC.
+// Permission is the ordered access level of a user on a subject (GLD-048):
+// granted per subject to a user, a group or an org unit, the most specific
+// grant winning. There is no deny level.
 enum Permission {
   // PERMISSION_UNSPECIFIED is the zero value; never granted.
   PERMISSION_UNSPECIFIED = 0;

@@ -16,6 +16,7 @@ var kindToProto = map[SubjectKind]goelandv1.SubjectKind{
 	SubjectKindActor:    goelandv1.SubjectKind_SUBJECT_KIND_ACTOR,
 	SubjectKindUser:     goelandv1.SubjectKind_SUBJECT_KIND_USER,
 	SubjectKindOrgUnit:  goelandv1.SubjectKind_SUBJECT_KIND_ORG_UNIT,
+	SubjectKindGroup:    goelandv1.SubjectKind_SUBJECT_KIND_GROUP,
 }
 
 // kindFromProto is the inverse of kindToProto.
@@ -26,6 +27,7 @@ var kindFromProto = map[goelandv1.SubjectKind]SubjectKind{
 	goelandv1.SubjectKind_SUBJECT_KIND_ACTOR:    SubjectKindActor,
 	goelandv1.SubjectKind_SUBJECT_KIND_USER:     SubjectKindUser,
 	goelandv1.SubjectKind_SUBJECT_KIND_ORG_UNIT: SubjectKindOrgUnit,
+	goelandv1.SubjectKind_SUBJECT_KIND_GROUP:    SubjectKindGroup,
 }
 
 // SubjectKindToProto converts a domain SubjectKind to the proto enum.

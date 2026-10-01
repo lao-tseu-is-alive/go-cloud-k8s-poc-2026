@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated OrgUnitService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedOrgUnitServiceHandler
 }
 
 // NewConnectServer builds an OrgUnitService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("org unit service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("org unit connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // ListOrgUnits returns the whole tree as a flat list.
@@ -68,11 +72,11 @@ func (s *ConnectServer) SearchOrgUnits(ctx context.Context, req *connect.Request
 
 // GetOrgUnit retrieves a unit with its place in the tree and optional relationships and audit.
 func (s *ConnectServer) GetOrgUnit(ctx context.Context, req *connect.Request[goelandv1.GetOrgUnitRequest]) (*connect.Response[goelandv1.GetOrgUnitResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	detail, err := s.service.Get(ctx, id)

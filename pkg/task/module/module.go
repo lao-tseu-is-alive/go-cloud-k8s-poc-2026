@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
 )
 
@@ -72,7 +73,11 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("task module: service init: %w", err)
 	}
-	cs, err := task.NewConnectServer(svc, deps.Logger)
+	authz, err := core.NewAuthorizer(deps.Pool, deps.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("task module: authorizer init: %w", err)
+	}
+	cs, err := task.NewConnectServer(svc, authz, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("task module: connect server init: %w", err)
 	}

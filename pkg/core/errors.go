@@ -21,4 +21,7 @@ var (
 	// subject's current business state (e.g. editing a closed case or an
 	// invalid lifecycle transition).
 	ErrInvalidState = errors.New("operation not allowed in the current state")
+	// ErrPermissionDenied is returned when the caller's effective access level on
+	// a subject is below what the operation needs (GLD-048).
+	ErrPermissionDenied = errors.New("permission denied")
 )

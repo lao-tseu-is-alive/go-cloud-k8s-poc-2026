@@ -9,6 +9,11 @@ tags:
       Every RPC carries a google.api.http annotation so the Vanguard transcoder also
       exposes it as REST/JSON (mapped from spec §13.6 relationships + subject/audit paths).
       The Connect/gRPC path /goeland.v1.CoreService/<Method> remains available too.
+  - name: AccessService
+    description: |-
+      AccessService manages grants and security groups and tells the caller its
+      effective level on a subject. Reads need goeland:read, changes goeland:write
+      plus the level each RPC names.
   - name: ActorService
     description: |-
       ActorService is the external-party (person / organization) component of the POC.
@@ -1274,6 +1279,208 @@ paths:
           type: string
       tags:
         - DocumentService
+  /api/grants/{grantId}/revoke:
+    post:
+      summary: Revoke a grant (FULL_CONTROL on the subject); the last FULL_CONTROL is kept.
+      operationId: RevokeGrant
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RevokeGrantResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: grantId
+          description: grant_id is the grant.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceRevokeGrantBody'
+      tags:
+        - AccessService
+  /api/groups:
+    get:
+      summary: List the security groups by name.
+      operationId: ListGroups
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListGroupsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: query filters by name (substring, accent-insensitive); empty lists all.
+          in: query
+          required: false
+          type: string
+        - name: includeArchived
+          description: include_archived also returns archived groups.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - AccessService
+    post:
+      summary: Create a security group; the creator gets FULL_CONTROL on it.
+      operationId: CreateGroup
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateGroupResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateGroupRequest creates a security group; its creator gets FULL_CONTROL.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateGroupRequest'
+      tags:
+        - AccessService
+  /api/groups/{groupId}/members:
+    post:
+      summary: Add an internal user to a live group (MANAGE on it).
+      operationId: AddGroupMember
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1AddGroupMemberResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: groupId
+          description: group_id is the group's subject id.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceAddGroupMemberBody'
+      tags:
+        - AccessService
+  /api/groups/{groupId}/members/{userId}/remove:
+    post:
+      summary: Remove a member (MANAGE on the group); the membership is kept as history.
+      operationId: RemoveGroupMember
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RemoveGroupMemberResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: groupId
+          description: group_id is the group's subject id.
+          in: path
+          required: true
+          type: string
+        - name: userId
+          description: user_id is the member.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceRemoveGroupMemberBody'
+      tags:
+        - AccessService
+  /api/groups/{id}:
+    get:
+      summary: Read a group and its current members.
+      operationId: GetGroup
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetGroupResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the group's subject id.
+          in: path
+          required: true
+          type: string
+      tags:
+        - AccessService
+    patch:
+      summary: Rename or redescribe a live group (MANAGE on it).
+      operationId: UpdateGroup
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateGroupResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the group's subject id.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceUpdateGroupBody'
+      tags:
+        - AccessService
+  /api/groups/{id}/archive:
+    post:
+      summary: Archive a group (FULL_CONTROL on it); its grants stop applying.
+      operationId: ArchiveGroup
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ArchiveGroupResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the group's subject id.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceArchiveGroupBody'
+      tags:
+        - AccessService
   /api/me:
     get:
       summary: |-
@@ -1667,8 +1874,9 @@ paths:
              - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
              - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
             never an authenticated operator.
-             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
-             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
+             - SUBJECT_KIND_GROUP: SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
           in: query
           required: false
           type: string
@@ -1680,6 +1888,7 @@ paths:
             - SUBJECT_KIND_ACTOR
             - SUBJECT_KIND_USER
             - SUBJECT_KIND_ORG_UNIT
+            - SUBJECT_KIND_GROUP
           default: SUBJECT_KIND_UNSPECIFIED
         - name: targetKind
           description: |-
@@ -1692,8 +1901,9 @@ paths:
              - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
              - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
             never an authenticated operator.
-             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
-             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
+             - SUBJECT_KIND_GROUP: SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
           in: query
           required: false
           type: string
@@ -1705,6 +1915,7 @@ paths:
             - SUBJECT_KIND_ACTOR
             - SUBJECT_KIND_USER
             - SUBJECT_KIND_ORG_UNIT
+            - SUBJECT_KIND_GROUP
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
@@ -1905,6 +2116,27 @@ paths:
           type: boolean
       tags:
         - CoreService
+  /api/subjects/{subjectId}/access:
+    get:
+      summary: The caller's effective level on a subject and where it comes from.
+      operationId: GetMyAccess
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetMyAccessResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: subject_id is the subject.
+          in: path
+          required: true
+          type: string
+      tags:
+        - AccessService
   /api/subjects/{subjectId}/audit:
     get:
       summary: |-
@@ -1986,6 +2218,57 @@ paths:
             $ref: '#/definitions/CoreServiceAssignBusinessRefBody'
       tags:
         - CoreService
+  /api/subjects/{subjectId}/grants:
+    get:
+      summary: List a subject's grants, optionally with the history (READ on the subject).
+      operationId: ListGrants
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListGrantsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: subject_id is the subject.
+          in: path
+          required: true
+          type: string
+        - name: includeRevoked
+          description: include_revoked also returns revoked and replaced grants (history).
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - AccessService
+    post:
+      summary: Give or change a grant (FULL_CONTROL on the subject), audited on the subject.
+      operationId: SetGrant
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SetGrantResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: subject_id is the subject.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/AccessServiceSetGrantBody'
+      tags:
+        - AccessService
   /api/subjects/{subjectId}/relationships:
     get:
       summary: |-
@@ -2068,8 +2351,9 @@ paths:
              - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
              - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
             never an authenticated operator.
-             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
-             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
+             - SUBJECT_KIND_GROUP: SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
           in: query
           required: false
           type: string
@@ -2081,6 +2365,7 @@ paths:
             - SUBJECT_KIND_ACTOR
             - SUBJECT_KIND_USER
             - SUBJECT_KIND_ORG_UNIT
+            - SUBJECT_KIND_GROUP
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
@@ -2963,6 +3248,68 @@ paths:
       tags:
         - CoreService
 definitions:
+  AccessServiceAddGroupMemberBody:
+    type: object
+    properties:
+      userId:
+        type: string
+        description: user_id is the user (User.id); it must have signed in once.
+    description: AddGroupMemberRequest adds an internal user to a live group (MANAGE on it).
+  AccessServiceArchiveGroupBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the archiving.
+    description: ArchiveGroupRequest archives a group (FULL_CONTROL on it); its grants stop applying.
+  AccessServiceRemoveGroupMemberBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the removal.
+    description: |-
+      RemoveGroupMemberRequest removes a member (MANAGE on the group); the
+      membership is ended, kept as history.
+  AccessServiceRevokeGrantBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the revocation; it is audited.
+    description: RevokeGrantRequest revokes a current grant (FULL_CONTROL on its subject).
+  AccessServiceSetGrantBody:
+    type: object
+    properties:
+      granteeKind:
+        $ref: '#/definitions/v1GranteeKind'
+        description: grantee_kind is who the grant is given to.
+      granteeId:
+        type: string
+        description: grantee_id is the user id, or the group or org unit subject id.
+      level:
+        $ref: '#/definitions/v1Permission'
+        description: level is the level to give (READ to FULL_CONTROL).
+      reason:
+        type: string
+        description: reason explains the grant; it is audited.
+    description: |-
+      SetGrantRequest gives or changes the grant of a grantee on a subject
+      (FULL_CONTROL on the subject); a changed level replaces the current grant,
+      kept as history.
+  AccessServiceUpdateGroupBody:
+    type: object
+    properties:
+      name:
+        type: string
+        description: name is the new name.
+      description:
+        type: string
+        description: description is the new description.
+      reason:
+        type: string
+        description: reason explains the change.
+    description: UpdateGroupRequest renames or redescribes a live group (MANAGE on it).
   ActorServiceUpdateActorBody:
     type: object
     properties:
@@ -3652,6 +3999,87 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/protobufAny'
+  v1Access:
+    type: object
+    properties:
+      subjectId:
+        type: string
+        description: subject_id is the subject.
+      kind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: kind is the subject's kind.
+      confidential:
+        type: boolean
+        description: confidential reports confidentiality_level >= 2 (explicit grant required).
+      level:
+        $ref: '#/definitions/v1Permission'
+        description: level is the effective level (PERMISSION_NONE when none).
+      source:
+        $ref: '#/definitions/v1AccessSource'
+        description: source is the rule that produced the level.
+    description: Access is the caller's effective level on a subject.
+  v1AccessGrant:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the grant.
+      subjectId:
+        type: string
+        description: subject_id is the subject the grant is on.
+      granteeKind:
+        $ref: '#/definitions/v1GranteeKind'
+        description: grantee_kind is who the grant is given to.
+      granteeId:
+        type: string
+        description: grantee_id is the user id, or the group or org unit subject id.
+      granteeLabel:
+        type: string
+        description: grantee_label is the grantee's display name.
+        readOnly: true
+      level:
+        $ref: '#/definitions/v1Permission'
+        description: level is the granted level.
+      grantedAt:
+        type: string
+        format: date-time
+        description: granted_at is when the grant was made.
+      grantedBy:
+        type: string
+        description: granted_by is the operator who made it.
+      grantReason:
+        type: string
+        description: grant_reason explains it.
+      revokedAt:
+        type: string
+        format: date-time
+        description: revoked_at is when it was revoked or replaced; unset while current.
+      revokedBy:
+        type: string
+        description: revoked_by is the operator who revoked it; empty while current.
+      revokeReason:
+        type: string
+        description: revoke_reason explains the revocation.
+    description: AccessGrant is one grant on a subject; a revoked grant is kept as history.
+  v1AccessSource:
+    type: string
+    enum:
+      - ACCESS_SOURCE_UNSPECIFIED
+      - ACCESS_SOURCE_PERSONAL
+      - ACCESS_SOURCE_GROUP
+      - ACCESS_SOURCE_ORG_UNIT
+      - ACCESS_SOURCE_ROLE
+      - ACCESS_SOURCE_BASELINE
+    default: ACCESS_SOURCE_UNSPECIFIED
+    description: |-
+      AccessSource tells which rule produced an effective level.
+
+       - ACCESS_SOURCE_UNSPECIFIED: ACCESS_SOURCE_UNSPECIFIED is the zero value.
+       - ACCESS_SOURCE_PERSONAL: ACCESS_SOURCE_PERSONAL is a grant to the user.
+       - ACCESS_SOURCE_GROUP: ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
+       - ACCESS_SOURCE_ORG_UNIT: ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
+       - ACCESS_SOURCE_ROLE: ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
+       - ACCESS_SOURCE_BASELINE: ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
   v1Actor:
     type: object
     properties:
@@ -3823,6 +4251,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the DOCUMENT_VERSION_ADDED audit event.
     description: AddDocumentVersionResponse returns the document with its new current version.
+  v1AddGroupMemberResponse:
+    type: object
+    properties:
+      member:
+        $ref: '#/definitions/v1GroupMember'
+        description: member is the new membership.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_LINKED event on the user's subject.
+    description: AddGroupMemberResponse returns the membership and its audit event.
   v1AddressType:
     type: string
     enum:
@@ -3863,6 +4301,16 @@ definitions:
     description: |-
       AppRole is an application role stored in Goéland (GLD-047). ADMIN is the role
       behind the goeland:admin scope.
+  v1ArchiveGroupResponse:
+    type: object
+    properties:
+      group:
+        $ref: '#/definitions/v1SecurityGroup'
+        description: group is the archived group.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the GROUP_ARCHIVED event.
+    description: ArchiveGroupResponse returns the group and its audit event.
   v1AssignBusinessRefResponse:
     type: object
     properties:
@@ -4646,6 +5094,26 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_CREATED entry of the reference change log.
     description: CreateDocumentTypeResponse returns the new document type and its log entry.
+  v1CreateGroupRequest:
+    type: object
+    properties:
+      name:
+        type: string
+        description: name is the group's name, unique among live groups.
+      description:
+        type: string
+        description: description tells what the group is for.
+    description: CreateGroupRequest creates a security group; its creator gets FULL_CONTROL.
+  v1CreateGroupResponse:
+    type: object
+    properties:
+      group:
+        $ref: '#/definitions/v1SecurityGroup'
+        description: group is the new group.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the GROUP_CREATED event.
+    description: CreateGroupResponse returns the group and its audit event.
   v1CreateOrgUnitRequest:
     type: object
     properties:
@@ -5289,6 +5757,26 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetDocumentResponse returns a document and the requested context.
+  v1GetGroupResponse:
+    type: object
+    properties:
+      group:
+        $ref: '#/definitions/v1SecurityGroup'
+        description: group is the group.
+      members:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1GroupMember'
+        description: members are its current members.
+    description: GetGroupResponse returns the group and its current members, by name.
+  v1GetMyAccessResponse:
+    type: object
+    properties:
+      access:
+        $ref: '#/definitions/v1Access'
+        description: access is the caller's effective level.
+    description: GetMyAccessResponse returns it.
   v1GetOrgUnitResponse:
     type: object
     properties:
@@ -5379,6 +5867,38 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the USER_ROLE_GRANTED event on the user's subject.
     description: GrantUserRoleResponse returns the new assignment and its audit event.
+  v1GranteeKind:
+    type: string
+    enum:
+      - GRANTEE_KIND_UNSPECIFIED
+      - GRANTEE_KIND_USER
+      - GRANTEE_KIND_GROUP
+      - GRANTEE_KIND_ORG_UNIT
+    default: GRANTEE_KIND_UNSPECIFIED
+    description: |-
+      GranteeKind is who a grant is given to.
+
+       - GRANTEE_KIND_UNSPECIFIED: GRANTEE_KIND_UNSPECIFIED is the zero value; rejected.
+       - GRANTEE_KIND_USER: GRANTEE_KIND_USER is an internal user (User.id).
+       - GRANTEE_KIND_GROUP: GRANTEE_KIND_GROUP is a security group (its subject id).
+       - GRANTEE_KIND_ORG_UNIT: GRANTEE_KIND_ORG_UNIT is an org unit and its sub-units (its subject id).
+  v1GroupMember:
+    type: object
+    properties:
+      user:
+        $ref: '#/definitions/v1User'
+        description: user is the member.
+      relationshipId:
+        type: string
+        description: relationship_id is the USER_MEMBER_OF_GROUP relationship.
+      since:
+        type: string
+        format: date-time
+        description: since is when the user joined.
+      addedBy:
+        type: string
+        description: added_by is the operator who added the user.
+    description: GroupMember is a current member of a group.
   v1LinkDocumentResponse:
     type: object
     properties:
@@ -5523,6 +6043,26 @@ definitions:
           $ref: '#/definitions/v1DocumentVersion'
         description: versions are the versions with their content, newest first.
     description: ListDocumentVersionsResponse returns every version, newest first.
+  v1ListGrantsResponse:
+    type: object
+    properties:
+      grants:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AccessGrant'
+        description: grants are the grants.
+    description: ListGrantsResponse returns the grants, current first, by level.
+  v1ListGroupsResponse:
+    type: object
+    properties:
+      groups:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SecurityGroup'
+        description: groups are the matching groups.
+    description: ListGroupsResponse returns the groups.
   v1ListMyTasksResponse:
     type: object
     properties:
@@ -5864,6 +6404,27 @@ definitions:
         format: double
         description: surface_m2 is the registered surface in square metres; 0 when unknown.
     description: ParcelDetails are the land-register identifiers of a parcel (bien-fonds).
+  v1Permission:
+    type: string
+    enum:
+      - PERMISSION_UNSPECIFIED
+      - PERMISSION_NONE
+      - PERMISSION_READ
+      - PERMISSION_CONTRIBUTE
+      - PERMISSION_MANAGE
+      - PERMISSION_FULL_CONTROL
+    default: PERMISSION_UNSPECIFIED
+    description: |-
+      Permission is the ordered access level of a user on a subject (GLD-048):
+      granted per subject to a user, a group or an org unit, the most specific
+      grant winning. There is no deny level.
+
+       - PERMISSION_UNSPECIFIED: PERMISSION_UNSPECIFIED is the zero value; never granted.
+       - PERMISSION_NONE: PERMISSION_NONE grants no access.
+       - PERMISSION_READ: PERMISSION_READ allows reading the subject.
+       - PERMISSION_CONTRIBUTE: PERMISSION_CONTRIBUTE adds timeline entries and attaches documents.
+       - PERMISSION_MANAGE: PERMISSION_MANAGE edits metadata, relations and participants.
+       - PERMISSION_FULL_CONTROL: PERMISSION_FULL_CONTROL closes, logically deletes and changes the owner.
   v1PersonDetails:
     type: object
     properties:
@@ -6056,6 +6617,13 @@ definitions:
       kinds equal source_kind and target_kind.
     required:
       - code
+  v1RemoveGroupMemberResponse:
+    type: object
+    properties:
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RELATIONSHIP_ENDED event.
+    description: RemoveGroupMemberResponse returns the ended membership event.
   v1ReopenTaskResponse:
     type: object
     properties:
@@ -6076,6 +6644,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: response_event is the CIRCULATION_RESPONDED audit event.
     description: RespondToCirculationResponse returns the circulation after the answer.
+  v1RevokeGrantResponse:
+    type: object
+    properties:
+      grant:
+        $ref: '#/definitions/v1AccessGrant'
+        description: grant is the revoked grant.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the ACCESS_REVOKED event on the subject.
+    description: RevokeGrantResponse returns the revoked grant and its audit event.
   v1RevokeUserRoleResponse:
     type: object
     properties:
@@ -6196,6 +6774,40 @@ definitions:
           $ref: '#/definitions/v1User'
         description: users are the matching users.
     description: SearchUsersResponse returns the matching users, ordered by name.
+  v1SecurityGroup:
+    type: object
+    properties:
+      subjectRef:
+        $ref: '#/definitions/v1SubjectRef'
+        description: subject_ref is the group's canonical identity (kind GROUP).
+      name:
+        type: string
+        description: name is the group's name, unique among live groups.
+      description:
+        type: string
+        description: description tells what the group is for.
+      archivedAt:
+        type: string
+        format: date-time
+        description: archived_at is when the group was archived; unset while live.
+      memberCount:
+        type: integer
+        format: int32
+        description: member_count is the number of current members.
+        readOnly: true
+    description: |-
+      SecurityGroup is a named set of internal users, given grants like a user or a
+      unit; a GROUP subject. Archived groups grant nothing.
+  v1SetGrantResponse:
+    type: object
+    properties:
+      grant:
+        $ref: '#/definitions/v1AccessGrant'
+        description: grant is the current grant.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the ACCESS_GRANTED or ACCESS_CHANGED event on the subject.
+    description: SetGrantResponse returns the current grant and its audit event.
   v1StartTaskResponse:
     type: object
     properties:
@@ -6216,6 +6828,7 @@ definitions:
       - SUBJECT_KIND_ACTOR
       - SUBJECT_KIND_USER
       - SUBJECT_KIND_ORG_UNIT
+      - SUBJECT_KIND_GROUP
     default: SUBJECT_KIND_UNSPECIFIED
     description: |-
       SubjectKind enumerates the canonical business subjects. Every SubjectRef has exactly one kind.
@@ -6227,8 +6840,9 @@ definitions:
        - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
        - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
       never an authenticated operator.
-       - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user as a graph subject (future).
-       - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+       - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
+       - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
+       - SUBJECT_KIND_GROUP: SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
   v1SubjectRef:
     type: object
     properties:
@@ -6877,6 +7491,16 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateDocumentTypeResponse returns the updated document type and its log entry.
+  v1UpdateGroupResponse:
+    type: object
+    properties:
+      group:
+        $ref: '#/definitions/v1SecurityGroup'
+        description: group is the updated group.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the GROUP_UPDATED event.
+    description: UpdateGroupResponse returns the group and its audit event.
   v1UpdateOrgUnitResponse:
     type: object
     properties:

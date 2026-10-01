@@ -52,6 +52,9 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Circu
 		if err := core.EnsureOpenCaseTx(ctx, tx, in.CaseID); err != nil {
 			return err
 		}
+		if err := core.EnsureAccessTx(ctx, tx, in.OperatorID, in.CaseID, core.LevelManage); err != nil {
+			return err
+		}
 		c, err := collectCirculation(tx.Query(ctx, insertCirculationSQL, pgx.NamedArgs{
 			"case_id": in.CaseID, "title": in.Title, "message": in.Message, "due_at": in.DueAt,
 			"step_count": stepCount(in.Recipients), "operator_id": in.OperatorID,
@@ -94,6 +97,10 @@ func (r *PostgresRepository) Respond(ctx context.Context, in RespondInput) (*Cir
 		if err != nil {
 			return err
 		}
+		// The recipient answers for itself; anyone else needs MANAGE on the case.
+		if err := core.EnsureAssigneeOrAccessTx(ctx, tx, in.OperatorID, c.CaseID, rec.AssigneeUserID, rec.AssigneeOrgUnitID, core.LevelManage); err != nil {
+			return err
+		}
 		id = c.ID
 		entry, err := responseEntryTx(ctx, tx, c, rec, in)
 		if err != nil {
@@ -130,6 +137,9 @@ func (r *PostgresRepository) Cancel(ctx context.Context, id uuid.UUID, operatorI
 	err := r.inTx(ctx, "cancel circulation", func(tx pgx.Tx) error {
 		c, err := lockOpenTx(ctx, tx, id)
 		if err != nil {
+			return err
+		}
+		if err := core.EnsureAccessTx(ctx, tx, operatorID, c.CaseID, core.LevelManage); err != nil {
 			return err
 		}
 		if err := cancelPendingTasksTx(ctx, tx, c.ID, operatorID, reason); err != nil {

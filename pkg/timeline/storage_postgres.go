@@ -41,7 +41,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Entry
 	var created *Entry
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "create timeline entry", func(tx pgx.Tx) error {
-		if err := core.EnsureOpenCaseTx(ctx, tx, in.CaseID); err != nil {
+		if err := lockCaseForEntryTx(ctx, tx, in.CaseID, in.OperatorID); err != nil {
 			return err
 		}
 		if in.CorrectsEntryID != nil {
@@ -163,7 +163,7 @@ func (r *PostgresRepository) List(ctx context.Context, filter ListFilter) (ListR
 func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "update timeline entry", func(tx pgx.Tx) error {
-		current, err := lockDraftTx(ctx, tx, id)
+		current, err := lockDraftTx(ctx, tx, id, in.OperatorID, core.LevelContribute)
 		if err != nil {
 			return err
 		}
@@ -191,21 +191,21 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 
 // Validate endorses a draft (see freeze).
 func (r *PostgresRepository) Validate(ctx context.Context, id uuid.UUID, operatorID, reason string) (*Entry, *core.AuditEvent, error) {
-	return r.freeze(ctx, id, validateEntrySQL, "TIMELINE_ENTRY_VALIDATED", operatorID, reason)
+	return r.freeze(ctx, id, validateEntrySQL, "TIMELINE_ENTRY_VALIDATED", operatorID, reason, core.LevelContribute)
 }
 
 // Lock freezes a draft as is (see freeze).
 func (r *PostgresRepository) Lock(ctx context.Context, id uuid.UUID, operatorID, reason string) (*Entry, *core.AuditEvent, error) {
-	return r.freeze(ctx, id, lockEntrySQL, "TIMELINE_ENTRY_LOCKED", operatorID, reason)
+	return r.freeze(ctx, id, lockEntrySQL, "TIMELINE_ENTRY_LOCKED", operatorID, reason, core.LevelManage)
 }
 
 // freeze pins the current version of every cited document while the entry is
 // still a draft, then moves it to its immutable status with statusSQL and
 // writes eventType, in one transaction.
-func (r *PostgresRepository) freeze(ctx context.Context, id uuid.UUID, statusSQL, eventType, operatorID, reason string) (*Entry, *core.AuditEvent, error) {
+func (r *PostgresRepository) freeze(ctx context.Context, id uuid.UUID, statusSQL, eventType, operatorID, reason string, need core.Level) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "freeze timeline entry", func(tx pgx.Tx) error {
-		current, err := lockDraftTx(ctx, tx, id)
+		current, err := lockDraftTx(ctx, tx, id, operatorID, need)
 		if err != nil {
 			return err
 		}
@@ -231,7 +231,7 @@ func (r *PostgresRepository) freeze(ctx context.Context, id uuid.UUID, statusSQL
 func (r *PostgresRepository) Withdraw(ctx context.Context, id uuid.UUID, operatorID, reason string) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "withdraw timeline entry", func(tx pgx.Tx) error {
-		current, err := lockDraftTx(ctx, tx, id)
+		current, err := lockDraftTx(ctx, tx, id, operatorID, core.LevelManage)
 		if err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func (r *PostgresRepository) Withdraw(ctx context.Context, id uuid.UUID, operato
 func (r *PostgresRepository) LinkDocument(ctx context.Context, entryID, documentID uuid.UUID, operatorID string) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "link timeline document", func(tx pgx.Tx) error {
-		e, err := lockDraftTx(ctx, tx, entryID)
+		e, err := lockDraftTx(ctx, tx, entryID, operatorID, core.LevelContribute)
 		if err != nil {
 			return err
 		}
@@ -277,7 +277,7 @@ func (r *PostgresRepository) LinkDocument(ctx context.Context, entryID, document
 func (r *PostgresRepository) UnlinkDocument(ctx context.Context, entryID, documentID uuid.UUID, operatorID, reason string) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "unlink timeline document", func(tx pgx.Tx) error {
-		e, err := lockDraftTx(ctx, tx, entryID)
+		e, err := lockDraftTx(ctx, tx, entryID, operatorID, core.LevelContribute)
 		if err != nil {
 			return err
 		}

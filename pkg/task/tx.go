@@ -65,6 +65,13 @@ func CreateTx(ctx context.Context, q core.Querier, in CreateInput, origin Origin
 	if err := core.EnsureOpenCaseTx(ctx, q, in.CaseID); err != nil {
 		return nil, nil, err
 	}
+	// A manual task needs MANAGE on the case; a task created by another
+	// component (circulation, ...) is authorized by that component.
+	if origin == OriginManual {
+		if err := core.EnsureAccessTx(ctx, q, in.OperatorID, in.CaseID, core.LevelManage); err != nil {
+			return nil, nil, err
+		}
+	}
 	taskType, err := activeType(ctx, q, in.TypeCode)
 	if err != nil {
 		return nil, nil, err
@@ -111,6 +118,9 @@ func MoveTx(ctx context.Context, q core.Querier, id uuid.UUID, move Move, operat
 	if err != nil {
 		return nil, nil, err
 	}
+	if err := ensureMoveAccessTx(ctx, q, operatorID, current, move); err != nil {
+		return nil, nil, err
+	}
 	if move != MoveStart && !opts.ByOrigin {
 		if err := ensureManualTx(current); err != nil {
 			return nil, nil, err
@@ -132,6 +142,16 @@ func MoveTx(ctx context.Context, q core.Querier, id uuid.UUID, move Move, operat
 		return nil, nil, err
 	}
 	return t, ev, nil
+}
+
+// ensureMoveAccessTx requires the level of a move: starting or completing is
+// the assignee's own work (or CONTRIBUTE on the case), cancelling and
+// reopening need MANAGE.
+func ensureMoveAccessTx(ctx context.Context, q core.Querier, operatorID string, t *Task, move Move) error {
+	if move == MoveStart || move == MoveComplete {
+		return core.EnsureAssigneeOrAccessTx(ctx, q, operatorID, t.CaseID, t.AssigneeUserID, t.AssigneeOrgUnitID, core.LevelContribute)
+	}
+	return core.EnsureAccessTx(ctx, q, operatorID, t.CaseID, core.LevelManage)
 }
 
 // ensureManualTx refuses a direct change to a task another component manages.
@@ -188,6 +208,19 @@ func lockPendingTx(ctx context.Context, q core.Querier, id uuid.UUID) (*Task, er
 		return nil, fmt.Errorf("%w: a %s task must be reopened before it changes", core.ErrInvalidState, t.Status)
 	}
 	return t, nil
+}
+
+// lockManualPendingTx is lockPendingTx for a manual task the operator manages
+// (MANAGE on its case): an edit or a reassignment.
+func lockManualPendingTx(ctx context.Context, q core.Querier, id uuid.UUID, operatorID string) (*Task, error) {
+	t, err := lockPendingTx(ctx, q, id)
+	if err != nil {
+		return nil, err
+	}
+	if err := core.EnsureAccessTx(ctx, q, operatorID, t.CaseID, core.LevelManage); err != nil {
+		return nil, err
+	}
+	return t, ensureManualTx(t)
 }
 
 // CheckAssigneeTx requires at most one assignee, an existing internal user or

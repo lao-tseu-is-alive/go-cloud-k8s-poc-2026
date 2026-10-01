@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteActor, getActor, updateActor } from '@/api/actorClient'
+  import AccessPanel from '@/components/access/AccessPanel.vue'
   import ActorAddressesPanel from '@/components/actor/ActorAddressesPanel.vue'
   import ActorContactsPanel from '@/components/actor/ActorContactsPanel.vue'
   import { actorToForm, buildUpdateRequest, emptyActorForm } from '@/components/actor/actorForm'
@@ -15,6 +16,7 @@
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useMyAccess } from '@/composables/useMyAccess'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
 
@@ -26,6 +28,8 @@
   const ui = useUiStore()
 
   const id = computed(() => String(route.params.id))
+  // The caller's level (GLD-048) hides what the server would refuse.
+  const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const actor = ref<GoActor | null>(null)
   const relationships = ref<SubjectRelationship[]>([])
   const audit = ref<AuditEvent[]>([])
@@ -45,7 +49,7 @@
   const isLocked = computed(() => !!actor.value?.recordMetadata?.isLocked)
   const isDeleted = computed(() => !!actor.value?.recordMetadata?.deletedAt)
   const isActive = computed(() => !!actor.value?.isActive)
-  const editable = computed(() => !isLocked.value && !isDeleted.value)
+  const editable = computed(() => !isLocked.value && !isDeleted.value && canManage.value)
   const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload)
   const isOrganization = computed(() => actor.value?.actorKind === 'ACTOR_KIND_ORGANIZATION')
   const isConfidential = computed(() => (actor.value?.recordMetadata?.confidentialityLevel ?? 0) > 0)
@@ -188,7 +192,7 @@
         </v-btn>
 
         <v-btn
-          v-if="!isDeleted && !isLocked"
+          v-if="!isDeleted && !isLocked && hasFullControl"
           color="error"
           prepend-icon="mdi-delete"
           variant="text"
@@ -279,6 +283,11 @@
 
         <v-col cols="12" md="4">
           <SubjectIdentityCard class="mb-4" :subject="actor.subjectRef" />
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.actor.governance') }}</v-card-title>

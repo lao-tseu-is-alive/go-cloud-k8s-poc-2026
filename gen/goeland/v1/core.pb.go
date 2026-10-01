@@ -71,10 +71,12 @@ const (
 	// SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
 	// never an authenticated operator.
 	SubjectKind_SUBJECT_KIND_ACTOR SubjectKind = 4
-	// SUBJECT_KIND_USER is an internal user as a graph subject (future).
+	// SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
 	SubjectKind_SUBJECT_KIND_USER SubjectKind = 5
-	// SUBJECT_KIND_ORG_UNIT is an internal organizational unit (future).
+	// SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
 	SubjectKind_SUBJECT_KIND_ORG_UNIT SubjectKind = 6
+	// SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
+	SubjectKind_SUBJECT_KIND_GROUP SubjectKind = 7
 )
 
 // Enum value maps for SubjectKind.
@@ -87,6 +89,7 @@ var (
 		4: "SUBJECT_KIND_ACTOR",
 		5: "SUBJECT_KIND_USER",
 		6: "SUBJECT_KIND_ORG_UNIT",
+		7: "SUBJECT_KIND_GROUP",
 	}
 	SubjectKind_value = map[string]int32{
 		"SUBJECT_KIND_UNSPECIFIED": 0,
@@ -96,6 +99,7 @@ var (
 		"SUBJECT_KIND_ACTOR":       4,
 		"SUBJECT_KIND_USER":        5,
 		"SUBJECT_KIND_ORG_UNIT":    6,
+		"SUBJECT_KIND_GROUP":       7,
 	}
 )
 
@@ -126,9 +130,9 @@ func (SubjectKind) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_core_proto_rawDescGZIP(), []int{0}
 }
 
-// Permission is the simple, ordered permission model for the POC.
-// Later replaceable by Casbin/OpenFGA or go-cloud-k8s-user-group integration.
-// It is not yet enforced by any RPC.
+// Permission is the ordered access level of a user on a subject (GLD-048):
+// granted per subject to a user, a group or an org unit, the most specific
+// grant winning. There is no deny level.
 type Permission int32
 
 const (
@@ -4287,7 +4291,7 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x16.goeland.v1.AuditEventR\x06events\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize*\xbf\x01\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize*\xd7\x01\n" +
 	"\vSubjectKind\x12\x1c\n" +
 	"\x18SUBJECT_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_KIND_CASE\x10\x01\x12\x19\n" +
@@ -4295,7 +4299,8 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x12SUBJECT_KIND_THING\x10\x03\x12\x16\n" +
 	"\x12SUBJECT_KIND_ACTOR\x10\x04\x12\x15\n" +
 	"\x11SUBJECT_KIND_USER\x10\x05\x12\x19\n" +
-	"\x15SUBJECT_KIND_ORG_UNIT\x10\x06*\xa1\x01\n" +
+	"\x15SUBJECT_KIND_ORG_UNIT\x10\x06\x12\x16\n" +
+	"\x12SUBJECT_KIND_GROUP\x10\a*\xa1\x01\n" +
 	"\n" +
 	"Permission\x12\x1a\n" +
 	"\x16PERMISSION_UNSPECIFIED\x10\x00\x12\x13\n" +

@@ -15,6 +15,7 @@ import (
 // ConnectServer exposes Service through the generated TaskService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	// now is the clock deciding whether a task is overdue.
 	now func() time.Time
@@ -22,23 +23,26 @@ type ConnectServer struct {
 }
 
 // NewConnectServer builds a TaskService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("task service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("task connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log, now: time.Now}, nil
+	return &ConnectServer{service: service, authz: authz, log: log, now: time.Now}, nil
 }
 
 // ListCaseTasks returns a page of the tasks of a case.
 func (s *ConnectServer) ListCaseTasks(ctx context.Context, req *connect.Request[goelandv1.ListCaseTasksRequest]) (*connect.Response[goelandv1.ListCaseTasksResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	caseID, err := core.ParseUUID(req.Msg.CaseId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead); err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -85,7 +89,8 @@ func (s *ConnectServer) ListMyTasks(ctx context.Context, req *connect.Request[go
 
 // GetTask retrieves a task with its assignment history.
 func (s *ConnectServer) GetTask(ctx context.Context, req *connect.Request[goelandv1.GetTaskRequest]) (*connect.Response[goelandv1.GetTaskResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	user, err := core.RequireCaller(ctx, core.ScopeRead)
+	if err != nil {
 		return nil, err
 	}
 	id, err := core.ParseUUID(req.Msg.Id)
@@ -95,6 +100,9 @@ func (s *ConnectServer) GetTask(ctx context.Context, req *connect.Request[goelan
 	t, err := s.service.Get(ctx, id)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.authz.Require(ctx, user, t.CaseID, core.LevelRead); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.GetTaskResponse{Task: DomainToProto(t, s.now())}), nil
 }

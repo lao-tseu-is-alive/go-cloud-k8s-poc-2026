@@ -26,6 +26,7 @@ func TestAPISurface(t *testing.T) {
 	s.documents()
 	s.orgUnits()
 	s.tasksAndCirculations()
+	s.access()
 }
 
 // gRPC status codes asserted by the surface test.
@@ -269,4 +270,60 @@ func (s *surface) tasksAndCirculations() {
 	}
 	s.ok("POST", "/api/circulations/"+circ+"/cancel", map[string]any{"reason": "retirée"})
 	s.fails(codeNotFound, "POST", missing("/api/circulations")+"/cancel", map[string]any{"reason": "x"})
+}
+
+// access covers the grants and groups (GLD-048) and their enforcement in the
+// adapters: the writer reads a public case, is refused a confidential one,
+// edits only once granted MANAGE and deletes only with FULL_CONTROL.
+func (s *surface) access() {
+	writer := str(s.call(s.writer, writerToken, "GET", "/api/me", nil).body, "user", "id")
+	asWriter := func(method, path string, body any) reply { return s.call(s.writer, writerToken, method, path, body) }
+
+	open := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Accès " + s.token}), "case", "subjectRef", "id")
+	secret := str(s.ok("POST", "/api/cases", map[string]any{
+		"caseTypeCode": "GENERIC_REQUEST", "title": "Confidentielle " + s.token, "initialGovernance": map[string]any{"confidentialityLevel": 2},
+	}), "case", "subjectRef", "id")
+	if r := asWriter("GET", "/api/cases/"+open, nil); r.status != 200 {
+		s.t.Fatalf("a public case is readable by everyone: %v", r.body)
+	}
+	s.expect(asWriter("GET", "/api/cases/"+secret, nil), codePermissionDenied, "a confidential case needs a grant")
+	s.expect(asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit"}), codePermissionDenied, "editing with READ")
+	if lvl := str(asWriter("GET", "/api/subjects/"+open+"/access", nil).body, "access", "level"); lvl != "PERMISSION_READ" {
+		s.t.Fatalf("the writer's baseline is READ: %s", lvl)
+	}
+
+	granted := s.ok("POST", "/api/subjects/"+open+"/grants", map[string]any{
+		"granteeKind": "GRANTEE_KIND_USER", "granteeId": writer, "level": "PERMISSION_MANAGE", "reason": "co-gestion",
+	})
+	if r := asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit avec MANAGE " + s.token}); r.status != 200 {
+		s.t.Fatalf("editing with MANAGE: %v", r.body)
+	}
+	s.expect(asWriter("DELETE", "/api/cases/"+open+"?reason=x", nil), codePermissionDenied, "deleting needs FULL_CONTROL")
+	s.expect(asWriter("POST", "/api/subjects/"+open+"/grants", map[string]any{
+		"granteeKind": "GRANTEE_KIND_USER", "granteeId": writer, "level": "PERMISSION_FULL_CONTROL", "reason": "moi",
+	}), codePermissionDenied, "granting needs FULL_CONTROL")
+	if len(list(s.ok("GET", "/api/subjects/"+open+"/grants?includeRevoked=true", nil), "grants")) < 2 {
+		s.t.Fatal("the creator's and the writer's grants are listed")
+	}
+	s.ok("POST", "/api/grants/"+str(granted, "grant", "id")+"/revoke", map[string]any{"reason": "fin"})
+	s.fails(codeNotFound, "POST", missing("/api/grants")+"/revoke", map[string]any{"reason": "x"})
+	s.groups(writer)
+}
+
+// groups covers the security group RPCs.
+func (s *surface) groups(writer string) {
+	id := str(s.ok("POST", "/api/groups", map[string]any{"name": "Commission " + s.token, "description": "Groupe de test"}), "group", "subjectRef", "id")
+	s.fails(codeAlreadyExists, "POST", "/api/groups", map[string]any{"name": "Commission " + s.token})
+	s.ok("PATCH", "/api/groups/"+id, map[string]any{"name": "Commission renommée " + s.token, "reason": "test"})
+	s.ok("POST", "/api/groups/"+id+"/members", map[string]any{"userId": writer})
+	group := s.ok("GET", "/api/groups/"+id, nil)
+	if len(list(group, "members")) != 1 {
+		s.t.Fatalf("the writer is a member: %v", group)
+	}
+	if len(list(s.ok("GET", "/api/groups?query=renommée+"+s.token, nil), "groups")) != 1 {
+		s.t.Fatal("the group is found by name")
+	}
+	s.ok("POST", "/api/groups/"+id+"/members/"+writer+"/remove", map[string]any{"reason": "départ"})
+	s.ok("POST", "/api/groups/"+id+"/archive", map[string]any{"reason": "commission dissoute"})
+	s.fails(codeNotFound, "GET", missing("/api/groups"), nil)
 }

@@ -11,6 +11,7 @@
     linkDocument,
     updateDocumentMetadata,
   } from '@/api/documentClient'
+  import AccessPanel from '@/components/access/AccessPanel.vue'
   import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
@@ -22,6 +23,7 @@
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useMyAccess } from '@/composables/useMyAccess'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatBytes } from '@/utils/formatters'
@@ -33,6 +35,8 @@
   const ui = useUiStore()
 
   const id = computed(() => String(route.params.id))
+  // The caller's level (GLD-048) hides what the server would refuse.
+  const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const doc = ref<GoDocument | null>(null)
   const relationships = ref<SubjectRelationship[]>([])
   const audit = ref<AuditEvent[]>([])
@@ -55,9 +59,9 @@
   const isDeleted = computed(() => !!doc.value?.recordMetadata?.deletedAt)
   const isFinal = computed(() => !!doc.value?.currentVersion?.isFinal)
   const isRecord = computed(() => !!doc.value?.currentVersion?.isRecord)
-  const editable = computed(() => !isLocked.value && !isDeleted.value)
+  const editable = computed(() => !isLocked.value && !isDeleted.value && canManage.value)
   const canFinalize = computed(() => !isFinal.value && editable.value)
-  const canDelete = computed(() => !isDeleted.value && !isLocked.value)
+  const canDelete = computed(() => !isDeleted.value && !isLocked.value && hasFullControl.value)
   const isConfidential = computed(() => (doc.value?.recordMetadata?.confidentialityLevel ?? 0) > 0)
 
   async function reload () {
@@ -301,6 +305,11 @@
         <!-- side column: governance + audit -->
         <v-col cols="12" md="4">
           <SubjectIdentityCard class="mb-4" :subject="doc.subjectRef" />
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>

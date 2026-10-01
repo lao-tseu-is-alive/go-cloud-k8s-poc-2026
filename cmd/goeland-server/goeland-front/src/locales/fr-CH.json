@@ -1,4 +1,64 @@
 {
+  "groups": {
+    "title": "Groupes de sécurité",
+    "intro": "Un groupe réunit des utilisateurs de plusieurs unités (une commission, un projet) pour leur donner un accès commun. Un accès personnel l'emporte sur celui d'un groupe, qui l'emporte sur celui d'une unité.",
+    "includeArchived": "Inclure les groupes archivés",
+    "archived": "Archivé",
+    "noMembers": "Ce groupe n'a pas encore de membre.",
+    "archiveConfirm": "Un groupe archivé ne donne plus aucun accès. Ses membres et son historique sont conservés.",
+    "actions": {
+      "create": "Nouveau groupe",
+      "edit": "Modifier",
+      "archive": "Archiver",
+      "addMember": "Ajouter un membre",
+      "removeMember": "Retirer du groupe"
+    },
+    "fields": {
+      "name": "Nom",
+      "description": "Description",
+      "members": "Membres",
+      "user": "Utilisateur",
+      "since": "Depuis"
+    },
+    "messages": {
+      "created": "Groupe créé.",
+      "updated": "Groupe modifié.",
+      "archived": "Groupe archivé.",
+      "memberAdded": "Membre ajouté.",
+      "memberRemoved": "Membre retiré."
+    }
+  },
+  "access": {
+    "title": "Accès",
+    "mine": "Mon accès :",
+    "confidential": "Confidentiel",
+    "history": "Historique",
+    "revoked": "Retiré",
+    "revokedOn": "Retiré le {date}",
+    "revokeTitle": "Retirer l'accès de {grantee}",
+    "actions": {
+      "grant": "Donner un accès",
+      "change": "Changer le niveau",
+      "revoke": "Retirer l'accès"
+    },
+    "fields": {
+      "level": "Niveau",
+      "reason": "Motif"
+    },
+    "grantee": {
+      "user": "Utilisateur",
+      "group": "Groupe",
+      "unit": "Unité",
+      "pickUser": "Rechercher un utilisateur",
+      "pickGroup": "Rechercher un groupe",
+      "pickUnit": "Rechercher une unité",
+      "unitHint": "L'accès d'une unité vaut aussi pour ses sous-unités ; l'unité la plus proche de l'utilisateur l'emporte."
+    },
+    "messages": {
+      "granted": "Accès enregistré.",
+      "revoked": "Accès retiré."
+    }
+  },
   "roles": {
     "tab": "Rôles",
     "empty": "Personne ne détient ce rôle.",
@@ -240,6 +300,7 @@
     "language": "Langue"
   },
   "nav": {
+    "groups": "Groupes",
     "myTasks": "Mes tâches",
     "orgUnits": "Unités",
     "cases": "Affaires",
@@ -628,6 +689,14 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "AccessSource": {
+      "ACCESS_SOURCE_UNSPECIFIED": "—",
+      "ACCESS_SOURCE_PERSONAL": "accès personnel",
+      "ACCESS_SOURCE_GROUP": "par un groupe",
+      "ACCESS_SOURCE_ORG_UNIT": "par une unité",
+      "ACCESS_SOURCE_ROLE": "par un rôle applicatif",
+      "ACCESS_SOURCE_BASELINE": "accès par défaut"
+    },
     "CirculationResponse": {
       "CIRCULATION_RESPONSE_UNSPECIFIED": "Sans réponse",
       "CIRCULATION_RESPONSE_FAVORABLE": "Favorable",
@@ -709,6 +778,7 @@
       "DOCUMENT_STATUS_ARCHIVED": "Archivé"
     },
     "SubjectKind": {
+      "SUBJECT_KIND_GROUP": "Groupe",
       "SUBJECT_KIND_UNSPECIFIED": "Type non précisé",
       "SUBJECT_KIND_CASE": "Affaire",
       "SUBJECT_KIND_DOCUMENT": "Document",
@@ -782,7 +852,7 @@
   },
   "errors": {
     "unauthenticated": "Authentification requise.",
-    "permission_denied": "Accès refusé.",
+    "permission_denied": "Vous n'avez pas l'accès nécessaire pour cette opération.",
     "not_found": "Élément introuvable.",
     "already_exists": "Cet élément existe déjà.",
     "failed_precondition": "Opération impossible dans l'état actuel du document.",

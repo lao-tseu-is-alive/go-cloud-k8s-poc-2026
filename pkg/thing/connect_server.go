@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated ThingService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedThingServiceHandler
 }
 
 // NewConnectServer builds a ThingService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("thing service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("thing connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // CreateThing registers a thing.
@@ -53,11 +57,11 @@ func (s *ConnectServer) CreateThing(ctx context.Context, req *connect.Request[go
 
 // GetThing retrieves a thing with optional relationships (both directions) and audit.
 func (s *ConnectServer) GetThing(ctx context.Context, req *connect.Request[goelandv1.GetThingRequest]) (*connect.Response[goelandv1.GetThingResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	t, err := s.service.Get(ctx, id)
@@ -84,11 +88,11 @@ func (s *ConnectServer) GetThing(ctx context.Context, req *connect.Request[goela
 
 // UpdateThing replaces the editable fields of a thing.
 func (s *ConnectServer) UpdateThing(ctx context.Context, req *connect.Request[goelandv1.UpdateThingRequest]) (*connect.Response[goelandv1.UpdateThingResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -135,11 +139,11 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 
 // DeleteThing logically deletes a thing.
 func (s *ConnectServer) DeleteThing(ctx context.Context, req *connect.Request[goelandv1.DeleteThingRequest]) (*connect.Response[goelandv1.DeleteThingResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelFullControl)
 	if err != nil {
 		return nil, err
 	}

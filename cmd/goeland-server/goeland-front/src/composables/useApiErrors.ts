@@ -16,6 +16,9 @@ const CONSTRAINT_KEYS: Record<string, string> = {
   'string.pattern': 'validation.pattern',
 }
 
+// Connect codes shown with a translated generic message rather than the server's text.
+const GENERIC_CODES = new Set(['permission_denied', 'unauthenticated', 'not_found'])
+
 export function useApiErrors () {
   const { t, te } = useI18n()
   const ui = useUiStore()
@@ -33,10 +36,17 @@ export function useApiErrors () {
     return first.message || undefined
   }
 
-  /** Translated message mapped from the Connect code (errors.<code>), if any. */
+  /**
+   * Translated message of the Connect code (errors.<code>) for the codes whose
+   * server message adds nothing for the user (refused, signed out, missing);
+   * other codes keep the server's specific reason.
+   */
   function codeMessage (err: ApiError): string | undefined {
-    const codeKey = err.code ? `errors.${err.code}` : ''
-    return codeKey && te(codeKey) ? t(codeKey) : undefined
+    if (!err.code || !GENERIC_CODES.has(err.code)) {
+      return undefined
+    }
+    const codeKey = `errors.${err.code}`
+    return te(codeKey) ? t(codeKey) : undefined
   }
 
   function toMessage (err: unknown): string {

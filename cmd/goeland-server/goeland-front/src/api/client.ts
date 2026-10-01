@@ -90,6 +90,22 @@ function collectViolations (details: unknown): ApiViolation[] {
   })
 }
 
+// gRPC status numbers (what the REST transcoder puts in "code") → Connect code names.
+const CODE_NAMES: Record<number, string> = {
+  1: 'canceled', 2: 'unknown', 3: 'invalid_argument', 4: 'deadline_exceeded', 5: 'not_found',
+  6: 'already_exists', 7: 'permission_denied', 8: 'resource_exhausted', 9: 'failed_precondition',
+  10: 'aborted', 11: 'out_of_range', 12: 'unimplemented', 13: 'internal', 14: 'unavailable',
+  15: 'data_loss', 16: 'unauthenticated',
+}
+
+/** The Connect code name of an error body's code: a name as is, a number mapped. */
+function codeName (code: unknown): string | undefined {
+  if (typeof code === 'number') {
+    return CODE_NAMES[code]
+  }
+  return typeof code === 'string' ? code : undefined
+}
+
 /** Picks the first string among the candidate error message fields. */
 function firstString (...candidates: unknown[]): string | undefined {
   return candidates.find((c): c is string => typeof c === 'string')
@@ -107,7 +123,7 @@ async function toApiError (res: Response): Promise<ApiError> {
   return new ApiError(
     firstString(data.message, data.error) ?? fallback,
     res.status,
-    firstString(data.code),
+    codeName(data.code),
     collectViolations(data.details),
   )
 }

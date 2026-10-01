@@ -64,15 +64,28 @@ func RecordSystemEntryTx(ctx context.Context, q core.Querier, in SystemEntry) (*
 	return e, nil
 }
 
-// lockDraftTx locks the entry's case (see core.EnsureOpenCaseTx), then the entry
-// itself, and rejects an entry that is no longer a draft. The case is locked
-// first, in the same order as entry creation, to avoid lock inversions.
-func lockDraftTx(ctx context.Context, q core.Querier, id uuid.UUID) (*Entry, error) {
+// lockCaseForEntryTx locks an open case (core.EnsureOpenCaseTx) and requires
+// CONTRIBUTE on it to add an entry.
+func lockCaseForEntryTx(ctx context.Context, q core.Querier, caseID uuid.UUID, operatorID string) error {
+	if err := core.EnsureOpenCaseTx(ctx, q, caseID); err != nil {
+		return err
+	}
+	return core.EnsureAccessTx(ctx, q, operatorID, caseID, core.LevelContribute)
+}
+
+// lockDraftTx locks the entry's case (see core.EnsureOpenCaseTx), requires the
+// operator's level need on it, then locks the entry itself and rejects an entry
+// that is no longer a draft. The case is locked first, in the same order as
+// entry creation, to avoid lock inversions.
+func lockDraftTx(ctx context.Context, q core.Querier, id uuid.UUID, operatorID string, need core.Level) (*Entry, error) {
 	current, err := collectEntry(q.Query(ctx, getEntrySQL, pgx.NamedArgs{"id": id}))
 	if err != nil {
 		return nil, err
 	}
 	if err := core.EnsureOpenCaseTx(ctx, q, current.CaseID); err != nil {
+		return nil, err
+	}
+	if err := core.EnsureAccessTx(ctx, q, operatorID, current.CaseID, need); err != nil {
 		return nil, err
 	}
 	e, err := collectEntry(q.Query(ctx, getEntryForUpdateSQL, pgx.NamedArgs{"id": id}))

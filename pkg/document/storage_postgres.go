@@ -77,6 +77,9 @@ func createNew(ctx context.Context, tx pgx.Tx, in CreateInput, blob *ContentBlob
 	if err != nil {
 		return CreateResult{}, fmt.Errorf("insert subject_ref: %w", err)
 	}
+	if in.Governance, err = depositGovernanceTx(ctx, tx, in); err != nil {
+		return CreateResult{}, err
+	}
 	if _, err := core.InsertRecordMetadataTx(ctx, tx, in.Governance, ref.ID); err != nil {
 		return CreateResult{}, fmt.Errorf("insert record_metadata: %w", err)
 	}
@@ -118,7 +121,29 @@ func createNew(ctx context.Context, tx pgx.Tx, in CreateInput, blob *ContentBlob
 	if err != nil {
 		return CreateResult{}, err
 	}
+	if rel != nil {
+		// Deposited from a case: the document starts with the case's grants (a
+		// copy made once, not a live inheritance; GLD-017).
+		if err := core.CopyGrantsTx(ctx, tx, *in.LinkToCaseID, ref.ID, in.OperatorID); err != nil {
+			return CreateResult{}, err
+		}
+	}
 	return CreateResult{Document: doc, Event: ev, Relationship: rel}, nil
+}
+
+// depositGovernanceTx raises the confidentiality of a document deposited from
+// a case to at least the case's level (the request may ask for more).
+func depositGovernanceTx(ctx context.Context, tx pgx.Tx, in CreateInput) (core.CreateSubjectInput, error) {
+	gov := in.Governance
+	if in.LinkToCaseID == nil || *in.LinkToCaseID == uuid.Nil {
+		return gov, nil
+	}
+	md, err := core.GetRecordMetadataTx(ctx, tx, *in.LinkToCaseID)
+	if err != nil {
+		return gov, fmt.Errorf("case governance: %w", err)
+	}
+	gov.ConfidentialityLevel = max(gov.ConfidentialityLevel, md.ConfidentialityLevel)
+	return gov, nil
 }
 
 // insertDocument inserts the document row (DRAFT, without version yet).

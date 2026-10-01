@@ -150,9 +150,11 @@ separately.
 
 These are the gaps that make this a POC rather than a production service:
 
-- **Authorization is coarse.** Every authenticated caller is granted both `goeland:read`
-  and `goeland:write` (`cmd/goeland-server/server.go`). Per-subject access grants and
-  deny-by-default confidentiality enforcement are **not implemented**.
+- **Authorization is partial.** Grants are enforced on every mutation and single read
+  (GLD-048: levels per subject for users, groups and org units; confidential subjects need an
+  explicit grant), but searches and lists are not filtered yet, so the titles of confidential
+  subjects still appear there, and downloads take a raw storage reference (both GLD-049). Every
+  authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
   without a shared/persistent volume.
 - **Observability is logs only.** No metrics or tracing endpoints yet.

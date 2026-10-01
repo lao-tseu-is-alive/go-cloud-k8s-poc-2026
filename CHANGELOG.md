@@ -16,13 +16,35 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `RevokeUserRole` (REST under `/api/app-roles` and `/api/users/{user_id}/roles`); grants and
   revocations need a reason, are audited on the user (`USER_ROLE_GRANTED` / `USER_ROLE_REVOKED`)
   and kept as history; the last administrator cannot be revoked. SPA: Administration → Rôles.
+- **GLD-048** (in progress) — Grants and security groups: `AccessService` (`GetMyAccess`,
+  `ListGrants`, `SetGrant`, `RevokeGrant`, `ListGroups`, `GetGroup`, `CreateGroup`, `UpdateGroup`,
+  `ArchiveGroup`, `AddGroupMember`, `RemoveGroupMember`) over migration `0023` (`access_grant` with
+  history, `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles ACTOR_MANAGER and
+  THING_MANAGER). The effective level is the most specific grant (personal, groups, nearest unit,
+  role, baseline READ) and confidential subjects (`confidentiality_level` >= 2) need an explicit
+  grant, with no administrator bypass. It is enforced on every mutation and single read of
+  cases, documents, actors, things, org units and groups, on timeline entries, tasks,
+  circulations and relationships (memberships managed from the group or unit); creators get
+  FULL_CONTROL, owning units MANAGE (backfilled for existing subjects); a document deposited from
+  a case copies its grants and confidentiality once. SPA: "Accès" panel on every detail page
+  (actions hidden by level) and the "Groupes" pages.
 
 ### Changed
 
+- **Breaking:** mutations now need a level on the subject: a caller who is neither its creator,
+  nor granted, nor an administrator only reads non-confidential subjects (403 otherwise).
 - **Breaking:** `goeland:admin` now comes from the ADMIN role stored in Goéland; the auth server's
   `IsAdmin` flag is ignored. Current administrators keep the role (migrated from the last recorded
   flag); new ones come from `GOELAND_BOOTSTRAP_ADMINS` (user ids) or an administrator.
   `GOELAND_DEV_USER_ADMIN=true` bootstraps the dev user. `User.roles` lists a user's roles.
+
+### Fixed
+
+- The embedded SPA dropped the build chunks whose names start with `_` (Vite's
+  `_plugin-vue_export-helper`): `//go:embed all:goeland-front/dist` keeps them, and a test checks
+  that every built file is embedded.
+- The SPA ignored the numeric error code of REST errors, so refusals showed the server's English
+  text; 401, 403 and 404 now show a translated message.
 
 ## [0.9.2] - 2026-09-30
 

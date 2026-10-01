@@ -4,9 +4,11 @@ import (
 	"context"
 	"errors"
 	"io"
+	"io/fs"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
+	"os"
 	"strings"
 	"testing"
 	"time"
@@ -65,5 +67,27 @@ func TestRequestIDMiddlewareKeepsOnlySafeClientIDs(t *testing.T) {
 		if (seen == c.header) != c.kept || seen == "" || rec.Header().Get("X-Request-ID") != seen {
 			t.Fatalf("X-Request-ID %q: context %q, response %q, want kept=%v", c.header, seen, rec.Header().Get("X-Request-ID"), c.kept)
 		}
+	}
+}
+
+// TestEmbeddedFrontendIsComplete checks that every file of the built SPA is
+// embedded: a plain //go:embed dir/* pattern silently drops the files whose
+// names start with "_" or ".", such as Vite's _plugin-vue_export-helper chunk.
+func TestEmbeddedFrontendIsComplete(t *testing.T) {
+	embedded, err := fs.Sub(frontendFiles, "goeland-front/dist")
+	if err != nil {
+		t.Fatal(err)
+	}
+	err = fs.WalkDir(os.DirFS("goeland-front/dist"), ".", func(path string, d fs.DirEntry, err error) error {
+		if err != nil || d.IsDir() {
+			return err
+		}
+		if _, statErr := fs.Stat(embedded, path); statErr != nil {
+			t.Errorf("%s is built but not embedded: %v", path, statErr)
+		}
+		return nil
+	})
+	if err != nil {
+		t.Fatal(err)
 	}
 }

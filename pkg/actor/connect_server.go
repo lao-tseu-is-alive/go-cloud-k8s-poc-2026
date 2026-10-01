@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated ActorService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedActorServiceHandler
 }
 
 // NewConnectServer builds an ActorService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("actor service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("actor connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // CreateActor registers a new person or organization actor.
@@ -71,11 +75,11 @@ func (s *ConnectServer) CreateActor(ctx context.Context, req *connect.Request[go
 
 // GetActor retrieves an actor with optional relationships + audit.
 func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goelandv1.GetActorRequest]) (*connect.Response[goelandv1.GetActorResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	act, err := s.service.Get(ctx, id)
@@ -102,12 +106,12 @@ func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goela
 
 // UpdateActor applies a partial update (respects locking).
 func (s *ConnectServer) UpdateActor(ctx context.Context, req *connect.Request[goelandv1.UpdateActorRequest]) (*connect.Response[goelandv1.UpdateActorResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	msg := req.Msg
+	id, err := core.ParseUUID(msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	msg := req.Msg
-	id, err := core.ParseUUID(msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -176,11 +180,11 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 
 // DeleteActor logically deletes an actor.
 func (s *ConnectServer) DeleteActor(ctx context.Context, req *connect.Request[goelandv1.DeleteActorRequest]) (*connect.Response[goelandv1.DeleteActorResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelFullControl)
 	if err != nil {
 		return nil, err
 	}

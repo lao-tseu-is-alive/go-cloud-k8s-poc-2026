@@ -16,6 +16,7 @@ import (
 // ConnectServer exposes Service through the generated CirculationService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	// now is the clock deciding whether a circulation is overdue.
 	now func() time.Time
@@ -23,23 +24,26 @@ type ConnectServer struct {
 }
 
 // NewConnectServer builds a CirculationService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("circulation service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("circulation connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log, now: time.Now}, nil
+	return &ConnectServer{service: service, authz: authz, log: log, now: time.Now}, nil
 }
 
 // ListCaseCirculations returns the circulations of a case.
 func (s *ConnectServer) ListCaseCirculations(ctx context.Context, req *connect.Request[goelandv1.ListCaseCirculationsRequest]) (*connect.Response[goelandv1.ListCaseCirculationsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	caseID, err := core.ParseUUID(req.Msg.CaseId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead); err != nil {
 		return nil, err
 	}
 	list, err := s.service.ListCase(ctx, caseID)
@@ -51,7 +55,8 @@ func (s *ConnectServer) ListCaseCirculations(ctx context.Context, req *connect.R
 
 // GetCirculation retrieves one circulation.
 func (s *ConnectServer) GetCirculation(ctx context.Context, req *connect.Request[goelandv1.GetCirculationRequest]) (*connect.Response[goelandv1.GetCirculationResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	user, err := core.RequireCaller(ctx, core.ScopeRead)
+	if err != nil {
 		return nil, err
 	}
 	id, err := core.ParseUUID(req.Msg.Id)
@@ -61,6 +66,9 @@ func (s *ConnectServer) GetCirculation(ctx context.Context, req *connect.Request
 	c, err := s.service.Get(ctx, id)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.authz.Require(ctx, user, c.CaseID, core.LevelRead); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.GetCirculationResponse{Circulation: DomainToProto(c, s.now())}), nil
 }

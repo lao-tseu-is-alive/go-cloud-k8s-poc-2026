@@ -76,6 +76,8 @@ func MapError(err error) *connect.Error {
 		return connect.NewError(connect.CodeFailedPrecondition, err)
 	case errors.Is(err, ErrInvalidState):
 		return connect.NewError(connect.CodeFailedPrecondition, err)
+	case errors.Is(err, ErrPermissionDenied):
+		return connect.NewError(connect.CodePermissionDenied, err)
 	default:
 		return nil
 	}

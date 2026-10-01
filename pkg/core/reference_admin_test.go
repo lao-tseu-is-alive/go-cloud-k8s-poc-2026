@@ -15,7 +15,7 @@ import (
 // TestReferenceAdministrationRequiresAdmin checks that writing reference data
 // and reading its log need goeland:admin, not just goeland:write.
 func TestReferenceAdministrationRequiresAdmin(t *testing.T) {
-	server, err := core.NewConnectServer(coretest.NewService(t), nil)
+	server, err := core.NewConnectServer(coretest.NewService(t), coretest.NewAuthorizer(t), nil)
 	if err != nil {
 		t.Fatal(err)
 	}

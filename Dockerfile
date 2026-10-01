@@ -23,7 +23,7 @@ WORKDIR /app
 COPY go.mod go.sum ./
 RUN go mod download
 COPY . .
-# Bring in the freshly built frontend so //go:embed goeland-front/dist/* resolves
+# Bring in the freshly built frontend so //go:embed all:goeland-front/dist resolves
 # (this overrides any stale/absent dist from the build context).
 COPY --from=frontend /app/cmd/goeland-server/goeland-front/dist ./cmd/goeland-server/goeland-front/dist
 # Inject version provenance so the container's /goAppInfo reports real values

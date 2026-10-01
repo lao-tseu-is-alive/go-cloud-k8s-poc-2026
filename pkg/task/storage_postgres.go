@@ -58,11 +58,8 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Task,
 func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Task, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "update task", func(tx pgx.Tx) error {
-		current, err := lockPendingTx(ctx, tx, id)
+		current, err := lockManualPendingTx(ctx, tx, id, in.OperatorID)
 		if err != nil {
-			return err
-		}
-		if err := ensureManualTx(current); err != nil {
 			return err
 		}
 		currentType, taskType, err := resolveType(ctx, tx, current.TypeID, in.TypeCode)
@@ -91,11 +88,8 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 func (r *PostgresRepository) Assign(ctx context.Context, id uuid.UUID, to Assignee, operatorID, reason string) (*Task, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "assign task", func(tx pgx.Tx) error {
-		current, err := lockPendingTx(ctx, tx, id)
+		current, err := lockManualPendingTx(ctx, tx, id, operatorID)
 		if err != nil {
-			return err
-		}
-		if err := ensureManualTx(current); err != nil {
 			return err
 		}
 		if sameAssignee(current, to) {

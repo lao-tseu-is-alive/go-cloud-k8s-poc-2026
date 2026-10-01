@@ -19,6 +19,7 @@ export type SubjectKind
     | 'SUBJECT_KIND_ACTOR'
     | 'SUBJECT_KIND_USER'
     | 'SUBJECT_KIND_ORG_UNIT'
+    | 'SUBJECT_KIND_GROUP'
 
 export type Permission
   = | 'PERMISSION_UNSPECIFIED'
@@ -1015,4 +1016,81 @@ export interface CreateCirculationRequest {
   message?: string
   dueAt?: string
   recipients: CirculationRecipientInput[]
+}
+
+// ---- Access: grants and security groups (GLD-048) ------------------------------------
+
+export type GranteeKind = 'GRANTEE_KIND_UNSPECIFIED' | 'GRANTEE_KIND_USER' | 'GRANTEE_KIND_GROUP' | 'GRANTEE_KIND_ORG_UNIT'
+
+export type AccessSource
+  = | 'ACCESS_SOURCE_UNSPECIFIED'
+    | 'ACCESS_SOURCE_PERSONAL'
+    | 'ACCESS_SOURCE_GROUP'
+    | 'ACCESS_SOURCE_ORG_UNIT'
+    | 'ACCESS_SOURCE_ROLE'
+    | 'ACCESS_SOURCE_BASELINE'
+
+/** The caller's effective level on a subject and where it comes from. */
+export interface Access {
+  subjectId: string
+  kind?: SubjectKind
+  confidential?: boolean
+  level?: Permission
+  source?: AccessSource
+}
+
+/** One grant on a subject; a revoked one is kept as history. */
+export interface AccessGrant {
+  id: string
+  subjectId: string
+  granteeKind?: GranteeKind
+  granteeId?: string
+  granteeLabel?: string
+  level?: Permission
+  grantedAt?: string
+  grantedBy?: string
+  grantReason?: string
+  revokedAt?: string
+  revokedBy?: string
+  revokeReason?: string
+}
+
+/** A security group: a named set of internal users given grants like a unit. */
+export interface SecurityGroup {
+  subjectRef?: SubjectRef
+  name: string
+  description?: string
+  archivedAt?: string
+  memberCount?: number
+}
+
+/** A current member of a group. */
+export interface GroupMember {
+  user?: User
+  relationshipId?: string
+  since?: string
+  addedBy?: string
+}
+
+export interface GetMyAccessResponse {
+  access?: Access
+}
+
+export interface ListGrantsResponse {
+  grants?: AccessGrant[]
+}
+
+export interface GrantChangeResponse {
+  grant?: AccessGrant
+  auditEvent?: AuditEvent
+}
+
+export interface ListGroupsResponse {
+  groups?: SecurityGroup[]
+}
+
+export interface GroupResponse {
+  group?: SecurityGroup
+  members?: GroupMember[]
+  auditEvent?: AuditEvent
 }

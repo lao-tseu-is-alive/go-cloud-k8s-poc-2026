@@ -87,7 +87,8 @@ func mapBusinessRefConflict(err error) error {
 	return err
 }
 
-// InsertRecordMetadataTx inserts the 1:1 governance record for a subject using q.
+// InsertRecordMetadataTx inserts the 1:1 governance record for a subject using q,
+// with the creator's FULL_CONTROL and the owning unit's MANAGE grants (GLD-048).
 func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInput, subjectID uuid.UUID) (*RecordMetadata, error) {
 	if in.OwnerOrgID != nil {
 		if err := EnsureLiveOrgUnitTx(ctx, q, *in.OwnerOrgID); err != nil {
@@ -111,7 +112,14 @@ func InsertRecordMetadataTx(ctx context.Context, q Querier, in CreateSubjectInpu
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[RecordMetadata])
+	md, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[RecordMetadata])
+	if err != nil {
+		return nil, err
+	}
+	if err := insertCreatorGrantsTx(ctx, q, in, subjectID); err != nil {
+		return nil, err
+	}
+	return md, nil
 }
 
 // EnsureLiveOrgUnitTx requires id to name an existing, not dissolved ORG_UNIT
@@ -363,6 +371,9 @@ func LinkSubjectsTx(ctx context.Context, q Querier, in LinkInput) (*SubjectRelat
 		return nil, err
 	}
 	if err := ensureLiveOrgUnitEndsTx(ctx, q, source, target); err != nil {
+		return nil, err
+	}
+	if err := ensureLinkAccessTx(ctx, q, in.OperatorID, source.ID, target.ID, rt.Code); err != nil {
 		return nil, err
 	}
 	rows, err := q.Query(ctx, insertSubjectRelationshipSQL, pgx.NamedArgs{

@@ -65,6 +65,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/.gitignore` — Ignores the locally exported third-party proto tree.
 - `proto/goeland/v1/actor.proto` — Authoritative `ActorService` contract: persons, organizations, typed contacts, categories.
 - `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
+- `proto/goeland/v1/access.proto` — Authoritative `AccessService` contract: grants (levels, grantee kinds, history), effective access and its source, security groups and members.
 - `proto/goeland/v1/circulation.proto` — Authoritative `CirculationService` contract: circulations, recipients by step, responses, cancellation.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
@@ -75,6 +76,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
 - `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
+- `gen/goeland/v1/access.pb.go` — Go messages generated from `access.proto`; never edit by hand.
 - `gen/goeland/v1/circulation.pb.go` — Go messages generated from `circulation.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
@@ -84,6 +86,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/access.connect.go` — ConnectRPC stubs generated for `AccessService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/circulation.connect.go` — ConnectRPC stubs generated for `CirculationService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
@@ -137,6 +140,18 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
 - `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
 
+## Access domain (`pkg/access`)
+
+- `pkg/access/connect_server.go` — `AccessService` ConnectRPC adapter: effective access, grants, groups and members.
+- `pkg/access/doc.go` — Package documentation for the grants and security groups domain.
+- `pkg/access/mappers.go` — Access domain ↔ proto mappers: grantee kinds, levels ↔ `Permission`, sources, grants, groups, members.
+- `pkg/access/model.go` — Grants, groups, members and their inputs, grantee kinds and audit event types.
+- `pkg/access/service.go` — Access repository interface and validation of grant, group and member operations.
+- `pkg/access/sql.go` — Raw SQL of grants (with grantee labels, current grant, FULL_CONTROL count) and of groups and members.
+- `pkg/access/storage_postgres.go` — pgx storage: audited grant set / change / revoke keeping history and the last FULL_CONTROL, groups as GROUP subjects, membership as relationships.
+- `pkg/access/module/module.go` — Bundleable access module: dependency validation and lifecycle.
+- `pkg/access/module/routes.go` — Access module routes: Vanguard services for bundling and standalone registration.
+
 ## Circulation domain (`pkg/circulation`)
 
 - `pkg/circulation/connect_server.go` — `CirculationService` ConnectRPC adapter.
@@ -153,9 +168,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Core domain (`pkg/core`)
 
+- `pkg/core/authorizer.go` — `Authorizer`: the Connect adapters' check of the caller's level on the subject an RPC addresses.
 - `pkg/core/batch.go` — Batch loading for list pages: `GetSubjectHeadersTx`, `CollectIndexedTx`, `CollectGroupedTx`, `IDsOf`, `UniqueIDs` (one query per related kind instead of per row).
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
+- `pkg/core/access.go` — Access levels, the effective level (most specific grant wins) and `EnsureAccessTx`, creator grants, link and relationship-change rules, grant copy, assignee checks.
+- `pkg/core/access_test.go` — Tests the precedence rule of the effective level (personal, group, unit, role, baseline, confidentiality).
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
 - `pkg/core/coretest/database.go` — `TestDatabaseURL`: the test database DSN, skipping without one or failing when `GOELAND_REQUIRE_DB_TESTS=true` (CI).
@@ -179,6 +197,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/requestctx.go` — Request ID propagation through the context.
 - `pkg/core/service.go` — Core business rules: subject creation, typed linking, audit listing.
 - `pkg/core/sql.go` — Raw SQL and alias-prefixed column projections for core tables.
+- `pkg/core/sql_access.go` — Raw SQL of the effective level (units walked to the root, groups, roles), creator grants, grant copy and unit membership.
 - `pkg/core/storage_postgres.go` — pgx implementation of the core repository.
 - `pkg/core/storage_users.go` — pgx persistence of internal users: first-sight registration (USER subject, governance, audit), profile updates, batch lookup.
 - `pkg/core/tx.go` — Exported transaction-scoped helpers reused by sibling domains for atomic identity, governance and audit.
@@ -204,6 +223,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0020_circulation.sql` — Schema migration: `case_circulation` (steps, status stamps) and `case_circulation_recipient` (one user or unit, task, response, timeline entry), CIRCULATION_RESPONSE task type.
 - `pkg/core/module/db/migrations/0021_append_only_logs.sql` — Schema migration: triggers making `audit_event` and `reference_change` refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/core/module/db/migrations/0022_app_roles.sql` — Schema migration: `app_role` (ADMIN seeded) and the `app_user_role` history; the former admin flag migrated, `app_user.is_admin` dropped.
+- `pkg/core/module/db/migrations/0023_access_grants.sql` — Schema migration: GROUP kind and `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles (ACTOR_MANAGER, THING_MANAGER), `access_grant` with history, grants backfilled for existing subjects.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -329,6 +349,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
 - `pkg/integration/append_only_test.go` — DB test: the audit trail and the reference change log refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/integration/roles_test.go` — DB test: roles granted and revoked with reasons, audited on the user, kept as history, derived admin flag and refusals.
+- `pkg/integration/access_enforcement_test.go` — DB test: access checked in the transactions of timeline entries, tasks, circulations and relationships, and a document deposited from a case.
+- `pkg/integration/access_test.go` — DB test: effective level precedence (units and sub-units, groups, personal, roles, confidentiality) and grant rules (who grants, history, last FULL_CONTROL).
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
@@ -359,6 +381,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint, test).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
+- `cmd/goeland-server/goeland-front/src/api/accessClient.ts` — REST client for `AccessService`: my access, grants, groups and members.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/roleClient.ts` — REST calls of the application roles: catalogue, holders, a user's history, grant and revoke.
@@ -382,6 +405,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
+- `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders.
+- `cmd/goeland-server/goeland-front/src/components/access/GroupPicker.vue` — Security group search (debounced, by name) bound to the group's subject id.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesPanel.vue` — Read-only address cards (role, principal, formatted lines, map.geo.admin.ch link).
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsEditor.vue` — Editable list of typed complements (type, value checked against its type, note, primary).
@@ -438,6 +463,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/document/documentForm.ts` — Document metadata form model.
 - `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
+- `cmd/goeland-server/goeland-front/src/composables/useMyAccess.ts` — The caller's level on a subject (contribute, manage, full control) to hide what the server would refuse.
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
@@ -452,6 +478,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/groups/GroupDetailPage.vue` — Security group page: members (add, remove), edit, archive, its grants and audit.
+- `cmd/goeland-server/goeland-front/src/pages/groups/GroupListPage.vue` — Security groups list with search, archived filter and creation.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingCreatePage.vue` — Thing creation page (type, details, geometry).
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingDetailPage.vue` — Thing detail: identifiers, geometry preview and map link, relationships (link, end, unlink), edit, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.

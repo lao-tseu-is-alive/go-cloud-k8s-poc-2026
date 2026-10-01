@@ -15,28 +15,32 @@ import (
 // ConnectServer exposes Service through the generated TimelineService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedTimelineServiceHandler
 }
 
 // NewConnectServer builds a TimelineService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("timeline service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("timeline connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // ListTimelineEntries returns a page of a case timeline.
 func (s *ConnectServer) ListTimelineEntries(ctx context.Context, req *connect.Request[goelandv1.ListTimelineEntriesRequest]) (*connect.Response[goelandv1.ListTimelineEntriesResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	caseID, err := core.ParseUUID(req.Msg.CaseId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead); err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -107,7 +111,8 @@ func (s *ConnectServer) CreateTimelineEntry(ctx context.Context, req *connect.Re
 
 // GetTimelineEntry retrieves one entry with its documents.
 func (s *ConnectServer) GetTimelineEntry(ctx context.Context, req *connect.Request[goelandv1.GetTimelineEntryRequest]) (*connect.Response[goelandv1.GetTimelineEntryResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	user, err := core.RequireCaller(ctx, core.ScopeRead)
+	if err != nil {
 		return nil, err
 	}
 	id, err := core.ParseUUID(req.Msg.Id)
@@ -117,6 +122,9 @@ func (s *ConnectServer) GetTimelineEntry(ctx context.Context, req *connect.Reque
 	e, err := s.service.Get(ctx, id)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.authz.Require(ctx, user, e.CaseID, core.LevelRead); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.GetTimelineEntryResponse{Entry: DomainToProto(e)}), nil
 }

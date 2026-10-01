@@ -11,6 +11,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
@@ -43,6 +44,8 @@ type testEnv struct {
 	taskSvc *task.Service
 	// timelineSvc is the case timeline service.
 	timelineSvc *timeline.Service
+	// accessSvc is the grants and groups service.
+	accessSvc *access.Service
 	// blobDir is the per-test directory holding uploaded bytes.
 	blobDir string
 }
@@ -167,7 +170,15 @@ func newTestEnv(t *testing.T) *testEnv {
 		t.Fatalf("build circulation service: %v", err)
 	}
 
-	return &testEnv{ctx: ctx, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root()}
+	accessRepo, err := access.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("access repository: %v", err)
+	}
+	accessSvc, err := access.NewService(accessRepo, log)
+	if err != nil {
+		t.Fatalf("access service: %v", err)
+	}
+	return &testEnv{ctx: ctx, accessSvc: accessSvc, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root()}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

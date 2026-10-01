@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
 const defaultRequestTimeout = 10 * time.Second
@@ -72,7 +73,11 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("circulation module: service init: %w", err)
 	}
-	cs, err := circulation.NewConnectServer(svc, deps.Logger)
+	authz, err := core.NewAuthorizer(deps.Pool, deps.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("circulation module: authorizer init: %w", err)
+	}
+	cs, err := circulation.NewConnectServer(svc, authz, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("circulation module: connect server init: %w", err)
 	}

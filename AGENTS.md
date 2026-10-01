@@ -116,6 +116,11 @@ whenever a task starts, completes, changes scope or order.
   the last answer completes the circulation with a SYSTEM summary. `casefile` calls
   `circulation.EnsureNoOpenCirculationsTx` before closing. Import order: casefile → circulation →
   task → timeline → core (never the reverse).
+- **access** (`pkg/access`) — grants and security groups → `AccessService` (GLD-048). A grant gives
+  READ < CONTRIBUTE < MANAGE < FULL_CONTROL on one subject to a user, a GROUP subject or an org
+  unit (covering its sub-units); changes keep history, are audited on the subject, and the last
+  FULL_CONTROL is kept. Membership is `USER_MEMBER_OF_GROUP`. The effective level lives in `core`
+  (see "Authorization" below).
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete, addresses), the Case
@@ -127,7 +132,8 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-A real permission/confidentiality engine (GLD-017), storage (MinIO),
+Filtered searches and lists, applied confidentiality on downloads and timeline visibility
+(GLD-049), storage (MinIO),
 search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
@@ -144,7 +150,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0022 (dbmate format)
+  │   └── db/migrations/     0001..0023 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -157,6 +163,8 @@ pkg/casefile/                case (affaire) domain: types, status lifecycle (reu
 pkg/thing/                   thing (objet) domain: parcels, buildings, LV95 PostGIS geometry
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/orgunit/                 organizational units (ORG_UNIT subjects in one tree, dissolution)
+  └── module/                bundleable module (NO migrations; core owns schema)
+pkg/access/                  grants and security groups (AccessService; the effective level is in core)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/circulation/             case circulations (recipients by step, answers in the timeline)
   └── module/                bundleable module (NO migrations; core owns schema)
@@ -218,7 +226,7 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
 - `make db-new name=add_case` — scaffold a new migration.
 - `make front-build` — `bun install && bun run build` in `goeland-front/` to
   produce `dist/`. It is a prerequisite of both `make run` and `make build`
-  because `//go:embed goeland-front/dist/*` fails if `dist/` is absent (it is
+  because `//go:embed all:goeland-front/dist` fails if `dist/` is absent (it is
   gitignored). On a clean checkout, build the frontend before `go build`/`go test`.
   The **Docker image** is self-contained: it builds the frontend in a dedicated `bun`
   stage before the Go build, so `docker build` works from a clean checkout.
@@ -243,6 +251,26 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
   (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` bootstraps it as
   administrator).
+
+**Authorization (GLD-048, model GLD-017):** the effective level of a user on a subject is the
+most specific grant — personal, then its groups (highest), then the nearest of its units or their
+ancestors, then a kind-wide application role (ADMIN covers every kind), then the baseline READ;
+a confidential subject (`confidentiality_level` >= 2) gets neither roles nor the baseline
+(`core.EffectiveAccessTx`, one SQL query). Where it is checked:
+
+- RPCs addressing a subject: `core.Authorizer.Caller(ctx, scope, id, level)` in the Connect
+  adapter (READ for reads, MANAGE for edits and lifecycle, FULL_CONTROL for deletion and grants);
+- case-owned entities: `core.EnsureAccessTx` on the case inside their transaction (timeline:
+  CONTRIBUTE, lock/withdraw MANAGE; tasks: MANAGE, start/complete by the assignee or CONTRIBUTE;
+  circulations: MANAGE, an answer by the recipient or MANAGE) — `core.EnsureAssigneeOrAccessTx`;
+- relationships: `core.LinkSubjectsTx` / `EndRelationshipTx` / unlink require MANAGE on the source
+  (CONTRIBUTE to attach a document to a case) and READ on the target; a membership needs MANAGE on
+  the group or unit, never one's own subject.
+
+Every new subject gets its creator's FULL_CONTROL and its owning unit's MANAGE
+(`core.InsertRecordMetadataTx`); a document deposited from a case copies the case's grants and
+confidentiality once (`core.CopyGrantsTx`), and attaching an existing document copies nothing.
+New RPCs must add their check. Searches and lists are not filtered yet (GLD-049).
 
 **Application roles (GLD-047):** administrators are decided in Goéland, never by the token.
 `core.RecordingVerifier` strips `goeland:admin` from what the token says and adds it back for a
@@ -327,6 +355,9 @@ CirculationService: `/api/cases/{case_id}/circulations`, `/api/circulations/{id}
 `/api/circulation-recipients/{recipient_id}/respond`;
 TaskService: `/api/cases/{case_id}/tasks`, `/api/tasks/mine`, `/api/tasks/{id}` with `/assign`,
 `/start`, `/complete`, `/cancel`, `/reopen`, `/api/task-types`; CoreService also `/api/users/search`;
+AccessService: `/api/subjects/{subject_id}/access`, `/api/subjects/{subject_id}/grants`,
+`/api/grants/{grant_id}/revoke`, `/api/groups` with `/{id}`, `/{id}/archive` and
+`/{group_id}/members[/{user_id}/remove]`;
 OrgUnitService: `/api/org-units` (flat tree), `/api/org-units/search`, `/api/org-units/{id}`,
 `/api/org-units/{id}/dissolve`, `/api/org-unit-types`;
 TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` with
@@ -336,7 +367,8 @@ TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` w
 
 `cmd/goeland-server/goeland-front` is a **Vue 3 + Vuetify 4** SPA (Vite, bun,
 Pinia, vue-router, vue-i18n; fr-CH default, en). `make front-build` produces
-`dist/`, which the server embeds with `//go:embed goeland-front/dist/*` and serves
+`dist/`, which the server embeds with `//go:embed all:goeland-front/dist` (`all:` keeps the
+chunks whose names start with `_`, such as Vite's `_plugin-vue_export-helper`) and serves
 at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
 **gitignored build artifact** — never hand-edit it; edit `src/` and rebuild.
 

@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated DocumentService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedDocumentServiceHandler
 }
 
 // NewConnectServer builds a DocumentService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("document service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("document connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // CreateDocument registers a new document.
@@ -85,11 +89,11 @@ func (s *ConnectServer) CreateDocument(ctx context.Context, req *connect.Request
 
 // AddDocumentVersion appends a new current version to a document.
 func (s *ConnectServer) AddDocumentVersion(ctx context.Context, req *connect.Request[goelandv1.AddDocumentVersionRequest]) (*connect.Response[goelandv1.AddDocumentVersionResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.DocumentId)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -118,11 +122,11 @@ func (s *ConnectServer) AddDocumentVersion(ctx context.Context, req *connect.Req
 
 // ListDocumentVersions lists the versions of a document, newest first.
 func (s *ConnectServer) ListDocumentVersions(ctx context.Context, req *connect.Request[goelandv1.ListDocumentVersionsRequest]) (*connect.Response[goelandv1.ListDocumentVersionsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	versions, err := s.service.ListVersions(ctx, id)
@@ -138,11 +142,11 @@ func (s *ConnectServer) ListDocumentVersions(ctx context.Context, req *connect.R
 
 // GetDocument retrieves a document with optional relationships + audit.
 func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[goelandv1.GetDocumentRequest]) (*connect.Response[goelandv1.GetDocumentResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	doc, err := s.service.Get(ctx, id)
@@ -169,11 +173,11 @@ func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[go
 
 // UpdateDocumentMetadata updates mutable metadata (respects locking).
 func (s *ConnectServer) UpdateDocumentMetadata(ctx context.Context, req *connect.Request[goelandv1.UpdateDocumentMetadataRequest]) (*connect.Response[goelandv1.UpdateDocumentMetadataResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -201,11 +205,11 @@ func (s *ConnectServer) UpdateDocumentMetadata(ctx context.Context, req *connect
 
 // FinalizeDocument marks a document final and optionally locks it.
 func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Request[goelandv1.FinalizeDocumentRequest]) (*connect.Response[goelandv1.FinalizeDocumentResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -223,11 +227,11 @@ func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Reque
 // comparison (it does not read bytes from storage). See Service.Verify. It runs
 // under the read scope precisely because it writes nothing.
 func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connect.Request[goelandv1.VerifyDocumentIntegrityRequest]) (*connect.Response[goelandv1.VerifyDocumentIntegrityResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	doc, verified, err := s.service.Verify(ctx, id, req.Msg.ExpectedSha256)
@@ -284,11 +288,11 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 
 // LinkDocument creates a typed relationship from a document to another subject.
 func (s *ConnectServer) LinkDocument(ctx context.Context, req *connect.Request[goelandv1.LinkDocumentRequest]) (*connect.Response[goelandv1.LinkDocumentResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	docID, err := core.ParseUUID(req.Msg.DocumentId)
 	if err != nil {
 		return nil, err
 	}
-	docID, err := core.ParseUUID(req.Msg.DocumentId)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, docID, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -314,11 +318,11 @@ func (s *ConnectServer) LinkDocument(ctx context.Context, req *connect.Request[g
 
 // DeleteDocument logically deletes a document.
 func (s *ConnectServer) DeleteDocument(ctx context.Context, req *connect.Request[goelandv1.DeleteDocumentRequest]) (*connect.Response[goelandv1.DeleteDocumentResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelFullControl)
 	if err != nil {
 		return nil, err
 	}

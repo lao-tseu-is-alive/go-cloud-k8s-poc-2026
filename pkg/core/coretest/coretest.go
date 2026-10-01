@@ -4,9 +4,12 @@ package coretest
 
 import (
 	"context"
+	"errors"
 	"testing"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
@@ -146,4 +149,42 @@ func (StubRepository) AppendAuditEvent(context.Context, core.AuditEvent) (*core.
 // ListAuditEvents returns an empty result.
 func (StubRepository) ListAuditEvents(context.Context, core.AuditFilter) (core.AuditResult, error) {
 	return core.AuditResult{}, nil
+}
+
+// errNoDatabase is returned by NoDatabase for every call.
+var errNoDatabase = errors.New("coretest: no database in a unit test")
+
+// NoDatabase is a core.Querier that fails every call: it lets an Authorizer be
+// built for adapter unit tests that never reach an access check.
+type NoDatabase struct{}
+
+// Exec fails.
+func (NoDatabase) Exec(context.Context, string, ...any) (pgconn.CommandTag, error) {
+	return pgconn.CommandTag{}, errNoDatabase
+}
+
+// Query fails.
+func (NoDatabase) Query(context.Context, string, ...any) (pgx.Rows, error) {
+	return nil, errNoDatabase
+}
+
+// QueryRow returns a row whose Scan fails.
+func (NoDatabase) QueryRow(context.Context, string, ...any) pgx.Row {
+	return failingRow{}
+}
+
+// failingRow is a pgx.Row whose Scan fails.
+type failingRow struct{}
+
+// Scan fails.
+func (failingRow) Scan(...any) error { return errNoDatabase }
+
+// NewAuthorizer returns an Authorizer on NoDatabase.
+func NewAuthorizer(t *testing.T) *core.Authorizer {
+	t.Helper()
+	a, err := core.NewAuthorizer(NoDatabase{}, nil)
+	if err != nil {
+		t.Fatalf("authorizer: %v", err)
+	}
+	return a
 }

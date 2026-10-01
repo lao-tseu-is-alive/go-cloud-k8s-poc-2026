@@ -152,16 +152,7 @@ func (r *PostgresRepository) LinkSubjects(ctx context.Context, in LinkInput) (*S
 	if err != nil {
 		return nil, nil, err
 	}
-	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
-		SubjectID:   in.SourceSubjectID,
-		EventType:   "RELATIONSHIP_LINKED",
-		ActorUserID: in.OperatorID,
-		AfterState: map[string]any{
-			"relationship_id": rel.ID.String(),
-			"type":            in.RelationshipTypeCode,
-			"target":          in.TargetSubjectID.String(),
-		},
-	})
+	ev, err := InsertAuditEventTx(ctx, tx, LinkedEvent(in, rel))
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
 	}
@@ -179,6 +170,13 @@ func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID 
 	}
 	defer func() { _ = tx.Rollback(ctx) }()
 
+	current, err := lockRelationshipTx(ctx, tx, relationshipID)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := ensureRelationshipChangeAccessTx(ctx, tx, operatorID, current); err != nil {
+		return nil, nil, err
+	}
 	rows, err := tx.Query(ctx, softDeleteRelationshipSQL, pgx.NamedArgs{
 		"id":          relationshipID,
 		"operator_id": operatorID,
@@ -210,17 +208,65 @@ func (r *PostgresRepository) UnlinkSubjects(ctx context.Context, relationshipID 
 // RELATIONSHIP_ENDED audit event in the same transaction; the returned edge is
 // hydrated with its subjects and type.
 func (r *PostgresRepository) EndRelationship(ctx context.Context, in EndInput) (*SubjectRelationship, *AuditEvent, error) {
-	tx, err := r.pool.Begin(ctx)
-	if err != nil {
-		return nil, nil, fmt.Errorf("begin end relationship: %w", err)
-	}
-	defer func() { _ = tx.Rollback(ctx) }()
-
-	current, err := lockOpenRelationshipTx(ctx, tx, in)
+	var rel *SubjectRelationship
+	var ev *AuditEvent
+	err := InTx(ctx, r.pool, "end relationship", func(tx pgx.Tx) error {
+		var err error
+		rel, ev, err = EndRelationshipTx(ctx, tx, in)
+		return err
+	})
 	if err != nil {
 		return nil, nil, err
 	}
-	rows, err := tx.Query(ctx, endRelationshipSQL, pgx.NamedArgs{"id": in.RelationshipID, "valid_to": in.ValidTo})
+	if err := r.hydrateRelationships(ctx, []*SubjectRelationship{rel}); err != nil {
+		return nil, nil, err
+	}
+	return rel, ev, nil
+}
+
+// lockOpenRelationshipTx locks the edge and checks it can be ended: it must
+// exist, not be unlinked (ErrNotFound) and have no end yet (ErrInvalidState).
+// An explicit end before the start of validity is ErrInvalidInput.
+func lockOpenRelationshipTx(ctx context.Context, q Querier, in EndInput) (*SubjectRelationship, error) {
+	rel, err := lockRelationshipTx(ctx, q, in.RelationshipID)
+	if err != nil {
+		return nil, err
+	}
+	switch {
+	case rel.ValidTo != nil:
+		return nil, fmt.Errorf("%w: the relationship already ended at %s", ErrInvalidState, rel.ValidTo.UTC().Format(time.RFC3339))
+	case in.ValidTo != nil && rel.ValidFrom != nil && in.ValidTo.Before(*rel.ValidFrom):
+		return nil, fmt.Errorf("%w: valid_to precedes valid_from", ErrInvalidInput)
+	}
+	return rel, nil
+}
+
+// LinkedEvent is the RELATIONSHIP_LINKED audit event of a new relationship,
+// written on its source subject.
+func LinkedEvent(in LinkInput, rel *SubjectRelationship) AuditEvent {
+	return AuditEvent{
+		SubjectID:   in.SourceSubjectID,
+		EventType:   "RELATIONSHIP_LINKED",
+		ActorUserID: in.OperatorID,
+		AfterState: map[string]any{
+			"relationship_id": rel.ID.String(),
+			"type":            in.RelationshipTypeCode,
+			"target":          in.TargetSubjectID.String(),
+		},
+	}
+}
+
+// EndRelationshipTx ends an open relationship (valid_to, kept as history) and
+// writes RELATIONSHIP_ENDED on its source subject using q.
+func EndRelationshipTx(ctx context.Context, q Querier, in EndInput) (*SubjectRelationship, *AuditEvent, error) {
+	current, err := lockOpenRelationshipTx(ctx, q, in)
+	if err != nil {
+		return nil, nil, err
+	}
+	if err := ensureRelationshipChangeAccessTx(ctx, q, in.OperatorID, current); err != nil {
+		return nil, nil, err
+	}
+	rows, err := q.Query(ctx, endRelationshipSQL, pgx.NamedArgs{"id": in.RelationshipID, "valid_to": in.ValidTo})
 	if err != nil {
 		return nil, nil, mapValidityOrder(err)
 	}
@@ -228,7 +274,7 @@ func (r *PostgresRepository) EndRelationship(ctx context.Context, in EndInput) (
 	if err != nil {
 		return nil, nil, mapValidityOrder(err)
 	}
-	ev, err := InsertAuditEventTx(ctx, tx, AuditEvent{
+	ev, err := InsertAuditEventTx(ctx, q, AuditEvent{
 		SubjectID:   rel.SourceSubjectID,
 		EventType:   "RELATIONSHIP_ENDED",
 		ActorUserID: in.OperatorID,
@@ -243,20 +289,13 @@ func (r *PostgresRepository) EndRelationship(ctx context.Context, in EndInput) (
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
 	}
-	if err := tx.Commit(ctx); err != nil {
-		return nil, nil, fmt.Errorf("commit end relationship: %w", err)
-	}
-	if err := r.hydrateRelationships(ctx, []*SubjectRelationship{rel}); err != nil {
-		return nil, nil, err
-	}
 	return rel, ev, nil
 }
 
-// lockOpenRelationshipTx locks the edge and checks it can be ended: it must
-// exist, not be unlinked (ErrNotFound) and have no end yet (ErrInvalidState).
-// An explicit end before the start of validity is ErrInvalidInput.
-func lockOpenRelationshipTx(ctx context.Context, q Querier, in EndInput) (*SubjectRelationship, error) {
-	rows, err := q.Query(ctx, getRelationshipForUpdateSQL, pgx.NamedArgs{"id": in.RelationshipID})
+// lockRelationshipTx locks a relationship that is not soft-deleted (ended ones
+// included); an unknown or unlinked one is ErrNotFound.
+func lockRelationshipTx(ctx context.Context, q Querier, id uuid.UUID) (*SubjectRelationship, error) {
+	rows, err := q.Query(ctx, getRelationshipForUpdateSQL, pgx.NamedArgs{"id": id})
 	if err != nil {
 		return nil, fmt.Errorf("lock relationship: %w", err)
 	}
@@ -264,13 +303,8 @@ func lockOpenRelationshipTx(ctx context.Context, q Querier, in EndInput) (*Subje
 	if err != nil {
 		return nil, mapNotFound(err)
 	}
-	switch {
-	case rel.DeletedAt != nil:
+	if rel.DeletedAt != nil {
 		return nil, ErrNotFound
-	case rel.ValidTo != nil:
-		return nil, fmt.Errorf("%w: the relationship already ended at %s", ErrInvalidState, rel.ValidTo.UTC().Format(time.RFC3339))
-	case in.ValidTo != nil && rel.ValidFrom != nil && in.ValidTo.Before(*rel.ValidFrom):
-		return nil, fmt.Errorf("%w: valid_to precedes valid_from", ErrInvalidInput)
 	}
 	return rel, nil
 }

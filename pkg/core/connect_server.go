@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated CoreService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedCoreServiceHandler
 }
 
 // NewConnectServer builds a CoreService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("core service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("core connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // CreateSubjectRef creates a subject identity + governance record.
@@ -62,11 +66,11 @@ func (s *ConnectServer) CreateSubjectRef(ctx context.Context, req *connect.Reque
 
 // GetSubjectRef retrieves a subject with optional governance + audit info.
 func (s *ConnectServer) GetSubjectRef(ctx context.Context, req *connect.Request[goelandv1.GetSubjectRefRequest]) (*connect.Response[goelandv1.GetSubjectRefResponse], error) {
-	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead); err != nil {
 		return nil, err
 	}
 	ref, md, audit, err := s.service.GetSubjectRef(ctx, id, req.Msg.IncludeMetadata, req.Msg.IncludeAuditSummary)
@@ -113,11 +117,11 @@ func (s *ConnectServer) LinkSubjects(ctx context.Context, req *connect.Request[g
 
 // AssignBusinessRef gives an existing subject its business reference.
 func (s *ConnectServer) AssignBusinessRef(ctx context.Context, req *connect.Request[goelandv1.AssignBusinessRefRequest]) (*connect.Response[goelandv1.AssignBusinessRefResponse], error) {
-	user, err := RequireCaller(ctx, ScopeWrite)
+	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
 		return nil, err
 	}
-	id, err := ParseUUID(req.Msg.SubjectId)
+	user, err := s.authz.Caller(ctx, ScopeWrite, id, LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -198,11 +202,11 @@ func (s *ConnectServer) EndRelationship(ctx context.Context, req *connect.Reques
 
 // ListRelationships lists outgoing or incoming relationships for a subject.
 func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Request[goelandv1.ListRelationshipsRequest]) (*connect.Response[goelandv1.ListRelationshipsResponse], error) {
-	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead); err != nil {
 		return nil, err
 	}
 	offset, err := ParsePageToken(req.Msg.PageToken)
@@ -245,11 +249,11 @@ func (s *ConnectServer) ListRelationshipTypes(ctx context.Context, req *connect.
 
 // ListAuditEvents returns the probative history for a subject.
 func (s *ConnectServer) ListAuditEvents(ctx context.Context, req *connect.Request[goelandv1.ListAuditEventsRequest]) (*connect.Response[goelandv1.ListAuditEventsResponse], error) {
-	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := ParseUUID(req.Msg.SubjectId)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead); err != nil {
 		return nil, err
 	}
 	offset, err := ParsePageToken(req.Msg.PageToken)

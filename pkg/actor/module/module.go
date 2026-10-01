@@ -78,7 +78,11 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("actor module: service init: %w", err)
 	}
-	cs, err := actor.NewConnectServer(svc, deps.Logger)
+	authz, err := core.NewAuthorizer(deps.Pool, deps.Logger)
+	if err != nil {
+		return nil, fmt.Errorf("actor module: authorizer init: %w", err)
+	}
+	cs, err := actor.NewConnectServer(svc, authz, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("actor module: connect server init: %w", err)
 	}

@@ -19,6 +19,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs/pkg/goHttpEcho"
+	accessmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access/module"
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
@@ -36,7 +37,7 @@ import (
 
 const maxRequestBodyBytes = 8 << 20 // 8 MiB
 
-//go:embed goeland-front/dist/*
+//go:embed all:goeland-front/dist
 var frontendFiles embed.FS
 
 // authScopes are granted to every authenticated caller in this POC.
@@ -268,7 +269,11 @@ func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.
 	if err != nil {
 		return nil, fmt.Errorf("circulation module: %w", err)
 	}
-	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod}, nil
+	accessMod, err := accessmodule.New(ctx, accessmodule.Config{RequestTimeout: timeout}, accessmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
+	if err != nil {
+		return nil, fmt.Errorf("access module: %w", err)
+	}
+	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod, accessMod}, nil
 }
 
 // buildRecordingVerifier wraps the auth-mode verifier so every verified caller

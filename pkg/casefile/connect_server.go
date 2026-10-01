@@ -14,19 +14,23 @@ import (
 // ConnectServer exposes Service through the generated CaseService contract.
 type ConnectServer struct {
 	service *Service
+	authz   *core.Authorizer
 	log     *slog.Logger
 	goelandv1connect.UnimplementedCaseServiceHandler
 }
 
 // NewConnectServer builds a CaseService ConnectServer. A nil logger falls back to slog.Default.
-func NewConnectServer(service *Service, log *slog.Logger) (*ConnectServer, error) {
+func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger) (*ConnectServer, error) {
 	if service == nil {
 		return nil, errors.New("case service is required")
+	}
+	if authz == nil {
+		return nil, errors.New("case connect server: an authorizer is required")
 	}
 	if log == nil {
 		log = slog.Default()
 	}
-	return &ConnectServer{service: service, log: log}, nil
+	return &ConnectServer{service: service, authz: authz, log: log}, nil
 }
 
 // CreateCase opens a new case.
@@ -56,11 +60,11 @@ func (s *ConnectServer) CreateCase(ctx context.Context, req *connect.Request[goe
 
 // GetCase retrieves a case with optional relationships (both directions) and audit.
 func (s *ConnectServer) GetCase(ctx context.Context, req *connect.Request[goelandv1.GetCaseRequest]) (*connect.Response[goelandv1.GetCaseResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
-		return nil, err
-	}
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
+		return nil, err
+	}
+	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
 		return nil, err
 	}
 	c, err := s.service.Get(ctx, id)
@@ -87,11 +91,11 @@ func (s *ConnectServer) GetCase(ctx context.Context, req *connect.Request[goelan
 
 // UpdateCase replaces the editable metadata of a case.
 func (s *ConnectServer) UpdateCase(ctx context.Context, req *connect.Request[goelandv1.UpdateCaseRequest]) (*connect.Response[goelandv1.UpdateCaseResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -110,11 +114,11 @@ func (s *ConnectServer) UpdateCase(ctx context.Context, req *connect.Request[goe
 
 // TransitionCase moves a case to another status.
 func (s *ConnectServer) TransitionCase(ctx context.Context, req *connect.Request[goelandv1.TransitionCaseRequest]) (*connect.Response[goelandv1.TransitionCaseResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelManage)
 	if err != nil {
 		return nil, err
 	}
@@ -158,11 +162,11 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 
 // DeleteCase logically deletes a case.
 func (s *ConnectServer) DeleteCase(ctx context.Context, req *connect.Request[goelandv1.DeleteCaseRequest]) (*connect.Response[goelandv1.DeleteCaseResponse], error) {
-	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
 		return nil, err
 	}
-	id, err := core.ParseUUID(req.Msg.Id)
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelFullControl)
 	if err != nil {
 		return nil, err
 	}

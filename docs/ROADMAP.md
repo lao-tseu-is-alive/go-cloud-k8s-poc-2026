@@ -247,11 +247,13 @@ covered by an integration test.
   from the token (the auth server's `IsAdmin` is ignored); first administrators from
   `GOELAND_BOOTSTRAP_ADMINS` (user ids, applied on their next request, audited); the last
   administrator cannot be revoked; role administration in the SPA.
-- [ ] **GLD-048 — Grants and groups**: `access_grant` (typed grantee, level, grantor, reason,
+- [~] **GLD-048 — Grants and groups**: `access_grant` (typed grantee, level, grantor, reason,
   revocation kept as history, audited on the subject), GROUP subjects with members, the
   `Authorizer` evaluating the precedence above, checks on every mutation and single read of
   the five subject kinds, creator FULL_CONTROL and owner unit MANAGE at creation (backfilled
   for existing subjects), kind-wide roles (ACTOR_MANAGER, THING_MANAGER), "Accès" panel.
+  Done 2026-10-01; org unit edits stay with administrators (their grants and memberships use
+  the model), searches and lists are filtered in GLD-049.
 - [ ] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
   SQL access predicate (pagination stays exact), confidentiality applied, the search ceiling
   derived server-side, downloads through a document or version instead of a raw `?ref=`,

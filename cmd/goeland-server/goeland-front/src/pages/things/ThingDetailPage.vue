@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteThing, getThing, updateThing } from '@/api/thingClient'
+  import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
@@ -14,6 +15,7 @@
   import ThingMainForm from '@/components/thing/ThingMainForm.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useMyAccess } from '@/composables/useMyAccess'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { swissMapPointUrl } from '@/utils/geometry'
@@ -26,6 +28,8 @@
   const ui = useUiStore()
 
   const id = computed(() => String(route.params.id))
+  // The caller's level (GLD-048) hides what the server would refuse.
+  const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const thing = ref<GoThing | null>(null)
   const relationships = ref<SubjectRelationship[]>([])
   const audit = ref<AuditEvent[]>([])
@@ -41,7 +45,7 @@
   const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload)
 
   const isDeleted = computed(() => !!thing.value?.recordMetadata?.deletedAt)
-  const editable = computed(() => !thing.value?.recordMetadata?.isLocked && !isDeleted.value)
+  const editable = computed(() => !thing.value?.recordMetadata?.isLocked && !isDeleted.value && canManage.value)
   const mapUrl = computed(() => swissMapPointUrl(thing.value?.anchorE, thing.value?.anchorN))
 
   async function reload () {
@@ -130,7 +134,7 @@
         >{{ t('actions.thing.edit') }}</v-btn>
 
         <v-btn
-          v-if="editable"
+          v-if="editable && hasFullControl"
           color="error"
           prepend-icon="mdi-delete"
           variant="text"
@@ -216,6 +220,11 @@
 
         <v-col cols="12" md="4">
           <SubjectIdentityCard class="mb-4" :subject="thing.subjectRef" />
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>

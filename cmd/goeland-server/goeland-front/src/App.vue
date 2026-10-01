@@ -86,6 +86,16 @@
       </v-btn>
 
       <v-btn
+        v-if="isAuthenticated"
+        class="d-none d-sm-inline-flex"
+        prepend-icon="mdi-account-group-outline"
+        to="/groups"
+        variant="text"
+      >
+        {{ t('nav.groups') }}
+      </v-btn>
+
+      <v-btn
         v-if="isAdmin"
         class="d-none d-sm-inline-flex"
         prepend-icon="mdi-cog-outline"

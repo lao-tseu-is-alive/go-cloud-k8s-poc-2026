@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
+  import AccessPanel from '@/components/access/AccessPanel.vue'
   import { CASE_TRANSITIONS, transitionNeedsReason } from '@/components/case/caseForm'
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
   import CaseCirculationsPanel from '@/components/circulation/CaseCirculationsPanel.vue'
@@ -16,6 +17,7 @@
   import CaseTimelinePanel from '@/components/timeline/CaseTimelinePanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useMyAccess } from '@/composables/useMyAccess'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
@@ -29,6 +31,8 @@
   const ui = useUiStore()
 
   const id = computed(() => String(route.params.id))
+  // The caller's level on the case (GLD-048) hides what the server would refuse.
+  const { access, reload: reloadAccess, canContribute, canManage, hasFullControl } = useMyAccess(id)
   const current = ref<GoCase | null>(null)
   const relationships = ref<SubjectRelationship[]>([])
   const audit = ref<AuditEvent[]>([])
@@ -60,8 +64,10 @@
   const isDeleted = computed(() => !!current.value?.recordMetadata?.deletedAt)
   const isClosed = computed(() => current.value?.status === 'CASE_STATUS_CLOSED')
   const mutable = computed(() => !isLocked.value && !isDeleted.value)
-  const editable = computed(() => mutable.value && !isClosed.value)
-  const transitions = computed(() => (mutable.value && current.value?.status ? CASE_TRANSITIONS[current.value.status] : []))
+  const editable = computed(() => mutable.value && !isClosed.value && canManage.value)
+  const contributable = computed(() => mutable.value && !isClosed.value && canContribute.value)
+  const linkable = computed(() => mutable.value && canManage.value)
+  const transitions = computed(() => (mutable.value && canManage.value && current.value?.status ? CASE_TRANSITIONS[current.value.status] : []))
   const reasonRequired = computed(() => !!transitionTarget.value && transitionNeedsReason(current.value?.status, transitionTarget.value))
   // A case with draft timeline entries or open tasks cannot be closed (server rule).
   const closing = computed(() => transitionTarget.value === 'CASE_STATUS_CLOSED')
@@ -211,7 +217,7 @@
         </v-btn>
 
         <v-btn
-          v-if="!isDeleted && !isLocked"
+          v-if="!isDeleted && !isLocked && hasFullControl"
           color="error"
           prepend-icon="mdi-delete"
           variant="text"
@@ -266,7 +272,7 @@
 
             <v-card-text>
               <CaseTimelinePanel
-                :can-edit="editable"
+                :can-edit="contributable"
                 :case-id="id"
                 :reload-key="timelineKey"
                 @changed="reload"
@@ -309,7 +315,7 @@
               <v-spacer />
 
               <v-btn
-                v-if="mutable"
+                v-if="linkable"
                 prepend-icon="mdi-link-plus"
                 size="small"
                 variant="tonal"
@@ -323,7 +329,7 @@
               <p class="text-caption text-medium-emphasis mb-2">{{ t('messages.case.relationshipsHint') }}</p>
 
               <RelationshipTable
-                :can-unlink="mutable"
+                :can-unlink="linkable"
                 :relationships="relationships"
                 @ended="reload"
                 @unlink="doUnlink"
@@ -334,6 +340,11 @@
 
         <v-col cols="12" md="4">
           <SubjectIdentityCard class="mb-4" :subject="current.subjectRef" />
+
+          <v-card class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>

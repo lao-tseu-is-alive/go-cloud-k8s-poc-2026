@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0022 (dbmate format)
+      └── db/migrations/  0001..0023 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -235,8 +235,12 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
 - **Things** — search/list, create (parcel, building or generic, with an LV95 GeoJSON geometry
   and SVG preview), detail with computed area and a map.geo.admin.ch link, edit,
   link/end/unlink, soft-delete.
-- **My tasks** (including those of the caller's units), the **org unit tree** and, for
-  administrators, the administration page: reference data and the users' application roles.
+- **My tasks** (including those of the caller's units), the **org unit tree**, the **security
+  groups** (members, archiving) and, for administrators, the administration page: reference data
+  and the users' application roles.
+- **Access** — every detail page shows the caller's level and where it comes from, and lists the
+  grants; a FULL_CONTROL holder gives (to a user, a group or a unit), changes and revokes them.
+  Actions the caller's level does not allow are hidden (the server refuses them anyway).
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
@@ -276,10 +280,18 @@ Services:
   `SearchDocuments`, `LinkDocument`, `DeleteDocument`, `ListDocumentTypes`
 - `goeland.v1.ActorService` — `CreateActor`, `GetActor`, `UpdateActor`,
   `SearchActors`, `DeleteActor`, `ListOrganizationCategories`
+- `goeland.v1.AccessService` — `GetMyAccess`, `ListGrants`, `SetGrant`, `RevokeGrant`, and the
+  security groups (`ListGroups`, `GetGroup`, `CreateGroup`, `UpdateGroup`, `ArchiveGroup`,
+  `AddGroupMember`, `RemoveGroupMember`)
+- and `CaseService`, `ThingService`, `TimelineService`, `TaskService`, `CirculationService`,
+  `OrgUnitService` (see the OpenAPI file for every RPC)
+
+Access is checked per subject (GLD-048): a refused call answers 403 `PERMISSION_DENIED`
+(see "Access" in the Web UI section).
 
 ### REST (recommended for curl / browsers)
 
-All three services are annotated (see `api/openapi/goeland.swagger.yaml` for the full contract).
+Every service is annotated (see `api/openapi/goeland.swagger.yaml` for the full contract).
 
 DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
 `PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
@@ -360,6 +372,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0020_circulation.sql         case_circulation (steps) + case_circulation_recipient (task, answer, timeline entry)
 0021_append_only_logs.sql    audit_event and reference_change refuse UPDATE, DELETE and TRUNCATE
 0022_app_roles.sql           app_role (ADMIN) + app_user_role history; is_admin now derived from the ADMIN role
+0023_access_grants.sql       access_grant (levels, history) + security_group (GROUP) + kind-wide roles; grants backfilled
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

@@ -33,6 +33,16 @@ const router = createRouter({
       component: () => import('@/pages/orgunits/OrgUnitDetailPage.vue'),
     },
     {
+      path: '/groups',
+      name: 'groups',
+      component: () => import('@/pages/groups/GroupListPage.vue'),
+    },
+    {
+      path: '/groups/:id',
+      name: 'group-detail',
+      component: () => import('@/pages/groups/GroupDetailPage.vue'),
+    },
+    {
       path: '/tasks/mine',
       name: 'my-tasks',
       component: () => import('@/pages/tasks/MyTasksPage.vue'),

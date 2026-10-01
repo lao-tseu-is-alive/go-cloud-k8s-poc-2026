@@ -1,4 +1,64 @@
 {
+  "groups": {
+    "title": "Security groups",
+    "intro": "A group brings together users of several units (a committee, a project) to give them a common access. A personal access wins over a group's, which wins over a unit's.",
+    "includeArchived": "Include archived groups",
+    "archived": "Archived",
+    "noMembers": "This group has no member yet.",
+    "archiveConfirm": "An archived group gives no access any more. Its members and history are kept.",
+    "actions": {
+      "create": "New group",
+      "edit": "Edit",
+      "archive": "Archive",
+      "addMember": "Add a member",
+      "removeMember": "Remove from the group"
+    },
+    "fields": {
+      "name": "Name",
+      "description": "Description",
+      "members": "Members",
+      "user": "User",
+      "since": "Since"
+    },
+    "messages": {
+      "created": "Group created.",
+      "updated": "Group updated.",
+      "archived": "Group archived.",
+      "memberAdded": "Member added.",
+      "memberRemoved": "Member removed."
+    }
+  },
+  "access": {
+    "title": "Access",
+    "mine": "My access:",
+    "confidential": "Confidential",
+    "history": "History",
+    "revoked": "Revoked",
+    "revokedOn": "Revoked on {date}",
+    "revokeTitle": "Revoke the access of {grantee}",
+    "actions": {
+      "grant": "Give access",
+      "change": "Change the level",
+      "revoke": "Revoke access"
+    },
+    "fields": {
+      "level": "Level",
+      "reason": "Reason"
+    },
+    "grantee": {
+      "user": "User",
+      "group": "Group",
+      "unit": "Unit",
+      "pickUser": "Search a user",
+      "pickGroup": "Search a group",
+      "pickUnit": "Search a unit",
+      "unitHint": "A unit's access also covers its sub-units; the unit nearest to the user wins."
+    },
+    "messages": {
+      "granted": "Access saved.",
+      "revoked": "Access revoked."
+    }
+  },
   "roles": {
     "tab": "Roles",
     "empty": "Nobody holds this role.",
@@ -240,6 +300,7 @@
     "language": "Language"
   },
   "nav": {
+    "groups": "Groups",
     "myTasks": "My tasks",
     "orgUnits": "Units",
     "cases": "Cases",
@@ -628,6 +689,14 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "AccessSource": {
+      "ACCESS_SOURCE_UNSPECIFIED": "—",
+      "ACCESS_SOURCE_PERSONAL": "personal access",
+      "ACCESS_SOURCE_GROUP": "through a group",
+      "ACCESS_SOURCE_ORG_UNIT": "through a unit",
+      "ACCESS_SOURCE_ROLE": "through an application role",
+      "ACCESS_SOURCE_BASELINE": "default access"
+    },
     "CirculationResponse": {
       "CIRCULATION_RESPONSE_UNSPECIFIED": "No answer",
       "CIRCULATION_RESPONSE_FAVORABLE": "Favourable",
@@ -709,6 +778,7 @@
       "DOCUMENT_STATUS_ARCHIVED": "Archived"
     },
     "SubjectKind": {
+      "SUBJECT_KIND_GROUP": "Group",
       "SUBJECT_KIND_UNSPECIFIED": "Unspecified kind",
       "SUBJECT_KIND_CASE": "Case",
       "SUBJECT_KIND_DOCUMENT": "Document",
@@ -782,7 +852,7 @@
   },
   "errors": {
     "unauthenticated": "Authentication required.",
-    "permission_denied": "Access denied.",
+    "permission_denied": "You do not have the access this operation needs.",
     "not_found": "Item not found.",
     "already_exists": "This item already exists.",
     "failed_precondition": "Operation not allowed in the document's current state.",
