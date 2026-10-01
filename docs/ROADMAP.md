@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.10.0**.
+Tracked version: **v0.11.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -29,8 +29,9 @@ Phase 1b (usable Actor and Case: GLD-035, 036, 037, 025, 038, 039, 014, 040) shi
 v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GLD-012), ORG_UNIT
 (GLD-041), Task (GLD-026), Circulation (GLD-013) — in v0.9.0, and the post-audit hardening
 (GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
-security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050; roles and grants
-shipped in v0.10.0, filtering (GLD-049) and follow-ups (GLD-050) done for the next release), then the sensitive read audit (GLD-033).
+security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050) is complete —
+roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD-050) in v0.11.0;
+next is the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -231,7 +232,7 @@ covered by an integration test.
 
 ## Phase 6 — Security (v2 §32, §34)
 
-- [~] **GLD-017 — Real authorization** (umbrella of GLD-047 to GLD-050; model decided
+- [x] **GLD-017 — Real authorization** (umbrella of GLD-047 to GLD-050; model decided
   2026-09-30 from the profile of the legacy rights, see IMPLEMENTATION_STATUS §3j): levels
   READ < CONTRIBUTE < MANAGE < FULL_CONTROL, no deny level; grants on any subject (CASE,
   DOCUMENT, ACTOR, THING, ORG_UNIT) to a USER, a GROUP or an ORG_UNIT (covering its sub-units);
@@ -254,7 +255,7 @@ covered by an integration test.
   for existing subjects), kind-wide roles (ACTOR_MANAGER, THING_MANAGER), "Accès" panel.
   Done 2026-10-01; org unit edits stay with administrators (their grants and memberships use
   the model), searches and lists are filtered in GLD-049.
-- [~] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
+- [x] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
   SQL access predicate (pagination stays exact), confidentiality applied, the search ceiling
   derived server-side, downloads through a document or version instead of a raw `?ref=`,
   timeline visibility applied (INTERNAL needs CONTRIBUTE, RESTRICTED needs MANAGE), the
@@ -263,7 +264,7 @@ covered by an integration test.
   tree), group, business-reference and relationship lists; `GET /api/documents/{id}/content`
   (`?versionId=`) replaces `/api/documents/download?ref=`. Left as they are: the labels of the
   ancestors and children on an org unit page and of the documents cited by a timeline entry.
-- [~] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
+- [x] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
   creator and creator's unit); the two go-cloud-k8s-auth findings fixed or explicitly
   accepted in that repository (accounts linked by e-mail without the identity provider's
   `email_verified`, user list visible to every authenticated user); unknown JSON body fields

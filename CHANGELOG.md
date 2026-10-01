@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.11.0] - 2026-10-01
+
+This release completes real authorization (**GLD-017**): searches, lists, downloads and the
+timeline follow read rights (**GLD-049**), and case types carry default access (**GLD-050**).
+Migration `0024` applies automatically at startup. **Breaking:** document bytes are downloaded
+through `GET /api/documents/{id}/content` (the raw `?ref=` endpoint is removed), and request
+bodies with an unknown field answer 400. The identity provider fixes go with it
+(go-cloud-k8s-auth `0a829b5`: e-mail linking only when verified, user directory for
+administrators).
+
 ### Added
 
 - **GLD-049** — Searches and lists show only what the caller may read: cases, documents, actors,
