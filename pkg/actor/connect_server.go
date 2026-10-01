@@ -179,9 +179,10 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.SearchActorsResponse{
-		Actors:        DomainsToProto(result.Actors),
-		NextPageToken: core.NextPageToken(offset, len(result.Actors), result.TotalSize),
-		TotalSize:     result.TotalSize,
+		Actors:          DomainsToProto(result.Actors),
+		NextPageToken:   core.NextPageToken(offset, len(result.Actors), result.TotalSize),
+		TotalSize:       result.TotalSize,
+		TotalSizeCapped: result.TotalCapped,
 	}), nil
 }
 

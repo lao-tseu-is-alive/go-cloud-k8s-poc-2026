@@ -5,8 +5,15 @@
 
   // Presentational: the parent owns loading + the link/unlink API calls (ending is
   // handled by the table's own dialog, which emits `ended`).
-  defineProps<{ relationships?: SubjectRelationship[], canManage?: boolean }>()
-  const emit = defineEmits<{ 'add-link': [], 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship] }>()
+  defineProps<{
+    relationships?: SubjectRelationship[]
+    canManage?: boolean
+    hasMore?: boolean
+    loading?: boolean
+    total?: number
+    capped?: boolean
+  }>()
+  const emit = defineEmits<{ 'add-link': [], 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship], 'load-more': [] }>()
   const { t } = useI18n()
 </script>
 
@@ -26,8 +33,13 @@
 
     <RelationshipTable
       :can-unlink="canManage"
+      :capped="capped"
+      :has-more="hasMore"
+      :loading="loading"
       :relationships="relationships"
+      :total="total"
       @ended="emit('ended', $event)"
+      @load-more="emit('load-more')"
       @unlink="emit('unlink', $event)"
     />
   </div>

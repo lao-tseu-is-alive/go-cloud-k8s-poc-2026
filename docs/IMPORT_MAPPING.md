@@ -91,9 +91,10 @@ are confidential by default, 6 inactive units stay live because they have live s
 ~346k open participations of dissolved units are imported as ended at the closing of their case
 (or at the import for an open case). 59 relationship types are created from the legacy roles.
 
-Observed at production volume (input of GLD-053): the unfiltered case search takes ~2.7 s (exact
-total over ~490k readable cases with the read predicate), filtered searches 0.3–0.6 s, actor
-search ~0.4 s, a case detail ~30 ms; a case detail lists at most 200 relationships.
+Observed at production volume and fixed in GLD-053: the unfiltered case search took ~2.7 s (an
+exact total over ~490k readable cases) and now ~0.04 s with a total capped at 10 000; a text search
+takes ~0.23 s, an actor search ~0.04 s; relationship panels page through up to ~125k incoming
+relationships of a unit (~0.07 s a page) instead of stopping at 200.
 
 ## Decisions
 

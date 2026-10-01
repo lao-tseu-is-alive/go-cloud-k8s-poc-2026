@@ -9,7 +9,7 @@
   import CaseTypeSelect from '@/components/case/CaseTypeSelect.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
-  import { formatDateTime } from '@/utils/formatters'
+  import { formatDateTime, formatTotal } from '@/utils/formatters'
 
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
@@ -24,6 +24,7 @@
   const cases = ref<GoCase[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
+  const totalCapped = ref(false)
   const loading = ref(false)
   const statusItems = computed(() => CASE_STATUSES.map((s: CaseStatus) => ({ value: s, title: enumLabel('CaseStatus', s) })))
 
@@ -39,6 +40,7 @@
       cases.value = reset ? page : [...cases.value, ...page]
       nextPageToken.value = res.nextPageToken ?? ''
       totalSize.value = res.totalSize ?? cases.value.length
+      totalCapped.value = !!res.totalSizeCapped
     } catch (error) {
       report(error)
     } finally {
@@ -154,7 +156,7 @@
       </v-table>
 
       <v-card-actions>
-        <span class="text-caption text-medium-emphasis">{{ cases.length }} / {{ totalSize }}</span>
+        <span class="text-caption text-medium-emphasis">{{ cases.length }} / {{ formatTotal(totalSize, totalCapped) }}</span>
         <v-spacer />
 
         <v-btn v-if="nextPageToken" :loading="loading" variant="text" @click="load(false)">

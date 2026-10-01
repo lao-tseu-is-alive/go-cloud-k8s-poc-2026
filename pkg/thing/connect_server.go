@@ -140,7 +140,7 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 		out[i] = DomainToProto(t)
 	}
 	return connect.NewResponse(&goelandv1.SearchThingsResponse{
-		Things: out, NextPageToken: core.NextPageToken(offset, len(out), result.TotalSize), TotalSize: result.TotalSize,
+		Things: out, NextPageToken: core.NextPageToken(offset, len(out), result.TotalSize), TotalSize: result.TotalSize, TotalSizeCapped: result.TotalCapped,
 	}), nil
 }
 

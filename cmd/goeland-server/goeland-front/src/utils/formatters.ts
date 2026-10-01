@@ -51,3 +51,9 @@ export function shortHash (sha?: string): string {
   }
   return sha.length > 20 ? `${sha.slice(0, 8)}…${sha.slice(-8)}` : sha
 }
+
+/** A total for display: "10 000+" when it is a lower bound (counting stops, GLD-053). */
+export function formatTotal (total?: number, capped?: boolean): string {
+  const text = (total ?? 0).toLocaleString('fr-CH')
+  return capped ? `${text}+` : text
+}

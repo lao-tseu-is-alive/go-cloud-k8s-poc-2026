@@ -21,8 +21,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   as business reference `GOELAND`), grants, actors with checked contacts and a correspondence
   address, and the actor, employee and unit roles on cases.
 
+- **GLD-053** — Production volume: search and relationship totals are counted up to 10 000
+  (`totalSizeCapped` on `SearchCases`, `SearchDocuments`, `SearchActors`, `SearchThings` and
+  `ListRelationships`; the SPA shows "10 000+"), indexes on the sort keys (migration `0026`), and
+  detail pages load relationships page by page ("Charger plus").
+
 ### Changed
 
+- Searches read their matches in index order and stop at the count limit, the server turns JIT
+  off and forces custom plans on its connections: on ~512k cases the unfiltered case search went
+  from 2.7 s to 0.04 s (GLD-053).
 - `cmd/goeland-import-orgunits` shares its unit mapping with the new import (`pkg/legacyimport`).
 
 ## [0.11.0] - 2026-10-01

@@ -204,22 +204,17 @@ const subjectRelationshipListColumns = `
 sr.id, sr.source_subject_id, sr.target_subject_id, sr.relationship_type_id, sr.role_detail,
 sr.valid_from, sr.valid_to, sr.created_at, sr.created_by, sr.deleted_at`
 
-const listRelationshipsColumns = subjectRelationshipListColumns + `,
-COUNT(*) OVER() AS total_count`
-
 // listRelationshipsSQL lists non-unlinked edges (open and ended) either outgoing from (@outgoing = true) or
 // incoming to (@outgoing = false) the given subject, optionally filtered by type code, whose
 // other end the viewer may read.
-var listRelationshipsSQL = `
-SELECT ` + listRelationshipsColumns + `
+var listRelationshipsSQL = CappedPageSQL(`
+SELECT sr.id AS id, sr.created_at AS sort_key
 FROM subject_relationship sr
 JOIN relationship_type rt ON rt.id = sr.relationship_type_id
 WHERE sr.deleted_at IS NULL
   AND ((@outgoing AND sr.source_subject_id = @subject_id) OR (NOT @outgoing AND sr.target_subject_id = @subject_id))
   AND (@relationship_type_code = '' OR rt.code = @relationship_type_code)
-  AND ` + ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", "") + `
-ORDER BY sr.created_at DESC
-LIMIT @limit OFFSET @offset;`
+  AND `+ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", ""), subjectRelationshipListColumns, "subject_relationship", "sr", true)
 
 // --- app_user ------------------------------------------------------------------
 

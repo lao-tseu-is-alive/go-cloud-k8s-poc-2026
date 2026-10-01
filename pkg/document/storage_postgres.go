@@ -607,6 +607,7 @@ type documentListRow struct {
 // Search runs full-text + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
 	rows, err := r.pool.Query(ctx, searchDocumentsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+		"count_limit":         core.CountLimit,
 		"query":               filter.Query,
 		"document_type_code":  filter.DocumentTypeCode,
 		"confidentiality_max": filter.ConfidentialityMax,
@@ -631,6 +632,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Documents[i] = &doc
 		result.TotalSize = listRows[i].TotalSize
 	}
+	result.TotalSize, result.TotalCapped = core.CapTotal(result.TotalSize)
 	return result, r.hydrateAll(ctx, result.Documents)
 }
 

@@ -239,6 +239,8 @@ export interface SearchActorsResponse {
   actors?: GoActor[]
   nextPageToken?: string
   totalSize?: number
+  /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
+  totalSizeCapped?: boolean
 }
 
 export interface GetActorResponse {
@@ -327,6 +329,8 @@ export interface SearchDocumentsResponse {
   documents?: GoDocument[]
   nextPageToken?: string
   totalSize?: number
+  /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
+  totalSizeCapped?: boolean
 }
 
 export interface GetDocumentResponse {
@@ -488,10 +492,20 @@ export interface SearchCasesParams {
   pageToken?: string
 }
 
+/** A page of the relationships of a subject in one direction. */
+export interface ListRelationshipsResponse {
+  relationships?: SubjectRelationship[]
+  nextPageToken?: string
+  totalSize?: number
+  totalSizeCapped?: boolean
+}
+
 export interface SearchCasesResponse {
   cases?: GoCase[]
   nextPageToken?: string
   totalSize?: number
+  /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
+  totalSizeCapped?: boolean
 }
 
 // --- Internal users (CoreService, GLD-025) ------------------------------------
@@ -681,6 +695,8 @@ export interface SearchThingsResponse {
   things?: GoThing[]
   nextPageToken?: string
   totalSize?: number
+  /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
+  totalSizeCapped?: boolean
 }
 
 // ---------------------------------------------------------------------------

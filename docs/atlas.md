@@ -184,6 +184,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Core domain (`pkg/core`)
 
 - `pkg/core/authorizer.go` — `Authorizer`: the Connect adapters' check of the caller's level on the subject an RPC addresses.
+- `pkg/core/capped.go` — Capped searches and lists (GLD-053): `CappedPageSQL` (matches read in index order up to the count limit, then the page), `MetadataLateralSQL`, `CapTotal`.
+- `pkg/core/capped_test.go` — Unit tests of the capped total and of the shape of a capped query.
 - `pkg/core/batch.go` — Batch loading for list pages: `GetSubjectHeadersTx`, `CollectIndexedTx`, `CollectGroupedTx`, `IDsOf`, `UniqueIDs` (one query per related kind instead of per row).
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
@@ -244,6 +246,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0023_access_grants.sql` — Schema migration: GROUP kind and `security_group`, `USER_MEMBER_OF_GROUP`, kind-wide roles (ACTOR_MANAGER, THING_MANAGER), `access_grant` with history, grants backfilled for existing subjects.
 - `pkg/core/module/db/migrations/0024_case_type_defaults.sql` — Schema migration: a case type's default confidentiality and `case_type_default_grant` template lines.
 - `pkg/core/module/db/migrations/0025_import_provenance.sql` — Schema migration: `import_batch` (one marker per import run, with its counts) and `subject_provenance` (source system, table and id of an imported subject).
+- `pkg/core/module/db/migrations/0026_search_order_indexes.sql` — Schema migration: indexes on the sort keys of the searches and of the relationship lists of a subject (GLD-053).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -488,6 +491,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
 - `cmd/goeland-server/goeland-front/src/composables/useMyAccess.ts` — The caller's level on a subject (contribute, manage, full control) to hide what the server would refuse.
+- `cmd/goeland-server/goeland-front/src/composables/usePagedRelationships.ts` — The relationships of a subject loaded page by page in both directions, with totals and "load more" (GLD-053).
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).

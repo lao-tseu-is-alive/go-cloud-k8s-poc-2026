@@ -1650,9 +1650,12 @@ type SearchActorsResponse struct {
 	// next_page_token fetches the next page; empty on the last page.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	// total_size is the number of matching actors across all pages.
-	TotalSize     int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TotalSize int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	// total_size_capped reports that total_size is a lower bound: counting stops
+	// at 10000 matches, and so does paging (refine the search to go further).
+	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SearchActorsResponse) Reset() {
@@ -1704,6 +1707,13 @@ func (x *SearchActorsResponse) GetTotalSize() int32 {
 		return x.TotalSize
 	}
 	return 0
+}
+
+func (x *SearchActorsResponse) GetTotalSizeCapped() bool {
+	if x != nil {
+		return x.TotalSizeCapped
+	}
+	return false
 }
 
 // DeleteActorRequest soft-deletes an actor.
@@ -2285,12 +2295,13 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\tpage_size\x18\x06 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\x88\x01\n" +
+	"page_token\x18\a \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xb4\x01\n" +
 	"\x14SearchActorsResponse\x12)\n" +
 	"\x06actors\x18\x01 \x03(\v2\x11.goeland.v1.ActorR\x06actors\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"P\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"P\n" +
 	"\x12DeleteActorRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"z\n" +

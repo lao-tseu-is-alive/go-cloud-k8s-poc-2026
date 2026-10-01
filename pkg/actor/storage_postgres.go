@@ -242,6 +242,7 @@ type actorListRow struct {
 // Search runs accent-insensitive + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
 	rows, err := r.pool.Query(ctx, searchActorsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+		"count_limit":     core.CountLimit,
 		"query":           filter.Query,
 		"actor_kind":      int16(filter.ActorKind),
 		"category_code":   filter.OrganizationCatCode,
@@ -263,6 +264,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Actors[i] = &act
 		result.TotalSize = listRows[i].TotalSize
 	}
+	result.TotalSize, result.TotalCapped = core.CapTotal(result.TotalSize)
 	return result, r.hydrateAll(ctx, result.Actors)
 }
 

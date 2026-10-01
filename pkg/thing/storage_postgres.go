@@ -186,7 +186,8 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		box = *filter.BBox
 	}
 	rows, err := r.pool.Query(ctx, searchThingsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
-		"query": filter.Query, "thing_type_code": filter.TypeCode, "has_bbox": filter.BBox != nil,
+		"count_limit": core.CountLimit,
+		"query":       filter.Query, "thing_type_code": filter.TypeCode, "has_bbox": filter.BBox != nil,
 		"e_min": box.EMin, "n_min": box.NMin, "e_max": box.EMax, "n_max": box.NMax,
 		"include_deleted": filter.IncludeDeleted, "limit": filter.Limit, "offset": filter.Offset,
 	}))
@@ -203,6 +204,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Things[i] = &t
 		result.TotalSize = listRows[i].TotalSize
 	}
+	result.TotalSize, result.TotalCapped = core.CapTotal(result.TotalSize)
 	return result, r.hydrateAll(ctx, result.Things)
 }
 

@@ -7,7 +7,7 @@
   import DocumentSearchFilters from '@/components/document/DocumentSearchFilters.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
-  import { formatDate, formatDateTime } from '@/utils/formatters'
+  import { formatDate, formatDateTime, formatTotal } from '@/utils/formatters'
 
   const { t } = useI18n()
   const router = useRouter()
@@ -18,6 +18,7 @@
   const documents = ref<GoDocument[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
+  const totalCapped = ref(false)
   const loading = ref(false)
 
   async function load (reset: boolean) {
@@ -32,6 +33,7 @@
       documents.value = reset ? page : [...documents.value, ...page]
       nextPageToken.value = res.nextPageToken ?? ''
       totalSize.value = res.totalSize ?? documents.value.length
+      totalCapped.value = !!res.totalSizeCapped
     } catch (error) {
       report(error)
     } finally {
@@ -121,7 +123,7 @@
       </v-table>
 
       <v-card-actions>
-        <span class="text-caption text-medium-emphasis">{{ documents.length }} / {{ totalSize }}</span>
+        <span class="text-caption text-medium-emphasis">{{ documents.length }} / {{ formatTotal(totalSize, totalCapped) }}</span>
         <v-spacer />
 
         <v-btn

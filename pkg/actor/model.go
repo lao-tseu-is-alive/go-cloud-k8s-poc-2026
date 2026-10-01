@@ -343,4 +343,6 @@ type SearchResult struct {
 	Actors []*Actor
 	// TotalSize is the number of matching actors across all pages.
 	TotalSize int32
+	// TotalCapped reports that TotalSize is a lower bound (core.MaxCountedTotal, GLD-053).
+	TotalCapped bool
 }

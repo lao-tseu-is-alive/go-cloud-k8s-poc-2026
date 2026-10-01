@@ -878,6 +878,11 @@
     "invalid_argument": "Données invalides."
   },
   "messages": {
+    "relationships": {
+      "shown": "{shown} sur {total}",
+      "loaded": "{shown} affichées",
+      "loadMore": "Charger plus"
+    },
     "relationship": {
       "ended": "Relation terminée ; elle reste dans l'historique.",
       "endHint": "Terminer indique que la relation a pris fin (par exemple un mandat échu) et la conserve dans l'historique. Déliez uniquement un lien créé par erreur.",

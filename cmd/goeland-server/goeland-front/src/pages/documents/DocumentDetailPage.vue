@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { AuditEvent, GoDocument, SubjectRelationship } from '@/api/types'
+  import type { AuditEvent, GoDocument } from '@/api/types'
   import type { DocumentFormModel } from '@/components/document/documentForm'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
@@ -24,6 +24,7 @@
   import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useMyAccess } from '@/composables/useMyAccess'
+  import { usePagedRelationships } from '@/composables/usePagedRelationships'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatBytes } from '@/utils/formatters'
@@ -38,7 +39,10 @@
   // The caller's level (GLD-048) hides what the server would refuse.
   const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const doc = ref<GoDocument | null>(null)
-  const relationships = ref<SubjectRelationship[]>([])
+  const {
+    relationships, hasMore: relHasMore, loading: relLoading, total: relTotal, capped: relCapped,
+    reload: reloadRelationships, loadMore: loadMoreRelationships,
+  } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
 
@@ -67,9 +71,9 @@
   async function reload () {
     loading.value = true
     try {
-      const res = await getDocument(id.value, { includeRelationships: true, includeAudit: true })
+      const res = await getDocument(id.value, { includeAudit: true })
       doc.value = res.document ?? null
-      relationships.value = res.relationships ?? []
+      await reloadRelationships()
       audit.value = res.recentAudit ?? []
     } catch (error) {
       report(error)
@@ -293,9 +297,14 @@
             <v-card-text>
               <DocumentRelationshipsPanel
                 :can-manage="editable"
+                :capped="relCapped"
+                :has-more="relHasMore"
+                :loading="relLoading"
                 :relationships="relationships"
+                :total="relTotal"
                 @add-link="linkOpen = true"
                 @ended="reload"
+                @load-more="loadMoreRelationships"
                 @unlink="doUnlink"
               />
             </v-card-text>

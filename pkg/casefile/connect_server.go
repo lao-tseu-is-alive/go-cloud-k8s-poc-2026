@@ -161,9 +161,10 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.SearchCasesResponse{
-		Cases:         DomainsToProto(result.Cases),
-		NextPageToken: core.NextPageToken(offset, len(result.Cases), result.TotalSize),
-		TotalSize:     result.TotalSize,
+		Cases:           DomainsToProto(result.Cases),
+		NextPageToken:   core.NextPageToken(offset, len(result.Cases), result.TotalSize),
+		TotalSize:       result.TotalSize,
+		TotalSizeCapped: result.TotalCapped,
 	}), nil
 }
 

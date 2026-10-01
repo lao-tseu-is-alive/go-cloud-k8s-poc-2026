@@ -333,6 +333,7 @@ type relationshipListRow struct {
 // ListRelationships returns a page of active relationships for a subject, hydrated with subject refs and types.
 func (r *PostgresRepository) ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error) {
 	rows, err := r.pool.Query(ctx, listRelationshipsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+		"count_limit":            CountLimit,
 		"subject_id":             filter.SubjectID,
 		"outgoing":               filter.Outgoing,
 		"relationship_type_code": filter.RelationshipTypeCode,
@@ -355,6 +356,7 @@ func (r *PostgresRepository) ListRelationships(ctx context.Context, filter Relat
 	if err := r.hydrateRelationships(ctx, result.Relationships); err != nil {
 		return RelationshipResult{}, err
 	}
+	result.TotalSize, result.TotalCapped = CapTotal(result.TotalSize)
 	return result, nil
 }
 

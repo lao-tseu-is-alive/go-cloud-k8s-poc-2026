@@ -6,7 +6,7 @@
   import { searchThings } from '@/api/thingClient'
   import ThingTypeSelect from '@/components/thing/ThingTypeSelect.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
-  import { formatDateTime } from '@/utils/formatters'
+  import { formatDateTime, formatTotal } from '@/utils/formatters'
 
   const { t } = useI18n()
   const router = useRouter()
@@ -17,6 +17,7 @@
   const things = ref<GoThing[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
+  const totalCapped = ref(false)
   const loading = ref(false)
 
   async function load (reset: boolean) {
@@ -27,6 +28,7 @@
       things.value = reset ? page : [...things.value, ...page]
       nextPageToken.value = res.nextPageToken ?? ''
       totalSize.value = res.totalSize ?? things.value.length
+      totalCapped.value = !!res.totalSizeCapped
     } catch (error) {
       report(error)
     } finally {
@@ -128,7 +130,7 @@
       </v-table>
 
       <div class="d-flex align-center justify-space-between pa-2">
-        <span class="text-medium-emphasis">{{ things.length }} / {{ totalSize }}</span>
+        <span class="text-medium-emphasis">{{ things.length }} / {{ formatTotal(totalSize, totalCapped) }}</span>
         <v-btn v-if="nextPageToken" :loading="loading" variant="text" @click="load(false)">{{ t('actions.common.loadMore') }}</v-btn>
       </div>
     </v-card>

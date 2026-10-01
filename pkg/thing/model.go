@@ -198,4 +198,6 @@ type SearchResult struct {
 	Things []*Thing
 	// TotalSize is the number of matches across all pages.
 	TotalSize int32
+	// TotalCapped reports that TotalSize is a lower bound (core.MaxCountedTotal, GLD-053).
+	TotalCapped bool
 }

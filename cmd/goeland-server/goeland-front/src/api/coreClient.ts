@@ -2,6 +2,7 @@ import type {
   AuditEvent,
   BatchGetUsersResponse,
   GetCurrentUserResponse,
+  ListRelationshipsResponse,
   RelationshipType,
   SearchUsersResponse,
   SubjectKind,
@@ -26,15 +27,29 @@ export async function listRelationshipTypes (
   return res.relationshipTypes ?? []
 }
 
-export async function listRelationships (
+/** One page of the relationships of a subject, outgoing or incoming (GLD-053). */
+export function listRelationshipsPage (
   subjectId: string,
-  opts: { outgoing?: boolean, relationshipTypeCode?: string } = {},
+  opts: { outgoing: boolean, relationshipTypeCode?: string, pageSize?: number, pageToken?: string },
+): Promise<ListRelationshipsResponse> {
+  return apiFetch<ListRelationshipsResponse>(`/api/subjects/${encodeURIComponent(subjectId)}/relationships`, {
+    query: { outgoing: opts.outgoing, relationshipTypeCode: opts.relationshipTypeCode, pageSize: opts.pageSize, pageToken: opts.pageToken },
+  })
+}
+
+/** Every relationship of one type and direction (for short lists such as the members of a unit). */
+export async function listAllRelationships (
+  subjectId: string,
+  opts: { outgoing: boolean, relationshipTypeCode: string },
 ): Promise<SubjectRelationship[]> {
-  const res = await apiFetch<{ relationships?: SubjectRelationship[] }>(
-    `/api/subjects/${encodeURIComponent(subjectId)}/relationships`,
-    { query: { outgoing: opts.outgoing, relationshipTypeCode: opts.relationshipTypeCode } },
-  )
-  return res.relationships ?? []
+  const all: SubjectRelationship[] = []
+  let pageToken: string | undefined
+  do {
+    const res = await listRelationshipsPage(subjectId, { ...opts, pageSize: 200, pageToken })
+    all.push(...(res.relationships ?? []))
+    pageToken = res.nextPageToken || undefined
+  } while (pageToken)
+  return all
 }
 
 export async function listAuditEvents (subjectId: string, pageSize = 50): Promise<AuditEvent[]> {

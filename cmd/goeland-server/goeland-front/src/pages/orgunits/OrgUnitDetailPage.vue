@@ -5,7 +5,7 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
-  import { linkSubjects, unlinkSubjects } from '@/api/coreClient'
+  import { linkSubjects, listAllRelationships, unlinkSubjects } from '@/api/coreClient'
   import { createOrgUnit, dissolveOrgUnit, getOrgUnit, updateOrgUnit } from '@/api/orgUnitClient'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
@@ -17,6 +17,7 @@
   import OrgUnitFormDialog from '@/components/orgunit/OrgUnitFormDialog.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useMyAccess } from '@/composables/useMyAccess'
+  import { usePagedRelationships } from '@/composables/usePagedRelationships'
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
@@ -35,7 +36,10 @@
   const unit = ref<OrgUnit | null>(null)
   const ancestors = ref<OrgUnitNode[]>([])
   const children = ref<OrgUnitNode[]>([])
-  const relationships = ref<SubjectRelationship[]>([])
+  const memberships = ref<SubjectRelationship[]>([])
+  const {
+    relationships, hasMore: relHasMore, loading: relLoading, reload: reloadRelationships, loadMore: loadMoreRelationships,
+  } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
 
@@ -47,9 +51,10 @@
   const dissolveReason = ref('')
   const dissolveBusy = ref(false)
 
-  // Membership (USER_MEMBER_OF_ORG_UNIT) has its own section; the table shows the rest.
+  // Membership (USER_MEMBER_OF_ORG_UNIT) has its own section, loaded whole (a few
+  // hundred at most); the table pages through the rest (GLD-053).
   const MEMBER_TYPE = 'USER_MEMBER_OF_ORG_UNIT'
-  const members = computed(() => relationships.value.filter(r => r.relationshipType?.code === MEMBER_TYPE && !r.validTo))
+  const members = computed(() => memberships.value.filter(r => !r.validTo))
   const otherRelationships = computed(() => relationships.value.filter(r => r.relationshipType?.code !== MEMBER_TYPE))
   const memberPick = ref<string | undefined>()
   const memberBusy = ref(false)
@@ -91,11 +96,12 @@
   async function reload () {
     loading.value = true
     try {
-      const res = await getOrgUnit(id.value, { includeRelationships: true, includeAudit: true })
+      const res = await getOrgUnit(id.value, { includeAudit: true })
       unit.value = res.orgUnit ?? null
       ancestors.value = res.ancestors ?? []
       children.value = res.children ?? []
-      relationships.value = res.relationships ?? []
+      memberships.value = await listAllRelationships(id.value, { outgoing: false, relationshipTypeCode: MEMBER_TYPE })
+      await reloadRelationships()
       audit.value = res.recentAudit ?? []
     } catch (error) {
       report(error)
@@ -286,7 +292,15 @@
 
             <v-card-text>
               <p class="text-caption text-medium-emphasis mb-2">{{ t('orgUnits.relationshipsHint') }}</p>
-              <RelationshipTable :can-unlink="false" :relationships="otherRelationships" @ended="reload" />
+
+              <RelationshipTable
+                :can-unlink="false"
+                :has-more="relHasMore"
+                :loading="relLoading"
+                :relationships="otherRelationships"
+                @ended="reload"
+                @load-more="loadMoreRelationships"
+              />
             </v-card-text>
           </v-card>
         </v-col>

@@ -878,6 +878,11 @@
     "invalid_argument": "Invalid data."
   },
   "messages": {
+    "relationships": {
+      "shown": "{shown} of {total}",
+      "loaded": "{shown} shown",
+      "loadMore": "Load more"
+    },
     "relationship": {
       "ended": "Relationship ended; it stays in the history.",
       "endHint": "Ending records that the relationship stopped (for example an ended mandate) and keeps it as history. Use unlink only for a link created by mistake.",

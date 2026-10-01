@@ -6246,6 +6246,11 @@ definitions:
         type: integer
         format: int32
         description: total_size is the number of matching edges across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the search to go further).
     description: ListRelationshipsResponse is one page of edges.
   v1ListRoleHoldersResponse:
     type: object
@@ -6788,6 +6793,11 @@ definitions:
         type: integer
         format: int32
         description: total_size is the number of matching actors across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the search to go further).
     description: SearchActorsResponse is one page of matching actors.
   v1SearchCasesResponse:
     type: object
@@ -6805,6 +6815,11 @@ definitions:
         type: integer
         format: int32
         description: total_size is the number of matching cases across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the search to go further).
     description: SearchCasesResponse is one page of matching cases.
   v1SearchDocumentsResponse:
     type: object
@@ -6822,6 +6837,11 @@ definitions:
         type: integer
         format: int32
         description: total_size is the number of matching documents across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the search to go further).
     description: SearchDocumentsResponse is one page of matching documents.
   v1SearchOrgUnitsResponse:
     type: object
@@ -6856,6 +6876,11 @@ definitions:
         type: integer
         format: int32
         description: total_size is the number of matches across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the search to go further).
     description: SearchThingsResponse is one page of search results.
   v1SearchUsersResponse:
     type: object

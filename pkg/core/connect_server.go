@@ -232,9 +232,10 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.ListRelationshipsResponse{
-		Relationships: DomainRelationshipsToProto(result.Relationships),
-		NextPageToken: NextPageToken(offset, len(result.Relationships), result.TotalSize),
-		TotalSize:     result.TotalSize,
+		Relationships:   DomainRelationshipsToProto(result.Relationships),
+		NextPageToken:   NextPageToken(offset, len(result.Relationships), result.TotalSize),
+		TotalSize:       result.TotalSize,
+		TotalSizeCapped: result.TotalCapped,
 	}), nil
 }
 

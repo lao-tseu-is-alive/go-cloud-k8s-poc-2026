@@ -288,6 +288,7 @@ type caseListRow struct {
 // Search runs the filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
 	rows, err := r.pool.Query(ctx, searchCasesSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+		"count_limit":     core.CountLimit,
 		"query":           filter.Query,
 		"case_type_code":  filter.CaseTypeCode,
 		"status":          int16(filter.Status),
@@ -308,6 +309,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		result.Cases[i] = &c
 		result.TotalSize = listRows[i].TotalSize
 	}
+	result.TotalSize, result.TotalCapped = core.CapTotal(result.TotalSize)
 	return result, r.hydrateAll(ctx, result.Cases)
 }
 

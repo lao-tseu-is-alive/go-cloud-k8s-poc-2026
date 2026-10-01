@@ -119,11 +119,10 @@ RETURNING ` + thingTypeColumns + `;`
 // searchThingsSQL matches the accent-folded search_vector or an exact parcel
 // number, EGRID or EGID, plus type, LV95 extent (index-backed &&, then exact
 // ST_Intersects) and deletion filters.
-var searchThingsSQL = `
-SELECT ` + thingColumns + `,
-COUNT(*) OVER() AS total_count
+var searchThingsSQL = core.CappedPageSQL(`
+SELECT t.id AS id, t.created_at AS sort_key
 FROM thing t
-JOIN record_metadata rm ON rm.subject_id = t.id
+`+core.MetadataLateralSQL("t.id")+`
 LEFT JOIN thing_parcel p ON p.thing_id = t.id
 LEFT JOIN thing_building b ON b.thing_id = t.id
 WHERE (@query = ''
@@ -133,6 +132,4 @@ WHERE (@query = ''
   AND (NOT @has_bbox OR (t.geom && ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056)
        AND ST_Intersects(t.geom, ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056))))
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND ` + core.ReadableSQL("t.id", "rm") + `
-ORDER BY t.created_at DESC
-LIMIT @limit OFFSET @offset;`
+  AND `+core.ReadableSQL("t.id", "rm"), thingColumns, "thing", "t", true)

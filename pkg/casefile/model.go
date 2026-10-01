@@ -191,6 +191,8 @@ type SearchResult struct {
 	Cases []*Case
 	// TotalSize is the number of matching cases across all pages.
 	TotalSize int32
+	// TotalCapped reports that TotalSize is a lower bound (core.MaxCountedTotal, GLD-053).
+	TotalCapped bool
 }
 
 // statusNames are the stable names used in audit events and errors (they

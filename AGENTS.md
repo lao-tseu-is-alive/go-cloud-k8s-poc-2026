@@ -138,6 +138,12 @@ domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
 
+**Volume (GLD-053):** a search or list over a growing table uses `core.CappedPageSQL` (matches
+in index order up to 10 001, the page taken from them, `TotalCapped` reported) with the governance
+joined by `core.MetadataLateralSQL` (a plain join let the planner hash-join every subject), and an
+index on its sort key; detail pages page their relationships (`usePagedRelationships`) instead of
+`includeRelationships`. Measure on the imported data before calling a list fast.
+
 **Legacy data import (GLD-051, GLD-052):** `cmd/goeland-import` (`pkg/legacyimport`) loads a
 brand-new local database from the read-only legacy replica in one transaction (dry run = full run
 rolled back), set-based with COPY, deterministic UUIDv5 ids, a `subject_provenance` row per

@@ -1097,9 +1097,12 @@ type SearchCasesResponse struct {
 	// next_page_token fetches the next page; empty on the last page.
 	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
 	// total_size is the number of matching cases across all pages.
-	TotalSize     int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	TotalSize int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	// total_size_capped reports that total_size is a lower bound: counting stops
+	// at 10000 matches, and so does paging (refine the search to go further).
+	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
 }
 
 func (x *SearchCasesResponse) Reset() {
@@ -1151,6 +1154,13 @@ func (x *SearchCasesResponse) GetTotalSize() int32 {
 		return x.TotalSize
 	}
 	return 0
+}
+
+func (x *SearchCasesResponse) GetTotalSizeCapped() bool {
+	if x != nil {
+		return x.TotalSizeCapped
+	}
+	return false
 }
 
 // DeleteCaseRequest soft-deletes a case.
@@ -1868,12 +1878,13 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\tpage_size\x18\x05 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\x84\x01\n" +
+	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xb0\x01\n" +
 	"\x13SearchCasesResponse\x12&\n" +
 	"\x05cases\x18\x01 \x03(\v2\x10.goeland.v1.CaseR\x05cases\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"O\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"O\n" +
 	"\x11DeleteCaseRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"w\n" +

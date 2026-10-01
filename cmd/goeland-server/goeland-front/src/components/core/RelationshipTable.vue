@@ -2,7 +2,7 @@
   import type { SubjectRelationship } from '@/api/types'
   import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { formatDate, formatDateTime } from '@/utils/formatters'
+  import { formatDate, formatDateTime, formatTotal } from '@/utils/formatters'
   import EndRelationshipDialog from './EndRelationshipDialog.vue'
   import SubjectLink from './SubjectLink.vue'
 
@@ -10,8 +10,13 @@
     relationships?: SubjectRelationship[]
     // when true, "end" and "unlink" actions are shown (guarded by the parent)
     canUnlink?: boolean
+    // paging (usePagedRelationships): more pages exist, the total (a lower bound when capped)
+    hasMore?: boolean
+    loading?: boolean
+    total?: number
+    capped?: boolean
   }>()
-  const emit = defineEmits<{ unlink: [rel: SubjectRelationship], ended: [rel: SubjectRelationship] }>()
+  const emit = defineEmits<{ 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship], 'load-more': [] }>()
   const { t } = useI18n()
 
   const endOpen = ref(false)
@@ -105,6 +110,25 @@
         </tr>
       </tbody>
     </v-table>
+
+    <div v-if="relationships?.length && (hasMore || total !== undefined)" class="d-flex align-center ga-2 mt-2">
+      <span class="text-caption text-medium-emphasis">
+        {{ total === undefined ? t('messages.relationships.loaded', { shown: relationships.length }) : t('messages.relationships.shown', { shown: relationships.length, total: formatTotal(total, capped) }) }}
+      </span>
+
+      <v-spacer />
+
+      <v-btn
+        v-if="hasMore"
+        :loading="loading"
+        prepend-icon="mdi-chevron-down"
+        size="small"
+        variant="tonal"
+        @click="emit('load-more')"
+      >
+        {{ t('messages.relationships.loadMore') }}
+      </v-btn>
+    </div>
 
     <EndRelationshipDialog v-model="endOpen" :relationship="endTarget" @ended="emit('ended', $event)" />
   </div>

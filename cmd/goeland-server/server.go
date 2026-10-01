@@ -58,6 +58,14 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("parse database URL: %w", err)
 	}
 	poolConfig.MaxConns = config.MaxConnections
+	// JIT compilation costs ~100-150 ms on the capped search queries, whose
+	// cost estimates cross jit_above_cost while they run in tens of
+	// milliseconds (GLD-053): interactive requests never gain from it.
+	poolConfig.ConnConfig.RuntimeParams["jit"] = "off"
+	// The searches use optional filters (@query = '' OR ...): after five runs of
+	// a prepared statement PostgreSQL may switch to a generic plan, blind to the
+	// values, which took a text search from 0.2 s to 2.3 s (GLD-053).
+	poolConfig.ConnConfig.RuntimeParams["plan_cache_mode"] = "force_custom_plan"
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("open database pool: %w", err)

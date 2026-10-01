@@ -296,6 +296,8 @@ type RelationshipResult struct {
 	Relationships []*SubjectRelationship
 	// TotalSize is the number of matching edges across all pages.
 	TotalSize int32
+	// TotalCapped reports that TotalSize is a lower bound (core.MaxCountedTotal, GLD-053).
+	TotalCapped bool
 }
 
 // AuditFilter controls audit-event listing.

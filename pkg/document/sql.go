@@ -164,17 +164,14 @@ ORDER BY code;`
 
 // --- search ------------------------------------------------------------------
 
-const searchDocumentColumns = documentColumns + `,
-COUNT(*) OVER() AS total_count`
-
 // searchDocumentsSQL performs full-text search over the generated tsvector plus
 // governance and relationship filters.
 // The query term is folded through immutable_unaccent() (migration 0005) so it
 // matches the equally accent-folded search_vector: "chateau" finds "château".
-var searchDocumentsSQL = `
-SELECT ` + searchDocumentColumns + `
+var searchDocumentsSQL = core.CappedPageSQL(`
+SELECT d.id AS id, d.created_at AS sort_key
 FROM document d
-JOIN record_metadata rm ON rm.subject_id = d.id
+`+core.MetadataLateralSQL("d.id")+`
 LEFT JOIN document_version cv ON cv.id = d.current_version_id
 WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
   AND (@document_type_code = '' OR d.document_type_id = (SELECT id FROM document_type WHERE code = @document_type_code))
@@ -194,9 +191,7 @@ WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_una
         WHERE sr.deleted_at IS NULL
           AND sr.source_subject_id = d.id
           AND sr.target_subject_id = @thing_id))
-  AND ` + core.ReadableSQL("d.id", "rm") + `
-ORDER BY d.created_at DESC
-LIMIT @limit OFFSET @offset;`
+  AND `+core.ReadableSQL("d.id", "rm"), documentColumns, "document", "d", true)
 
 // --- document_type administration (GLD-040) ---------------------------------------------
 

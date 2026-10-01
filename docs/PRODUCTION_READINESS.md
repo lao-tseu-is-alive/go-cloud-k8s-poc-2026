@@ -42,6 +42,13 @@ Provide **either** a full DSN or the individual parts (the DSN wins):
 Pool size is capped by `GOELAND_DB_MAX_CONNECTIONS` (default 10, range 1–1000). Size it
 against `max_connections` × replica count.
 
+The server sets two session parameters on its own connections (nothing to configure on the
+instance), both measured at production volume (GLD-053): `jit=off` (JIT compilation added
+100–150 ms to searches that run in tens of milliseconds) and `plan_cache_mode=force_custom_plan`
+(a generic plan of the optional-filter searches took a text search from 0.2 s to 2.3 s). After a
+bulk load (`cmd/goeland-import` does it), run `ANALYZE`: without statistics the planner picks very
+poor plans. Search totals are counted up to 10 000 matches (`totalSizeCapped` beyond).
+
 ## 2. Migrations
 
 Migrations are embedded (`pkg/core/module/db/migrations`) and applied automatically on

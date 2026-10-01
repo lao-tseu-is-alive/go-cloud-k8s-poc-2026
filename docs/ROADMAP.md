@@ -335,9 +335,14 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
 - [~] **GLD-052 — Import wave 1**: employees (`app_user`, unit membership), org units, security
   groups, case types, cases with status and confidentiality, grants, actors with contacts and a
   correspondence address, and the actor, employee and unit roles on cases.
-- [ ] **GLD-053 — Behaviour at production volume**: measure searches, the read filter, pagination
+- [~] **GLD-053 — Behaviour at production volume**: measure searches, the read filter, pagination
   totals and detail pages on the imported data (~610k subjects, ~2.4M grants, ~2.8M
-  relationships) and fix what does not hold (indexes, estimated totals, ...).
+  relationships) and fix what does not hold (indexes, estimated totals, ...). Done 2026-10-01:
+  totals counted up to 10 000 (`total_size_capped`, `core.CappedPageSQL`), governance joined
+  through a LATERAL subquery so scans follow the sort index (migration `0026`), `jit=off` and
+  `plan_cache_mode=force_custom_plan` on the server's connections, relationship panels paged
+  ("Charger plus", members of a unit loaded whole): unfiltered case search 2.7 s → 0.04 s, text
+  search 0.23 s, a unit with ~125k incoming relationships 0.07 s.
 - [ ] **GLD-054 — Import wave 2**: timeline entries, document metadata (external reference, no
   bytes), things, links between cases.
 

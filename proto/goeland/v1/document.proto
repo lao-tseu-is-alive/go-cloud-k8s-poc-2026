@@ -430,6 +430,9 @@ message SearchDocumentsResponse {
   string next_page_token = 2;
   // total_size is the number of matching documents across all pages.
   int32 total_size = 3;
+  // total_size_capped reports that total_size is a lower bound: counting stops
+  // at 10000 matches, and so does paging (refine the search to go further).
+  bool total_size_capped = 4;
 }
 
 // LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects

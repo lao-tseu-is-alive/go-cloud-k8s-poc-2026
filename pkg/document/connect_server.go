@@ -287,9 +287,10 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.SearchDocumentsResponse{
-		Documents:     DomainsToProto(result.Documents),
-		NextPageToken: core.NextPageToken(offset, len(result.Documents), result.TotalSize),
-		TotalSize:     result.TotalSize,
+		Documents:       DomainsToProto(result.Documents),
+		NextPageToken:   core.NextPageToken(offset, len(result.Documents), result.TotalSize),
+		TotalSize:       result.TotalSize,
+		TotalSizeCapped: result.TotalCapped,
 	}), nil
 }
 

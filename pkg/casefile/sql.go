@@ -67,22 +67,19 @@ ORDER BY code;`
 // --- search ----------------------------------------------------------------------
 
 // searchCasesSQL matches the accent-folded search_vector (immutable_unaccent,
-// migration 0005) or the exact business reference, plus type/status/deletion filters.
-var searchCasesSQL = `
-SELECT ` + caseColumns + `,
-COUNT(*) OVER() AS total_count
+// migration 0005) or the exact business reference, plus type/status/deletion filters,
+// newest first, with a capped total (core.CappedPageSQL).
+var searchCasesSQL = core.CappedPageSQL(`
+SELECT c.id AS id, c.created_at AS sort_key
 FROM case_file c
-JOIN subject_ref sr ON sr.id = c.id
-JOIN record_metadata rm ON rm.subject_id = c.id
+`+core.MetadataLateralSQL("c.id")+`
 WHERE (@query = ''
        OR c.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query))
-       OR sr.business_ref = @query)
+       OR EXISTS (SELECT 1 FROM subject_ref sr WHERE sr.id = c.id AND sr.business_ref = @query))
   AND (@case_type_code = '' OR c.case_type_id = (SELECT id FROM case_type WHERE code = @case_type_code))
   AND (@status::smallint = 0 OR c.status = @status::smallint)
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND ` + core.ReadableSQL("c.id", "rm") + `
-ORDER BY c.created_at DESC
-LIMIT @limit OFFSET @offset;`
+  AND `+core.ReadableSQL("c.id", "rm"), caseColumns, "case_file", "c", true)
 
 // --- case_type administration (GLD-040) ---------------------------------------------
 

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { AuditEvent, GoActor, SubjectRelationship } from '@/api/types'
+  import type { AuditEvent, GoActor } from '@/api/types'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
@@ -17,6 +17,7 @@
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { useMyAccess } from '@/composables/useMyAccess'
+  import { usePagedRelationships } from '@/composables/usePagedRelationships'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
 
@@ -31,7 +32,10 @@
   // The caller's level (GLD-048) hides what the server would refuse.
   const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const actor = ref<GoActor | null>(null)
-  const relationships = ref<SubjectRelationship[]>([])
+  const {
+    relationships, hasMore: relHasMore, loading: relLoading, total: relTotal, capped: relCapped,
+    reload: reloadRelationships, loadMore: loadMoreRelationships,
+  } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
 
@@ -57,9 +61,9 @@
   async function reload () {
     loading.value = true
     try {
-      const res = await getActor(id.value, { includeRelationships: true, includeAudit: true })
+      const res = await getActor(id.value, { includeAudit: true })
       actor.value = res.actor ?? null
-      relationships.value = res.relationships ?? []
+      await reloadRelationships()
       audit.value = res.recentAudit ?? []
     } catch (error) {
       report(error)
@@ -273,8 +277,13 @@
 
               <RelationshipTable
                 :can-unlink="editable"
+                :capped="relCapped"
+                :has-more="relHasMore"
+                :loading="relLoading"
                 :relationships="relationships"
+                :total="relTotal"
                 @ended="reload"
+                @load-more="loadMoreRelationships"
                 @unlink="doUnlink"
               />
             </v-card-text>
