@@ -79,7 +79,8 @@ func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goela
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	if err != nil {
 		return nil, err
 	}
 	act, err := s.service.Get(ctx, id)
@@ -88,7 +89,11 @@ func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goela
 	}
 	resp := &goelandv1.GetActorResponse{Actor: DomainToProto(act)}
 	if req.Msg.IncludeRelationships {
-		rels, err := s.service.Relationships(ctx, id)
+		viewer, err := s.authz.ViewerOf(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		rels, err := s.service.Relationships(ctx, id, viewer)
 		if err != nil {
 			return nil, s.mapError(err)
 		}
@@ -152,7 +157,8 @@ func (s *ConnectServer) UpdateActor(ctx context.Context, req *connect.Request[go
 
 // SearchActors runs an accent-insensitive + filtered search.
 func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[goelandv1.SearchActorsRequest]) (*connect.Response[goelandv1.SearchActorsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -160,6 +166,7 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		Viewer:              viewer,
 		Query:               req.Msg.Query,
 		ActorKind:           Kind(req.Msg.ActorKind),
 		OrganizationCatCode: req.Msg.OrganizationCategoryCode,

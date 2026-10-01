@@ -87,6 +87,9 @@ func (s *Service) List(ctx context.Context, filter ListFilter) (ListResult, erro
 	}
 	filter.Limit = limit
 	filter.Offset = max(filter.Offset, 0)
+	if !filter.MaxVisibility.Valid() {
+		filter.MaxVisibility = VisibilityCaseParticipants
+	}
 	for _, t := range filter.Types {
 		if !t.Valid() {
 			return ListResult{}, fmt.Errorf("%w: unknown entry type %d", core.ErrInvalidInput, t)

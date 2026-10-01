@@ -255,7 +255,7 @@ All add read-only governance and audit panels. Bilingual (fr-CH default, en).
   computes SHA-256/size/mime server-side and registers a **deduplicated** `content_blob`
   (identical content returns the existing blob, `reused: true`, and the new bytes are
   discarded); the UI passes the returned `contentBlobId` to `CreateDocument` or
-  `AddDocumentVersion`. `GET /api/documents/download?ref=…` (`goeland:read`) streams a blob back. Blobs live under `GOELAND_DOCUMENT_PATH` (default
+  `AddDocumentVersion`. `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049). Blobs live under `GOELAND_DOCUMENT_PATH` (default
   `./go_documents`, gitignored); a single upload is capped by `GOELAND_MAX_UPLOAD_BYTES`
   (default 100 MiB).
 
@@ -299,7 +299,7 @@ DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api
 `POST /api/documents/{id}/links` · `DELETE /api/documents/{id}` ·
 `POST /api/documents/{documentId}/versions` · `GET /api/documents/{documentId}/versions`. Plus two
 **out-of-proto** binary endpoints (see [Web UI](#web-ui)):
-`POST /api/documents/upload` and `GET /api/documents/download`.
+`POST /api/documents/upload` and `GET /api/documents/{id}/content`.
 
 ActorService: `GET /api/organization-categories` · `POST /api/actors` ·
 `GET /api/actors/{id}` · `PATCH /api/actors/{id}` · `GET /api/actors/search` ·

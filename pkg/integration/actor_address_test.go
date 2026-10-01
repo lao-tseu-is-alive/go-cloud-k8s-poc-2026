@@ -56,7 +56,7 @@ func TestActorAddressesAndBranch(t *testing.T) {
 		t.Fatalf("link branch to head: %v", err)
 	}
 	for _, id := range []uuid.UUID{head.ID, branch.ID} {
-		rels, err := env.actorSvc.Relationships(env.ctx, id)
+		rels, err := env.actorSvc.Relationships(env.ctx, id, operatorViewer)
 		if err != nil || len(rels) != 1 || rels[0].RelationshipType.Code != "ACTOR_BRANCH_OF_ACTOR" {
 			t.Fatalf("the branch link must be listed from both actors: %+v (%v)", rels, err)
 		}

@@ -35,10 +35,11 @@ func NewConnectServer(service *Service, authz *core.Authorizer, log *slog.Logger
 
 // ListOrgUnits returns the whole tree as a flat list.
 func (s *ConnectServer) ListOrgUnits(ctx context.Context, req *connect.Request[goelandv1.ListOrgUnitsRequest]) (*connect.Response[goelandv1.ListOrgUnitsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
-	nodes, err := s.service.List(ctx, req.Msg.IncludeDissolved)
+	nodes, err := s.service.List(ctx, req.Msg.IncludeDissolved, viewer)
 	if err != nil {
 		return nil, s.mapError(err)
 	}
@@ -47,7 +48,8 @@ func (s *ConnectServer) ListOrgUnits(ctx context.Context, req *connect.Request[g
 
 // SearchOrgUnits runs the filtered unit search.
 func (s *ConnectServer) SearchOrgUnits(ctx context.Context, req *connect.Request[goelandv1.SearchOrgUnitsRequest]) (*connect.Response[goelandv1.SearchOrgUnitsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -55,6 +57,7 @@ func (s *ConnectServer) SearchOrgUnits(ctx context.Context, req *connect.Request
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		Viewer:           viewer,
 		Query:            req.Msg.Query,
 		IncludeDissolved: req.Msg.IncludeDissolved,
 		Limit:            int(req.Msg.PageSize),
@@ -76,7 +79,8 @@ func (s *ConnectServer) GetOrgUnit(ctx context.Context, req *connect.Request[goe
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	if err != nil {
 		return nil, err
 	}
 	detail, err := s.service.Get(ctx, id)
@@ -89,7 +93,11 @@ func (s *ConnectServer) GetOrgUnit(ctx context.Context, req *connect.Request[goe
 		Children:  NodesToProto(detail.Children),
 	}
 	if req.Msg.IncludeRelationships {
-		rels, err := s.service.Relationships(ctx, id)
+		viewer, err := s.authz.ViewerOf(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		rels, err := s.service.Relationships(ctx, id, viewer)
 		if err != nil {
 			return nil, s.mapError(err)
 		}

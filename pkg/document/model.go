@@ -267,6 +267,8 @@ type UpdateInput struct {
 
 // SearchFilter controls document search. Results are newest first.
 type SearchFilter struct {
+	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
+	Viewer core.Viewer
 	// Query is an accent-insensitive full-text query over title and
 	// description; empty matches every document.
 	Query string
@@ -279,7 +281,8 @@ type SearchFilter struct {
 	// that thing; nil means any.
 	ThingID *uuid.UUID
 	// ConfidentialityMax is the inclusive upper bound on the confidentiality
-	// level; 0 or less means no cap (5).
+	// level; 0 or less means no cap (5). It only narrows: Viewer's read
+	// rights apply in any case (GLD-049).
 	ConfidentialityMax int32
 	// OnlyRecords restricts results to documents whose current version is a record.
 	OnlyRecords bool

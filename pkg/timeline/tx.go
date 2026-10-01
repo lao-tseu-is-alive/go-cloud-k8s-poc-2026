@@ -65,12 +65,12 @@ func RecordSystemEntryTx(ctx context.Context, q core.Querier, in SystemEntry) (*
 }
 
 // lockCaseForEntryTx locks an open case (core.EnsureOpenCaseTx) and requires
-// CONTRIBUTE on it to add an entry.
-func lockCaseForEntryTx(ctx context.Context, q core.Querier, caseID uuid.UUID, operatorID string) error {
+// CONTRIBUTE on it to add an entry, or the level reading audience if higher.
+func lockCaseForEntryTx(ctx context.Context, q core.Querier, caseID uuid.UUID, operatorID string, audience Visibility) error {
 	if err := core.EnsureOpenCaseTx(ctx, q, caseID); err != nil {
 		return err
 	}
-	return core.EnsureAccessTx(ctx, q, operatorID, caseID, core.LevelContribute)
+	return core.EnsureAccessTx(ctx, q, operatorID, caseID, max(core.LevelContribute, audience.Needs()))
 }
 
 // lockDraftTx locks the entry's case (see core.EnsureOpenCaseTx), requires the
@@ -84,6 +84,9 @@ func lockDraftTx(ctx context.Context, q core.Querier, id uuid.UUID, operatorID s
 	}
 	if err := core.EnsureOpenCaseTx(ctx, q, current.CaseID); err != nil {
 		return nil, err
+	}
+	if current.CreatedBy != operatorID {
+		need = max(need, current.Visibility.Needs()) // an entry beyond the operator's audience stays out of reach
 	}
 	if err := core.EnsureAccessTx(ctx, q, operatorID, current.CaseID, need); err != nil {
 		return nil, err

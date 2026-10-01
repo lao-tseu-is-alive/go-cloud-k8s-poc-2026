@@ -134,6 +134,8 @@ type CreateInput struct {
 
 // SearchFilter controls unit search, ordered by label.
 type SearchFilter struct {
+	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
+	Viewer core.Viewer
 	// Query is matched accent-insensitively against abbreviation, label and
 	// description, or exactly against the abbreviation (any case) or the
 	// external reference.

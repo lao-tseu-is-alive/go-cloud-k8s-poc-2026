@@ -132,11 +132,11 @@ func assertDissolution(t *testing.T, env *testEnv, parent, child *orgunit.OrgUni
 	if _, _, err := env.orgUnitSvc.Create(ctx, under); !errors.Is(err, core.ErrInvalidInput) {
 		t.Fatalf("a child of a dissolved unit: want ErrInvalidInput, got %v", err)
 	}
-	live, err := env.orgUnitSvc.List(ctx, false)
+	live, err := env.orgUnitSvc.List(ctx, false, core.Viewer{})
 	if err != nil || containsNode(live, child.ID) || !containsNode(live, parent.ID) {
 		t.Fatalf("the tree hides dissolved units by default (%v)", err)
 	}
-	all, err := env.orgUnitSvc.List(ctx, true)
+	all, err := env.orgUnitSvc.List(ctx, true, core.Viewer{})
 	if err != nil || !containsNode(all, child.ID) {
 		t.Fatalf("include_dissolved returns them (%v)", err)
 	}

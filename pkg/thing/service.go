@@ -80,8 +80,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Thing, error) {
 }
 
 // Relationships returns the thing's relationships in both directions.
-func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
-	return s.coreSvc.SubjectRelationships(ctx, id)
+func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
+	return s.coreSvc.SubjectRelationships(ctx, id, viewer)
 }
 
 // RecentAudit returns the most recent audit events of a thing, newest first.

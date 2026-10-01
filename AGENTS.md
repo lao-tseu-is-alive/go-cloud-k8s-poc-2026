@@ -132,8 +132,7 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-Filtered searches and lists, applied confidentiality on downloads and timeline visibility
-(GLD-049), storage (MinIO),
+Default grants per case type (GLD-050), storage (MinIO),
 search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
@@ -175,7 +174,7 @@ pkg/timeline/                case timeline (suivis): entries, corrections, cited
 pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
 cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
   ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
-  ├── upload.go              out-of-proto POST /upload + GET /download (own bearer check)
+  ├── upload.go              out-of-proto POST /upload + GET /{id}/content (own bearer check)
   ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas inventory)
@@ -270,7 +269,18 @@ a confidential subject (`confidentiality_level` >= 2) gets neither roles nor the
 Every new subject gets its creator's FULL_CONTROL and its owning unit's MANAGE
 (`core.InsertRecordMetadataTx`); a document deposited from a case copies the case's grants and
 confidentiality once (`core.CopyGrantsTx`), and attaching an existing document copies nothing.
-New RPCs must add their check. Searches and lists are not filtered yet (GLD-049).
+New RPCs must add their check.
+
+**Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
+query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
+groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
+and the query adds `core.ReadableSQL(idExpr, rmAlias)` with `viewer.AddTo(args)` (a zero Viewer
+sees public subjects only). Relationship lists drop edges whose other end is unreadable. A
+timeline entry's visibility needs READ (participants), CONTRIBUTE (internal) or MANAGE
+(restricted) on the case, except for its author, to read or to write. Document bytes are
+downloaded through `GET /api/documents/{id}/content[?versionId=]` (READ on the document), and the
+automatic reuse of identical content only picks a document the caller may read. New lists must
+apply the predicate.
 
 **Application roles (GLD-047):** administrators are decided in Goéland, never by the token.
 `core.RecordingVerifier` strips `goeland:admin` from what the token says and adds it back for a
@@ -392,7 +402,7 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   returns a `contentBlobId` that the SPA passes to `CreateDocument` / `AddDocumentVersion`
   (so validation/governance/audit still flow through the proto path). Never accept a
   client-supplied digest as content identity: automatic document reuse keys on the
-  server-registered blob. `GET /api/documents/download?ref=…` (`goeland:read`) streams a blob back.
+  server-registered blob. `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049).
 - **Document model (spec v2):** `document` (logical object) → `document_version`
   (append-only; `document.current_version_id` is explicit; final/record versions are
   immutable and versions are never deleted — DB trigger) → `content_blob` (unique SHA-256).

@@ -54,7 +54,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
-| §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | 🟡 | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; searches, lists, downloads and timeline visibility in GLD-049 |
+| §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | ✅ | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; GLD-049: searches and lists filtered in SQL (`core.ReadableSQL`, exact pagination), downloads through the document (`GET /api/documents/{id}/content`), timeline visibility by level, document reuse only among readable documents; default grants per case type in GLD-050 |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
 ---
@@ -154,9 +154,10 @@ Not betterments, just a different-but-equivalent option chosen for consistency:
 
 ### 3c. Known gaps (LESS than the spec — backlog, not enhancements)
 
-- **Authorization is scope-based only** (`goeland:read` / `goeland:write`). The `Permission`
-  enum exists in proto, but `access_grant`, per-subject grants and deny-by-default
-  confidentiality (spec §10) are **not** enforced yet. Tracked in §1 (🟡) and §5.
+- **Authorization follow-ups** — per-subject grants, confidentiality and filtered lists are
+  enforced (GLD-048, GLD-049); default grants per case type (GLD-050) and the sensitive read
+  audit (GLD-033) are not built yet. The labels of an org unit's ancestors and children and of
+  the documents cited by a timeline entry are shown without a read check.
 
 ### 3d. Review quick-wins applied (2026-07-07, from `reports/report_20260707_codex.md`)
 
@@ -236,7 +237,10 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   document, and the new context is expressed by relationships. ⚠️ Accepted risk: until real
   authorization exists (GLD-017), this can link or reveal a document of a confidential case
   from another case, and an upload response can act as an existence oracle. GLD-017 must
-  revisit reuse against confidentiality and read rights.
+  revisit reuse against confidentiality and read rights. **Revisited in GLD-049:** reuse only
+  picks a document the caller may read (otherwise a new document is created on the same blob),
+  so it neither reveals nor attaches an unreadable document; the upload's `reused` flag on the
+  blob remains the accepted existence oracle.
 - **API stays in `goeland.v1` (v2 §21)** — no `goeland.v2` package: nothing runs in
   production, so the Document/Version/Blob split evolves `goeland.v1` directly and obsolete
   `Document` fields may be removed once the SPA is migrated, without a deprecation period.

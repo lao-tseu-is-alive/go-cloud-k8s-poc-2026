@@ -8,8 +8,10 @@ import (
 	"mime"
 	"net/http"
 	"path/filepath"
+	"strconv"
 	"strings"
 
+	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -133,33 +135,89 @@ func uploadHandler(docs *document.Service, log *slog.Logger) http.HandlerFunc {
 	}
 }
 
-// downloadHandler streams previously uploaded content back by its storage
-// reference (passed as ?ref=) through any blobstore.Store; access is gated by
-// httpAuthMiddleware. Seekable objects are served with http.ServeContent
-// (range requests, content-type sniffing by name); others are streamed.
-func downloadHandler(store blobstore.Store, log *slog.Logger) http.HandlerFunc {
+// contentHandler streams the bytes of a document version, the current one or
+// the one named by ?versionId= (GLD-049): the caller needs READ on the
+// document, so content is reached through its governed document and never by a
+// raw storage reference. Seekable objects are served with http.ServeContent
+// (range requests); others are streamed.
+func contentHandler(docs *document.Service, store blobstore.Store, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
-		ref := r.URL.Query().Get("ref")
-		obj, err := store.Get(r.Context(), ref)
+		documentID, versionID, err := contentRequest(r)
+		if err != nil {
+			writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+			return
+		}
+		user, _ := authadapter.UserFromContext(r.Context())
+		blob, err := docs.Content(r.Context(), core.OperatorID(user), documentID, versionID)
+		if err != nil {
+			writeContentError(w, log, err)
+			return
+		}
+		obj, err := store.Get(r.Context(), blob.StorageRef)
 		if errors.Is(err, blobstore.ErrInvalidRef) || errors.Is(err, blobstore.ErrNotFound) {
-			writeJSON(w, http.StatusNotFound, map[string]string{"error": "blob not found"})
+			writeJSON(w, http.StatusNotFound, map[string]string{"error": "content not found"})
 			return
 		}
 		if err != nil {
-			log.Error("download: open blob failed", "error", err, "ref", ref)
+			log.Error("download: open blob failed", "error", err, "content_blob_id", blob.ID)
 			writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to read file"})
 			return
 		}
 		defer obj.Close()
+		contentType := blob.MimeType
+		if contentType == "" {
+			contentType = "application/octet-stream"
+		}
+		w.Header().Set("Content-Type", contentType)
 		info := obj.Info()
 		if seeker, ok := obj.(io.ReadSeeker); ok {
 			http.ServeContent(w, r, info.Name, info.ModTime, seeker)
 			return
 		}
-		w.Header().Set("Content-Type", "application/octet-stream")
 		if _, err := io.Copy(w, obj); err != nil {
-			log.Warn("download: stream interrupted", "error", err, "ref", ref)
+			log.Warn("download: stream interrupted", "error", err, "content_blob_id", blob.ID)
 		}
+	}
+}
+
+// contentRequest reads the document id (path) and the optional version id
+// (?versionId=) of a content download; any other query parameter is refused.
+func contentRequest(r *http.Request) (uuid.UUID, *uuid.UUID, error) {
+	documentID, err := uuid.Parse(r.PathValue("id"))
+	if err != nil {
+		return uuid.Nil, nil, errors.New("invalid document id")
+	}
+	query := r.URL.Query()
+	for name := range query {
+		if name != "versionId" {
+			return uuid.Nil, nil, errors.New("unknown query parameter " + strconv.Quote(name))
+		}
+	}
+	raw := query.Get("versionId")
+	if raw == "" {
+		return documentID, nil, nil
+	}
+	versionID, err := uuid.Parse(raw)
+	if err != nil {
+		return uuid.Nil, nil, errors.New("invalid version id")
+	}
+	return documentID, &versionID, nil
+}
+
+// writeContentError answers a refused or failed content download: an unknown
+// document, version or content and an unreadable document are told apart as
+// 404 and 403, like the Connect API.
+func writeContentError(w http.ResponseWriter, log *slog.Logger, err error) {
+	switch {
+	case errors.Is(err, core.ErrNotFound):
+		writeJSON(w, http.StatusNotFound, map[string]string{"error": "document content not found"})
+	case errors.Is(err, core.ErrPermissionDenied):
+		writeJSON(w, http.StatusForbidden, map[string]string{"error": "permission denied"})
+	case errors.Is(err, core.ErrInvalidInput):
+		writeJSON(w, http.StatusBadRequest, map[string]string{"error": err.Error()})
+	default:
+		log.Error("download: read content failed", "error", err)
+		writeJSON(w, http.StatusInternalServerError, map[string]string{"error": "failed to read file"})
 	}
 }
 

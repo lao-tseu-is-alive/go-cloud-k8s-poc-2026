@@ -1,5 +1,7 @@
 package thing
 
+import "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+
 // SQL fragments for the thing repository. Column projections are the single
 // source of truth for pgx named scanning; they are alias-prefixed, so INSERT
 // statements alias their target (AS t). The geometry is read as GeoJSON with
@@ -117,7 +119,7 @@ RETURNING ` + thingTypeColumns + `;`
 // searchThingsSQL matches the accent-folded search_vector or an exact parcel
 // number, EGRID or EGID, plus type, LV95 extent (index-backed &&, then exact
 // ST_Intersects) and deletion filters.
-const searchThingsSQL = `
+var searchThingsSQL = `
 SELECT ` + thingColumns + `,
 COUNT(*) OVER() AS total_count
 FROM thing t
@@ -131,5 +133,6 @@ WHERE (@query = ''
   AND (NOT @has_bbox OR (t.geom && ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056)
        AND ST_Intersects(t.geom, ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056))))
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND ` + core.ReadableSQL("t.id", "rm") + `
 ORDER BY t.created_at DESC
 LIMIT @limit OFFSET @offset;`

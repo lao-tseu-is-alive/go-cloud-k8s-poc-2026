@@ -23,11 +23,10 @@
   const downloading = ref(false)
 
   async function download () {
-    const ref = content.value?.storageRef
-    if (!ref) return
+    if (!content.value?.storageRef) return
     downloading.value = true
     try {
-      await downloadDocumentBlob(ref, props.document.title || 'document')
+      await downloadDocumentBlob(documentId(), props.document.title || 'document', props.document.currentVersion?.id)
     } catch (error) {
       report(error)
     } finally {

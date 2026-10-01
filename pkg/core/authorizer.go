@@ -50,3 +50,32 @@ func (a *Authorizer) Require(ctx context.Context, user *authadapter.Authenticate
 	}
 	return nil
 }
+
+// Reader authenticates the caller with the read scope and resolves it as the
+// Viewer a filtered search or list runs for (GLD-049); failures are Connect errors.
+func (a *Authorizer) Reader(ctx context.Context) (Viewer, error) {
+	user, err := RequireCaller(ctx, ScopeRead)
+	if err != nil {
+		return Viewer{}, err
+	}
+	return a.ViewerOf(ctx, user)
+}
+
+// ViewerOf resolves an authenticated caller as a Viewer; failures are Connect errors.
+func (a *Authorizer) ViewerOf(ctx context.Context, user *authadapter.AuthenticatedUser) (Viewer, error) {
+	v, err := ViewerTx(ctx, a.q, OperatorID(user))
+	if err != nil {
+		return Viewer{}, ToConnectError(a.log, "access", err)
+	}
+	return v, nil
+}
+
+// Access returns the caller's effective level on subjectID (e.g. to filter a
+// case's timeline by visibility); failures are Connect errors.
+func (a *Authorizer) Access(ctx context.Context, user *authadapter.AuthenticatedUser, subjectID uuid.UUID) (Access, error) {
+	access, err := EffectiveAccessTx(ctx, a.q, OperatorID(user), subjectID)
+	if err != nil {
+		return Access{}, ToConnectError(a.log, "access", err)
+	}
+	return access, nil
+}

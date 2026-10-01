@@ -317,6 +317,8 @@ type UpdateInput struct {
 // SearchFilter controls actor search.
 // Results are ordered by display name.
 type SearchFilter struct {
+	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
+	Viewer core.Viewer
 	// Query is an accent-insensitive full-text query over the display and
 	// legal names; empty matches every actor.
 	Query string

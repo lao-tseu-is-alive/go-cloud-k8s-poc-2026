@@ -69,6 +69,8 @@ func FormatAllocatedBusinessRef(period string, sequence int64) string {
 
 // LookupFilter selects subjects by business reference.
 type LookupFilter struct {
+	// Viewer is who looks up: only the subjects it may read are returned (GLD-049).
+	Viewer Viewer
 	// BusinessRef is the required, exact reference to find.
 	BusinessRef string
 	// Namespace restricts the match to one namespace; empty matches any namespace,

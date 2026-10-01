@@ -81,3 +81,27 @@ SELECT EXISTS (
     JOIN app_user me ON me.subject_id = r.source_subject_id
     WHERE me.user_id = @user_id AND r.target_subject_id = @unit_id
       AND r.deleted_at IS NULL AND r.valid_to IS NULL);`
+
+// viewerPrincipalsSQL lists the subjects a user's grants may come through: its
+// live groups, and its live units with all their ancestors.
+const viewerPrincipalsSQL = `
+WITH RECURSIVE
+me AS (SELECT u.subject_id FROM app_user u WHERE u.user_id = @user_id),
+up AS (
+    SELECT r.target_subject_id AS unit_id, 0 AS depth
+    FROM subject_relationship r
+    JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_MEMBER_OF_ORG_UNIT'
+    JOIN org_unit ou ON ou.id = r.target_subject_id AND ou.dissolved_at IS NULL
+    WHERE r.source_subject_id = (SELECT subject_id FROM me) AND r.deleted_at IS NULL AND r.valid_to IS NULL
+    UNION ALL
+    SELECT ou.parent_id, up.depth + 1
+    FROM up JOIN org_unit ou ON ou.id = up.unit_id
+    WHERE ou.parent_id IS NOT NULL AND up.depth < 64
+)
+SELECT unit_id FROM up
+UNION
+SELECT r.target_subject_id
+FROM subject_relationship r
+JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_MEMBER_OF_GROUP'
+JOIN security_group sg ON sg.id = r.target_subject_id AND sg.archived_at IS NULL
+WHERE r.source_subject_id = (SELECT subject_id FROM me) AND r.deleted_at IS NULL AND r.valid_to IS NULL;`

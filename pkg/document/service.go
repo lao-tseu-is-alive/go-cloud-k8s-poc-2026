@@ -129,9 +129,9 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Document, error) {
 }
 
 // Relationships returns the outgoing relationships for a document subject.
-func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
+func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
 	res, err := s.coreSvc.ListRelationships(ctx, core.RelationshipFilter{
-		SubjectID: id, Outgoing: true, Limit: core.MaxPageSize,
+		SubjectID: id, Outgoing: true, Limit: core.MaxPageSize, Viewer: viewer,
 	})
 	if err != nil {
 		return nil, err
@@ -172,6 +172,23 @@ func (s *Service) ListVersions(ctx context.Context, documentID uuid.UUID) ([]*Ve
 		return nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
 	}
 	return s.repo.ListVersions(ctx, documentID)
+}
+
+// Content returns the blob of a document version (the current one when
+// versionID is nil) for download: operatorID needs READ on the document, and a
+// version without stored bytes is core.ErrNotFound.
+func (s *Service) Content(ctx context.Context, operatorID string, documentID uuid.UUID, versionID *uuid.UUID) (*ContentBlob, error) {
+	if documentID == uuid.Nil {
+		return nil, fmt.Errorf("%w: document id is required", core.ErrInvalidInput)
+	}
+	version, err := s.repo.Content(ctx, operatorID, documentID, versionID)
+	if err != nil {
+		return nil, err
+	}
+	if version.Content == nil || version.Content.StorageRef == "" {
+		return nil, fmt.Errorf("%w: the version has no stored content", core.ErrNotFound)
+	}
+	return version.Content, nil
 }
 
 // UpdateMetadata updates mutable metadata (rejected when the record is locked).

@@ -120,7 +120,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
 - `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
-- `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and download endpoints with their own bearer and scope check, and the frontend config handler.
+- `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and governed content download (READ on the document) endpoints with their own bearer and scope check, and the frontend config handler.
 
 ## Shared Go packages
 
@@ -351,6 +351,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/roles_test.go` — DB test: roles granted and revoked with reasons, audited on the user, kept as history, derived admin flag and refusals.
 - `pkg/integration/access_enforcement_test.go` — DB test: access checked in the transactions of timeline entries, tasks, circulations and relationships, and a document deposited from a case.
 - `pkg/integration/access_test.go` — DB test: effective level precedence (units and sub-units, groups, personal, roles, confidentiality) and grant rules (who grants, history, last FULL_CONTROL).
+- `pkg/integration/read_filter_test.go` — DB test: confidential subjects absent from searches, totals and relationship lists without a grant, governed download and reuse among readable documents, timeline visibility by level.
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.

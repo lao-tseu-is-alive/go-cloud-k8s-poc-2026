@@ -18,7 +18,7 @@ type Repository interface {
 	ListGrants(ctx context.Context, operatorID string, subjectID uuid.UUID, includeRevoked bool) ([]*Grant, error)
 	SetGrant(ctx context.Context, in SetGrantInput) (*Grant, *core.AuditEvent, error)
 	RevokeGrant(ctx context.Context, grantID uuid.UUID, operatorID, reason string) (*Grant, *core.AuditEvent, error)
-	ListGroups(ctx context.Context, query string, includeArchived bool) ([]*Group, error)
+	ListGroups(ctx context.Context, operatorID, query string, includeArchived bool) ([]*Group, error)
 	GetGroup(ctx context.Context, operatorID string, id uuid.UUID) (*Group, []*Member, error)
 	CreateGroup(ctx context.Context, in GroupInput) (*Group, *core.AuditEvent, error)
 	UpdateGroup(ctx context.Context, id uuid.UUID, in GroupInput) (*Group, *core.AuditEvent, error)
@@ -79,8 +79,8 @@ func (s *Service) RevokeGrant(ctx context.Context, grantID uuid.UUID, operatorID
 }
 
 // ListGroups returns the groups matching query.
-func (s *Service) ListGroups(ctx context.Context, query string, includeArchived bool) ([]*Group, error) {
-	return s.repo.ListGroups(ctx, strings.TrimSpace(query), includeArchived)
+func (s *Service) ListGroups(ctx context.Context, operatorID, query string, includeArchived bool) ([]*Group, error) {
+	return s.repo.ListGroups(ctx, operatorID, strings.TrimSpace(query), includeArchived)
 }
 
 // GetGroup returns a group and its members (READ on the group).

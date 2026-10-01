@@ -121,7 +121,7 @@ func TestOrganizationActorLifecycle(t *testing.T) {
 		}); err != nil {
 			t.Fatalf("link case to actor: %v", err)
 		}
-		rels, err := env.actorSvc.Relationships(ctx, actorID)
+		rels, err := env.actorSvc.Relationships(ctx, actorID, operatorViewer)
 		if err != nil {
 			t.Fatalf("list actor relationships: %v", err)
 		}

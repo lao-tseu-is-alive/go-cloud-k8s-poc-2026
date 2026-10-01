@@ -162,6 +162,8 @@ type TransitionInput struct {
 
 // SearchFilter controls case search. Results are newest first.
 type SearchFilter struct {
+	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
+	Viewer core.Viewer
 	// Query is matched accent-insensitively against title and description, or
 	// exactly against the business reference; empty matches every case.
 	Query string

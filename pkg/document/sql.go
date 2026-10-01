@@ -1,5 +1,7 @@
 package document
 
+import "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+
 // SQL fragments for the document repository. Column projections are the single
 // source of truth for pgx named scanning (columns map to `db` tags).
 //
@@ -48,13 +50,15 @@ WHERE d.id = @id
 RETURNING ` + documentColumns + `;`
 
 // findReusableDocumentSQL finds the oldest live (not soft-deleted) document with
-// a version backed by the blob: the target of automatic reuse (spec v2 §20).
-const findReusableDocumentSQL = `
+// a version backed by the blob that the viewer may read: the target of automatic
+// reuse (spec v2 §20).
+var findReusableDocumentSQL = `
 SELECT ` + documentColumns + `
 FROM document d
 JOIN record_metadata rm ON rm.subject_id = d.id
 WHERE rm.deleted_at IS NULL
   AND EXISTS (SELECT 1 FROM document_version v WHERE v.document_id = d.id AND v.content_blob_id = @content_blob_id)
+  AND ` + core.ReadableSQL("d.id", "rm") + `
 ORDER BY d.created_at
 LIMIT 1;`
 
@@ -85,6 +89,15 @@ const getVersionsByIDsSQL = `
 SELECT ` + versionColumns + `
 FROM document_version v
 WHERE v.id = ANY(@ids::uuid[]);`
+
+// contentVersionSQL is the version to download: the one given (of this
+// document) or, without one, the document's current version.
+const contentVersionSQL = `
+SELECT ` + versionColumns + `
+FROM document_version v
+JOIN document d ON d.id = v.document_id
+WHERE v.document_id = @document_id
+  AND v.id = COALESCE(@version_id::uuid, d.current_version_id);`
 
 const listVersionsSQL = `
 SELECT ` + versionColumns + `
@@ -158,7 +171,7 @@ COUNT(*) OVER() AS total_count`
 // governance and relationship filters.
 // The query term is folded through immutable_unaccent() (migration 0005) so it
 // matches the equally accent-folded search_vector: "chateau" finds "château".
-const searchDocumentsSQL = `
+var searchDocumentsSQL = `
 SELECT ` + searchDocumentColumns + `
 FROM document d
 JOIN record_metadata rm ON rm.subject_id = d.id
@@ -181,6 +194,7 @@ WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_una
         WHERE sr.deleted_at IS NULL
           AND sr.source_subject_id = d.id
           AND sr.target_subject_id = @thing_id))
+  AND ` + core.ReadableSQL("d.id", "rm") + `
 ORDER BY d.created_at DESC
 LIMIT @limit OFFSET @offset;`
 

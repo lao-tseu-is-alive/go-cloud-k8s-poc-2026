@@ -40,7 +40,12 @@ func (s *ConnectServer) ListTimelineEntries(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead)
+	if err != nil {
+		return nil, err
+	}
+	access, err := s.authz.Access(ctx, user, caseID)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -55,6 +60,8 @@ func (s *ConnectServer) ListTimelineEntries(ctx context.Context, req *connect.Re
 		CaseID:           caseID,
 		Types:            types,
 		IncludeWithdrawn: req.Msg.IncludeWithdrawn,
+		ViewerID:         core.OperatorID(user),
+		MaxVisibility:    MaxVisibility(access.Level),
 		Limit:            int(req.Msg.PageSize),
 		Offset:           offset,
 	})
@@ -123,7 +130,11 @@ func (s *ConnectServer) GetTimelineEntry(ctx context.Context, req *connect.Reque
 	if err != nil {
 		return nil, s.mapError(err)
 	}
-	if err := s.authz.Require(ctx, user, e.CaseID, core.LevelRead); err != nil {
+	need := e.Visibility.Needs()
+	if e.CreatedBy == core.OperatorID(user) {
+		need = core.LevelRead
+	}
+	if err := s.authz.Require(ctx, user, e.CaseID, need); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.GetTimelineEntryResponse{Entry: DomainToProto(e)}), nil

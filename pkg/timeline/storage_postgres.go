@@ -41,7 +41,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (*Entry
 	var created *Entry
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "create timeline entry", func(tx pgx.Tx) error {
-		if err := lockCaseForEntryTx(ctx, tx, in.CaseID, in.OperatorID); err != nil {
+		if err := lockCaseForEntryTx(ctx, tx, in.CaseID, in.OperatorID, in.Visibility); err != nil {
 			return err
 		}
 		if in.CorrectsEntryID != nil {
@@ -136,6 +136,8 @@ func (r *PostgresRepository) List(ctx context.Context, filter ListFilter) (ListR
 		"case_id":           filter.CaseID,
 		"entry_types":       types,
 		"include_withdrawn": filter.IncludeWithdrawn,
+		"max_visibility":    int16(filter.MaxVisibility),
+		"viewer_id":         filter.ViewerID,
 		"limit":             filter.Limit,
 		"offset":            filter.Offset,
 	})
@@ -163,7 +165,7 @@ func (r *PostgresRepository) List(ctx context.Context, filter ListFilter) (ListR
 func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in UpdateInput) (*Entry, *core.AuditEvent, error) {
 	var ev *core.AuditEvent
 	err := r.inTx(ctx, "update timeline entry", func(tx pgx.Tx) error {
-		current, err := lockDraftTx(ctx, tx, id, in.OperatorID, core.LevelContribute)
+		current, err := lockDraftTx(ctx, tx, id, in.OperatorID, max(core.LevelContribute, in.Visibility.Needs()))
 		if err != nil {
 			return err
 		}

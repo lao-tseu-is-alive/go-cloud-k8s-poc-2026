@@ -85,8 +85,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Case, error) {
 
 // Relationships returns the case's active relationships in both directions:
 // outgoing (actors, documents, things, child cases) then incoming (parent cases).
-func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
-	return s.coreSvc.SubjectRelationships(ctx, id)
+func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
+	return s.coreSvc.SubjectRelationships(ctx, id, viewer)
 }
 
 // RecentAudit returns the most recent audit events of a case, newest first.

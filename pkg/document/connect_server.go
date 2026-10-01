@@ -146,7 +146,8 @@ func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[go
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	if err != nil {
 		return nil, err
 	}
 	doc, err := s.service.Get(ctx, id)
@@ -155,7 +156,11 @@ func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[go
 	}
 	resp := &goelandv1.GetDocumentResponse{Document: DomainToProto(doc)}
 	if req.Msg.IncludeRelationships {
-		rels, err := s.service.Relationships(ctx, id)
+		viewer, err := s.authz.ViewerOf(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		rels, err := s.service.Relationships(ctx, id, viewer)
 		if err != nil {
 			return nil, s.mapError(err)
 		}
@@ -249,7 +254,8 @@ func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connec
 
 // SearchDocuments runs a full-text + filtered search.
 func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Request[goelandv1.SearchDocumentsRequest]) (*connect.Response[goelandv1.SearchDocumentsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -265,6 +271,7 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 		return nil, err
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		Viewer:             viewer,
 		Query:              req.Msg.Query,
 		DocumentTypeCode:   req.Msg.DocumentTypeCode,
 		CaseID:             caseID,

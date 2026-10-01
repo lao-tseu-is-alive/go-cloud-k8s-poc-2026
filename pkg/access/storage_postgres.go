@@ -193,9 +193,13 @@ func ensureLiveGroupTx(ctx context.Context, q core.Querier, id uuid.UUID) error 
 
 // --- groups -------------------------------------------------------------------------------
 
-// ListGroups returns the groups matching query, by name.
-func (r *PostgresRepository) ListGroups(ctx context.Context, query string, includeArchived bool) ([]*Group, error) {
-	rows, err := r.pool.Query(ctx, listGroupsSQL, pgx.NamedArgs{"query": query, "include_archived": includeArchived})
+// ListGroups returns the groups operatorID may read matching query, by name.
+func (r *PostgresRepository) ListGroups(ctx context.Context, operatorID, query string, includeArchived bool) ([]*Group, error) {
+	viewer, err := core.ViewerTx(ctx, r.pool, operatorID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := r.pool.Query(ctx, listGroupsSQL, viewer.AddTo(pgx.NamedArgs{"query": query, "include_archived": includeArchived}))
 	if err != nil {
 		return nil, fmt.Errorf("list groups: %w", err)
 	}

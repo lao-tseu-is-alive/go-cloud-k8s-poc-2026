@@ -64,7 +64,8 @@ func (s *ConnectServer) GetCase(ctx context.Context, req *connect.Request[goelan
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	if err != nil {
 		return nil, err
 	}
 	c, err := s.service.Get(ctx, id)
@@ -73,7 +74,11 @@ func (s *ConnectServer) GetCase(ctx context.Context, req *connect.Request[goelan
 	}
 	resp := &goelandv1.GetCaseResponse{Case: DomainToProto(c)}
 	if req.Msg.IncludeRelationships {
-		rels, err := s.service.Relationships(ctx, id)
+		viewer, err := s.authz.ViewerOf(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		rels, err := s.service.Relationships(ctx, id, viewer)
 		if err != nil {
 			return nil, s.mapError(err)
 		}
@@ -135,7 +140,8 @@ func (s *ConnectServer) TransitionCase(ctx context.Context, req *connect.Request
 
 // SearchCases runs the filtered case search.
 func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[goelandv1.SearchCasesRequest]) (*connect.Response[goelandv1.SearchCasesResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -143,6 +149,7 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		Viewer:         viewer,
 		Query:          req.Msg.Query,
 		CaseTypeCode:   req.Msg.CaseTypeCode,
 		Status:         Status(req.Msg.Status),

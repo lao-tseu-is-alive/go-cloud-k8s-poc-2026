@@ -62,7 +62,7 @@ func TestCaseLifecycle(t *testing.T) {
 	}
 	linkParticipants(t, env, c)
 
-	rels, err := env.caseSvc.Relationships(ctx, c.ID)
+	rels, err := env.caseSvc.Relationships(ctx, c.ID, operatorViewer)
 	if err != nil || len(rels) != 4 {
 		t.Fatalf("expected 4 relationships (requester, mandatee, architect, document), got %d (%v)", len(rels), err)
 	}

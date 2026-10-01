@@ -122,10 +122,11 @@ func (s *ConnectServer) RevokeGrant(ctx context.Context, req *connect.Request[go
 
 // ListGroups lists the security groups.
 func (s *ConnectServer) ListGroups(ctx context.Context, req *connect.Request[goelandv1.ListGroupsRequest]) (*connect.Response[goelandv1.ListGroupsResponse], error) {
-	if _, err := caller(ctx, core.ScopeRead); err != nil {
+	operator, err := caller(ctx, core.ScopeRead)
+	if err != nil {
 		return nil, err
 	}
-	groups, err := s.service.ListGroups(ctx, req.Msg.Query, req.Msg.IncludeArchived)
+	groups, err := s.service.ListGroups(ctx, operator, req.Msg.Query, req.Msg.IncludeArchived)
 	if err != nil {
 		return nil, s.mapError(err)
 	}

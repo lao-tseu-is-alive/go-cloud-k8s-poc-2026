@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
 // EntryType mirrors the case_timeline_entry.entry_type column and the
@@ -66,7 +68,8 @@ const (
 func (s Status) Correctable() bool { return s == StatusValidated || s == StatusLocked }
 
 // Visibility mirrors the case_timeline_entry.visibility column and the
-// TimelineVisibility proto enum. It is stored but not enforced before GLD-017.
+// TimelineVisibility proto enum. It is enforced from the reader's level on the
+// case (GLD-049): see Needs.
 type Visibility int16
 
 // Persisted values are 1 to 3 (CHECK constraint); 0 means the default.
@@ -84,6 +87,32 @@ const (
 // Valid reports whether v is a persisted visibility.
 func (v Visibility) Valid() bool {
 	return v >= VisibilityCaseParticipants && v <= VisibilityRestricted
+}
+
+// Needs is the level on the case that reads (or writes for) audience v: READ
+// for the case participants, CONTRIBUTE for internal entries and MANAGE for
+// restricted ones (GLD-049). An entry is always visible to its author.
+func (v Visibility) Needs() core.Level {
+	switch v {
+	case VisibilityInternal:
+		return core.LevelContribute
+	case VisibilityRestricted:
+		return core.LevelManage
+	default:
+		return core.LevelRead
+	}
+}
+
+// MaxVisibility is the widest audience a level on the case reads.
+func MaxVisibility(level core.Level) Visibility {
+	switch {
+	case level >= core.LevelManage:
+		return VisibilityRestricted
+	case level >= core.LevelContribute:
+		return VisibilityInternal
+	default:
+		return VisibilityCaseParticipants
+	}
 }
 
 // Entry is one element of a case timeline (a row of case_timeline_entry).
@@ -230,6 +259,11 @@ type ListFilter struct {
 	Types []EntryType
 	// IncludeWithdrawn also returns withdrawn drafts.
 	IncludeWithdrawn bool
+	// ViewerID is who lists: its own entries are always returned.
+	ViewerID string
+	// MaxVisibility is the widest audience returned (see MaxVisibility);
+	// unspecified means the case participants only.
+	MaxVisibility Visibility
 	// Limit is the page size, normalized to [1, core.MaxPageSize].
 	Limit int
 	// Offset is the zero-based number of rows to skip; negative becomes 0.

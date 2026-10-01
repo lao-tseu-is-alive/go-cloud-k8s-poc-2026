@@ -43,7 +43,8 @@ FROM case_timeline_entry e
 WHERE e.id = @id
 FOR UPDATE;`
 
-// listEntriesSQL pages through one case timeline, most recent business date first.
+// listEntriesSQL pages through one case timeline, most recent business date
+// first, keeping the entries the viewer may see (its own, or up to @max_visibility).
 const listEntriesSQL = `
 SELECT ` + readEntryColumns + `,
 COUNT(*) OVER() AS total_count
@@ -51,6 +52,7 @@ FROM case_timeline_entry e
 WHERE e.case_id = @case_id
   AND (cardinality(@entry_types::smallint[]) = 0 OR e.entry_type = ANY(@entry_types::smallint[]))
   AND (@include_withdrawn OR e.status <> 4)
+  AND (e.visibility <= @max_visibility OR e.created_by = @viewer_id)
 ORDER BY e.occurred_at DESC, e.created_at DESC, e.id
 LIMIT @limit OFFSET @offset;`
 

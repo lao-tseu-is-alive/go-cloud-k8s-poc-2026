@@ -8,6 +8,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-049** — Searches and lists show only what the caller may read: cases, documents, actors,
+  things, org units (search and tree), groups, business-reference lookups and relationship lists
+  (an edge whose other end is unreadable is left out, also in `includeRelationships`). The filter
+  runs inside the SQL query (`core.ReadableSQL`, `core.Viewer`), so pages and totals stay exact.
+  Timeline entries follow their visibility: participants with READ on the case, internal with
+  CONTRIBUTE, restricted with MANAGE, and always their author; writing for an audience needs the
+  same level.
+
+### Changed
+
+- **Breaking:** document bytes are downloaded with `GET /api/documents/{id}/content`
+  (`?versionId=` for another version than the current one), which needs READ on the document;
+  `GET /api/documents/download?ref=` is removed. The SPA uses the new endpoint.
+- The automatic reuse of a document with identical content only picks a document the caller may
+  read; otherwise a new document is created on the same content.
+
 ## [0.10.0] - 2026-10-01
 
 This release makes authorization real (Phase 6, first two steps): application roles stored in

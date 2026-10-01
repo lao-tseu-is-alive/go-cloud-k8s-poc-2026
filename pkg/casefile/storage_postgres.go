@@ -270,14 +270,14 @@ type caseListRow struct {
 
 // Search runs the filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, searchCasesSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, searchCasesSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"query":           filter.Query,
 		"case_type_code":  filter.CaseTypeCode,
 		"status":          int16(filter.Status),
 		"include_deleted": filter.IncludeDeleted,
 		"limit":           filter.Limit,
 		"offset":          filter.Offset,
-	})
+	}))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search cases: %w", err)
 	}

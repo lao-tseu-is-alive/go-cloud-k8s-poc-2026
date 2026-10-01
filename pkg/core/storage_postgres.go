@@ -128,12 +128,12 @@ func (r *PostgresRepository) AssignBusinessRef(ctx context.Context, subjectID uu
 // LookupSubjects returns at most limit subjects whose business reference
 // matches filter exactly, oldest first.
 func (r *PostgresRepository) LookupSubjects(ctx context.Context, filter LookupFilter, limit int) ([]*SubjectRef, error) {
-	rows, err := r.pool.Query(ctx, lookupSubjectsByBusinessRefSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, lookupSubjectsByBusinessRefSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"business_ref":           filter.BusinessRef,
 		"business_ref_namespace": filter.Namespace,
 		"kind":                   string(filter.Kind),
 		"limit":                  limit,
-	})
+	}))
 	if err != nil {
 		return nil, fmt.Errorf("lookup subjects: %w", err)
 	}
@@ -332,13 +332,13 @@ type relationshipListRow struct {
 
 // ListRelationships returns a page of active relationships for a subject, hydrated with subject refs and types.
 func (r *PostgresRepository) ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error) {
-	rows, err := r.pool.Query(ctx, listRelationshipsSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, listRelationshipsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"subject_id":             filter.SubjectID,
 		"outgoing":               filter.Outgoing,
 		"relationship_type_code": filter.RelationshipTypeCode,
 		"limit":                  filter.Limit,
 		"offset":                 filter.Offset,
-	})
+	}))
 	if err != nil {
 		return RelationshipResult{}, fmt.Errorf("list relationships: %w", err)
 	}

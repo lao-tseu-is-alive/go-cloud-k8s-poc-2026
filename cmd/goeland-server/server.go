@@ -142,8 +142,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	// for file payloads.
 	mux.Handle("POST /api/documents/upload",
 		httpAuthMiddleware(verifier, log, core.ScopeWrite, http.MaxBytesHandler(uploadHandler(docMod.Service(), log), config.MaxUploadBytes)))
-	mux.Handle("GET /api/documents/download",
-		httpAuthMiddleware(verifier, log, core.ScopeRead, downloadHandler(blobStore, log)))
+	mux.Handle("GET /api/documents/{id}/content",
+		httpAuthMiddleware(verifier, log, core.ScopeRead, contentHandler(docMod.Service(), blobStore, log)))
 
 	if err := mountTranscoder(mux, transcoder, serviceNames); err != nil {
 		return nil, err

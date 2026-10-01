@@ -1,5 +1,7 @@
 package casefile
 
+import "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+
 // SQL fragments for the case repository. Column projections are the single
 // source of truth for pgx named scanning (columns map to `db` tags); they are
 // alias-prefixed, so INSERT statements alias their target (AS c).
@@ -66,7 +68,7 @@ ORDER BY code;`
 
 // searchCasesSQL matches the accent-folded search_vector (immutable_unaccent,
 // migration 0005) or the exact business reference, plus type/status/deletion filters.
-const searchCasesSQL = `
+var searchCasesSQL = `
 SELECT ` + caseColumns + `,
 COUNT(*) OVER() AS total_count
 FROM case_file c
@@ -78,6 +80,7 @@ WHERE (@query = ''
   AND (@case_type_code = '' OR c.case_type_id = (SELECT id FROM case_type WHERE code = @case_type_code))
   AND (@status::smallint = 0 OR c.status = @status::smallint)
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND ` + core.ReadableSQL("c.id", "rm") + `
 ORDER BY c.created_at DESC
 LIMIT @limit OFFSET @offset;`
 

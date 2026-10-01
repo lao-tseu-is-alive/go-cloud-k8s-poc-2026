@@ -52,13 +52,15 @@ VALUES (@namespace, to_char(now() AT TIME ZONE @time_zone, 'YYYY'), 1)
 ON CONFLICT (namespace, period) DO UPDATE SET last_value = c.last_value + 1
 RETURNING period, last_value;`
 
-// lookupSubjectsByBusinessRefSQL finds subjects by exact business reference.
-const lookupSubjectsByBusinessRefSQL = `
+// lookupSubjectsByBusinessRefSQL finds the subjects the viewer may read by exact
+// business reference.
+var lookupSubjectsByBusinessRefSQL = `
 SELECT ` + subjectRefColumns + `
 FROM subject_ref
 WHERE business_ref = @business_ref
   AND (@business_ref_namespace = '' OR business_ref_namespace = @business_ref_namespace)
   AND (@kind = '' OR kind = @kind)
+  AND ` + ReadableSQL("subject_ref.id", "") + `
 ORDER BY created_at
 LIMIT @limit;`
 
@@ -206,14 +208,16 @@ const listRelationshipsColumns = subjectRelationshipListColumns + `,
 COUNT(*) OVER() AS total_count`
 
 // listRelationshipsSQL lists non-unlinked edges (open and ended) either outgoing from (@outgoing = true) or
-// incoming to (@outgoing = false) the given subject, optionally filtered by type code.
-const listRelationshipsSQL = `
+// incoming to (@outgoing = false) the given subject, optionally filtered by type code, whose
+// other end the viewer may read.
+var listRelationshipsSQL = `
 SELECT ` + listRelationshipsColumns + `
 FROM subject_relationship sr
 JOIN relationship_type rt ON rt.id = sr.relationship_type_id
 WHERE sr.deleted_at IS NULL
   AND ((@outgoing AND sr.source_subject_id = @subject_id) OR (NOT @outgoing AND sr.target_subject_id = @subject_id))
   AND (@relationship_type_code = '' OR rt.code = @relationship_type_code)
+  AND ` + ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", "") + `
 ORDER BY sr.created_at DESC
 LIMIT @limit OFFSET @offset;`
 

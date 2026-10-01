@@ -13,6 +13,10 @@ import (
 
 const testOperator = "integration-operator"
 
+// operatorViewer reads as the test operator without groups or units: it sees
+// what is public and what testOperator created (its creator grant).
+var operatorViewer = core.Viewer{UserID: testOperator}
+
 // TestMigrationsIdempotentAndSeeded asserts the embedded schema applies cleanly a
 // second time and that the reference data (document types) is present afterwards.
 func TestMigrationsIdempotentAndSeeded(t *testing.T) {
@@ -122,7 +126,7 @@ func TestDocumentLifecycle(t *testing.T) {
 		}); !errors.Is(err, core.ErrConflict) {
 			t.Fatalf("duplicate link: want ErrConflict, got %v", err)
 		}
-		rels, err := env.docSvc.Relationships(ctx, docID)
+		rels, err := env.docSvc.Relationships(ctx, docID, operatorViewer)
 		if err != nil {
 			t.Fatalf("list relationships: %v", err)
 		}

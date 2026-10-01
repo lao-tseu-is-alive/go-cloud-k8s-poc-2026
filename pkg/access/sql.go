@@ -1,5 +1,7 @@
 package access
 
+import "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+
 // --- grants -------------------------------------------------------------------------------
 
 // grantColumns projects a grant (alias g) with its grantee's display name: the
@@ -67,11 +69,13 @@ sg.id, sg.name, sg.description, sg.archived_at, sg.archived_by,
    JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_MEMBER_OF_GROUP'
   WHERE r.target_subject_id = sg.id AND r.deleted_at IS NULL AND r.valid_to IS NULL)::int AS member_count`
 
-const listGroupsSQL = `
+// listGroupsSQL keeps the groups the viewer may read (GLD-049).
+var listGroupsSQL = `
 SELECT ` + groupColumns + `
 FROM security_group sg
 WHERE (@include_archived OR sg.archived_at IS NULL)
   AND (@query = '' OR immutable_unaccent(lower(sg.name)) LIKE '%' || immutable_unaccent(lower(@query)) || '%')
+  AND ` + core.ReadableSQL("sg.id", "") + `
 ORDER BY lower(sg.name), sg.id;`
 
 const getGroupSQL = `

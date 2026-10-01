@@ -13,7 +13,7 @@ import (
 type Repository interface {
 	Create(ctx context.Context, in CreateInput) (*OrgUnit, *core.AuditEvent, error)
 	Get(ctx context.Context, id uuid.UUID) (*Detail, error)
-	List(ctx context.Context, includeDissolved bool) ([]*Node, error)
+	List(ctx context.Context, includeDissolved bool, viewer core.Viewer) ([]*Node, error)
 	Search(ctx context.Context, filter SearchFilter) (SearchResult, error)
 	Update(ctx context.Context, id uuid.UUID, in Input) (*OrgUnit, *core.AuditEvent, error)
 	Dissolve(ctx context.Context, id uuid.UUID, operatorID, reason string) (*OrgUnit, *core.AuditEvent, error)

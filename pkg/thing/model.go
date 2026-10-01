@@ -175,6 +175,8 @@ type BBox struct {
 
 // SearchFilter selects things.
 type SearchFilter struct {
+	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
+	Viewer core.Viewer
 	// Query matches name, description and external reference accent-insensitively,
 	// or exactly a parcel number, EGRID or EGID; empty matches every thing.
 	Query string

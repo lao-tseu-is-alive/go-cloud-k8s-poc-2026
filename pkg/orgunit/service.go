@@ -74,8 +74,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Detail, error) {
 }
 
 // Relationships returns the unit's active relationships in both directions.
-func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
-	return s.coreSvc.SubjectRelationships(ctx, id)
+func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
+	return s.coreSvc.SubjectRelationships(ctx, id, viewer)
 }
 
 // RecentAudit returns the most recent audit events of a unit, newest first.
@@ -88,8 +88,8 @@ func (s *Service) RecentAudit(ctx context.Context, id uuid.UUID) ([]*core.AuditE
 }
 
 // List returns the whole tree as a flat list.
-func (s *Service) List(ctx context.Context, includeDissolved bool) ([]*Node, error) {
-	return s.repo.List(ctx, includeDissolved)
+func (s *Service) List(ctx context.Context, includeDissolved bool, viewer core.Viewer) ([]*Node, error) {
+	return s.repo.List(ctx, includeDissolved, viewer)
 }
 
 // Search runs the filtered unit search.

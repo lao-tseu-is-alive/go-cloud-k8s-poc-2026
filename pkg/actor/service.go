@@ -91,8 +91,8 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Actor, error) {
 // Relationships returns the relationships of an actor in both directions:
 // incoming roles (CASE_HAS_ACTOR_*, DOCUMENT_*_ACTOR) and actor-to-actor links
 // such as ACTOR_BRANCH_OF_ACTOR or ACTOR_CONTACT_PERSON_OF_ACTOR.
-func (s *Service) Relationships(ctx context.Context, id uuid.UUID) ([]*core.SubjectRelationship, error) {
-	return s.coreSvc.SubjectRelationships(ctx, id)
+func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
+	return s.coreSvc.SubjectRelationships(ctx, id, viewer)
 }
 
 // RecentAudit returns the most recent audit events for an actor subject.

@@ -15,6 +15,7 @@ type Repository interface {
 	Get(ctx context.Context, id uuid.UUID) (*Document, error)
 	AddVersion(ctx context.Context, documentID uuid.UUID, in VersionInput) (*Document, *Version, *core.AuditEvent, error)
 	ListVersions(ctx context.Context, documentID uuid.UUID) ([]*Version, error)
+	Content(ctx context.Context, operatorID string, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error)
 	RegisterBlob(ctx context.Context, blob ContentBlob) (*ContentBlob, bool, error)
 	FindBlobBySHA256(ctx context.Context, sha256 string) (*ContentBlob, error)
 	UpdateMetadata(ctx context.Context, id uuid.UUID, in UpdateInput) (*Document, *core.AuditEvent, error)

@@ -197,6 +197,15 @@ func (s *surface) documents() {
 	id := str(s.ok("POST", "/api/documents", map[string]any{"documentTypeCode": "PLAN", "title": "Plan surface " + s.token, "contentBlobId": blob}), "document", "subjectRef", "id")
 	s.ok("GET", "/api/documents/"+id, nil)
 	s.fails(codeNotFound, "GET", missing("/api/documents"), nil)
+	if r := s.call(s.admin, adminToken, "GET", "/api/documents/"+id+"/content", nil); r.status != 200 {
+		s.t.Fatalf("download the current version: HTTP %d", r.status)
+	}
+	if r := s.call(s.admin, adminToken, "GET", missing("/api/documents")+"/content", nil); r.status != 404 {
+		s.t.Fatalf("download an unknown document: HTTP %d", r.status)
+	}
+	if r := s.call(s.admin, adminToken, "GET", "/api/documents/"+id+"/content?ref=internal://x", nil); r.status != 400 {
+		s.t.Fatalf("a raw storage reference is refused: HTTP %d", r.status)
+	}
 	s.ok("PATCH", "/api/documents/"+id, map[string]any{"title": "Plan surface révisé " + s.token, "reason": "test"})
 	second, _ := sc.upload("%PDF surface v2 " + s.token)
 	s.ok("POST", "/api/documents/"+id+"/versions", map[string]any{"contentBlobId": second, "reason": "nouvelle version"})
@@ -287,6 +296,7 @@ func (s *surface) access() {
 		s.t.Fatalf("a public case is readable by everyone: %v", r.body)
 	}
 	s.expect(asWriter("GET", "/api/cases/"+secret, nil), codePermissionDenied, "a confidential case needs a grant")
+	s.readFilters(asWriter, secret)
 	s.expect(asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit"}), codePermissionDenied, "editing with READ")
 	if lvl := str(asWriter("GET", "/api/subjects/"+open+"/access", nil).body, "access", "level"); lvl != "PERMISSION_READ" {
 		s.t.Fatalf("the writer's baseline is READ: %s", lvl)
@@ -308,6 +318,26 @@ func (s *surface) access() {
 	s.ok("POST", "/api/grants/"+str(granted, "grant", "id")+"/revoke", map[string]any{"reason": "fin"})
 	s.fails(codeNotFound, "POST", missing("/api/grants")+"/revoke", map[string]any{"reason": "x"})
 	s.groups(writer)
+}
+
+// readFilters covers GLD-049 over HTTP: a confidential case is found by its
+// creator only, and a confidential document's content is refused to others.
+func (s *surface) readFilters(asWriter func(method, path string, body any) reply, secret string) {
+	search := "/api/cases/search?query=Confidentielle+" + s.token
+	if n := len(list(s.ok("GET", search, nil), "cases")); n != 1 {
+		s.t.Fatalf("the creator finds its confidential case: %d", n)
+	}
+	if r := asWriter("GET", search, nil); r.status != 200 || len(list(r.body, "cases")) != 0 {
+		s.t.Fatalf("another user does not find it: %v", r.body)
+	}
+	sc := &scenario{e2e: s.e2e}
+	blob, _ := sc.upload("%PDF confidentiel " + s.token)
+	doc := str(s.ok("POST", "/api/documents", map[string]any{
+		"documentTypeCode": "PLAN", "title": "Plan confidentiel " + s.token, "contentBlobId": blob, "linkToCaseId": secret,
+	}), "document", "subjectRef", "id")
+	if r := asWriter("GET", "/api/documents/"+doc+"/content", nil); r.status != 403 {
+		s.t.Fatalf("the content of a confidential document needs READ: HTTP %d", r.status)
+	}
 }
 
 // groups covers the security group RPCs.

@@ -274,8 +274,8 @@ func (r *PostgresRepository) get(ctx context.Context, id uuid.UUID) (*OrgUnit, e
 }
 
 // List returns the whole tree as a flat list.
-func (r *PostgresRepository) List(ctx context.Context, includeDissolved bool) ([]*Node, error) {
-	return collectNodes(r.pool.Query(ctx, listNodesSQL, pgx.NamedArgs{"include_dissolved": includeDissolved}))
+func (r *PostgresRepository) List(ctx context.Context, includeDissolved bool, viewer core.Viewer) ([]*Node, error) {
+	return collectNodes(r.pool.Query(ctx, listNodesSQL, viewer.AddTo(pgx.NamedArgs{"include_dissolved": includeDissolved})))
 }
 
 // unitListRow adds the window total to the unit columns for search scanning.
@@ -287,12 +287,12 @@ type unitListRow struct {
 
 // Search runs the filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, searchUnitsSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, searchUnitsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"query":             filter.Query,
 		"include_dissolved": filter.IncludeDissolved,
 		"limit":             filter.Limit,
 		"offset":            filter.Offset,
-	})
+	}))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search org units: %w", err)
 	}

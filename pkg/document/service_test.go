@@ -36,6 +36,9 @@ func (f *fakeRepo) AddVersion(context.Context, uuid.UUID, VersionInput) (*Docume
 	return &Document{}, &Version{VersionNo: 2}, &core.AuditEvent{}, nil
 }
 func (f *fakeRepo) ListVersions(context.Context, uuid.UUID) ([]*Version, error) { return nil, nil }
+func (f *fakeRepo) Content(context.Context, string, uuid.UUID, *uuid.UUID) (*Version, error) {
+	return nil, nil
+}
 func (f *fakeRepo) RegisterBlob(_ context.Context, blob ContentBlob) (*ContentBlob, bool, error) {
 	if f.registerErr != nil {
 		return nil, false, f.registerErr

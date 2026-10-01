@@ -1,5 +1,7 @@
 package orgunit
 
+import "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+
 // SQL fragments for the org unit repository. Column projections are the single
 // source of truth for pgx named scanning (columns map to `db` tags); they are
 // alias-prefixed, so INSERT statements alias their target (AS u).
@@ -43,11 +45,12 @@ WHERE u.id = @id
 RETURNING ` + unitColumns + `;`
 
 // listNodesSQL is the whole tree, ordered by type order then label.
-const listNodesSQL = `
+var listNodesSQL = `
 SELECT ` + nodeColumns + `
 FROM org_unit u
 JOIN org_unit_type t ON t.id = u.org_unit_type_id
 WHERE (@include_dissolved OR u.dissolved_at IS NULL)
+  AND ` + core.ReadableSQL("u.id", "") + `
 ORDER BY t.sort_order, u.label, u.id;`
 
 // ancestorsSQL walks up from a unit to the root; the recursion depth orders
@@ -86,7 +89,7 @@ SELECT EXISTS (SELECT 1 FROM below WHERE id = @candidate);`
 
 // searchUnitsSQL matches the accent-folded search_vector, the exact
 // abbreviation (case-insensitive) or the exact external reference, ordered by label.
-const searchUnitsSQL = `
+var searchUnitsSQL = `
 SELECT ` + unitColumns + `,
 COUNT(*) OVER() AS total_count
 FROM org_unit u
@@ -95,6 +98,7 @@ WHERE (@query = ''
        OR lower(u.abbreviation) = lower(@query)
        OR (u.external_ref <> '' AND u.external_ref = @query))
   AND (@include_dissolved OR u.dissolved_at IS NULL)
+  AND ` + core.ReadableSQL("u.id", "") + `
 ORDER BY u.label, u.id
 LIMIT @limit OFFSET @offset;`
 

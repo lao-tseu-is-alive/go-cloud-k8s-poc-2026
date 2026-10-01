@@ -61,7 +61,8 @@ func (s *ConnectServer) GetThing(ctx context.Context, req *connect.Request[goela
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	if err != nil {
 		return nil, err
 	}
 	t, err := s.service.Get(ctx, id)
@@ -70,7 +71,11 @@ func (s *ConnectServer) GetThing(ctx context.Context, req *connect.Request[goela
 	}
 	resp := &goelandv1.GetThingResponse{Thing: DomainToProto(t)}
 	if req.Msg.IncludeRelationships {
-		rels, err := s.service.Relationships(ctx, id)
+		viewer, err := s.authz.ViewerOf(ctx, user)
+		if err != nil {
+			return nil, err
+		}
+		rels, err := s.service.Relationships(ctx, id, viewer)
 		if err != nil {
 			return nil, s.mapError(err)
 		}
@@ -110,7 +115,8 @@ func (s *ConnectServer) UpdateThing(ctx context.Context, req *connect.Request[go
 
 // SearchThings runs the filtered search.
 func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[goelandv1.SearchThingsRequest]) (*connect.Response[goelandv1.SearchThingsResponse], error) {
-	if _, err := core.RequireCaller(ctx, core.ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := core.ParsePageToken(req.Msg.PageToken)
@@ -122,7 +128,8 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 		return nil, s.mapError(err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
-		Query: req.Msg.Query, TypeCode: req.Msg.ThingTypeCode, BBox: bbox, IncludeDeleted: req.Msg.IncludeDeleted,
+		Viewer: viewer,
+		Query:  req.Msg.Query, TypeCode: req.Msg.ThingTypeCode, BBox: bbox, IncludeDeleted: req.Msg.IncludeDeleted,
 		Limit: int(req.Msg.PageSize), Offset: offset,
 	})
 	if err != nil {

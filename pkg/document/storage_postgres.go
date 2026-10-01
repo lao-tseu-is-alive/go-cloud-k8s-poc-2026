@@ -51,7 +51,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 		if blob, err = getBlob(ctx, tx, *in.ContentBlobID); err != nil {
 			return CreateResult{}, fmt.Errorf("content blob: %w", err)
 		}
-		if existing, err = findReusableDocument(ctx, tx, blob.ID); err != nil {
+		if existing, err = findReusableDocument(ctx, tx, blob.ID, in.OperatorID); err != nil {
 			return CreateResult{}, err
 		}
 	}
@@ -341,6 +341,23 @@ func (r *PostgresRepository) ListVersions(ctx context.Context, documentID uuid.U
 	return versions, hydrateVersions(ctx, r.pool, versions)
 }
 
+// Content returns a version of a document hydrated with its blob, after
+// checking that operatorID may read the document (GLD-049).
+func (r *PostgresRepository) Content(ctx context.Context, operatorID string, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error) {
+	if err := core.EnsureAccessTx(ctx, r.pool, operatorID, documentID, core.LevelRead); err != nil {
+		return nil, err
+	}
+	rows, err := r.pool.Query(ctx, contentVersionSQL, pgx.NamedArgs{"document_id": documentID, "version_id": versionID})
+	if err != nil {
+		return nil, fmt.Errorf("get version content: %w", err)
+	}
+	version, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Version])
+	if err != nil {
+		return nil, mapDBError(err)
+	}
+	return version, hydrateVersions(ctx, r.pool, []*Version{version})
+}
+
 // RegisterBlob stores the metadata of freshly written content, or returns the
 // blob that already holds the digest (reused = true) when identical content is
 // known, including when a concurrent upload won the race.
@@ -589,7 +606,7 @@ type documentListRow struct {
 
 // Search runs full-text + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, searchDocumentsSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, searchDocumentsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"query":               filter.Query,
 		"document_type_code":  filter.DocumentTypeCode,
 		"confidentiality_max": filter.ConfidentialityMax,
@@ -600,7 +617,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		"thing_id":            filter.ThingID,
 		"limit":               filter.Limit,
 		"offset":              filter.Offset,
-	})
+	}))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search documents: %w", err)
 	}
@@ -702,9 +719,15 @@ func getBlob(ctx context.Context, q core.Querier, id uuid.UUID) (*ContentBlob, e
 	return blob, nil
 }
 
-// findReusableDocument returns the live document already holding the blob, or nil.
-func findReusableDocument(ctx context.Context, q core.Querier, blobID uuid.UUID) (*Document, error) {
-	rows, err := q.Query(ctx, findReusableDocumentSQL, pgx.NamedArgs{"content_blob_id": blobID})
+// findReusableDocument returns the live document already holding the blob that
+// operatorID may read, or nil: content alone never reveals, nor attaches, a
+// document the operator cannot read (GLD-049).
+func findReusableDocument(ctx context.Context, q core.Querier, blobID uuid.UUID, operatorID string) (*Document, error) {
+	viewer, err := core.ViewerTx(ctx, q, operatorID)
+	if err != nil {
+		return nil, err
+	}
+	rows, err := q.Query(ctx, findReusableDocumentSQL, viewer.AddTo(pgx.NamedArgs{"content_blob_id": blobID}))
 	if err != nil {
 		return nil, fmt.Errorf("find reusable document: %w", err)
 	}

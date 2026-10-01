@@ -274,6 +274,8 @@ type EndInput struct {
 // RelationshipFilter controls relationship listing for one subject.
 // Unlinked (soft-deleted) edges are excluded; ended edges are returned as history.
 type RelationshipFilter struct {
+	// Viewer is who lists: edges whose other end it may not read are left out (GLD-049).
+	Viewer Viewer
 	// SubjectID is the subject whose edges are listed.
 	SubjectID uuid.UUID
 	// Outgoing selects edges whose source is SubjectID when true, and edges

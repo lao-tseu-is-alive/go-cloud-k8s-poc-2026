@@ -77,7 +77,7 @@ func TestTimelineLifecycle(t *testing.T) {
 // assertCaseHasDocument checks that citing the document linked it to the case.
 func assertCaseHasDocument(t *testing.T, env *testEnv, caseID, documentID uuid.UUID) {
 	t.Helper()
-	rels, err := env.caseSvc.Relationships(env.ctx, caseID)
+	rels, err := env.caseSvc.Relationships(env.ctx, caseID, operatorViewer)
 	if err != nil {
 		t.Fatalf("case relationships: %v", err)
 	}

@@ -53,7 +53,7 @@ func TestThingLifecycle(t *testing.T) {
 	c := openCase(t, env, "Permis "+token)
 	link(t, env, c.ID, core.LinkInput{TargetSubjectID: parcel.ID, RelationshipTypeCode: "CASE_CONCERNS_THING"})
 	link(t, env, parcel.ID, core.LinkInput{TargetSubjectID: newActor(t, env).ID, RelationshipTypeCode: "THING_HAS_ACTOR_OWNER"})
-	if rels, err := env.thingSvc.Relationships(ctx, parcel.ID); err != nil || len(rels) != 3 {
+	if rels, err := env.thingSvc.Relationships(ctx, parcel.ID, operatorViewer); err != nil || len(rels) != 3 {
 		t.Fatalf("parcel relationships (building, owner, case): %d (%v)", len(rels), err)
 	}
 

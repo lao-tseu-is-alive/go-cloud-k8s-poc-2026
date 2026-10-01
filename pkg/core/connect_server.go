@@ -137,10 +137,12 @@ func (s *ConnectServer) AssignBusinessRef(ctx context.Context, req *connect.Requ
 
 // LookupSubjects finds subjects by exact business reference.
 func (s *ConnectServer) LookupSubjects(ctx context.Context, req *connect.Request[goelandv1.LookupSubjectsRequest]) (*connect.Response[goelandv1.LookupSubjectsResponse], error) {
-	if _, err := RequireCaller(ctx, ScopeRead); err != nil {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
 		return nil, err
 	}
 	refs, err := s.service.LookupSubjects(ctx, LookupFilter{
+		Viewer:      viewer,
 		BusinessRef: req.Msg.BusinessRef,
 		Namespace:   req.Msg.Namespace,
 		Kind:        SubjectKindFromProto(req.Msg.Kind),
@@ -206,7 +208,12 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 	if err != nil {
 		return nil, err
 	}
-	if _, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead); err != nil {
+	user, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead)
+	if err != nil {
+		return nil, err
+	}
+	viewer, err := s.authz.ViewerOf(ctx, user)
+	if err != nil {
 		return nil, err
 	}
 	offset, err := ParsePageToken(req.Msg.PageToken)
@@ -214,6 +221,7 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.ListRelationships(ctx, RelationshipFilter{
+		Viewer:               viewer,
 		SubjectID:            id,
 		Outgoing:             req.Msg.Outgoing,
 		RelationshipTypeCode: req.Msg.RelationshipTypeCode,

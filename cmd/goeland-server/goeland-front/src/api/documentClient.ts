@@ -120,11 +120,13 @@ export function uploadDocumentFile (file: File, signal?: AbortSignal): Promise<U
 }
 
 /**
- * Downloads a stored blob (auth required, so we fetch with the token and trigger
- * a browser save rather than using a plain <a href>).
+ * Downloads the content of a document version, the current one by default (auth
+ * and READ on the document required, so we fetch with the token and trigger a
+ * browser save rather than using a plain <a href>).
  */
-export async function downloadDocumentBlob (storageRef: string, filename: string): Promise<void> {
-  const blob = await apiFetchBlob(`/api/documents/download?ref=${encodeURIComponent(storageRef)}`)
+export async function downloadDocumentBlob (documentId: string, filename: string, versionId?: string): Promise<void> {
+  const query = versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''
+  const blob = await apiFetchBlob(`/api/documents/${encodeURIComponent(documentId)}/content${query}`)
   const url = URL.createObjectURL(blob)
   const a = document.createElement('a')
   a.href = url
