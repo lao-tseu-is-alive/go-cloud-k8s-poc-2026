@@ -254,7 +254,7 @@ covered by an integration test.
   for existing subjects), kind-wide roles (ACTOR_MANAGER, THING_MANAGER), "Accès" panel.
   Done 2026-10-01; org unit edits stay with administrators (their grants and memberships use
   the model), searches and lists are filtered in GLD-049.
-- [x] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
+- [~] **GLD-049 — Filtering and confidentiality**: searches and lists filtered by a shared
   SQL access predicate (pagination stays exact), confidentiality applied, the search ceiling
   derived server-side, downloads through a document or version instead of a raw `?ref=`,
   timeline visibility applied (INTERNAL needs CONTRIBUTE, RESTRICTED needs MANAGE), the
