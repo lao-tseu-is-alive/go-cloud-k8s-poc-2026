@@ -1182,7 +1182,10 @@ type SearchThingsRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the results: "<field>" or "<field> desc", the field one of
+	// name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1255,6 +1258,13 @@ func (x *SearchThingsRequest) GetPageSize() int32 {
 func (x *SearchThingsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *SearchThingsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -1890,7 +1900,7 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\x0especialization\"y\n" +
 	"\x13UpdateThingResponse\x12'\n" +
 	"\x05thing\x18\x01 \x01(\v2\x11.goeland.v1.ThingR\x05thing\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xfe\x01\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xbe\x02\n" +
 	"\x13SearchThingsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12/\n" +
 	"\x0fthing_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\rthingTypeCode\x12\x1b\n" +
@@ -1899,7 +1909,8 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\tpage_size\x18\x05 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xb4\x01\n" +
+	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\a \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xb4\x01\n" +
 	"\x14SearchThingsResponse\x12)\n" +
 	"\x06things\x18\x01 \x03(\v2\x11.goeland.v1.ThingR\x06things\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

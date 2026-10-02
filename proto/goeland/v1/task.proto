@@ -172,6 +172,12 @@ message ListCaseTasksRequest {
   ];
   // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 4 [(buf.validate.field).string.max_len = 1024];
+  // order_by sorts the results: "<field>" or "<field> desc", the field one of
+  // title, case, assignee, due_at, status (default: pending first, then due_at). An unknown field is INVALID_ARGUMENT.
+  string order_by = 5 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^$|^[a-z_]+( (asc|desc))?$"
+  }];
 }
 
 // ListCaseTasksResponse is one page of tasks.
@@ -209,6 +215,12 @@ message ListMyTasksRequest {
   ];
   // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 4 [(buf.validate.field).string.max_len = 1024];
+  // order_by sorts the results: "<field>" or "<field> desc", the field one of
+  // title, case, assignee, due_at, status (default: due_at, pending first). An unknown field is INVALID_ARGUMENT.
+  string order_by = 5 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^$|^[a-z_]+( (asc|desc))?$"
+  }];
 }
 
 // ListMyTasksResponse is one page of the caller's tasks.

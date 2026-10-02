@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import type { SecurityGroup } from '@/api/types'
-  import { onMounted, ref, watch } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { createGroup, listGroups } from '@/api/accessClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
+  import { sortRows } from '@/utils/listSort'
   import { maxLength, required } from '@/utils/validation'
 
   // Security groups (GLD-048): named sets of internal users given grants like
@@ -17,6 +20,12 @@
   const ui = useUiStore()
 
   const groups = ref<SecurityGroup[]>([])
+  // Every group is loaded at once (a few hundred at most): sorted here.
+  const sort = ref<ListSort>()
+  const sortedGroups = computed(() => sortRows(groups.value, sort.value, (g, field) => {
+    if (field === 'members') return g.memberCount ?? 0
+    return field === 'description' ? g.description : g.name
+  }))
   const query = ref('')
   const includeArchived = ref(false)
   const loading = ref(false)
@@ -93,15 +102,15 @@
       <v-table v-else>
         <thead>
           <tr>
-            <th scope="col">{{ t('groups.fields.name') }}</th>
-            <th scope="col">{{ t('groups.fields.description') }}</th>
-            <th scope="col">{{ t('groups.fields.members') }}</th>
+            <SortableHeader v-model:sort="sort" field="name" :label="t('groups.fields.name')" />
+            <SortableHeader v-model:sort="sort" field="description" :label="t('groups.fields.description')" />
+            <SortableHeader v-model:sort="sort" field="members" :label="t('groups.fields.members')" />
           </tr>
         </thead>
 
         <tbody>
           <tr
-            v-for="g in groups"
+            v-for="g in sortedGroups"
             :key="g.subjectRef?.id"
             class="clickable"
             tabindex="0"

@@ -166,6 +166,7 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		OrderBy:             req.Msg.OrderBy,
 		Viewer:              viewer,
 		Query:               req.Msg.Query,
 		ActorKind:           Kind(req.Msg.ActorKind),

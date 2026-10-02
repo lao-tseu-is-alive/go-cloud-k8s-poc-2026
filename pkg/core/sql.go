@@ -214,7 +214,7 @@ JOIN relationship_type rt ON rt.id = sr.relationship_type_id
 WHERE sr.deleted_at IS NULL
   AND ((@outgoing AND sr.source_subject_id = @subject_id) OR (NOT @outgoing AND sr.target_subject_id = @subject_id))
   AND (@relationship_type_code = '' OR rt.code = @relationship_type_code)
-  AND `+ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", ""), subjectRelationshipListColumns, "subject_relationship", "sr", true)
+  AND `+ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", ""), subjectRelationshipListColumns, "subject_relationship", "sr", SortOrder{Desc: true})
 
 // --- app_user ------------------------------------------------------------------
 

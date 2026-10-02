@@ -76,6 +76,9 @@ func (s *Service) ListCase(ctx context.Context, filter CaseFilter) (ListResult, 
 	if err := checkStatuses(filter.Statuses); err != nil {
 		return ListResult{}, err
 	}
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(taskSortFields), core.Sort{}); err != nil {
+		return ListResult{}, err
+	}
 	return s.repo.ListCase(ctx, filter)
 }
 
@@ -94,6 +97,9 @@ func (s *Service) ListMine(ctx context.Context, filter MineFilter) (ListResult, 
 	}
 	if len(filter.Statuses) == 0 {
 		filter.Statuses = []Status{StatusOpen, StatusInProgress}
+	}
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(taskSortFields), core.Sort{}); err != nil {
+		return ListResult{}, err
 	}
 	return s.repo.ListMine(ctx, filter)
 }

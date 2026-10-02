@@ -1727,7 +1727,10 @@ type SearchDocumentsRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,9,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the results: "<field>" or "<field> desc", the field one of
+	// title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,11,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1828,6 +1831,13 @@ func (x *SearchDocumentsRequest) GetPageSize() int32 {
 func (x *SearchDocumentsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -2678,7 +2688,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\ractual_sha256\x18\x02 \x01(\tR\factualSha256\x12;\n" +
 	"\vverified_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"verifiedAt\x12.\n" +
-	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"\x9c\x03\n" +
+	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"\xdc\x03\n" +
 	"\x16SearchDocumentsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05query\x125\n" +
 	"\x12document_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x10documentTypeCode\x12\x17\n" +
@@ -2693,7 +2703,8 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
 	"page_token\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xc0\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\v \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xc0\x01\n" +
 	"\x17SearchDocumentsResponse\x122\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x14.goeland.v1.DocumentR\tdocuments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

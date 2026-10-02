@@ -365,6 +365,18 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
   constraints, one import marker instead of per-row audit, advisory-locked. Real
   person data requires the product owner's data-governance sign-off.
 
+## UI feedback on real data (2026-10-02)
+
+Remarks of the product owner after seeing the POC on the imported production data.
+
+- [~] **GLD-055 — Sortable lists**: every list sorts by a click on a column header. The paged
+  lists (cases, documents, actors, things, my tasks, the tasks of a case) sort on the server
+  (`order_by` on their RPC, a whitelist of fields per list, `core.ParseOrderBy` /
+  `core.SortedQueries`, indexes of migration `0027`); the short lists (groups) in the browser.
+  Done 2026-10-02: `SortableHeader` (aria-sort, keyboard), 0.04–0.3 s on ~512k cases and ~2.3M
+  documents except the document "final" and "type" columns (~1.2 s, few distinct values over the
+  whole table). The detail panels (relationships, grants, timeline) keep their order for now.
+
 ## Infrastructure
 
 - [ ] **GLD-020 — Object storage**: an S3-compatible (MinIO) implementation of

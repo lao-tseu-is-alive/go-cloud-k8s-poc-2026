@@ -597,18 +597,19 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, opera
 	return ev, nil
 }
 
-// documentSearchSQL picks the query of the scope of filter (case, thing, both or none).
+// documentSearchSQL picks the query of the scope (case, thing, both or none)
+// and sort of filter.
 func documentSearchSQL(filter SearchFilter) string {
+	scope := scopeAll
 	switch {
 	case filter.CaseID != nil && filter.ThingID != nil:
-		return searchCaseThingDocumentsSQL
+		scope = scopeCaseThing
 	case filter.CaseID != nil:
-		return searchCaseDocumentsSQL
+		scope = scopeCase
 	case filter.ThingID != nil:
-		return searchThingDocumentsSQL
-	default:
-		return searchAllDocumentsSQL
+		scope = scopeThing
 	}
+	return core.SortedQuery(searchDocumentsSQL[scope], filter.Sort, defaultDocumentSort)
 }
 
 // documentListRow adds the window total to the document columns for search scanning.

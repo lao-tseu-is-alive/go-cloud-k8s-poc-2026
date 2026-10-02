@@ -233,6 +233,8 @@ export interface SearchActorsParams {
   includeDeleted?: boolean
   pageSize?: number
   pageToken?: string
+  /** order_by: "<field>" or "<field> desc" (GLD-055). */
+  orderBy?: string
 }
 
 export interface SearchActorsResponse {
@@ -323,6 +325,8 @@ export interface SearchDocumentsParams {
   includeDeleted?: boolean
   pageSize?: number
   pageToken?: string
+  /** order_by: "<field>" or "<field> desc" (GLD-055). */
+  orderBy?: string
 }
 
 export interface SearchDocumentsResponse {
@@ -490,6 +494,8 @@ export interface SearchCasesParams {
   includeDeleted?: boolean
   pageSize?: number
   pageToken?: string
+  /** order_by: "<field>" or "<field> desc" (GLD-055). */
+  orderBy?: string
 }
 
 /** A page of the relationships of a subject in one direction. */
@@ -689,6 +695,8 @@ export interface SearchThingsParams {
   includeDeleted?: boolean
   pageSize?: number
   pageToken?: string
+  /** order_by: "<field>" or "<field> desc" (GLD-055). */
+  orderBy?: string
 }
 
 export interface SearchThingsResponse {

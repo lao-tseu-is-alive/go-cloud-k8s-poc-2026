@@ -145,6 +145,9 @@ func (s *Service) Search(ctx context.Context, filter SearchFilter) (SearchResult
 	filter.Offset = max(filter.Offset, 0)
 	filter.Query = strings.TrimSpace(filter.Query)
 	filter.CaseTypeCode = strings.TrimSpace(filter.CaseTypeCode)
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(caseSortFields), defaultCaseSort); err != nil {
+		return SearchResult{}, err
+	}
 	if filter.Status != StatusUnspecified && !filter.Status.Valid() {
 		return SearchResult{}, fmt.Errorf("%w: unknown status %d", core.ErrInvalidInput, filter.Status)
 	}

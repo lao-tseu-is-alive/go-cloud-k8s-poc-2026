@@ -149,6 +149,7 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		OrderBy:        req.Msg.OrderBy,
 		Viewer:         viewer,
 		Query:          req.Msg.Query,
 		CaseTypeCode:   req.Msg.CaseTypeCode,

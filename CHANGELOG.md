@@ -21,6 +21,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   as business reference `GOELAND`), grants, actors with checked contacts and a correspondence
   address, and the actor, employee and unit roles on cases.
 
+- **GLD-055** — Sortable lists: a click on a column header sorts the case, document, actor,
+  thing, task and group lists (`orderBy` on `SearchCases`, `SearchDocuments`, `SearchActors`,
+  `SearchThings`, `ListMyTasks` and `ListCaseTasks`: `"<field>"` or `"<field> desc"`, an unknown
+  field answers 400); indexes on the sorted columns (migration `0027`).
 - **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
   details), their actor roles and cases, links between cases (parent, related), documents as
   metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),

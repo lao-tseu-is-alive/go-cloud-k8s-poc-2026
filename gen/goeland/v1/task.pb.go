@@ -640,7 +640,10 @@ type ListCaseTasksRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the results: "<field>" or "<field> desc", the field one of
+	// title, case, assignee, due_at, status (default: pending first, then due_at). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -699,6 +702,13 @@ func (x *ListCaseTasksRequest) GetPageSize() int32 {
 func (x *ListCaseTasksRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListCaseTasksRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -788,7 +798,10 @@ type ListMyTasksRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,3,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,4,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the results: "<field>" or "<field> desc", the field one of
+	// title, case, assignee, due_at, status (default: due_at, pending first). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,5,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -847,6 +860,13 @@ func (x *ListMyTasksRequest) GetPageSize() int32 {
 func (x *ListMyTasksRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListMyTasksRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -2289,28 +2309,30 @@ const file_goeland_v1_task_proto_rawDesc = "" +
 	"\fcancelled_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vcancelledAt\x12!\n" +
 	"\fcancelled_by\x18\x19 \x01(\tR\vcancelledBy\x12/\n" +
 	"\x13cancellation_reason\x18\x1a \x01(\tR\x12cancellationReason\x12<\n" +
-	"\vassignments\x18\x1b \x03(\v2\x1a.goeland.v1.TaskAssignmentR\vassignments\"\xd2\x01\n" +
+	"\vassignments\x18\x1b \x03(\v2\x1a.goeland.v1.TaskAssignmentR\vassignments\"\x92\x02\n" +
 	"\x14ListCaseTasksRequest\x12!\n" +
 	"\acase_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06caseId\x12E\n" +
 	"\bstatuses\x18\x02 \x03(\x0e2\x16.goeland.v1.TaskStatusB\x11\xbaH\x0e\x92\x01\v\x10\x04\"\a\x82\x01\x04\x10\x01 \x00R\bstatuses\x12'\n" +
 	"\tpage_size\x18\x03 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xa5\x01\n" +
+	"page_token\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\x05 \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xa5\x01\n" +
 	"\x15ListCaseTasksResponse\x12&\n" +
 	"\x05tasks\x18\x01 \x03(\v2\x10.goeland.v1.TaskR\x05tasks\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12\x1d\n" +
 	"\n" +
-	"open_count\x18\x04 \x01(\x05R\topenCount\"\xd2\x01\n" +
+	"open_count\x18\x04 \x01(\x05R\topenCount\"\x92\x02\n" +
 	"\x12ListMyTasksRequest\x12E\n" +
 	"\bstatuses\x18\x01 \x03(\x0e2\x16.goeland.v1.TaskStatusB\x11\xbaH\x0e\x92\x01\v\x10\x04\"\a\x82\x01\x04\x10\x01 \x00R\bstatuses\x12#\n" +
 	"\rinclude_units\x18\x02 \x01(\bR\fincludeUnits\x12'\n" +
 	"\tpage_size\x18\x03 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\x84\x01\n" +
+	"page_token\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\x05 \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\x84\x01\n" +
 	"\x13ListMyTasksResponse\x12&\n" +
 	"\x05tasks\x18\x01 \x03(\v2\x10.goeland.v1.TaskR\x05tasks\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

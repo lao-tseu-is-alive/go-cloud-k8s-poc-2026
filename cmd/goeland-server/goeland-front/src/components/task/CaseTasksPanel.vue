@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Task, TaskStatus } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listCaseTasks } from '@/api/taskClient'
@@ -7,6 +8,7 @@
   import { PENDING_STATUSES } from '@/components/task/taskForm'
   import TaskTable from '@/components/task/TaskTable.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { toOrderBy } from '@/utils/listSort'
 
   // The tasks of a case: pending ones by default, all on demand. Reports the
   // pending count (a case cannot close while tasks are open) and asks the page
@@ -17,6 +19,7 @@
   const { t } = useI18n()
   const { report } = useApiErrors()
   const tasks = ref<Task[]>([])
+  const sort = ref<ListSort>()
   const loading = ref(false)
   const showAll = ref(false)
   const dialogs = ref<InstanceType<typeof TaskDialogs> | null>(null)
@@ -25,7 +28,7 @@
     loading.value = true
     try {
       const statuses: TaskStatus[] | undefined = showAll.value ? undefined : PENDING_STATUSES
-      const res = await listCaseTasks(props.caseId, { statuses, pageSize: 200 })
+      const res = await listCaseTasks(props.caseId, { statuses, pageSize: 200, orderBy: toOrderBy(sort.value) })
       tasks.value = res.tasks ?? []
       emit('open', res.openCount ?? 0)
     } catch (error) {
@@ -40,7 +43,7 @@
     emit('changed')
   }
 
-  watch([() => props.caseId, () => props.reloadKey, showAll], load, { immediate: true })
+  watch([() => props.caseId, () => props.reloadKey, showAll, sort], load, { immediate: true })
 </script>
 
 <template>
@@ -73,6 +76,7 @@
 
     <TaskTable
       v-else
+      v-model:sort="sort"
       :can-edit="canEdit"
       :tasks="tasks"
       @assign="dialogs?.openAssign($event)"

@@ -122,6 +122,9 @@ func (s *Service) Search(ctx context.Context, filter SearchFilter) (SearchResult
 	filter.Limit, filter.Offset = limit, max(filter.Offset, 0)
 	filter.Query = strings.TrimSpace(filter.Query)
 	filter.TypeCode = strings.TrimSpace(filter.TypeCode)
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(thingSortFields), defaultThingSort); err != nil {
+		return SearchResult{}, err
+	}
 	return s.repo.Search(ctx, filter)
 }
 

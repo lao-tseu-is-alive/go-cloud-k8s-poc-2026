@@ -92,16 +92,31 @@ ORDER BY label;`
 // searchActorsSQL performs accent-insensitive name search over the generated
 // search_vector plus kind / category / status filters. The query term is folded
 // through immutable_unaccent (migration 0005) to match the accent-folded vector.
-var searchActorsSQL = core.CappedPageSQL(`
-SELECT a.id AS id, a.display_name AS sort_key
+// actorSortFields are the sortable columns of the actor list (GLD-055).
+var actorSortFields = map[string]core.SortField{
+	"display_name": {Expr: "a.display_name"},
+	"actor_kind":   {Expr: "a.actor_kind"},
+	"is_active":    {Expr: "a.is_active"},
+	"created_at":   {Expr: "a.created_at"},
+	"category":     {Nullable: true, Expr: "oc.label", Join: "LEFT JOIN organization_category oc ON oc.id = a.organization_category_id"},
+}
+
+// defaultActorSort is the order of the actor list without order_by: by name.
+var defaultActorSort = core.Sort{Field: "display_name"}
+
+var searchActorsSQL = core.SortedQueries(actorSortFields, func(f core.SortField, desc bool) string {
+	return core.CappedPageSQL(`
+SELECT a.id AS id, `+f.Expr+` AS sort_key
 FROM actor a
+`+f.Join+`
 `+core.MetadataLateralSQL("a.id")+`
 WHERE (@query = '' OR a.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
   AND (@actor_kind = 0 OR a.actor_kind = @actor_kind)
   AND (@category_code = '' OR a.organization_category_id = (SELECT id FROM organization_category WHERE code = @category_code))
   AND (NOT @only_active OR a.is_active = true)
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND `+core.ReadableSQL("a.id", "rm"), actorColumns, "actor", "a", false)
+  AND `+core.ReadableSQL("a.id", "rm"), actorColumns, "actor", "a", f.Order(desc))
+})
 
 // --- address / actor_address ---------------------------------------------------
 

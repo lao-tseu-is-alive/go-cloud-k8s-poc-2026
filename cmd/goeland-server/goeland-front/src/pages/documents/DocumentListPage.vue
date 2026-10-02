@@ -1,13 +1,16 @@
 <script setup lang="ts">
   import type { GoDocument, SearchDocumentsParams } from '@/api/types'
-  import { onMounted, ref } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchDocuments } from '@/api/documentClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import DocumentSearchFilters from '@/components/document/DocumentSearchFilters.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { formatDate, formatDateTime, formatTotal } from '@/utils/formatters'
+  import { toOrderBy } from '@/utils/listSort'
 
   const { t } = useI18n()
   const router = useRouter()
@@ -15,6 +18,7 @@
 
   const PAGE_SIZE = 25
   const filters = ref<SearchDocumentsParams>({ query: '', documentTypeCode: undefined, onlyFinal: false, onlyRecords: false, includeDeleted: false })
+  const sort = ref<ListSort>()
   const documents = ref<GoDocument[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
@@ -26,6 +30,7 @@
     try {
       const res = await searchDocuments({
         ...filters.value,
+        orderBy: toOrderBy(sort.value),
         pageSize: PAGE_SIZE,
         pageToken: reset ? undefined : nextPageToken.value || undefined,
       })
@@ -45,6 +50,8 @@
     nextPageToken.value = ''
     void load(true)
   }
+  // A click on a column header sorts on the server, from the first page.
+  watch(sort, onSearch)
 
   function onReset () {
     filters.value = { query: '', documentTypeCode: undefined, onlyFinal: false, onlyRecords: false, includeDeleted: false }
@@ -75,12 +82,12 @@
       <v-table hover>
         <thead>
           <tr>
-            <th scope="col">{{ t('fields.document.title') }}</th>
-            <th scope="col">{{ t('fields.document.document_type') }}</th>
-            <th scope="col">{{ t('fields.document.status') }}</th>
-            <th scope="col">{{ t('fields.document.official_date') }}</th>
-            <th scope="col">{{ t('fields.document.is_final') }}</th>
-            <th scope="col">{{ t('fields.common.created_at') }}</th>
+            <SortableHeader v-model:sort="sort" field="title" :label="t('fields.document.title')" />
+            <SortableHeader v-model:sort="sort" field="document_type" :label="t('fields.document.document_type')" />
+            <SortableHeader v-model:sort="sort" field="status" :label="t('fields.document.status')" />
+            <SortableHeader v-model:sort="sort" field="official_date" :label="t('fields.document.official_date')" />
+            <SortableHeader v-model:sort="sort" field="is_final" :label="t('fields.document.is_final')" />
+            <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
           </tr>
         </thead>
 

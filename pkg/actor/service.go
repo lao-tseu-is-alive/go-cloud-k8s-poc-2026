@@ -153,6 +153,9 @@ func (s *Service) Search(ctx context.Context, filter SearchFilter) (SearchResult
 	}
 	filter.Query = strings.TrimSpace(filter.Query)
 	filter.OrganizationCatCode = strings.TrimSpace(filter.OrganizationCatCode)
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(actorSortFields), defaultActorSort); err != nil {
+		return SearchResult{}, err
+	}
 	return s.repo.Search(ctx, filter)
 }
 

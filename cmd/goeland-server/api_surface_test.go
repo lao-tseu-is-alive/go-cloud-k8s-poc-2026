@@ -74,6 +74,7 @@ func (s *surface) catalogues() {
 	s.ok("GET", "/api/relationship-types", nil)
 	s.caseTypeDefaults()
 	s.strictJSON()
+	s.sorting()
 }
 
 // caseTypeDefaults covers the default access of a case type (GLD-050).
@@ -97,6 +98,19 @@ func (s *surface) caseTypeDefaults() {
 	if lvl, _ := created["case"].(map[string]any)["recordMetadata"].(map[string]any)["confidentialityLevel"].(float64); lvl != 2 {
 		s.t.Fatalf("the type's minimum confidentiality applies: %v", created)
 	}
+}
+
+// sorting calls every sorted list once and refuses an unknown sort field (GLD-055).
+func (s *surface) sorting() {
+	for _, path := range []string{
+		"/api/cases/search?orderBy=title%20desc", "/api/cases/search?orderBy=business_ref",
+		"/api/documents/search?orderBy=official_date%20desc", "/api/actors/search?orderBy=category",
+		"/api/things/search?orderBy=thing_type", "/api/tasks/mine?orderBy=due_at%20desc",
+	} {
+		s.ok("GET", path, nil)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/cases/search?orderBy=owner", nil)
+	s.fails(codeInvalidArgument, "GET", "/api/cases/search?orderBy=title%20sideways", nil)
 }
 
 // strictJSON checks that a body naming an unknown field is refused on both

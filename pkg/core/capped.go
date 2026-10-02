@@ -11,25 +11,21 @@ const CountLimit = MaxCountedTotal + 1
 
 // CappedPageSQL builds a paged query whose total counts at most CountLimit
 // matches. match selects "<alias>.id AS id, <sort expression> AS sort_key"
-// from the filtered rows; it is ordered by sort_key (descending when desc)
+// from the filtered rows; it is ordered by sort_key in order
 // then id, and cut at @count_limit, so an index on the sort key ends the scan
 // early. The page (@limit, @offset) is read from those matches and projected
 // with columns over table aliased alias; every row carries total_count.
-func CappedPageSQL(match, columns, table, alias string, desc bool) string {
-	direction := ""
-	if desc {
-		direction = " DESC"
-	}
-	order := "sort_key" + direction + ", id" + direction
+func CappedPageSQL(match, columns, table, alias string, order SortOrder) string {
+	inner := sortOrderOf("", order)
 	return `
 WITH matched AS (
 ` + match + `
-ORDER BY ` + order + `
+ORDER BY ` + inner + `
 LIMIT @count_limit)
 SELECT ` + columns + `, (SELECT count(*) FROM matched) AS total_count
-FROM (SELECT id, sort_key FROM matched ORDER BY ` + order + ` LIMIT @limit OFFSET @offset) m
+FROM (SELECT id, sort_key FROM matched ORDER BY ` + inner + ` LIMIT @limit OFFSET @offset) m
 JOIN ` + table + ` ` + alias + ` ON ` + alias + `.id = m.id
-ORDER BY m.sort_key` + direction + `, m.id` + direction + `;`
+ORDER BY ` + sortOrderOf("m.", order) + `;`
 }
 
 // MetadataLateralSQL joins the governance of subject idExpr as rm (deleted_at,
@@ -51,27 +47,23 @@ const ScanWindow = 20000
 // total counts the matches among the @scan_window first rows of windowTable in
 // the sort order only (windowMatch is match over that window), so it is a
 // lower bound when the table is larger (window_full, see CapWindowTotal).
-func WindowedPageSQL(match, windowMatch, windowTable, columns, table, alias string, desc bool) string {
-	direction := ""
-	if desc {
-		direction = " DESC"
-	}
-	order := "sort_key" + direction + ", id" + direction
+func WindowedPageSQL(match, windowMatch, windowTable, columns, table, alias string, order SortOrder) string {
+	inner := sortOrderOf("", order)
 	return `
 WITH page AS (
 ` + match + `
-ORDER BY ` + order + `
+ORDER BY ` + inner + `
 LIMIT @limit OFFSET @offset),
 counted AS (
 SELECT count(*) AS n FROM (
 ` + windowMatch + `
-ORDER BY ` + order + `
+ORDER BY ` + inner + `
 LIMIT @count_limit) x)
 SELECT ` + columns + `, (SELECT n FROM counted) AS total_count,
        (SELECT count(*) FROM (SELECT 1 FROM ` + windowTable + ` LIMIT @scan_window) w) >= @scan_window AS window_full
 FROM page m
 JOIN ` + table + ` ` + alias + ` ON ` + alias + `.id = m.id
-ORDER BY m.sort_key` + direction + `, m.id` + direction + `;`
+ORDER BY ` + sortOrderOf("m.", order) + `;`
 }
 
 // CapWindowTotal is CapTotal for a WindowedPageSQL query: when the window did
@@ -87,6 +79,16 @@ func CapWindowTotal(total int32, windowFull bool, offset, returned, limit int) (
 	}
 	total, _ = CapTotal(max(total, seen))
 	return total, true
+}
+
+// sortOrderOf orders on sort_key (NULL last) then id, in the same
+// direction, the columns qualified by prefix.
+func sortOrderOf(prefix string, order SortOrder) string {
+	id := " ASC"
+	if order.Desc {
+		id = " DESC"
+	}
+	return prefix + "sort_key" + OrderDirection(order) + ", " + prefix + "id" + id
 }
 
 // CapTotal turns the total of a CappedPageSQL query into the reported total

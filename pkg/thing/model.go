@@ -175,6 +175,10 @@ type BBox struct {
 
 // SearchFilter selects things.
 type SearchFilter struct {
+	// Sort is the order of the results (thingSortFields); the zero value is the default.
+	Sort core.Sort
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
 	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
 	Viewer core.Viewer
 	// Query matches name, description and external reference accent-insensitively,

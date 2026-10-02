@@ -248,6 +248,9 @@ func (s *Service) Search(ctx context.Context, filter SearchFilter) (SearchResult
 	if filter.ConfidentialityMax <= 0 {
 		filter.ConfidentialityMax = 5
 	}
+	if filter.Sort, err = core.ParseOrderBy(filter.OrderBy, core.SortNames(documentSortFields), defaultDocumentSort); err != nil {
+		return SearchResult{}, err
+	}
 	return s.repo.Search(ctx, filter)
 }
 

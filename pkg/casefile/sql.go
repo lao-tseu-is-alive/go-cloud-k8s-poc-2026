@@ -66,20 +66,40 @@ ORDER BY code;`
 
 // --- search ----------------------------------------------------------------------
 
-// searchCasesSQL matches the accent-folded search_vector (immutable_unaccent,
-// migration 0005) or the exact business reference, plus type/status/deletion filters,
-// newest first, with a capped total (core.CappedPageSQL).
-var searchCasesSQL = core.CappedPageSQL(`
-SELECT c.id AS id, c.created_at AS sort_key
+// caseSortFields are the sortable columns of the case list (GLD-055).
+var caseSortFields = map[string]core.SortField{
+	"created_at": {Expr: "c.created_at"},
+	"opened_at":  {Expr: "c.opened_at"},
+	"title":      {Expr: "c.title"},
+	"status":     {Expr: "c.status"},
+	"case_type":  {Expr: "ct.label", Join: "JOIN case_type ct ON ct.id = c.case_type_id"},
+	"business_ref": {
+		Expr: "lpad(sr.business_ref, 20, '0')",                           // numeric references sort by value
+		Join: "JOIN subject_ref sr ON sr.id = c.id AND sr.kind = 'CASE'", // the kind leads the sort index
+	},
+}
+
+// defaultCaseSort is the order of the case list without order_by: newest first.
+var defaultCaseSort = core.Sort{Field: "created_at", Desc: true}
+
+// searchCasesSQL holds, per sort, the search matching the accent-folded
+// search_vector (immutable_unaccent, migration 0005) or the exact business
+// reference, plus type/status/deletion filters, with a capped total
+// (core.CappedPageSQL).
+var searchCasesSQL = core.SortedQueries(caseSortFields, func(f core.SortField, desc bool) string {
+	return core.CappedPageSQL(`
+SELECT c.id AS id, `+f.Expr+` AS sort_key
 FROM case_file c
+`+f.Join+`
 `+core.MetadataLateralSQL("c.id")+`
 WHERE (@query = ''
        OR c.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query))
-       OR EXISTS (SELECT 1 FROM subject_ref sr WHERE sr.id = c.id AND sr.business_ref = @query))
+       OR EXISTS (SELECT 1 FROM subject_ref sb WHERE sb.id = c.id AND sb.business_ref = @query))
   AND (@case_type_code = '' OR c.case_type_id = (SELECT id FROM case_type WHERE code = @case_type_code))
   AND (@status::smallint = 0 OR c.status = @status::smallint)
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND `+core.ReadableSQL("c.id", "rm"), caseColumns, "case_file", "c", true)
+  AND `+core.ReadableSQL("c.id", "rm"), caseColumns, "case_file", "c", f.Order(desc))
+})
 
 // --- case_type administration (GLD-040) ---------------------------------------------
 

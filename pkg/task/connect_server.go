@@ -50,7 +50,8 @@ func (s *ConnectServer) ListCaseTasks(ctx context.Context, req *connect.Request[
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	res, err := s.service.ListCase(ctx, CaseFilter{
-		CaseID: caseID, Statuses: statusesFromProto(req.Msg.Statuses), Limit: int(req.Msg.PageSize), Offset: offset,
+		OrderBy: req.Msg.OrderBy,
+		CaseID:  caseID, Statuses: statusesFromProto(req.Msg.Statuses), Limit: int(req.Msg.PageSize), Offset: offset,
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -74,7 +75,8 @@ func (s *ConnectServer) ListMyTasks(ctx context.Context, req *connect.Request[go
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
 	res, err := s.service.ListMine(ctx, MineFilter{
-		UserID: core.OperatorID(user), IncludeUnits: req.Msg.IncludeUnits, Statuses: statusesFromProto(req.Msg.Statuses),
+		OrderBy: req.Msg.OrderBy,
+		UserID:  core.OperatorID(user), IncludeUnits: req.Msg.IncludeUnits, Statuses: statusesFromProto(req.Msg.Statuses),
 		Limit: int(req.Msg.PageSize), Offset: offset,
 	})
 	if err != nil {

@@ -271,6 +271,7 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 		return nil, err
 	}
 	result, err := s.service.Search(ctx, SearchFilter{
+		OrderBy:            req.Msg.OrderBy,
 		Viewer:             viewer,
 		Query:              req.Msg.Query,
 		DocumentTypeCode:   req.Msg.DocumentTypeCode,

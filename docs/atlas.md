@@ -189,6 +189,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/authorizer.go` — `Authorizer`: the Connect adapters' check of the caller's level on the subject an RPC addresses.
 - `pkg/core/capped.go` — Capped searches and lists (GLD-053): `CappedPageSQL` (matches read in index order up to the count limit, then the page), `MetadataLateralSQL`, `CapTotal`.
 - `pkg/core/capped_test.go` — Unit tests of the capped total and of the shape of a capped query.
+- `pkg/core/sorting.go` — Sortable lists (GLD-055): `Sort`, `ParseOrderBy` (order_by against a field whitelist), sort fields and their per-sort queries, directions (NULL last).
 - `pkg/core/batch.go` — Batch loading for list pages: `GetSubjectHeadersTx`, `CollectIndexedTx`, `CollectGroupedTx`, `IDsOf`, `UniqueIDs` (one query per related kind instead of per row).
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
@@ -250,6 +251,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0024_case_type_defaults.sql` — Schema migration: a case type's default confidentiality and `case_type_default_grant` template lines.
 - `pkg/core/module/db/migrations/0025_import_provenance.sql` — Schema migration: `import_batch` (one marker per import run, with its counts) and `subject_provenance` (source system, table and id of an imported subject).
 - `pkg/core/module/db/migrations/0026_search_order_indexes.sql` — Schema migration: indexes on the sort keys of the searches and of the relationship lists of a subject (GLD-053).
+- `pkg/core/module/db/migrations/0027_sort_indexes.sql` — Schema migration: indexes on the sortable columns of the case, document and thing lists and on the business reference sort (GLD-055).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -384,6 +386,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
 - `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
+- `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
@@ -458,6 +461,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link (type, then a searched target of its kind); the parent performs the call.
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
+- `cmd/goeland-server/goeland-front/src/components/core/SortableHeader.vue` — Column header that sorts its list (ascending then descending, aria-sort, keyboard).
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
 - `cmd/goeland-server/goeland-front/src/components/core/UserPicker.vue` — Internal user search (debounced, by name or e-mail) bound to an operator id.
 - `cmd/goeland-server/goeland-front/src/components/core/UserLabel.vue` — Internal user shown by name (admin icon, e-mail and id in the tooltip) from an operator id.
@@ -533,12 +537,14 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/listSort.test.ts` — Vitest unit tests of the list sort helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/geometry.test.ts` — GeoJSON parsing, the geometry rule (type, Swiss extent) and the SVG projection.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/i18nStub.ts` — Translate stub returning the message key, for asserting rules without i18n.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/validation.test.ts` — The required, length and SHA-256 form rules.
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
+- `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.

@@ -5,6 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
 // Status mirrors the case_task.status column and the TaskStatus proto enum.
@@ -191,6 +193,10 @@ type UpdateInput struct {
 
 // CaseFilter selects the tasks of one case.
 type CaseFilter struct {
+	// Sort is the order of the page (taskSortFields); the zero value is the list's default.
+	Sort core.Sort
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
 	// CaseID is the case whose tasks are listed.
 	CaseID uuid.UUID
 	// Statuses restricts the result; empty means every status.
@@ -203,6 +209,10 @@ type CaseFilter struct {
 
 // MineFilter selects the caller's tasks across cases.
 type MineFilter struct {
+	// Sort is the order of the page (taskSortFields); the zero value is the list's default.
+	Sort core.Sort
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
 	// UserID is the caller's operator id, set server-side.
 	UserID string
 	// IncludeUnits also returns the tasks of the caller's org units.

@@ -420,6 +420,12 @@ message SearchDocumentsRequest {
   ];
   // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 10 [(buf.validate.field).string.max_len = 1024];
+  // order_by sorts the results: "<field>" or "<field> desc", the field one of
+  // title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+  string order_by = 11 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^$|^[a-z_]+( (asc|desc))?$"
+  }];
 }
 
 // SearchDocumentsResponse is one page of matching documents.

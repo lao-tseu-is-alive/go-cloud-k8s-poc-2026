@@ -164,21 +164,30 @@ ORDER BY code;`
 
 // --- search ------------------------------------------------------------------
 
-// searchDocumentsSQL performs full-text search over the generated tsvector plus
-// governance filters, within scope (searchAllDocumentsSQL, ...).
-// The query term is folded through immutable_unaccent() (migration 0005) so it
-// matches the equally accent-folded search_vector: "chateau" finds "château".
-func searchDocumentsSQL(scope string) string {
-	return core.CappedPageSQL(documentMatchSQL(scope, "document"), documentColumns, "document", "d", true)
+// documentSortFields are the sortable columns of the document list (GLD-055).
+var documentSortFields = map[string]core.SortField{
+	"created_at":    {Expr: "d.created_at"},
+	"title":         {Expr: "d.title"},
+	"official_date": {Expr: "d.official_date", Nullable: true},
+	"status":        {Expr: "d.status"},
+	"is_final":      {Expr: "cv.is_final", Nullable: true},
+	"document_type": {Expr: "dt.label", Join: "JOIN document_type dt ON dt.id = d.document_type_id"},
 }
 
-// documentMatchSQL is the match of a document search over from (the table or a window of it).
-func documentMatchSQL(scope, from string) string {
+// defaultDocumentSort is the order of the document list without order_by: newest first.
+var defaultDocumentSort = core.Sort{Field: "created_at", Desc: true}
+
+// documentMatchSQL is the match of a document search: full-text over the
+// generated tsvector (folded through immutable_unaccent, migration 0005, so
+// "chateau" finds "château") plus governance filters, within scope, over from
+// (the table, or a window of its newest rows), keyed by the sort field f.
+func documentMatchSQL(scope, from string, f core.SortField) string {
 	return `
-SELECT d.id AS id, d.created_at AS sort_key
+SELECT d.id AS id, ` + f.Expr + ` AS sort_key
 FROM ` + from + ` d
 ` + core.MetadataLateralSQL("d.id") + `
 LEFT JOIN document_version cv ON cv.id = d.current_version_id
+` + f.Join + `
 WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
   AND (@document_type_code = '' OR d.document_type_id = (SELECT id FROM document_type WHERE code = @document_type_code))
   AND rm.confidentiality_level <= @confidentiality_max
@@ -189,29 +198,48 @@ WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_una
   AND ` + core.ReadableSQL("d.id", "rm")
 }
 
+// documentScope selects the documents of a case, a thing, both or none.
+type documentScope int
+
+const (
+	scopeAll documentScope = iota
+	scopeCase
+	scopeThing
+	scopeCaseThing
+)
+
 // The scopes of a document search. A case or thing scope is a top-level IN, so
 // the plan starts from the few edges of that subject; nested in an OR with the
 // "no scope" case, PostgreSQL scanned every document (GLD-053: 2 s → 20 ms).
-var (
-	// searchAllDocumentsSQL counts within a window of the newest documents (core.WindowedPageSQL).
-	searchAllDocumentsSQL = core.WindowedPageSQL(documentMatchSQL("", "document"),
-		documentMatchSQL("", "(SELECT * FROM document ORDER BY created_at DESC, id DESC LIMIT @scan_window)"),
-		"document", documentColumns, "document", "d", true)
-	searchCaseDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
+const (
+	caseScopeSQL = `  AND d.id IN (
         SELECT sr.target_subject_id FROM subject_relationship sr
         JOIN relationship_type rt ON rt.id = sr.relationship_type_id AND rt.code = 'CASE_HAS_DOCUMENT'
-        WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @case_id)`)
-	searchThingDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
+        WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @case_id)`
+	thingScopeSQL = `  AND d.id IN (
         SELECT sr.source_subject_id FROM subject_relationship sr
-        WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @thing_id)`)
-	searchCaseThingDocumentsSQL = searchDocumentsSQL(`  AND d.id IN (
-        SELECT sr.target_subject_id FROM subject_relationship sr
-        JOIN relationship_type rt ON rt.id = sr.relationship_type_id AND rt.code = 'CASE_HAS_DOCUMENT'
-        WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @case_id)
-  AND d.id IN (
-        SELECT sr.source_subject_id FROM subject_relationship sr
-        WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @thing_id)`)
+        WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @thing_id)`
 )
+
+// searchDocumentsSQL holds the search of each scope and sort. The unscoped one
+// counts within a window of the newest documents (core.WindowedPageSQL).
+var searchDocumentsSQL = map[documentScope]map[core.Sort]string{
+	scopeAll: core.SortedQueries(documentSortFields, func(f core.SortField, desc bool) string {
+		return core.WindowedPageSQL(documentMatchSQL("", "document", f),
+			documentMatchSQL("", "(SELECT * FROM document ORDER BY created_at DESC, id DESC LIMIT @scan_window)", f),
+			"document", documentColumns, "document", "d", f.Order(desc))
+	}),
+	scopeCase:      scopedDocumentQueries(caseScopeSQL),
+	scopeThing:     scopedDocumentQueries(thingScopeSQL),
+	scopeCaseThing: scopedDocumentQueries(caseScopeSQL + "\n" + thingScopeSQL),
+}
+
+// scopedDocumentQueries builds the queries of every sort within scope.
+func scopedDocumentQueries(scope string) map[core.Sort]string {
+	return core.SortedQueries(documentSortFields, func(f core.SortField, desc bool) string {
+		return core.CappedPageSQL(documentMatchSQL(scope, "document", f), documentColumns, "document", "d", f.Order(desc))
+	})
+}
 
 // --- document_type administration (GLD-040) ---------------------------------------------
 

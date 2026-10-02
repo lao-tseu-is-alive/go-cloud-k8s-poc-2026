@@ -167,7 +167,7 @@ func (r *PostgresRepository) ListCase(ctx context.Context, filter CaseFilter) (L
 	if _, err := core.GetRecordMetadataTx(ctx, r.pool, filter.CaseID); err != nil {
 		return ListResult{}, err
 	}
-	res, err := r.list(ctx, listCaseTasksSQL, pgx.NamedArgs{
+	res, err := r.list(ctx, core.SortedQuery(listCaseTasksSQL, filter.Sort, core.Sort{}), pgx.NamedArgs{
 		"case_id": filter.CaseID, "statuses": statusCodes(filter.Statuses), "limit": filter.Limit, "offset": filter.Offset,
 	})
 	if err != nil {
@@ -181,7 +181,7 @@ func (r *PostgresRepository) ListCase(ctx context.Context, filter CaseFilter) (L
 
 // ListMine returns a page of the caller's tasks across live cases.
 func (r *PostgresRepository) ListMine(ctx context.Context, filter MineFilter) (ListResult, error) {
-	return r.list(ctx, listMyTasksSQL, pgx.NamedArgs{
+	return r.list(ctx, core.SortedQuery(listMyTasksSQL, filter.Sort, core.Sort{}), pgx.NamedArgs{
 		"user_id": filter.UserID, "include_units": filter.IncludeUnits, "statuses": statusCodes(filter.Statuses),
 		"limit": filter.Limit, "offset": filter.Offset,
 	})

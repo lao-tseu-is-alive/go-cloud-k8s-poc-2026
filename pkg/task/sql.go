@@ -1,6 +1,10 @@
 package task
 
-import "strings"
+import (
+	"strings"
+
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+)
 
 // SQL fragments for the task repository. Column projections are the single
 // source of truth for pgx named scanning (columns map to `db` tags); they are
@@ -104,22 +108,52 @@ SET status = 1, completed_at = NULL, completed_by = '', completion_note = '',
 WHERE t.id = @id
 RETURNING ` + rawTaskColumns + `;`
 
-var listCaseTasksSQL = `
-SELECT ` + readTaskColumns + `,
-COUNT(*) OVER() AS total_count` + taskFrom + `
+// taskSortFields are the sortable columns of the task lists (GLD-055): the
+// case and assignee labels are output columns of readTaskColumns.
+var taskSortFields = map[string]core.SortField{
+	"title":    {Expr: "t.title"},
+	"case":     {Expr: "case_label"},
+	"assignee": {Expr: "assignee_label", Nullable: true},
+	"due_at":   {Expr: "t.due_at", Nullable: true},
+	"status":   {Expr: "t.status"},
+}
+
+// taskOrders holds the ORDER BY clause of each sort; the zero Sort is the
+// list's own default order.
+func taskOrders(defaultOrder string) map[core.Sort]string {
+	orders := core.SortedQueries(taskSortFields, func(f core.SortField, desc bool) string {
+		return "\nORDER BY " + f.Expr + core.OrderDirection(f.Order(desc)) + ", t.id"
+	})
+	orders[core.Sort{}] = defaultOrder
+	return orders
+}
+
+// listCaseTasksSQL holds, per sort, the page of the tasks of a case (pending first by default).
+var listCaseTasksSQL = sortedTaskQueries(`
+SELECT `+readTaskColumns+`,
+COUNT(*) OVER() AS total_count`+taskFrom+`
 WHERE t.case_id = @case_id
-  AND (cardinality(@statuses::smallint[]) = 0 OR t.status = ANY(@statuses::smallint[]))` + pendingFirst + `
-LIMIT @limit OFFSET @offset;`
+  AND (cardinality(@statuses::smallint[]) = 0 OR t.status = ANY(@statuses::smallint[]))`, pendingFirst)
+
+// sortedTaskQueries appends each sort's ORDER BY and the page to query.
+func sortedTaskQueries(query, defaultOrder string) map[core.Sort]string {
+	out := map[core.Sort]string{}
+	for sort, order := range taskOrders(defaultOrder) {
+		out[sort] = query + order + "\nLIMIT @limit OFFSET @offset;"
+	}
+	return out
+}
 
 const countPendingSQL = `
 SELECT count(*) FROM case_task
 WHERE case_id = @case_id AND status IN (1, 2);`
 
-// listMyTasksSQL returns the tasks of live cases assigned to the user or,
-// when asked, to a unit the user belongs to (open USER_MEMBER_OF_ORG_UNIT edge).
-var listMyTasksSQL = `
-SELECT ` + readTaskColumns + `,
-COUNT(*) OVER() AS total_count` + taskFrom + `
+// listMyTasksSQL holds, per sort, the tasks of live cases assigned to the user
+// or, when asked, to a unit the user belongs to (open USER_MEMBER_OF_ORG_UNIT
+// edge), earliest deadline first by default.
+var listMyTasksSQL = sortedTaskQueries(`
+SELECT `+readTaskColumns+`,
+COUNT(*) OVER() AS total_count`+taskFrom+`
 JOIN record_metadata rm ON rm.subject_id = t.case_id
 WHERE rm.deleted_at IS NULL
   AND t.status = ANY(@statuses::smallint[])
@@ -130,9 +164,8 @@ WHERE rm.deleted_at IS NULL
            JOIN relationship_type rt ON rt.id = r.relationship_type_id
            JOIN app_user me ON me.subject_id = r.source_subject_id
            WHERE rt.code = 'USER_MEMBER_OF_ORG_UNIT' AND me.user_id = @user_id
-             AND r.deleted_at IS NULL AND r.valid_to IS NULL)))
-ORDER BY t.due_at ASC NULLS LAST, t.created_at, t.id
-LIMIT @limit OFFSET @offset;`
+             AND r.deleted_at IS NULL AND r.valid_to IS NULL)))`, `
+ORDER BY t.due_at ASC NULLS LAST, t.created_at, t.id`)
 
 // --- assignments --------------------------------------------------------------------
 

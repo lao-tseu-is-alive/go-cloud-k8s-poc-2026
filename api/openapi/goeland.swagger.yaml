@@ -159,6 +159,13 @@ paths:
           in: query
           required: false
           type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            display_name, actor_kind, category, is_active, created_at (default: display_name). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
       tags:
         - ActorService
   /api/actors/{id}:
@@ -483,6 +490,13 @@ paths:
           in: query
           required: false
           type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
       tags:
         - CaseService
   /api/cases/{caseId}/circulations:
@@ -581,6 +595,13 @@ paths:
           format: int32
         - name: pageToken
           description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            title, case, assignee, due_at, status (default: pending first, then due_at). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -1077,6 +1098,13 @@ paths:
           format: int32
         - name: pageToken
           description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -2521,6 +2549,13 @@ paths:
           in: query
           required: false
           type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            title, case, assignee, due_at, status (default: due_at, pending first). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
       tags:
         - TaskService
   /api/tasks/{id}:
@@ -2852,6 +2887,13 @@ paths:
           format: int32
         - name: pageToken
           description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the results: "<field>" or "<field> desc", the field one of
+            name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string

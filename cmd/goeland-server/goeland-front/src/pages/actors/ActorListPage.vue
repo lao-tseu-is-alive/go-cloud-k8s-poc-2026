@@ -1,13 +1,16 @@
 <script setup lang="ts">
   import type { GoActor, SearchActorsParams } from '@/api/types'
-  import { onMounted, ref } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchActors } from '@/api/actorClient'
   import ActorSearchFilters from '@/components/actor/ActorSearchFilters.vue'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDateTime, formatTotal } from '@/utils/formatters'
+  import { toOrderBy } from '@/utils/listSort'
 
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
@@ -19,6 +22,7 @@
     return { query: '', actorKind: undefined, organizationCategoryCode: undefined, onlyActive: false, includeDeleted: false }
   }
   const filters = ref<SearchActorsParams>(emptyFilters())
+  const sort = ref<ListSort>()
   const actors = ref<GoActor[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
@@ -30,6 +34,7 @@
     try {
       const res = await searchActors({
         ...filters.value,
+        orderBy: toOrderBy(sort.value),
         pageSize: PAGE_SIZE,
         pageToken: reset ? undefined : nextPageToken.value || undefined,
       })
@@ -49,6 +54,8 @@
     nextPageToken.value = ''
     void load(true)
   }
+  // A click on a column header sorts on the server, from the first page.
+  watch(sort, onSearch)
 
   function onReset () {
     filters.value = emptyFilters()
@@ -79,11 +86,11 @@
       <v-table hover>
         <thead>
           <tr>
-            <th scope="col">{{ t('fields.actor.display_name') }}</th>
-            <th scope="col">{{ t('fields.actor.actor_kind') }}</th>
-            <th scope="col">{{ t('fields.actor.category') }}</th>
-            <th scope="col">{{ t('fields.actor.is_active') }}</th>
-            <th scope="col">{{ t('fields.common.created_at') }}</th>
+            <SortableHeader v-model:sort="sort" field="display_name" :label="t('fields.actor.display_name')" />
+            <SortableHeader v-model:sort="sort" field="actor_kind" :label="t('fields.actor.actor_kind')" />
+            <SortableHeader v-model:sort="sort" field="category" :label="t('fields.actor.category')" />
+            <SortableHeader v-model:sort="sort" field="is_active" :label="t('fields.actor.is_active')" />
+            <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
           </tr>
         </thead>
 

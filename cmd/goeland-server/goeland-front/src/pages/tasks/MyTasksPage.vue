@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { Task, TaskStatus } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listMyTasks } from '@/api/taskClient'
@@ -8,6 +9,7 @@
   import TaskTable from '@/components/task/TaskTable.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { toOrderBy } from '@/utils/listSort'
 
   // The caller's tasks across cases, earliest deadline first: assigned to them
   // and, optionally, to the units they belong to.
@@ -17,6 +19,7 @@
   const PAGE_SIZE = 50
 
   const tasks = ref<Task[]>([])
+  const sort = ref<ListSort>()
   const total = ref(0)
   const nextToken = ref('')
   const loading = ref(false)
@@ -31,6 +34,7 @@
     try {
       const res = await listMyTasks({
         statuses: statuses.value.length > 0 ? statuses.value : undefined,
+        orderBy: toOrderBy(sort.value),
         includeUnits: includeUnits.value || undefined,
         pageSize: PAGE_SIZE,
         pageToken: append ? nextToken.value : undefined,
@@ -45,7 +49,7 @@
     }
   }
 
-  watch([includeUnits, statuses], () => load(), { immediate: true })
+  watch([includeUnits, statuses, sort], () => load(), { immediate: true })
 </script>
 
 <template>
@@ -85,6 +89,7 @@
 
         <TaskTable
           v-else
+          v-model:sort="sort"
           can-edit
           show-case
           :tasks="tasks"

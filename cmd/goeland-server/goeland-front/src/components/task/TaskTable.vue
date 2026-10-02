@@ -1,15 +1,19 @@
 <script setup lang="ts">
   import type { TaskMove } from '@/api/taskClient'
   import type { Task } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { useI18n } from 'vue-i18n'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
   import { allowedMoves, isCirculationTask, isManaged, isPending, MOVE_ICONS, taskStatusColor } from '@/components/task/taskForm'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDate } from '@/utils/formatters'
 
   // A list of tasks with their assignee, deadline (overdue highlighted) and the
-  // actions their status allows. showCase adds the case column ("my tasks").
+  // actions their status allows. showCase adds the case column ("my tasks");
+  // the column headers sort the list on the server (v-model:sort, GLD-055).
   defineProps<{ tasks: Task[], showCase?: boolean, canEdit?: boolean }>()
+  const sort = defineModel<ListSort | undefined>('sort')
   const emit = defineEmits<{
     edit: [task: Task]
     assign: [task: Task]
@@ -26,11 +30,11 @@
   <v-table density="compact">
     <thead>
       <tr>
-        <th scope="col">{{ t('tasks.fields.title') }}</th>
-        <th v-if="showCase" scope="col">{{ t('tasks.fields.case') }}</th>
-        <th scope="col">{{ t('tasks.fields.assignee') }}</th>
-        <th scope="col">{{ t('tasks.fields.dueAt') }}</th>
-        <th scope="col">{{ t('tasks.fields.status') }}</th>
+        <SortableHeader v-model:sort="sort" field="title" :label="t('tasks.fields.title')" />
+        <SortableHeader v-if="showCase" v-model:sort="sort" field="case" :label="t('tasks.fields.case')" />
+        <SortableHeader v-model:sort="sort" field="assignee" :label="t('tasks.fields.assignee')" />
+        <SortableHeader v-model:sort="sort" field="due_at" :label="t('tasks.fields.dueAt')" />
+        <SortableHeader v-model:sort="sort" field="status" :label="t('tasks.fields.status')" />
         <th scope="col" />
       </tr>
     </thead>

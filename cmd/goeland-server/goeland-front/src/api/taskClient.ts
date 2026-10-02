@@ -10,12 +10,12 @@ const taskPath = (id: string) => `/api/tasks/${encodeURIComponent(id)}`
 
 type TaskResponse = { task?: Task }
 
-export function listCaseTasks (caseId: string, params: { statuses?: TaskStatus[], pageSize?: number, pageToken?: string } = {}): Promise<ListTasksResponse> {
+export function listCaseTasks (caseId: string, params: { statuses?: TaskStatus[], pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListTasksResponse> {
   return apiFetch<ListTasksResponse>(caseTasksPath(caseId), { query: params as Record<string, unknown> })
 }
 
 /** The caller's tasks across cases; without statuses, the pending ones. */
-export function listMyTasks (params: { statuses?: TaskStatus[], includeUnits?: boolean, pageSize?: number, pageToken?: string } = {}): Promise<ListTasksResponse> {
+export function listMyTasks (params: { statuses?: TaskStatus[], includeUnits?: boolean, pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListTasksResponse> {
   return apiFetch<ListTasksResponse>('/api/tasks/mine', { query: params as Record<string, unknown> })
 }
 

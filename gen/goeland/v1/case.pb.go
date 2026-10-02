@@ -1012,7 +1012,10 @@ type SearchCasesRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,5,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the results: "<field>" or "<field> desc", the field one of
+	// business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1085,6 +1088,13 @@ func (x *SearchCasesRequest) GetPageSize() int32 {
 func (x *SearchCasesRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *SearchCasesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -1869,7 +1879,7 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x81\x01\n" +
 	"\x16TransitionCaseResponse\x12$\n" +
 	"\x04case\x18\x01 \x01(\v2\x10.goeland.v1.CaseR\x04case\x12A\n" +
-	"\x10transition_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\x0ftransitionEvent\"\x98\x02\n" +
+	"\x10transition_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\x0ftransitionEvent\"\xd8\x02\n" +
 	"\x12SearchCasesRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12-\n" +
 	"\x0ecase_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\fcaseTypeCode\x128\n" +
@@ -1878,7 +1888,8 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\tpage_size\x18\x05 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xb0\x01\n" +
+	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\a \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xb0\x01\n" +
 	"\x13SearchCasesResponse\x12&\n" +
 	"\x05cases\x18\x01 \x03(\v2\x10.goeland.v1.CaseR\x05cases\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

@@ -269,6 +269,12 @@ message SearchCasesRequest {
   ];
   // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 6 [(buf.validate.field).string.max_len = 1024];
+  // order_by sorts the results: "<field>" or "<field> desc", the field one of
+  // business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+  string order_by = 7 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^$|^[a-z_]+( (asc|desc))?$"
+  }];
 }
 
 // SearchCasesResponse is one page of matching cases.

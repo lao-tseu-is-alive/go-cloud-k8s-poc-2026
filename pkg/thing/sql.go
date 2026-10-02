@@ -119,9 +119,21 @@ RETURNING ` + thingTypeColumns + `;`
 // searchThingsSQL matches the accent-folded search_vector or an exact parcel
 // number, EGRID or EGID, plus type, LV95 extent (index-backed &&, then exact
 // ST_Intersects) and deletion filters.
-var searchThingsSQL = core.CappedPageSQL(`
-SELECT t.id AS id, t.created_at AS sort_key
+// thingSortFields are the sortable columns of the thing list (GLD-055).
+var thingSortFields = map[string]core.SortField{
+	"created_at": {Expr: "t.created_at"},
+	"name":       {Expr: "t.name"},
+	"thing_type": {Expr: "tt.label", Join: "JOIN thing_type tt ON tt.id = t.thing_type_id"},
+}
+
+// defaultThingSort is the order of the thing list without order_by: newest first.
+var defaultThingSort = core.Sort{Field: "created_at", Desc: true}
+
+var searchThingsSQL = core.SortedQueries(thingSortFields, func(f core.SortField, desc bool) string {
+	return core.CappedPageSQL(`
+SELECT t.id AS id, `+f.Expr+` AS sort_key
 FROM thing t
+`+f.Join+`
 `+core.MetadataLateralSQL("t.id")+`
 LEFT JOIN thing_parcel p ON p.thing_id = t.id
 LEFT JOIN thing_building b ON b.thing_id = t.id
@@ -132,4 +144,5 @@ WHERE (@query = ''
   AND (NOT @has_bbox OR (t.geom && ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056)
        AND ST_Intersects(t.geom, ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056))))
   AND (@include_deleted OR rm.deleted_at IS NULL)
-  AND `+core.ReadableSQL("t.id", "rm"), thingColumns, "thing", "t", true)
+  AND `+core.ReadableSQL("t.id", "rm"), thingColumns, "thing", "t", f.Order(desc))
+})

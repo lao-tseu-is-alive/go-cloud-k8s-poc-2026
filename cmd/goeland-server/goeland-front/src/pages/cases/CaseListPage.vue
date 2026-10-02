@@ -1,15 +1,18 @@
 <script setup lang="ts">
   import type { CaseStatus, GoCase, SearchCasesParams } from '@/api/types'
-  import { computed, onMounted, ref } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchCases } from '@/api/caseClient'
   import { CASE_STATUSES } from '@/components/case/caseForm'
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
   import CaseTypeSelect from '@/components/case/CaseTypeSelect.vue'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDateTime, formatTotal } from '@/utils/formatters'
+  import { toOrderBy } from '@/utils/listSort'
 
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
@@ -21,6 +24,7 @@
     return { query: '', caseTypeCode: undefined, status: undefined, includeDeleted: false }
   }
   const filters = ref<SearchCasesParams>(emptyFilters())
+  const sort = ref<ListSort>()
   const cases = ref<GoCase[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
@@ -33,6 +37,7 @@
     try {
       const res = await searchCases({
         ...filters.value,
+        orderBy: toOrderBy(sort.value),
         pageSize: PAGE_SIZE,
         pageToken: reset ? undefined : nextPageToken.value || undefined,
       })
@@ -52,6 +57,8 @@
     nextPageToken.value = ''
     void load(true)
   }
+  // A click on a column header sorts on the server, from the first page.
+  watch(sort, onSearch)
 
   function onReset () {
     filters.value = emptyFilters()
@@ -117,11 +124,11 @@
       <v-table hover>
         <thead>
           <tr>
-            <th scope="col">{{ t('fields.subject.business_ref') }}</th>
-            <th scope="col">{{ t('fields.case.title') }}</th>
-            <th scope="col">{{ t('fields.case.case_type') }}</th>
-            <th scope="col">{{ t('fields.case.status') }}</th>
-            <th scope="col">{{ t('fields.case.opened_at') }}</th>
+            <SortableHeader v-model:sort="sort" field="business_ref" :label="t('fields.subject.business_ref')" />
+            <SortableHeader v-model:sort="sort" field="title" :label="t('fields.case.title')" />
+            <SortableHeader v-model:sort="sort" field="case_type" :label="t('fields.case.case_type')" />
+            <SortableHeader v-model:sort="sort" field="status" :label="t('fields.case.status')" />
+            <SortableHeader v-model:sort="sort" field="opened_at" :label="t('fields.case.opened_at')" />
           </tr>
         </thead>
 

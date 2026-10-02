@@ -930,6 +930,7 @@
       "addressesHint": "Adresses de l'acteur selon leur rôle ; l'étoile marque l'adresse principale. Une succursale qui agit comme partie distincte est un autre acteur, lié par « Succursale de »."
     },
     "common": {
+      "sortBy": "Trier par {column}",
       "loading": "Chargement…",
       "error": "Une erreur est survenue.",
       "noData": "Aucune donnée à afficher.",

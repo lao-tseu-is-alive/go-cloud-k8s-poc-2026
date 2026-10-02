@@ -267,6 +267,10 @@ type UpdateInput struct {
 
 // SearchFilter controls document search. Results are newest first.
 type SearchFilter struct {
+	// Sort is the order of the results (documentSortFields); the zero value is the default.
+	Sort core.Sort
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
 	// Viewer is who searches: only the subjects it may read are returned (GLD-049).
 	Viewer core.Viewer
 	// Query is an accent-insensitive full-text query over title and

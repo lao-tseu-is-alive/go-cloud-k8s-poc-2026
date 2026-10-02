@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import type { GoThing, SearchThingsParams } from '@/api/types'
-  import { onMounted, ref } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchThings } from '@/api/thingClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import ThingTypeSelect from '@/components/thing/ThingTypeSelect.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { formatDateTime, formatTotal } from '@/utils/formatters'
+  import { toOrderBy } from '@/utils/listSort'
 
   const { t } = useI18n()
   const router = useRouter()
@@ -14,6 +17,7 @@
 
   const PAGE_SIZE = 25
   const filters = ref<SearchThingsParams>({ query: '', thingTypeCode: undefined })
+  const sort = ref<ListSort>()
   const things = ref<GoThing[]>([])
   const nextPageToken = ref('')
   const totalSize = ref(0)
@@ -23,7 +27,7 @@
   async function load (reset: boolean) {
     loading.value = true
     try {
-      const res = await searchThings({ ...filters.value, pageSize: PAGE_SIZE, pageToken: reset ? undefined : nextPageToken.value || undefined })
+      const res = await searchThings({ ...filters.value, orderBy: toOrderBy(sort.value), pageSize: PAGE_SIZE, pageToken: reset ? undefined : nextPageToken.value || undefined })
       const page = res.things ?? []
       things.value = reset ? page : [...things.value, ...page]
       nextPageToken.value = res.nextPageToken ?? ''
@@ -35,6 +39,9 @@
       loading.value = false
     }
   }
+
+  // A click on a column header sorts on the server, from the first page.
+  watch(sort, () => load(true))
 
   function onReset () {
     filters.value = { query: '', thingTypeCode: undefined }
@@ -99,11 +106,11 @@
       <v-table density="comfortable">
         <thead>
           <tr>
-            <th scope="col">{{ t('fields.thing.name') }}</th>
-            <th scope="col">{{ t('fields.thing.thing_type') }}</th>
+            <SortableHeader v-model:sort="sort" field="name" :label="t('fields.thing.name')" />
+            <SortableHeader v-model:sort="sort" field="thing_type" :label="t('fields.thing.thing_type')" />
             <th scope="col">{{ t('fields.thing.identifiers') }}</th>
             <th scope="col">{{ t('fields.thing.area') }}</th>
-            <th scope="col">{{ t('fields.thing.created_at') }}</th>
+            <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.thing.created_at')" />
           </tr>
         </thead>
 
