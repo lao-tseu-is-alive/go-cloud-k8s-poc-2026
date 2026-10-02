@@ -31,8 +31,9 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 (GLD-042, GLD-043) in v0.9.1, and the second review hardening (GLD-044) in v0.9.2. Phase 6,
 security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050) is complete —
 roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD-050) in v0.11.0;
-next is the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on
-production data), then the sensitive read audit (GLD-033).
+the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on production
+data) is done; next are the UI remarks on real data — sortable detail tables (GLD-056) and
+ordered type pickers (GLD-057) — then the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -376,6 +377,20 @@ Remarks of the product owner after seeing the POC on the imported production dat
   Done 2026-10-02: `SortableHeader` (aria-sort, keyboard), 0.04–0.3 s on ~512k cases and ~2.3M
   documents except the document "final" and "type" columns (~1.2 s, few distinct values over the
   whole table). The detail panels (relationships, grants, timeline) keep their order for now.
+- [ ] **GLD-056 — Sortable detail tables** (first action of the next session): the tables inside
+  the detail pages sort by their headers too — first the "Intervenants, documents et sujets
+  liés" table of a case (`RelationshipTable`, server-paged: `order_by` on `ListRelationships`,
+  e.g. type, other end, validity, creation), then the other tables still on plain `<th>`: group
+  members (`GroupDetailPage`), document versions (`DocumentVersionsPanel`), the admin
+  catalogues, reference change log and role holders (`ReferenceCatalogPanel`,
+  `ReferenceChangesPanel`, `RolesAdminPanel`), and the lists rendered as `v-list` (grants of the
+  access panel, unit members, circulations).
+- [ ] **GLD-057 — Ordered type pickers** (first action of the next session): every type picker
+  (case, document, thing, task, org unit, relationship types, organization categories) lists
+  its entries by label, not by code: the catalogue RPCs order by `code` (`ORDER BY code` in each
+  `sql.go`), which with the ~325 imported `LEG_<id>` case types and ~110 thing types gives an
+  unusable order. Order the catalogues by label server-side (keeping the code as tie-break) and
+  make the pickers searchable (`v-autocomplete`) where the list is long.
 
 ## Infrastructure
 
