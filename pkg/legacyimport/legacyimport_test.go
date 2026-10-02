@@ -15,7 +15,8 @@ func newTestImporter() *Importer {
 		now: time.Date(2026, 10, 1, 12, 0, 0, 0, time.UTC), subjects: map[uuid.UUID]core.SubjectKind{},
 		employees: map[int64]bool{}, activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{},
 		liveUnits: map[uuid.UUID]bool{}, liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{},
-		caseClosedAt: map[uuid.UUID]time.Time{}, relTypes: map[string]uuid.UUID{},
+		caseClosedAt: map[uuid.UUID]time.Time{}, relTypes: map[string]uuid.UUID{}, unitTypes: map[int64]string{},
+		unitParents: map[int64]int64{}, allEmployeeUnits: map[int64]int64{}, entries: map[uuid.UUID]bool{}, thingTypes: map[int64]uuid.UUID{},
 	}
 }
 
@@ -164,5 +165,34 @@ func TestContactAndAddressRows(t *testing.T) {
 	}
 	if row := imp.addressRow(&sourceAddress{ActorID: 1, Street: "Rue B", PostalCode: "75001", Locality: "Paris", Country: "France"}, countries, c); row == nil || row[6] != "FR" {
 		t.Fatalf("a foreign address keeps its postal code: %v", row)
+	}
+}
+
+func TestDocumentLevels(t *testing.T) {
+	imp := newTestImporter()
+	// unit tree: 1 DIRECTION > 2 SERVICE > 3 UNIT; the poster 7 works in 3.
+	for id, typ := range map[int64]string{1: "DIRECTION", 2: "SERVICE", 3: "UNIT"} {
+		imp.unitTypes[id] = typ
+		imp.subjects[ID(string(core.SubjectKindOrgUnit), id)] = core.SubjectKindOrgUnit
+	}
+	imp.unitParents[3], imp.unitParents[2] = 2, 1
+	imp.employees[7], imp.allEmployeeUnits[7] = true, 3
+	doc := ID(string(core.SubjectKindDocument), 1)
+	c := &StageCounts{}
+	for level, unit := range map[int32]int64{2: 1, 3: 2, 4: 3} {
+		rows := imp.documentGrantRows(doc, 7, level, c)
+		if len(rows) != 2 || rows[0][4] != int16(core.LevelFullControl) || rows[1][3] != ID(string(core.SubjectKindOrgUnit), unit) {
+			t.Errorf("level %d opens to unit %d: %v", level, unit, rows)
+		}
+	}
+	for _, level := range []int32{5, 6} {
+		if rows := imp.documentGrantRows(doc, 7, level, c); len(rows) != 1 {
+			t.Errorf("level %d: the poster only (the access lists come apart): %v", level, rows)
+		}
+	}
+	for level, want := range map[int32]int32{0: 0, 1: 1, 2: core.ConfidentialLevel, 6: core.ConfidentialLevel} {
+		if got := imp.documentSubject(&sourceDocument{ID: 1, Title: "x", Level: level}).confidentiality; got != want {
+			t.Errorf("level %d: confidentiality %d, want %d", level, got, want)
+		}
 	}
 }

@@ -81,7 +81,7 @@ legacy id: the imported grants then apply exactly as in production.
 | `lien_thing_affaire` | `CASE_CONCERNS_THING` | |
 | `lien_affaire_affaire` | `CASE_PARENT_OF_CASE`, `CASE_RELATED_TO_CASE` | "Parent": case 1 is the parent of case 2 (the older one in 86% of the rows), "Enfant" is its mirror (not imported); "Lien" is stored both ways (kept once), "Lien unidirectionnel" keeps its direction |
 | `document` (~2.3M) | `document` + one `document_version` + `content_blob` | one generic type "Document Goéland" (the legacy type is a file format, which gives the media type); the current content is known by its SHA-256 only (no storage reference: the bytes stay in the legacy store); definitive → final; earlier versions not imported |
-| confidential documents | `access_grant` | see the decision below |
+| `doclevelconfidential` | confidentiality and `access_grant` | see the decision below (levels 0-6 of the legacy UI) |
 | `lien_affaire_document` / `lien_thing_document` | `CASE_HAS_DOCUMENT` / `DOCUMENT_REPRESENTS_THING` | |
 | `acteur_role` on `Document` | `DOCUMENT_AUTHORED_BY_ACTOR`, `DOCUMENT_HAS_ACTOR_<ROLE>` | |
 | `affaire_suivi` (~2.2M) | `case_timeline_entry` (COMMENT, visible to all involved) | validated → VALIDATED; locked (`affaire_suivi_verrou`) or of a closed case → LOCKED; otherwise a draft |
@@ -118,25 +118,29 @@ relationships of a unit (~0.07 s a page) instead of stopping at 200.
 Loaded in about 28 minutes in all (peak memory about 1.5 GB): ~180k things (~47k located at the
 centre of their extent, parcels without geometry; a few repeated EGID/EGRID left empty), ~94k
 actor roles on things, ~607k case–thing links, ~5k parent and ~135k related case links, ~2.3M
-documents (one version each, ~30k with earlier versions not imported), ~3.3M grants on the
-confidential documents plus ~654k from their access lists, ~2M case–document and ~1.9M
+documents (one version each, ~30k with earlier versions not imported), the readers of the
+confidential documents (see Decisions), ~2M case–document and ~1.9M
 thing–document links, ~715k document–actor roles, ~2.2M follow-ups (~125k validated, ~1.75M
 locked, ~326k drafts of open cases) and ~1.5M cited documents.
 
 At this volume (GLD-053): a case's documents ~20 ms, a thing's ~90 ms, a case timeline ~10 ms;
-the unscoped document search counts within the 20 000 newest documents (a lower bound) and takes
-~0.26 s for an employee — but ~1.6 s for a user without any grant, who reads only the public ~1 in
-160 documents and must scan far to fill a page. An access-aware search index (Meilisearch, on the
-roadmap) is the remedy.
+the unscoped document search counts within the 20 000 newest documents (a lower bound); with the
+confirmed levels (~20% of the documents confidential) every document search takes 30–120 ms.
+Measured with the first, provisional rule (81% confidential), a user without grants waited ~1.6 s:
+a table where most rows are unreadable remains the worst case of the read filter.
 
 ## Decisions
 
-- **Document confidentiality (provisional, to be confirmed)**: the legacy marks ~81% of the
-  documents confidential with a level 0-6 relative to the poster's unit and has no dictionary of
-  the levels. Until confirmed: a non-confidential document is public; a confidential one is
-  confidential (level 2) with FULL_CONTROL to its poster, READ to the poster's unit (levels 0-4:
-  the unit level − 1 steps up, covering its sub-units) and READ to its explicit access list
-  (employees, groups, units; levels 5 and 6 nearly always have one and get only it).
+- **Document confidentiality (confirmed 2026-10-02 from the legacy UI, `selNivConf`)**: the
+  level decides, not the `docisconfidential` flag (kept in the metadata). 0 "Document public" →
+  confidentiality 0; 1 "Interne Ville de Lausanne" (~78% of the documents) → 1, read by every
+  employee; 2 "Limité aux employés de la direction", 3 "… du service", 4 "… de l'unité
+  organisationnelle" → confidential (2) with READ to the poster's direction, service (its nearest
+  ancestor of that type) or direct unit, covering their sub-units; 5 "Limité au(x) groupe(s) de
+  sécurité autorisé(s)" and 6 "Limité aux employés autorisés" → confidential with READ to the
+  access lists only. The poster gets FULL_CONTROL on a confidential document. The poster's unit
+  is its current one (the legacy does not keep the unit at the time of posting). Access to a case
+  does not open its confidential documents (no live inheritance, as in the legacy levels).
 
 - Grants given to inactive employees are imported (no effect, history kept).
 - "Aucun accès" (a few dozen rows) is not imported: the person may then reach the case through

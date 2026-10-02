@@ -216,17 +216,17 @@ ORDER BY d.iddocument;`
 const documentGrantsSQL = `
 SELECT d.iddocument, d.iduserpost, coalesce(d.doclevelconfidential, 0)
 FROM document d
-WHERE d.docisconfidential AND d.iduserpost IS NOT NULL
+WHERE coalesce(d.doclevelconfidential, 0) >= 2 AND d.iduserpost IS NOT NULL
 ORDER BY d.iddocument;`
 
-// documentAccessListsSQL reads the access lists of the confidential documents
+// documentAccessListsSQL reads the access lists of the confidential documents (levels 2-6)
 // as (document, E/G/O, grantee).
 const documentAccessListsSQL = `
-SELECT a.iddocument, 'E', a.idemploye FROM document_employe_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential
+SELECT a.iddocument, 'E', a.idemploye FROM document_employe_acces a JOIN document d ON d.iddocument = a.iddocument AND coalesce(d.doclevelconfidential, 0) >= 2
 UNION ALL
-SELECT a.iddocument, 'G', a.idgroupe FROM document_groupe_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential
+SELECT a.iddocument, 'G', a.idgroupe FROM document_groupe_acces a JOIN document d ON d.iddocument = a.iddocument AND coalesce(d.doclevelconfidential, 0) >= 2
 UNION ALL
-SELECT a.iddocument, 'O', a.idorgunit FROM document_org_unit_acces a JOIN document d ON d.iddocument = a.iddocument AND d.docisconfidential;`
+SELECT a.iddocument, 'O', a.idorgunit FROM document_org_unit_acces a JOIN document d ON d.iddocument = a.iddocument AND coalesce(d.doclevelconfidential, 0) >= 2;`
 
 const timelineEntriesSQL = `
 SELECT s.idaffairesuivi, s.idaffaire, s.idcreator, coalesce(s.commentaire, ''), s.dateofficielle, s.datecreated,

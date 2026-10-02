@@ -345,12 +345,12 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
   search 0.23 s, a unit with ~125k incoming relationships 0.07 s. After wave 2 (~2.3M
   documents, 81% confidential): document searches scoped to a case or thing are top-level `IN`
   (2 s → 20–90 ms) and the unscoped one counts within a window of the newest 20 000 documents
-  (`core.WindowedPageSQL`): ~0.26 s for an employee, ~1.6 s for a user without grants (known limit,
-  an access-aware index is the remedy).
+  (`core.WindowedPageSQL`); with the confirmed document levels every document search takes
+  30–120 ms (a table where most rows are unreadable stays the read filter's worst case).
 - [~] **GLD-054 — Import wave 2**: timeline entries, document metadata (external reference, no
   bytes), things, links between cases. Done 2026-10-01 (see IMPORT_MAPPING.md): things with an
   approximate location, parcel and building details, documents with their current content known
-  by its SHA-256, readers of the confidential documents (provisional rule, to be confirmed),
+  by its SHA-256, readers of the confidential documents (levels of the legacy UI, confirmed),
   follow-ups with cited documents and final status, case–thing, case–document, thing–document
   and case–case links, actor roles on things and documents.
 

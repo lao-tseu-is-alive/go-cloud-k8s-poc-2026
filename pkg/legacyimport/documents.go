@@ -25,10 +25,22 @@ const (
 	// documentStatusDraft and documentStatusFinal are document.Status values.
 	documentStatusDraft = 1
 	documentStatusFinal = 2
-	// explicitListLevel is the first legacy confidentiality level whose readers
-	// are the document's explicit access list only (5 and 6 nearly always have one).
+	// The legacy confidentiality levels of a document (selNivConf in the
+	// legacy UI): 0 public, 1 internal to the City, 2 the poster's direction,
+	// 3 the poster's service, 4 the poster's unit, 5 the authorized security
+	// groups, 6 the authorized employees (the last two: the access lists).
+	levelInternal     = 1
+	levelDirection    = 2
+	levelService      = 3
+	levelUnit         = 4
 	explicitListLevel = 5
+	// internalConfidentiality is the POC level of an internal document: read by
+	// every employee (below core.ConfidentialLevel).
+	internalConfidentiality = 1
 )
+
+// levelUnitTypes is the type of the poster's unit (or ancestor) a level opens to.
+var levelUnitTypes = map[int32]string{levelDirection: "DIRECTION", levelService: "SERVICE"}
 
 // sourceDocument is a legacy document with the metadata of its current content.
 type sourceDocument struct {
@@ -157,8 +169,11 @@ func (imp *Importer) ensureLegacyDocumentType(ctx context.Context) (uuid.UUID, e
 func (imp *Importer) documentSubject(d *sourceDocument) subject {
 	s := newSubject(core.SubjectKindDocument, "document", d.ID, documentTitle(d))
 	s.createdAt, s.updatedAt, s.createdBy = d.CreatedAt, d.UpdatedAt, imp.operator(d.PosterID)
-	if d.Confidential {
+	switch {
+	case d.Level >= levelDirection:
 		s.confidentiality = core.ConfidentialLevel
+	case d.Level == levelInternal:
+		s.confidentiality = internalConfidentiality
 	}
 	return s
 }
@@ -195,7 +210,7 @@ func (imp *Importer) documentRow(d *sourceDocument, typeID uuid.UUID) []any {
 	if d.Definitive {
 		status = documentStatusFinal
 	}
-	metadata := map[string]any{"legacy_file_name": d.FileName, "legacy_version": d.Version}
+	metadata := map[string]any{"legacy_file_name": d.FileName, "legacy_version": d.Version, "legacy_level": d.Level, "legacy_confidential_flag": d.Confidential}
 	if d.Subject != "" {
 		metadata["legacy_subject"] = d.Subject
 	}
@@ -242,11 +257,11 @@ func (imp *Importer) versionRow(d *sourceDocument) []any {
 		validatedAt, validatedBy, map[string]any{"legacy_version": d.Version}, firstTime(d.CreatedAt, &imp.now), imp.operator(d.PosterID)}
 }
 
-// importDocumentGrants gives the readers of the confidential documents, the
-// legacy confidentiality being relative to the poster's unit: the poster gets
-// FULL_CONTROL; levels 0 to 4 open the document to the poster's unit, level
-// minus one units up (a unit grant covers its sub-units); levels 5 and 6 to
-// the explicit access list only (importDocumentAccessLists).
+// importDocumentGrants gives the readers of the confidential documents (legacy
+// levels 2 to 6; 0 and 1 are read by every employee): the poster gets
+// FULL_CONTROL; level 2 opens the document to the poster's direction, 3 to its
+// service, 4 to its unit (a unit grant covers its sub-units); levels 5 and 6
+// to the explicit access lists only (importDocumentAccessLists).
 func (imp *Importer) importDocumentGrants(ctx context.Context, c *StageCounts) error {
 	if _, err := imp.tx.Exec(ctx, createDocumentGrantStagingSQL); err != nil {
 		return fmt.Errorf("create document grant staging: %w", err)
@@ -274,7 +289,7 @@ func (imp *Importer) documentGrantRows(docID uuid.UUID, posterID int64, level in
 	if level >= explicitListLevel {
 		return rows
 	}
-	unit, ok := imp.posterUnit(posterID, max(level-1, 0))
+	unit, ok := imp.posterUnit(posterID, levelUnitTypes[level], c)
 	if !ok {
 		c.adjust("poster without a known unit, poster only")
 		return rows
@@ -282,22 +297,36 @@ func (imp *Importer) documentGrantRows(docID uuid.UUID, posterID int64, level in
 	return append(rows, []any{docID, string(core.GranteeOrgUnit), nil, unit, int16(core.LevelRead), OperatorID, grantReason})
 }
 
-// posterUnit is the unit up steps above the poster's direct unit (the highest
-// one reached when the tree is shorter), when that unit was imported.
-func (imp *Importer) posterUnit(posterID int64, up int32) (uuid.UUID, bool) {
+// posterUnit is the poster's direct unit, or for a direction or service
+// level its nearest ancestor of that type (the poster's own unit when none is
+// found above it), when that unit was imported. The legacy keeps the poster's
+// current unit only, not the one at the time of posting.
+func (imp *Importer) posterUnit(posterID int64, unitType string, c *StageCounts) (uuid.UUID, bool) {
 	unit, ok := imp.allEmployeeUnits[posterID]
 	if !ok {
 		return uuid.Nil, false
 	}
-	for ; up > 0; up-- {
-		parent, ok := imp.unitParents[unit]
-		if !ok {
-			break
-		}
-		unit = parent
+	if unitType != "" {
+		unit = imp.ancestorOfType(unit, unitType, c)
 	}
 	id := ID(string(core.SubjectKindOrgUnit), unit)
 	return id, imp.known(id, core.SubjectKindOrgUnit)
+}
+
+// ancestorOfType walks up from unit to the first unit of unitType.
+func (imp *Importer) ancestorOfType(unit int64, unitType string, c *StageCounts) int64 {
+	for current, depth := unit, 0; depth < 64; depth++ {
+		if imp.unitTypes[current] == unitType {
+			return current
+		}
+		parent, ok := imp.unitParents[current]
+		if !ok {
+			break
+		}
+		current = parent
+	}
+	c.adjust("no " + strings.ToLower(unitType) + " above the poster's unit, its unit used")
+	return unit
 }
 
 // importDocumentAccessLists turns the legacy per-document access lists of the

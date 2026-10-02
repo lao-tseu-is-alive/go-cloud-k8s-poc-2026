@@ -48,9 +48,9 @@ instance), both measured at production volume (GLD-053): `jit=off` (JIT compilat
 (a generic plan of the optional-filter searches took a text search from 0.2 s to 2.3 s). After a
 bulk load (`cmd/goeland-import` does it), run `ANALYZE`: without statistics the planner picks very
 poor plans. Search totals are counted up to 10 000 matches (`totalSizeCapped` beyond); the
-unscoped document search counts within the 20 000 newest documents. A user reading very few of
-the documents (no grant on the confidential ones) waits ~1.6 s for an unscoped document search
-on ~2.3M documents: an access-aware search index is the planned remedy.
+unscoped document search counts within the 20 000 newest documents. The read filter's worst case
+is a table where the caller can read very few rows (it must scan far to fill a page): measured at
+~1.6 s on ~2.3M documents with 81% unreadable; an access-aware search index would remove it.
 
 ## 2. Migrations
 

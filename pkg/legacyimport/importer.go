@@ -51,6 +51,8 @@ type Importer struct {
 	// unitParents the parent of each legacy unit.
 	allEmployeeUnits map[int64]int64
 	unitParents      map[int64]int64
+	// unitTypes is the POC type code of each legacy unit.
+	unitTypes map[int64]string
 	// entries are the imported timeline entries.
 	entries map[uuid.UUID]bool
 	// thingTypes maps a legacy IdTypeThing to the POC thing type id.
@@ -87,7 +89,7 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 		subjects: map[uuid.UUID]core.SubjectKind{}, employees: map[int64]bool{}, relTypes: map[string]uuid.UUID{},
 		activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{}, liveUnits: map[uuid.UUID]bool{},
 		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{}, thingTypes: map[int64]uuid.UUID{},
-		allEmployeeUnits: map[int64]int64{}, unitParents: map[int64]int64{}, entries: map[uuid.UUID]bool{},
+		allEmployeeUnits: map[int64]int64{}, unitParents: map[int64]int64{}, unitTypes: map[int64]string{}, entries: map[uuid.UUID]bool{},
 	}
 	if err := tx.QueryRow(ctx, insertBatchSQL, pgx.NamedArgs{
 		"source_system": SourceSystem, "snapshot_at": snapshot, "started_by": opts.StartedBy,

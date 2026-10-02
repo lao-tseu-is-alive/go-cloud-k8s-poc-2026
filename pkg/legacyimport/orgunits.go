@@ -152,6 +152,7 @@ func (imp *Importer) importOrgUnits(ctx context.Context, c *StageCounts) error {
 			typeCode = "UNIT"
 			c.adjust("unknown type, imported as UNIT")
 		}
+		imp.unitTypes[u.ID] = typeCode
 		label := imp.uniqueUnitLabel(u, live[u.ID], taken, c)
 		s := newSubject(core.SubjectKindOrgUnit, "org_unit", u.ID, label)
 		subjects = append(subjects, s)
