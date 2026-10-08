@@ -1190,7 +1190,7 @@ paths:
   /api/documents/{id}:
     get:
       summary: |-
-        Retrieve a document with context (outgoing relationships, recent history).
+        Retrieve a document with context (relationships in both directions, recent history).
         Requires goeland:read; NOT_FOUND when the document does not exist.
       operationId: GetDocument
       responses:
@@ -1210,9 +1210,9 @@ paths:
           type: string
         - name: includeRelationships
           description: |-
-            include_relationships also returns the document's OUTGOING relationships
-            (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
-            the document: list them with CoreService.ListRelationships(outgoing=false).
+            include_relationships also returns the document's relationships in BOTH
+            directions: outgoing ones (to things, actors, previous versions) and the
+            incoming CASE_HAS_DOCUMENT edges of every case holding it (v2 §20).
           in: query
           required: false
           type: boolean
@@ -5905,7 +5905,7 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1SubjectRelationship'
-        description: relationships are the outgoing edges; empty unless include_relationships was set.
+        description: relationships are the outgoing then incoming edges; empty unless include_relationships was set.
       recentAudit:
         type: array
         items:

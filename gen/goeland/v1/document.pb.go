@@ -1172,9 +1172,9 @@ type GetDocumentRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the document (subject_ref) UUID.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// include_relationships also returns the document's OUTGOING relationships
-	// (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
-	// the document: list them with CoreService.ListRelationships(outgoing=false).
+	// include_relationships also returns the document's relationships in BOTH
+	// directions: outgoing ones (to things, actors, previous versions) and the
+	// incoming CASE_HAS_DOCUMENT edges of every case holding it (v2 §20).
 	IncludeRelationships bool `protobuf:"varint,2,opt,name=include_relationships,json=includeRelationships,proto3" json:"include_relationships,omitempty"`
 	// include_audit also returns the 20 most recent audit events.
 	IncludeAudit  bool `protobuf:"varint,3,opt,name=include_audit,json=includeAudit,proto3" json:"include_audit,omitempty"`
@@ -1238,7 +1238,7 @@ type GetDocumentResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// document is the document with its governance.
 	Document *Document `protobuf:"bytes,1,opt,name=document,proto3" json:"document,omitempty"`
-	// relationships are the outgoing edges; empty unless include_relationships was set.
+	// relationships are the outgoing then incoming edges; empty unless include_relationships was set.
 	Relationships []*SubjectRelationship `protobuf:"bytes,2,rep,name=relationships,proto3" json:"relationships,omitempty"`
 	// recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
 	RecentAudit   []*AuditEvent `protobuf:"bytes,3,rep,name=recent_audit,json=recentAudit,proto3" json:"recent_audit,omitempty"`

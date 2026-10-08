@@ -26,7 +26,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | Document UI works | ✅ | migrated: versions panel, reuse notice, integrity on the current version |
 | Actor / Document tests green | ✅ | unit + `pkg/integration` |
 | global deduplication tested | ✅ | `pkg/integration/document_versions_test.go` (incl. concurrent uploads) |
-| same Document linkable to several cases | ✅ | automatic reuse links the same document to each case; `GetDocument` still lists outgoing edges only (GLD-006) |
+| same Document linkable to several cases | ✅ | automatic reuse links the same document to each case; `GetDocument` lists the cases holding it with its own edges (GLD-006) |
 | no regression audit / auth / security / CI | ✅ | enforced by `make release-check` |
 
 ---
@@ -42,7 +42,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | ✅ | every domain as a full slice in the browser (documents, actors, cases with timeline, tasks and circulations, things with geometry preview, org units, my tasks, reference data administration); core panels read-only |
-| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /download` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
+| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /api/documents/{id}/content` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 / v2 §26-27 `case_timeline_entry` + `timeline_document_link` | ✅ `0017` | ✅ `TimelineService.*` (9 RPCs) | ✅ | GLD-012: DRAFT → VALIDATED / LOCKED / WITHDRAWN, immutable once out of draft (DB trigger too), corrections as new entries, documents cited by logical id with the version pinned on validation, case status changes as SYSTEM entries, audited on the CASE subject; SPA "Suivis" panel in the case detail |
 | §9 / v2 §29 `case_circulation` + `case_circulation_recipient` | ✅ `0020` | ✅ `CirculationService.*` (5 RPCs) | ✅ | GLD-013: a composition of tasks (one per recipient, user or unit, origin CIRCULATION, managed by the circulation), ordered steps, answers as locked RESPONSE timeline entries, completion with a SYSTEM summary, cancellation of open tasks, no closure with an open circulation; overdue computed; SPA case panel + answer from "Mes tâches" |
@@ -295,8 +295,8 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   again. VALIDATED (endorsed) and LOCKED (frozen as is) are both immutable; a correction is a
   new entry (`corrects_entry_id`, same case, at most one live correction). A case cannot close
   while drafts remain (validate, lock or withdraw them) and a closed case accepts no timeline
-  change. Authors may validate their own entries and `visibility` is stored but not enforced
-  until GLD-017; SYSTEM entries are server-written only and AI_PROPOSAL is reserved for GLD-030.
+  change. Authors may validate their own entries and `visibility` was stored but not enforced
+  until GLD-017 (enforced since GLD-049: participants READ, internal CONTRIBUTE, restricted MANAGE); SYSTEM entries are server-written only and AI_PROPOSAL is reserved for GLD-030.
 - **ORG_UNIT (GLD-041, v2 §5.7, §31, 2026-09-29)** — modelled from the production structure
   (aggregates only). There is no natural unique code: the abbreviation names the service a unit
   belongs to and is inherited by most sub-units (111 values for 738 units) and labels repeat
@@ -304,7 +304,7 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   `external_ref` keeps the source id. A unit is dissolved, never deleted, and only without live
   sub-units; a dissolved unit takes no child, owned subject or relationship. `owner_org_id`
   became a typed foreign key (no unit existed before, so earlier free-text values were dropped).
-  User ↔ unit membership is deferred to GLD-026, where tasks need it.
+  User ↔ unit membership was deferred to GLD-026, where tasks need it (built there).
 - **Task (GLD-026, v2 §28, 2026-09-29)** — the legacy system has no task entity, so the model is
   new. A task belongs to its case (not a subject; audited on the CASE subject), like a timeline
   entry. One assignee at a time (an `app_user` or a live org unit) or none; every (re)assignment
@@ -312,14 +312,14 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   completion stamps are cleared, the audit keeps them). A case cannot close with open tasks.
   Only completion and cancellation write SYSTEM timeline entries (creation and reassignment stay
   in the history and the audit). Unit membership is the `USER_MEMBER_OF_ORG_UNIT` relationship;
-  the SPA offers it to administrators, but until GLD-017 any writer may create it through the API.
+  the SPA offers it to administrators; since GLD-048 a membership needs MANAGE on the unit.
 - **Circulation (GLD-013, v2 §29, spec v1 §9, 2026-09-29)** — modelled from the production
   structure (aggregates only: 134k circulations, 3.1 recipients on average, 60% with several
   ordered steps). A circulation is a composition of tasks: each recipient (one user or one live
   unit) gets a task (origin CIRCULATION) when its step opens; such a task can only be started
   directly, its completion and cancellation belong to the circulation. Every answer (even
   NOT_CONCERNED) is a locked RESPONSE timeline entry authored by the operator who records it
-  (until GLD-017 any writer may record an answer, e.g. one received by mail). Deviation from v1 §9:
+  (since GLD-048 the recipient or a MANAGE holder on the case records it, e.g. one received by mail). Deviation from v1 §9:
   no EXPIRED status — overdue is computed and late answers are accepted; automatic expiry with its
   audit event comes with the scheduler of GLD-028. "For information" recipients (a copy on almost
   every production circulation) are deferred until notifications exist.
@@ -449,11 +449,14 @@ Decisions for the POC (v2 §32):
   scopes (403 without `goeland:admin`), protovalidate (400), error mapping (FAILED_PRECONDITION on
   a closed case) and the module wiring. The **API surface test** (`api_surface_test.go`,
   2026-09-30) calls every other RPC once. Combined coverage with the integration tests: 74.8%.
-- ⬜ Broader DB integration coverage (spec §16: relationship / timeline / circulation /
-  security) — add alongside each new domain, following the `pkg/integration` pattern.
-- 🟡 Frontend: Vitest unit tests of the pure `utils/` modules (44 tests, contact rules shared
-  with the server) in `make front-check`, beside type-check, lint and build; component tests
-  are still to come (GLD-009).
+- ✅ DB integration coverage beyond the lifecycles (spec §16): relationships (end, unlink,
+  sorting), timeline, circulations, tasks, org units, append-only logs, business references,
+  reference administration, roles, grants and their enforcement, the read filter, default access
+  per case type and batched searches — one `pkg/integration` file per area; add one with each
+  new domain.
+- 🟡 Frontend: Vitest unit tests of the pure `utils/` modules (contact rules shared with the
+  server, list sort, picker search, ...) in `make front-check`, beside type-check, lint and
+  build; component tests are still to come (GLD-009).
 - ✅ CI (`.github/workflows`): Trivy image CVE scan on push/PR to `main`; unit tests +
   image build/scan/publish on version tags; cross-compiled binary release on version tags.
 

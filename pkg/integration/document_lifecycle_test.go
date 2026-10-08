@@ -2,6 +2,7 @@ package integration
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/google/uuid"
@@ -132,6 +133,13 @@ func TestDocumentLifecycle(t *testing.T) {
 		}
 		if len(rels) == 0 {
 			t.Fatal("document should have at least one outgoing relationship after linking")
+		}
+		// The cases holding the document point into it and come with it too (GLD-006).
+		c := openCase(t, env, "Document context "+token)
+		link(t, env, c.ID, core.LinkInput{TargetSubjectID: docID, RelationshipTypeCode: "CASE_HAS_DOCUMENT"})
+		rels, err = env.docSvc.Relationships(ctx, docID, operatorViewer)
+		if err != nil || !slices.ContainsFunc(rels, func(r *core.SubjectRelationship) bool { return r.SourceSubjectID == c.ID }) {
+			t.Fatalf("incoming CASE_HAS_DOCUMENT missing from the document relationships: %v", err)
 		}
 	})
 

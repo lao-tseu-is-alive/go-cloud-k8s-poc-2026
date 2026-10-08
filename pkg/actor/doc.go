@@ -8,6 +8,9 @@
 // typed CoreService relationships (CASE_HAS_ACTOR_*, DOCUMENT_AUTHORED_BY_ACTOR,
 // ...) — never through fields on the actor — so roles live in relationship_type.
 //
-// This first slice covers identity + typed contacts. Addresses and the full role
-// vocabulary are later slices.
+// It covers the minimal identity of a person or an organization, typed contacts
+// normalized per type (contacts.go), and addresses linked with a role and one
+// principal (actor_address, GLD-014). Branches and contact persons are other
+// actors linked by ACTOR_BRANCH_OF_ACTOR / ACTOR_CONTACT_PERSON_OF_ACTOR; the full
+// production role vocabulary is still to be mapped onto relationship_type.
 package actor

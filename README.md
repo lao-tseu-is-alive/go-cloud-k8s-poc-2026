@@ -21,7 +21,7 @@ It implements the **transversal core** (subjects, governance, relationships, aud
 internal users, reference data administration) and nine domains built on it: **Document**
 (a modern GED entity), **Actor** (external persons & organizations), **Case** (the affaire),
 **Thing** (parcels, buildings… with LV95 PostGIS geometry), **Timeline** (case follow-ups),
-**Org units**, **Tasks** and **Circulations** — keeping the proto-first Go / gRPC /
+**Org units**, **Tasks**, **Circulations** and **Access** (grants and security groups) — keeping the proto-first Go / gRPC /
 ConnectRPC / PostgreSQL approach and the structural conventions of `go-cloud-k8s-thing` +
 `go-mcp-markdown-notes`. The spec v2 §50 scenario runs end to end.
 
@@ -131,7 +131,10 @@ pkg/task/                case tasks: assignment history, lifecycle, "my tasks"
   └── module/            bundleable module (schema owned by core)
 pkg/timeline/            case timeline (suivis): drafts, validation, corrections, cited documents
   └── module/            bundleable module (schema owned by core)
-pkg/integration/         env-gated PostgreSQL integration tests (migrations + document/actor lifecycle)
+pkg/access/              grants and security groups (the effective level is computed in core)
+  └── module/            bundleable module (schema owned by core)
+pkg/legacyimport/        one-shot legacy data import (set-based, deterministic ids, provenance)
+pkg/integration/         env-gated PostgreSQL integration tests (migrations, every domain, rights and read filter)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /{id}/content endpoints
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
@@ -374,6 +377,10 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0021_append_only_logs.sql    audit_event and reference_change refuse UPDATE, DELETE and TRUNCATE
 0022_app_roles.sql           app_role (ADMIN) + app_user_role history; is_admin now derived from the ADMIN role
 0023_access_grants.sql       access_grant (levels, history) + security_group (GROUP) + kind-wide roles; grants backfilled
+0024_case_type_defaults.sql  case type minimum confidentiality + case_type_default_grant templates
+0025_import_provenance.sql   import_batch + subject_provenance (legacy source ids, one marker per import)
+0026_search_order_indexes.sql  indexes on the order of the searches and lists (production volume)
+0027_sort_indexes.sql        indexes on the sortable columns of the lists
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -478,6 +485,6 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Not built yet
 
-A real permission/confidentiality engine (GLD-017), MinIO storage, Meilisearch, provenance and
-outbox, export, AI proposals and workflow integration — all designed to sit on top of the same
+The sensitive read audit (GLD-033), MinIO storage, Meilisearch, the outbox, export, AI
+proposals and workflow integration — all designed to sit on top of the same
 subject/relationship/audit foundation. The order lives in [`docs/ROADMAP.md`](docs/ROADMAP.md).

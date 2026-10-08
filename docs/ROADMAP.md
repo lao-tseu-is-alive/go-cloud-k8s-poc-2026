@@ -54,10 +54,12 @@ next is the sensitive read audit (GLD-033).
 - [ ] **GLD-005 — Partial actor rename**: `UpdateActorRequest.display_name`
   is required by validation, which makes the adapter's "empty means unchanged"
   branch unreachable; make it truly optional or document it as required.
-- [ ] **GLD-006 — Document incoming relationships**: `GetDocument` returns only
-  outgoing edges, so the `CASE_HAS_DOCUMENT` links to cases are not shown with
-  the document; return both directions (proto, service, SPA panel). Needed for
-  "same document in several cases" (v2 §20).
+- [~] **GLD-006 — Document incoming relationships**: `GetDocument` returned only
+  outgoing edges, so the `CASE_HAS_DOCUMENT` links to cases were not shown with
+  the document. Needed for "same document in several cases" (v2 §20). The SPA panel
+  shows both directions since GLD-053/GLD-056 (`ListRelationships`); done 2026-10-08:
+  `include_relationships` returns the outgoing then incoming edges, like the case and
+  the actor, checked by the §50 scenario (one document in two cases).
 - [ ] **GLD-007 — Non-destructive contact replacement**: `replace_contacts`
   physically deletes `actor_contact` rows and the audit event keeps only the
   display name; preserve the replaced contacts (soft delete or before/after
@@ -93,6 +95,26 @@ next is the sensitive read audit (GLD-033).
   outside loopback unless explicitly allowed; `X-Request-ID` is bounded; server configuration
   tests. The CI pinning rule is reworded instead (third-party actions by SHA, GitHub's own on
   their major tag).
+- [~] **GLD-058 — Third review follow-ups** (review `reports/report_20261005_gpt-5.md`, decided
+  2026-10-08): the documentation had drifted after GLD-049 to GLD-055 while every gate stayed
+  green. Done 2026-10-08: PRODUCTION_READINESS limitations (filtering and governed download done;
+  sensitive read audit, DDL role and non-probative verification called out), the README (Access
+  domain, migrations `0024`–`0027`, package tree, "not built yet"), IMPLEMENTATION_STATUS
+  (download route, tests, passages written "until GLD-017") and the actor, task and integration
+  package docs; `docs-assert` now derives the latest migration from the repository and requires
+  it in AGENTS, README and IMPLEMENTATION_STATUS, ties the download route to `server.go` and
+  forbids the removed `GET /download` and "not filtered yet" claims. GLD-006 is fixed in the same
+  round; the other findings were already planned (GLD-004/005/007/008/009/010/020/021/033/045/046)
+  or became GLD-059 to GLD-061.
+- [ ] **GLD-059 — Immutable build inputs and SBOM**: pin the Dockerfile and CI service images
+  (`oven/bun`, `golang`, `postgis/postgis`) by digest with an update bot (Renovate or Dependabot),
+  and publish a license inventory and a CycloneDX SBOM with each release (v2 §43; Trivy can
+  produce it in the release workflow).
+- [ ] **GLD-060 — Relationship rules in the database**: a trigger checking that the source and
+  target kinds of `subject_relationship` match its `relationship_type`, as the service does, so
+  the legacy import and any future worker that bypass the service cannot write an invalid edge.
+- [ ] **GLD-061 — Migration checksums** (low priority): record a checksum of each applied
+  migration in `schema_migrations` and refuse to start when an applied migration file changed.
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 

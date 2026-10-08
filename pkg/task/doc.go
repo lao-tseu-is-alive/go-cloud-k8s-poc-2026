@@ -15,5 +15,5 @@
 // Completing or cancelling a task records a SYSTEM entry in the case timeline.
 // A closed case freezes its tasks, and the case lifecycle (package casefile)
 // calls EnsureNoOpenTasksTx before closing a case. Origin records what created
-// a task: MANUAL today, CIRCULATION, WORKFLOW and AI for later slices.
+// a task: MANUAL and CIRCULATION today, WORKFLOW and AI for later slices.
 package task

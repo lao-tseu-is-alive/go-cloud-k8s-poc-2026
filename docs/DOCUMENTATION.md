@@ -192,6 +192,11 @@ Add or update an assertion when all of these conditions hold:
 - silent drift would be worse than an explicit maintenance failure;
 - a deterministic assertion can identify the expected source text.
 
+An assertion may also forbid a literal that once described a removed contract
+(an endpoint, a limitation that no longer holds), or derive its expected text
+from the repository itself (the latest migration), so the documents that quote
+it fail as soon as it changes.
+
 Literal assertions are intentionally simple and visible. They SHOULD NOT cover
 every sentence, and MUST NOT replace unit, integration or security tests. If a
 refactor intentionally changes asserted text (including a `gofmt` realignment),

@@ -5,10 +5,11 @@ what the database must provide, how migrations behave, how blobs persist, how au
 configured, which probes to wire, and which values are secrets.
 
 > **Status: POC.** The server basics are production-shaped (timeouts, graceful shutdown,
-> health/readiness, structured logs, request IDs, non-root scratch image). Two things are
-> **not** production-grade yet and are called out explicitly below: **authorization is
-> coarse** and **blob storage is node-local**. Read [Known limitations](#known-limitations)
-> before exposing this to real data.
+> health/readiness, structured logs, request IDs, non-root scratch image) and access is
+> enforced per subject, filtered in every search and list. What is **not** production-grade
+> yet is called out explicitly below — chiefly **no audit of sensitive reads**, **migrations
+> run by the runtime role** and **node-local blob storage**. Read
+> [Known limitations](#known-limitations) before exposing this to real data.
 
 ## 1. Database
 
@@ -160,13 +161,20 @@ separately.
 
 These are the gaps that make this a POC rather than a production service:
 
-- **Authorization is partial.** Grants are enforced on every mutation and single read
-  (GLD-048: levels per subject for users, groups and org units; confidential subjects need an
-  explicit grant), but searches and lists are not filtered yet, so the titles of confidential
-  subjects still appear there, and downloads take a raw storage reference (both GLD-049). Every
-  authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
+- **Sensitive reads are not audited.** Access is enforced on every mutation and read (GLD-048:
+  levels per subject for users, groups and org units; confidential subjects need an explicit
+  grant), searches and lists return only readable subjects, and document bytes are downloaded
+  through `GET /api/documents/{id}/content` with READ on the document (GLD-049). Mutations are
+  audited, but reading or downloading a confidential subject leaves no trace yet (GLD-033).
+  Every authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
+- **Migrations run with the runtime role** (§2): the application role owns the DDL, so it could
+  alter the schema or drop the append-only triggers, and a faulty migration blocks every new pod
+  (GLD-046: a migration job with its own role).
+- **Integrity verification is not probative.** `VerifyDocumentIntegrity` compares a digest with
+  the recorded one without rereading the stored bytes (GLD-021).
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
-  without a shared/persistent volume.
+  without a shared/persistent volume, and bytes uploaded but never attached to a document are
+  not collected (GLD-020, GLD-045).
 - **Observability is logs only.** No metrics or tracing endpoints yet.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.

@@ -24,6 +24,17 @@ require_literal() {
     fi
 }
 
+forbid_literal() {
+    local file="$1"
+    local literal="$2"
+    local claim="$3"
+
+    if grep -Fq -- "$literal" "$file"; then
+        echo "docs-assert: ${claim}: ${file} still contains outdated text: ${literal}" >&2
+        failed=1
+    fi
+}
+
 # Upload and blob storage defaults are operator-facing and must agree between
 # the server configuration and every document that states them.
 require_literal cmd/goeland-server/config.go 'defaultMaxUploadBytes = 100 << 20 // 100 MiB' 'upload limit source'
@@ -43,6 +54,25 @@ require_literal AGENTS.md 'Scopes: `goeland:read` (read RPCs), `goeland:write` (
 # The operator identity is derived server-side only; requests cannot forge it.
 require_literal pkg/core/authctx.go 'func OperatorID(user *authadapter.AuthenticatedUser) string {' 'operator identity source'
 require_literal AGENTS.md 'ALWAYS derived server-side via `core.OperatorID(user)` — never from the request' 'operator identity agent contract'
+
+# Every migration range quoted in the docs ends at the latest embedded migration (GLD-058).
+latest_migration="$(basename "$(find pkg/core/module/db/migrations -name '[0-9]*_*.sql' | sort | tail -n 1)")"
+latest_version="${latest_migration%%_*}"
+require_literal AGENTS.md "0001..${latest_version} (dbmate format)" 'migration range agent contract'
+require_literal README.md "0001..${latest_version} (dbmate format)" 'migration range readme tree'
+require_literal README.md "${latest_migration}" 'latest migration listed in the readme'
+require_literal requirements/IMPLEMENTATION_STATUS.md "migrations \`0001–${latest_version}\` applied" 'migration range status snapshot'
+
+# Document bytes are downloaded through the document (GLD-049), never a raw storage reference.
+content_route='GET /api/documents/{id}/content'
+require_literal cmd/goeland-server/server.go "mux.Handle(\"${content_route}\"," 'governed download route source'
+require_literal AGENTS.md "${content_route}" 'governed download agent contract'
+require_literal README.md "${content_route}" 'governed download readme'
+require_literal docs/PRODUCTION_READINESS.md "${content_route}" 'governed download operator contract'
+for doc in README.md AGENTS.md docs/PRODUCTION_READINESS.md requirements/IMPLEMENTATION_STATUS.md; do
+    forbid_literal "${doc}" '`GET /download`' 'removed raw download endpoint'
+done
+forbid_literal docs/PRODUCTION_READINESS.md 'not filtered yet' 'searches and lists are filtered (GLD-049)'
 
 # Migrations are serialized across replicas by one advisory lock key.
 require_literal pkg/core/module/migrate.go 'const migrationLockKey = "go-cloud-k8s-poc-2026:migrations"' 'migration lock source'

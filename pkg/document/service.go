@@ -128,15 +128,10 @@ func (s *Service) Get(ctx context.Context, id uuid.UUID) (*Document, error) {
 	return s.repo.Get(ctx, id)
 }
 
-// Relationships returns the outgoing relationships for a document subject.
+// Relationships returns the relationships of a document subject in both directions
+// (outgoing first): the cases holding it point into it (CASE_HAS_DOCUMENT, GLD-006).
 func (s *Service) Relationships(ctx context.Context, id uuid.UUID, viewer core.Viewer) ([]*core.SubjectRelationship, error) {
-	res, err := s.coreSvc.ListRelationships(ctx, core.RelationshipFilter{
-		SubjectID: id, Outgoing: true, Limit: core.MaxPageSize, Viewer: viewer,
-	})
-	if err != nil {
-		return nil, err
-	}
-	return res.Relationships, nil
+	return s.coreSvc.SubjectRelationships(ctx, id, viewer)
 }
 
 // RecentAudit returns the most recent audit events for a document subject.

@@ -115,7 +115,7 @@ type DocumentServiceClient interface {
 	AddDocumentVersion(context.Context, *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error)
 	// List the versions of a document, newest first. Requires goeland:read.
 	ListDocumentVersions(context.Context, *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error)
-	// Retrieve a document with context (outgoing relationships, recent history).
+	// Retrieve a document with context (relationships in both directions, recent history).
 	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
 	// Update mutable metadata only (respects locking).
@@ -336,7 +336,7 @@ type DocumentServiceHandler interface {
 	AddDocumentVersion(context.Context, *connect.Request[v1.AddDocumentVersionRequest]) (*connect.Response[v1.AddDocumentVersionResponse], error)
 	// List the versions of a document, newest first. Requires goeland:read.
 	ListDocumentVersions(context.Context, *connect.Request[v1.ListDocumentVersionsRequest]) (*connect.Response[v1.ListDocumentVersionsResponse], error)
-	// Retrieve a document with context (outgoing relationships, recent history).
+	// Retrieve a document with context (relationships in both directions, recent history).
 	// Requires goeland:read; NOT_FOUND when the document does not exist.
 	GetDocument(context.Context, *connect.Request[v1.GetDocumentRequest]) (*connect.Response[v1.GetDocumentResponse], error)
 	// Update mutable metadata only (respects locking).

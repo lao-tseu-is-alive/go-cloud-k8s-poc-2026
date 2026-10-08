@@ -8,6 +8,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Fixed
+
+- **GLD-006** — `GetDocument` with `includeRelationships` returns the document's relationships
+  in both directions, including the `CASE_HAS_DOCUMENT` edges of every case holding it (outgoing
+  edges only before).
+
+### Changed
+
+- **GLD-058** — Follow-ups of the 2026-10-05 review: the production readiness limitations, the
+  README, the implementation status and several package docs match the code again, and
+  `make docs-check` now fails when the latest migration or the download route drifts from the
+  documents, or when the removed raw download returns to them.
+
 ## [0.12.0] - 2026-10-08
 
 This release shows the POC on production data: a one-shot local import of the legacy Goéland

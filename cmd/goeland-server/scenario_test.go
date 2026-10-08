@@ -308,6 +308,16 @@ func (s *scenario) steps13to18() {
 	s.caseB = str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Affaire B " + s.token}), "case", "subjectRef", "id")
 	s.link(s.caseB, s.document, "CASE_HAS_DOCUMENT")
 	s.link(s.document, s.building, "DOCUMENT_REPRESENTS_THING")
+	// The same document in two cases (v2 §20): GetDocument returns both incoming edges (GLD-006).
+	holders := 0
+	for _, r := range list(s.ok("GET", "/api/documents/"+s.document+"?includeRelationships=true", nil), "relationships") {
+		if str(r, "relationshipType", "code") == "CASE_HAS_DOCUMENT" {
+			holders++
+		}
+	}
+	if holders != 2 {
+		s.t.Fatalf("step 18: the document lists the 2 cases holding it, got %d", holders)
+	}
 }
 
 // steps19to21: a follow-up citing the document, validated then immutable.

@@ -301,9 +301,9 @@ message ListDocumentVersionsResponse {
 message GetDocumentRequest {
   // id is the document (subject_ref) UUID.
   string id = 1 [(buf.validate.field).string.uuid = true];
-  // include_relationships also returns the document's OUTGOING relationships
-  // (to things, actors, previous versions). CASE_HAS_DOCUMENT edges point into
-  // the document: list them with CoreService.ListRelationships(outgoing=false).
+  // include_relationships also returns the document's relationships in BOTH
+  // directions: outgoing ones (to things, actors, previous versions) and the
+  // incoming CASE_HAS_DOCUMENT edges of every case holding it (v2 §20).
   bool include_relationships = 2;
   // include_audit also returns the 20 most recent audit events.
   bool include_audit = 3;
@@ -313,7 +313,7 @@ message GetDocumentRequest {
 message GetDocumentResponse {
   // document is the document with its governance.
   Document document = 1;
-  // relationships are the outgoing edges; empty unless include_relationships was set.
+  // relationships are the outgoing then incoming edges; empty unless include_relationships was set.
   repeated SubjectRelationship relationships = 2;
   // recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
   repeated AuditEvent recent_audit = 3;
@@ -596,7 +596,7 @@ service DocumentService {
     option (google.api.http) = {get: "/api/documents/{document_id}/versions"};
   }
 
-  // Retrieve a document with context (outgoing relationships, recent history).
+  // Retrieve a document with context (relationships in both directions, recent history).
   // Requires goeland:read; NOT_FOUND when the document does not exist.
   rpc GetDocument(GetDocumentRequest) returns (GetDocumentResponse) {
     option (google.api.http) = {get: "/api/documents/{id}"};
