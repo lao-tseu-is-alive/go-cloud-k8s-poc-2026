@@ -313,7 +313,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	return result, r.hydrateAll(ctx, result.Cases)
 }
 
-// ListTypes returns the case type catalogue ordered by code.
+// ListTypes returns the case type catalogue ordered by label, code as tie-break.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*CaseType, error) {
 	rows, err := r.pool.Query(ctx, listCaseTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {

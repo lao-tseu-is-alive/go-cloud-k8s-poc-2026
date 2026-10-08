@@ -417,7 +417,7 @@ message ListTaskTypesRequest {
   bool only_active = 1;
 }
 
-// ListTaskTypesResponse returns the matching types, by code.
+// ListTaskTypesResponse returns the matching types, by label (code as tie-break).
 message ListTaskTypesResponse {
   // task_types are the matching types.
   repeated TaskType task_types = 1;

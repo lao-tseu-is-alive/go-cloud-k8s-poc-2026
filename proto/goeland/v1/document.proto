@@ -492,7 +492,7 @@ message ListDocumentTypesRequest {
 
 // ListDocumentTypesResponse returns the matching catalogue entries.
 message ListDocumentTypesResponse {
-  // document_types are the matching types.
+  // document_types are the matching types, ordered by label (code as tie-break).
   repeated DocumentType document_types = 1;
 }
 

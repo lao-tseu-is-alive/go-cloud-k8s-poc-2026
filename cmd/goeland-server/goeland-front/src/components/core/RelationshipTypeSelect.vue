@@ -4,9 +4,11 @@
   import { useI18n } from 'vue-i18n'
   import { listRelationshipTypes } from '@/api/coreClient'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { foldedFilter } from '@/utils/textSearch'
 
-  // Loads the relationship-type catalogue and lets the user pick one. The bound
-  // value is always the *code* (sent to the API); the label is display-only.
+  // Loads the relationship-type catalogue (ordered by label) and lets the user search and
+  // pick one (GLD-057). The bound value is always the *code* (sent to the API); the label
+  // is display-only.
   const props = defineProps<{
     sourceKind?: SubjectKind
     targetKind?: SubjectKind
@@ -38,8 +40,10 @@
 </script>
 
 <template>
-  <v-select
+  <v-autocomplete
     v-model="model"
+    auto-select-first
+    :custom-filter="foldedFilter"
     item-title="label"
     item-value="code"
     :items="types"

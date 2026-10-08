@@ -62,7 +62,7 @@ const listCaseTypesSQL = `
 SELECT ` + caseTypeColumns + `
 FROM case_type
 WHERE (NOT @only_active OR is_active = true)
-ORDER BY code;`
+ORDER BY label, code;`
 
 // --- search ----------------------------------------------------------------------
 

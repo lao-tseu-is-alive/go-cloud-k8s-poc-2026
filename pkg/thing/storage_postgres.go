@@ -208,7 +208,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	return result, r.hydrateAll(ctx, result.Things)
 }
 
-// ListTypes returns the thing type catalogue ordered by code.
+// ListTypes returns the thing type catalogue ordered by label, code as tie-break.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*ThingType, error) {
 	rows, err := r.pool.Query(ctx, listThingTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {

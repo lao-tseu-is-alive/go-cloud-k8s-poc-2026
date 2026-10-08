@@ -4,7 +4,9 @@
   import { useI18n } from 'vue-i18n'
   import { listThingTypes } from '@/api/thingClient'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { foldedFilter } from '@/utils/textSearch'
 
+  // A searchable picker (GLD-057): the catalogue comes ordered by label and typing filters it.
   // Bound value is the thing type *code*; the selected type is also emitted so
   // the form can follow its specialization (parcel, building, generic).
   const props = defineProps<{ label?: string, clearable?: boolean, rules?: Array<(v: unknown) => true | string> }>()
@@ -30,9 +32,11 @@
 </script>
 
 <template>
-  <v-select
+  <v-autocomplete
     v-model="model"
+    auto-select-first
     :clearable="props.clearable"
+    :custom-filter="foldedFilter"
     item-title="label"
     item-value="code"
     :items="types"

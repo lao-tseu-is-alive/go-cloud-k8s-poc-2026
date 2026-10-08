@@ -714,7 +714,7 @@ message ListRelationshipTypesRequest {
 
 // ListRelationshipTypesResponse returns the matching catalogue entries.
 message ListRelationshipTypesResponse {
-  // relationship_types are the matching types.
+  // relationship_types are the matching types, ordered by label (code as tie-break).
   repeated RelationshipType relationship_types = 1;
 }
 

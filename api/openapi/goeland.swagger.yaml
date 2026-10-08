@@ -6182,7 +6182,7 @@ definitions:
           type: object
           $ref: '#/definitions/v1CaseType'
         description: case_types are the matching types.
-    description: ListCaseTypesResponse returns the matching case types, ordered by code.
+    description: ListCaseTypesResponse returns the matching case types, ordered by label (code as tie-break).
   v1ListDocumentTypesResponse:
     type: object
     properties:
@@ -6191,7 +6191,7 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1DocumentType'
-        description: document_types are the matching types.
+        description: document_types are the matching types, ordered by label (code as tie-break).
     description: ListDocumentTypesResponse returns the matching catalogue entries.
   v1ListDocumentVersionsResponse:
     type: object
@@ -6249,7 +6249,7 @@ definitions:
           type: object
           $ref: '#/definitions/v1OrgUnitType'
         description: org_unit_types are the matching types.
-    description: ListOrgUnitTypesResponse returns the matching types, by sort order then code.
+    description: ListOrgUnitTypesResponse returns the matching types, by sort order, label then code.
   v1ListOrgUnitsResponse:
     type: object
     properties:
@@ -6268,7 +6268,7 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1OrganizationCategory'
-        description: categories are the matching categories, ordered by label.
+        description: categories are the matching categories, ordered by label (code as tie-break).
     description: ListOrganizationCategoriesResponse returns the matching categories.
   v1ListReferenceChangesResponse:
     type: object
@@ -6295,7 +6295,7 @@ definitions:
         items:
           type: object
           $ref: '#/definitions/v1RelationshipType'
-        description: relationship_types are the matching types.
+        description: relationship_types are the matching types, ordered by label (code as tie-break).
     description: ListRelationshipTypesResponse returns the matching catalogue entries.
   v1ListRelationshipsResponse:
     type: object
@@ -6338,7 +6338,7 @@ definitions:
           type: object
           $ref: '#/definitions/v1TaskType'
         description: task_types are the matching types.
-    description: ListTaskTypesResponse returns the matching types, by code.
+    description: ListTaskTypesResponse returns the matching types, by label (code as tie-break).
   v1ListThingTypesResponse:
     type: object
     properties:
@@ -6348,7 +6348,7 @@ definitions:
           type: object
           $ref: '#/definitions/v1ThingType'
         description: thing_types are the catalogue entries.
-    description: ListThingTypesResponse returns the thing types ordered by code.
+    description: ListThingTypesResponse returns the thing types ordered by label (code as tie-break).
   v1ListTimelineEntriesResponse:
     type: object
     properties:

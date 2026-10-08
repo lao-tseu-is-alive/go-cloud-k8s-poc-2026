@@ -2,6 +2,7 @@ package integration
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -91,5 +92,29 @@ func TestRelationshipSorting(t *testing.T) {
 	}
 	if _, err := env.coreSvc.ListRelationships(env.ctx, core.RelationshipFilter{SubjectID: c.ID, OrderBy: "deleted_at"}); !errors.Is(err, core.ErrInvalidInput) {
 		t.Fatalf("an unknown sort field: want ErrInvalidInput, got %v", err)
+	}
+}
+
+// TestCatalogueOrderedByLabel checks that a type picker gets its catalogue by label, not by
+// code (GLD-057): the imported LEG_<id> codes said nothing to the user.
+func TestCatalogueOrderedByLabel(t *testing.T) {
+	env := newTestEnv(t)
+	token := uniqueToken()
+	first, last := referenceCode("IT_Z"), referenceCode("IT_A")
+	for code, label := range map[string]string{first: "Aa " + token, last: "Zz " + token} {
+		if _, _, err := env.caseSvc.CreateCaseType(env.ctx, casefile.CaseTypeInput{Code: code, Label: label, BusinessRefNamespace: "ITC", OperatorID: testOperator}); err != nil {
+			t.Fatalf("create case type %s: %v", code, err)
+		}
+	}
+	types, err := env.caseSvc.ListTypes(env.ctx, true)
+	if err != nil {
+		t.Fatal(err)
+	}
+	codes := make([]string, 0, len(types))
+	for _, ct := range types {
+		codes = append(codes, ct.Code)
+	}
+	if slices.Index(codes, first) > slices.Index(codes, last) {
+		t.Fatalf("case types must come by label: %q after %q", first, last)
 	}
 }

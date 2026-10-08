@@ -4,7 +4,9 @@
   import { useI18n } from 'vue-i18n'
   import { listOrganizationCategories } from '@/api/actorClient'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { foldedFilter } from '@/utils/textSearch'
 
+  // A searchable picker (GLD-057): the catalogue comes ordered by label and typing filters it.
   // Bound value is the organization category *code* (sent to the API). Labels
   // come from the catalogue's own label field (seeded from real prod categories).
   const props = defineProps<{
@@ -32,9 +34,11 @@
 </script>
 
 <template>
-  <v-select
+  <v-autocomplete
     v-model="model"
+    auto-select-first
     :clearable="props.clearable"
+    :custom-filter="foldedFilter"
     item-title="label"
     item-value="code"
     :items="categories"

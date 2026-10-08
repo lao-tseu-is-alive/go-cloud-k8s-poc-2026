@@ -407,7 +407,7 @@ func (r *PostgresRepository) hydrateRelationships(ctx context.Context, rels []*S
 	return nil
 }
 
-// ListRelationshipTypes returns the catalogue of relationship types, optionally filtered.
+// ListRelationshipTypes returns the catalogue of relationship types, optionally filtered, by label then code.
 func (r *PostgresRepository) ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error) {
 	rows, err := r.pool.Query(ctx, listRelationshipTypesSQL, pgx.NamedArgs{
 		"only_active": onlyActive,

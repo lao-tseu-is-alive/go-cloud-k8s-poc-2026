@@ -1885,7 +1885,7 @@ func (x *ListOrganizationCategoriesRequest) GetOnlyActive() bool {
 // ListOrganizationCategoriesResponse returns the matching categories.
 type ListOrganizationCategoriesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// categories are the matching categories, ordered by label.
+	// categories are the matching categories, ordered by label (code as tie-break).
 	Categories    []*OrganizationCategory `protobuf:"bytes,1,rep,name=categories,proto3" json:"categories,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

@@ -1260,7 +1260,7 @@ func (x *ListOrgUnitTypesRequest) GetOnlyActive() bool {
 	return false
 }
 
-// ListOrgUnitTypesResponse returns the matching types, by sort order then code.
+// ListOrgUnitTypesResponse returns the matching types, by sort order, label then code.
 type ListOrgUnitTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// org_unit_types are the matching types.

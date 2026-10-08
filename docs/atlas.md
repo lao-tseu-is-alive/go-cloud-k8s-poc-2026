@@ -538,6 +538,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/listSort.test.ts` — Vitest unit tests of the list sort helpers.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/textSearch.test.ts` — Accent- and case-insensitive matching of the searchable pickers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/geometry.test.ts` — GeoJSON parsing, the geometry rule (type, Swiss extent) and the SVG projection.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/i18nStub.ts` — Translate stub returning the message key, for asserting rules without i18n.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/validation.test.ts` — The required, length and SHA-256 form rules.
@@ -547,6 +548,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
+- `cmd/goeland-server/goeland-front/src/utils/textSearch.ts` — Accent folding and the filter of the searchable type pickers.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.
 - `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.
 - `cmd/goeland-server/goeland-front/tsconfig.json` — TypeScript project references root.

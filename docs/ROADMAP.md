@@ -32,8 +32,8 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050) is complete —
 roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD-050) in v0.11.0;
 the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on production
-data) is done; next are the UI remarks on real data — sortable detail tables (GLD-056) and
-ordered type pickers (GLD-057) — then the sensitive read audit (GLD-033).
+data) is done, and so are the UI remarks on real data — sortable detail tables (GLD-056) and
+ordered type pickers (GLD-057); next is the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -388,12 +388,14 @@ Remarks of the product owner after seeing the POC on the imported production dat
   imported data the default order takes ~0.1 s for the most linked subject (~124k edges, both
   directions merged from their indexes); a label sort takes 0.03–0.15 s for ~2.5k edges and up
   to ~1.4 s for the 59 subjects above 10k edges (every edge read to sort it).
-- [ ] **GLD-057 — Ordered type pickers** (first action of the next session): every type picker
-  (case, document, thing, task, org unit, relationship types, organization categories) lists
-  its entries by label, not by code: the catalogue RPCs order by `code` (`ORDER BY code` in each
-  `sql.go`), which with the ~325 imported `LEG_<id>` case types and ~110 thing types gives an
-  unusable order. Order the catalogues by label server-side (keeping the code as tie-break) and
-  make the pickers searchable (`v-autocomplete`) where the list is long.
+- [~] **GLD-057 — Ordered type pickers**: every type picker (case, document, thing, task, org
+  unit, relationship types, organization categories) lists its entries by label, not by code:
+  the catalogue RPCs ordered by `code`, which with the ~325 imported `LEG_<id>` case types and
+  ~110 thing types gave an unusable order. Done 2026-10-08: the catalogues are ordered by label
+  server-side (code as tie-break; org unit types keep their `sort_order` first), and the case,
+  document, thing, relationship type and organization category pickers are searchable
+  (`v-autocomplete`, accent- and case-insensitive, Enter picks the first match); the short task
+  and org unit type lists stay plain selects.
 
 ## Infrastructure
 

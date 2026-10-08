@@ -1499,7 +1499,7 @@ func (x *ListThingTypesRequest) GetOnlyActive() bool {
 	return false
 }
 
-// ListThingTypesResponse returns the thing types ordered by code.
+// ListThingTypesResponse returns the thing types ordered by label (code as tie-break).
 type ListThingTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// thing_types are the catalogue entries.

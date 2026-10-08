@@ -471,7 +471,7 @@ message ListOrganizationCategoriesRequest {
 
 // ListOrganizationCategoriesResponse returns the matching categories.
 message ListOrganizationCategoriesResponse {
-  // categories are the matching categories, ordered by label.
+  // categories are the matching categories, ordered by label (code as tie-break).
   repeated OrganizationCategory categories = 1;
 }
 

@@ -159,7 +159,7 @@ FROM relationship_type
 WHERE (NOT @only_active OR is_active = true)
   AND (@source_kind = '' OR source_kind = @source_kind)
   AND (@target_kind = '' OR target_kind = @target_kind)
-ORDER BY code;`
+ORDER BY label, code;`
 
 // --- subject_relationship ----------------------------------------------------
 

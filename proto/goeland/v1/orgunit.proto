@@ -272,7 +272,7 @@ message ListOrgUnitTypesRequest {
   bool only_active = 1;
 }
 
-// ListOrgUnitTypesResponse returns the matching types, by sort order then code.
+// ListOrgUnitTypesResponse returns the matching types, by sort order, label then code.
 message ListOrgUnitTypesResponse {
   // org_unit_types are the matching types.
   repeated OrgUnitType org_unit_types = 1;

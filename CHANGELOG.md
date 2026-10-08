@@ -30,6 +30,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `ListRelationships`), the reference change log sorts on the server (`orderBy` on
   `ListReferenceChanges`), and the group members, document versions, reference catalogues and
   role holders sort in the browser; unit members are listed by name.
+- **GLD-057** — Ordered type pickers: the catalogues (case, document, thing, task, org unit and
+  relationship types, organization categories) come ordered by label, code as tie-break, and the
+  case, document, thing, relationship type and organization category pickers filter as you
+  type, ignoring accents and case.
 - **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
   details), their actor roles and cases, links between cases (parent, related), documents as
   metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),

@@ -2206,7 +2206,7 @@ func (x *ListDocumentTypesRequest) GetOnlyActive() bool {
 // ListDocumentTypesResponse returns the matching catalogue entries.
 type ListDocumentTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// document_types are the matching types.
+	// document_types are the matching types, ordered by label (code as tie-break).
 	DocumentTypes []*DocumentType `protobuf:"bytes,1,rep,name=document_types,json=documentTypes,proto3" json:"document_types,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache

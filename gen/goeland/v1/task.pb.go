@@ -1937,7 +1937,7 @@ func (x *ListTaskTypesRequest) GetOnlyActive() bool {
 	return false
 }
 
-// ListTaskTypesResponse returns the matching types, by code.
+// ListTaskTypesResponse returns the matching types, by label (code as tie-break).
 type ListTaskTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// task_types are the matching types.

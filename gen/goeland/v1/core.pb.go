@@ -3226,7 +3226,7 @@ func (x *ListRelationshipTypesRequest) GetTargetKind() SubjectKind {
 // ListRelationshipTypesResponse returns the matching catalogue entries.
 type ListRelationshipTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// relationship_types are the matching types.
+	// relationship_types are the matching types, ordered by label (code as tie-break).
 	RelationshipTypes []*RelationshipType `protobuf:"bytes,1,rep,name=relationship_types,json=relationshipTypes,proto3" json:"relationship_types,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache

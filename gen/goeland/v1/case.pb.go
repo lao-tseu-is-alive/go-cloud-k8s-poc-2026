@@ -1329,7 +1329,7 @@ func (x *ListCaseTypesRequest) GetOnlyActive() bool {
 	return false
 }
 
-// ListCaseTypesResponse returns the matching case types, ordered by code.
+// ListCaseTypesResponse returns the matching case types, ordered by label (code as tie-break).
 type ListCaseTypesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// case_types are the matching types.

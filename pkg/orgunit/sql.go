@@ -125,7 +125,7 @@ const listTypesSQL = `
 SELECT ` + typeColumns + `
 FROM org_unit_type
 WHERE (NOT @only_active OR is_active = true)
-ORDER BY sort_order, code;`
+ORDER BY sort_order, label, code;`
 
 // --- org_unit_type administration (GLD-040) -----------------------------------------
 

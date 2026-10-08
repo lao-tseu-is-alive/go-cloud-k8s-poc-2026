@@ -655,7 +655,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	return result, r.hydrateAll(ctx, result.Documents)
 }
 
-// ListTypes returns the document type catalogue.
+// ListTypes returns the document type catalogue, by label then code.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*DocumentType, error) {
 	rows, err := r.pool.Query(ctx, listDocumentTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {

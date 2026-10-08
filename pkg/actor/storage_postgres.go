@@ -298,7 +298,7 @@ func (r *PostgresRepository) SoftDelete(ctx context.Context, id uuid.UUID, opera
 	return ev, nil
 }
 
-// ListCategories returns the organization category catalogue.
+// ListCategories returns the organization category catalogue, by label then code.
 func (r *PostgresRepository) ListCategories(ctx context.Context, onlyActive bool) ([]*OrganizationCategory, error) {
 	rows, err := r.pool.Query(ctx, listCategoriesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {

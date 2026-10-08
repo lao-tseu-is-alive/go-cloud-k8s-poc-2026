@@ -206,7 +206,7 @@ func (r *PostgresRepository) list(ctx context.Context, sql string, args pgx.Name
 	return res, r.hydrate(ctx, res.Tasks)
 }
 
-// ListTypes returns the task type catalogue by code.
+// ListTypes returns the task type catalogue by label, code as tie-break.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*TaskType, error) {
 	rows, err := r.pool.Query(ctx, listTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {

@@ -324,7 +324,7 @@ message ListThingTypesRequest {
   bool only_active = 1;
 }
 
-// ListThingTypesResponse returns the thing types ordered by code.
+// ListThingTypesResponse returns the thing types ordered by label (code as tie-break).
 message ListThingTypesResponse {
   // thing_types are the catalogue entries.
   repeated ThingType thing_types = 1;

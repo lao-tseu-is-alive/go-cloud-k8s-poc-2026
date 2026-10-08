@@ -312,7 +312,7 @@ message ListCaseTypesRequest {
   bool only_active = 1;
 }
 
-// ListCaseTypesResponse returns the matching case types, ordered by code.
+// ListCaseTypesResponse returns the matching case types, ordered by label (code as tie-break).
 message ListCaseTypesResponse {
   // case_types are the matching types.
   repeated CaseType case_types = 1;

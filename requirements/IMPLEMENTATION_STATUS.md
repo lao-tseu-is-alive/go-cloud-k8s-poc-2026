@@ -411,10 +411,12 @@ Decisions for the POC (v2 §32):
   is the POC user id (a shared environment needs the identity provider or the production F5 JWT
   service to issue it). Real data stays on the machine; the rules live in `docs/IMPORT_MAPPING.md`.
 
-- 🚀 **Sortable tables (GLD-055, GLD-056, 2026-10-02/08)** — every list and detail table sorts by a
+- 🚀 **Sortable tables (GLD-055, GLD-056, GLD-057, 2026-10-02/08)** — every list and detail table sorts by a
   click on its headers (the spec asks for none): paged lists on the server through a whitelisted
   `order_by`, short ones in the browser. A subject's relationships became one list in both
   directions (`both_directions`), so a sort orders the whole table rather than each direction.
+  The type pickers list their catalogue by label and the long ones filter as you type, accents
+  aside (GLD-057): the imported catalogues hold hundreds of `LEG_<id>` codes.
 
 ---
 

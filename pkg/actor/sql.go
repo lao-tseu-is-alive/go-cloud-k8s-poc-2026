@@ -85,7 +85,7 @@ const listCategoriesSQL = `
 SELECT ` + categoryColumns + `
 FROM organization_category
 WHERE (NOT @only_active OR is_active = true)
-ORDER BY label;`
+ORDER BY label, code;`
 
 // --- search ------------------------------------------------------------------
 

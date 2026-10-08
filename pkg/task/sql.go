@@ -206,7 +206,7 @@ const listTypesSQL = `
 SELECT ` + typeColumns + `
 FROM task_type
 WHERE (NOT @only_active OR is_active = true)
-ORDER BY code;`
+ORDER BY label, code;`
 
 const insertTypeSQL = `
 INSERT INTO task_type (code, label, description)

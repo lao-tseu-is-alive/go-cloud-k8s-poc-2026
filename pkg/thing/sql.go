@@ -92,7 +92,7 @@ const listThingTypesSQL = `
 SELECT ` + thingTypeColumns + `
 FROM thing_type
 WHERE (NOT @only_active OR is_active)
-ORDER BY code;`
+ORDER BY label, code;`
 
 const insertThingTypeSQL = `
 INSERT INTO thing_type (code, label, description)

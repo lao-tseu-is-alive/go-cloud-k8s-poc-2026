@@ -309,7 +309,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	return result, r.hydrateAll(ctx, result.Units)
 }
 
-// ListTypes returns the unit type catalogue by sort order then code.
+// ListTypes returns the unit type catalogue by sort order, label then code.
 func (r *PostgresRepository) ListTypes(ctx context.Context, onlyActive bool) ([]*OrgUnitType, error) {
 	rows, err := r.pool.Query(ctx, listTypesSQL, pgx.NamedArgs{"only_active": onlyActive})
 	if err != nil {
