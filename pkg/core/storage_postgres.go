@@ -330,12 +330,13 @@ type relationshipListRow struct {
 	TotalSize int32 `db:"total_count"`
 }
 
-// ListRelationships returns a page of active relationships for a subject, hydrated with subject refs and types.
+// ListRelationships returns a sorted page of the relationships of a subject, hydrated with subject refs and types.
 func (r *PostgresRepository) ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error) {
-	rows, err := r.pool.Query(ctx, listRelationshipsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, SortedQuery(listRelationshipsSQL, filter.Sort, defaultRelationshipSort), filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":            CountLimit,
 		"subject_id":             filter.SubjectID,
-		"outgoing":               filter.Outgoing,
+		"outgoing":               filter.Outgoing || filter.BothDirections,
+		"incoming":               !filter.Outgoing || filter.BothDirections,
 		"relationship_type_code": filter.RelationshipTypeCode,
 		"limit":                  filter.Limit,
 		"offset":                 filter.Offset,

@@ -1,13 +1,17 @@
 <script setup lang="ts">
   import type { ReferenceCatalogue, ReferenceChange } from '@/api/types'
-  import { onMounted, ref } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listReferenceChanges } from '@/api/referenceClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { formatDateTime } from '@/utils/formatters'
+  import { toOrderBy } from '@/utils/listSort'
 
-  // Read-only view of the append-only reference change log, newest first.
+  // Read-only view of the append-only reference change log, newest first
+  // unless a header sorts it (on the server, GLD-056).
   const props = defineProps<{ catalogue?: ReferenceCatalogue }>()
   const { t } = useI18n()
   const { report } = useApiErrors()
@@ -15,11 +19,12 @@
   const changes = ref<ReferenceChange[]>([])
   const nextPageToken = ref('')
   const loading = ref(false)
+  const sort = ref<ListSort>()
 
   async function load (reset = true) {
     loading.value = true
     try {
-      const res = await listReferenceChanges({ catalogue: props.catalogue, pageSize: 50, pageToken: reset ? undefined : nextPageToken.value })
+      const res = await listReferenceChanges({ catalogue: props.catalogue, orderBy: toOrderBy(sort.value), pageSize: 50, pageToken: reset ? undefined : nextPageToken.value })
       changes.value = reset ? (res.changes ?? []) : [...changes.value, ...(res.changes ?? [])]
       nextPageToken.value = res.nextPageToken ?? ''
     } catch (error) {
@@ -29,6 +34,7 @@
     }
   }
   onMounted(() => load())
+  watch(sort, () => load())
   defineExpose({ reload: () => load() })
 </script>
 
@@ -39,10 +45,10 @@
     <v-table v-else density="compact">
       <thead>
         <tr>
-          <th scope="col">{{ t('fields.reference.occurredAt') }}</th>
-          <th scope="col">{{ t('fields.reference.catalogue') }}</th>
-          <th scope="col">{{ t('fields.reference.code') }}</th>
-          <th scope="col">{{ t('fields.reference.event') }}</th>
+          <SortableHeader v-model:sort="sort" field="occurred_at" :label="t('fields.reference.occurredAt')" />
+          <SortableHeader v-model:sort="sort" field="catalogue" :label="t('fields.reference.catalogue')" />
+          <SortableHeader v-model:sort="sort" field="code" :label="t('fields.reference.code')" />
+          <SortableHeader v-model:sort="sort" field="event" :label="t('fields.reference.event')" />
           <th scope="col">{{ t('fields.audit.actor_user_id') }}</th>
           <th scope="col">{{ t('fields.reference.reason') }}</th>
           <th scope="col">{{ t('fields.audit.before_state') }} / {{ t('fields.audit.after_state') }}</th>

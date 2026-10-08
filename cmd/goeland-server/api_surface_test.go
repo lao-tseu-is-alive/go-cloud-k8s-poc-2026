@@ -100,17 +100,19 @@ func (s *surface) caseTypeDefaults() {
 	}
 }
 
-// sorting calls every sorted list once and refuses an unknown sort field (GLD-055).
+// sorting calls every sorted list once and refuses an unknown sort field (GLD-055, GLD-056).
 func (s *surface) sorting() {
 	for _, path := range []string{
 		"/api/cases/search?orderBy=title%20desc", "/api/cases/search?orderBy=business_ref",
 		"/api/documents/search?orderBy=official_date%20desc", "/api/actors/search?orderBy=category",
 		"/api/things/search?orderBy=thing_type", "/api/tasks/mine?orderBy=due_at%20desc",
+		"/api/reference-changes?orderBy=code%20desc",
 	} {
 		s.ok("GET", path, nil)
 	}
 	s.fails(codeInvalidArgument, "GET", "/api/cases/search?orderBy=owner", nil)
 	s.fails(codeInvalidArgument, "GET", "/api/cases/search?orderBy=title%20sideways", nil)
+	s.fails(codeInvalidArgument, "GET", "/api/reference-changes?orderBy=reason", nil)
 }
 
 // strictJSON checks that a body naming an unknown field is refused on both
@@ -158,6 +160,10 @@ func (s *surface) core() {
 	if len(list(rels, "relationships")) == 0 {
 		s.t.Fatalf("relationships listed: %v", rels)
 	}
+	if both := s.ok("GET", "/api/subjects/"+s.caseID+"/relationships?bothDirections=true&orderBy=target%20desc", nil); len(list(both, "relationships")) < len(list(rels, "relationships")) {
+		s.t.Fatalf("both directions sorted (GLD-056): %v", both)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/subjects/"+s.caseID+"/relationships?orderBy=deleted_at", nil)
 
 	me := s.ok("GET", "/api/me", nil)
 	userID := str(me, "user", "id")

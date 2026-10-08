@@ -145,7 +145,9 @@ index on its sort key; detail pages page their relationships (`usePagedRelations
 `includeRelationships`. Measure on the imported data before calling a list fast. A list is
 sortable (GLD-055): a paged one takes `order_by` (a `core.SortField` whitelist built with
 `core.SortedQueries`, NOT NULL keys indexed; mark nullable keys `Nullable`), a short one sorts in
-the browser (`utils/listSort.ts`); its headers are `SortableHeader`.
+the browser (`utils/listSort.ts`); its headers are `SortableHeader`. A sort key read from another
+table is a scalar subquery, not a join (GLD-056: joined, the planner sorted all of `subject_ref`
+to find the first labels of one subject's relationships).
 
 **Legacy data import (GLD-051, GLD-052):** `cmd/goeland-import` (`pkg/legacyimport`) loads a
 brand-new local database from the read-only legacy replica in one transaction (dry run = full run

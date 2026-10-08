@@ -27,13 +27,23 @@ export async function listRelationshipTypes (
   return res.relationshipTypes ?? []
 }
 
-/** One page of the relationships of a subject, outgoing or incoming (GLD-053). */
+/**
+ * One page of the relationships of a subject (GLD-053), outgoing or incoming,
+ * or both in one sorted list (GLD-056); orderBy is "<field>" or "<field> desc".
+ */
 export function listRelationshipsPage (
   subjectId: string,
-  opts: { outgoing: boolean, relationshipTypeCode?: string, pageSize?: number, pageToken?: string },
+  opts: { outgoing?: boolean, bothDirections?: boolean, relationshipTypeCode?: string, orderBy?: string, pageSize?: number, pageToken?: string },
 ): Promise<ListRelationshipsResponse> {
   return apiFetch<ListRelationshipsResponse>(`/api/subjects/${encodeURIComponent(subjectId)}/relationships`, {
-    query: { outgoing: opts.outgoing, relationshipTypeCode: opts.relationshipTypeCode, pageSize: opts.pageSize, pageToken: opts.pageToken },
+    query: {
+      outgoing: opts.outgoing,
+      bothDirections: opts.bothDirections,
+      relationshipTypeCode: opts.relationshipTypeCode,
+      orderBy: opts.orderBy,
+      pageSize: opts.pageSize,
+      pageToken: opts.pageToken,
+    },
   })
 }
 

@@ -196,25 +196,55 @@ SET valid_to = coalesce(@valid_to::timestamptz, now())
 WHERE id = @id
 RETURNING ` + subjectRelationshipColumns + `;`
 
-// subjectRelationshipListColumns qualifies each column with the sr alias because
-// listRelationshipsSQL joins relationship_type (which also has id/... columns);
-// an unqualified projection would be ambiguous. Output column names are unchanged,
-// so the relationshipListRow db tags still match.
+// subjectRelationshipListColumns qualifies each column with the sr alias, the
+// alias of the page join in listRelationshipsSQL. Output column names are
+// unchanged, so the relationshipListRow db tags still match.
 const subjectRelationshipListColumns = `
 sr.id, sr.source_subject_id, sr.target_subject_id, sr.relationship_type_id, sr.role_detail,
 sr.valid_from, sr.valid_to, sr.created_at, sr.created_by, sr.deleted_at`
 
-// listRelationshipsSQL lists non-unlinked edges (open and ended) either outgoing from (@outgoing = true) or
-// incoming to (@outgoing = false) the given subject, optionally filtered by type code, whose
-// other end the viewer may read.
-var listRelationshipsSQL = CappedPageSQL(`
-SELECT sr.id AS id, sr.created_at AS sort_key
+// relationshipSortFields are the sortable columns of a relationship list
+// (GLD-056). The labels are scalar subqueries rather than joins, so the scan
+// starts from the subject's edges: with a join the planner sorted every
+// subject_ref row to find the first labels (~5 s on the most linked subject).
+var relationshipSortFields = map[string]SortField{
+	"created_at":  {Expr: "sr.created_at"},
+	"type":        {Expr: "(SELECT rt.label FROM relationship_type rt WHERE rt.id = sr.relationship_type_id)"},
+	"source":      {Expr: "(SELECT s.display_label FROM subject_ref s WHERE s.id = sr.source_subject_id)"},
+	"target":      {Expr: "(SELECT s.display_label FROM subject_ref s WHERE s.id = sr.target_subject_id)"},
+	"role_detail": {Expr: "NULLIF(sr.role_detail, '')", Nullable: true},
+	"valid_from":  {Expr: "sr.valid_from", Nullable: true},
+}
+
+// defaultRelationshipSort lists the latest edges first.
+var defaultRelationshipSort = Sort{Field: "created_at", Desc: true}
+
+// relationshipBranchSQL selects the edges of one direction (@flag): those
+// whose subjectCol is the subject, optionally of one type, whose other end
+// (otherCol) the viewer may read; each branch is ordered and cut at the count
+// limit, so with the default order both read their index and stop early.
+func relationshipBranchSQL(f SortField, order SortOrder, flag, subjectCol, otherCol string) string {
+	return `(SELECT sr.id AS id, ` + f.Expr + ` AS sort_key
 FROM subject_relationship sr
-JOIN relationship_type rt ON rt.id = sr.relationship_type_id
-WHERE sr.deleted_at IS NULL
-  AND ((@outgoing AND sr.source_subject_id = @subject_id) OR (NOT @outgoing AND sr.target_subject_id = @subject_id))
-  AND (@relationship_type_code = '' OR rt.code = @relationship_type_code)
-  AND `+ReadableSQL("(CASE WHEN @outgoing THEN sr.target_subject_id ELSE sr.source_subject_id END)", ""), subjectRelationshipListColumns, "subject_relationship", "sr", SortOrder{Desc: true})
+WHERE @` + flag + `::boolean AND sr.deleted_at IS NULL AND sr.` + subjectCol + ` = @subject_id
+  AND (@relationship_type_code = '' OR sr.relationship_type_id = (SELECT rt.id FROM relationship_type rt WHERE rt.code = @relationship_type_code))
+  AND ` + ReadableSQL("sr."+otherCol, "") + `
+ORDER BY ` + sortOrderOf("", order) + `
+LIMIT @count_limit)`
+}
+
+// listRelationshipsSQL lists non-unlinked edges (open and ended) outgoing from
+// (@outgoing) and/or incoming to (@incoming) the given subject, optionally
+// filtered by type code, whose other end the viewer may read, in each sort.
+var listRelationshipsSQL = SortedQueries(relationshipSortFields, func(f SortField, desc bool) string {
+	order := f.Order(desc)
+	return CappedPageSQL(`
+SELECT id, sort_key FROM (
+`+relationshipBranchSQL(f, order, "outgoing", "source_subject_id", "target_subject_id")+`
+UNION ALL
+`+relationshipBranchSQL(f, order, "incoming", "target_subject_id", "source_subject_id")+`) u`,
+		subjectRelationshipListColumns, "subject_relationship", "sr", order)
+})
 
 // --- app_user ------------------------------------------------------------------
 
@@ -328,12 +358,28 @@ INSERT INTO reference_change (catalogue, code, event_type, actor_user_id, before
 VALUES (@catalogue, @code, @event_type, @actor_user_id, @before_state, @after_state, @reason)
 RETURNING ` + referenceChangeColumns + `;`
 
-const listReferenceChangesSQL = `
+// referenceChangeSortFields are the sortable columns of the reference change
+// log (GLD-056); the log is small (administrators' changes), so it sorts
+// without dedicated indexes.
+var referenceChangeSortFields = map[string]SortField{
+	"occurred_at": {Expr: "occurred_at"},
+	"catalogue":   {Expr: "catalogue"},
+	"code":        {Expr: "code"},
+	"event":       {Expr: "event_type"},
+}
+
+// defaultReferenceChangeSort lists the latest changes first.
+var defaultReferenceChangeSort = Sort{Field: "occurred_at", Desc: true}
+
+// listReferenceChangesSQL pages the log, optionally of one catalogue, in each sort.
+var listReferenceChangesSQL = SortedQueries(referenceChangeSortFields, func(f SortField, desc bool) string {
+	return `
 SELECT ` + referenceChangeColumns + `, count(*) OVER () AS total_size
 FROM reference_change
 WHERE (@catalogue = '' OR catalogue = @catalogue)
-ORDER BY occurred_at DESC, id
+ORDER BY ` + f.Expr + OrderDirection(f.Order(desc)) + `, occurred_at DESC, id
 LIMIT @limit OFFSET @offset;`
+})
 
 const insertRelationshipTypeSQL = `
 INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description)

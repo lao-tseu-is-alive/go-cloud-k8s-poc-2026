@@ -2,6 +2,7 @@ package integration
 
 import (
 	"errors"
+	"slices"
 	"strings"
 	"testing"
 
@@ -89,5 +90,10 @@ func TestReferenceAdministration(t *testing.T) {
 	only, err := env.coreSvc.ListReferenceChanges(ctx, core.ReferenceFilter{Catalogue: core.CatalogueDocumentType})
 	if err != nil || len(only.Changes) == 0 || only.Changes[0].Catalogue != core.CatalogueDocumentType {
 		t.Fatalf("catalogue filter: %+v (%v)", only.Changes, err)
+	}
+	byCode, err := env.coreSvc.ListReferenceChanges(ctx, core.ReferenceFilter{OrderBy: "code desc", Limit: core.MaxPageSize})
+	// Initials only: the database collation may weigh "_" differently from a byte comparison.
+	if err != nil || !slices.IsSortedFunc(byCode.Changes, func(a, b *core.ReferenceChange) int { return strings.Compare(b.Code[:1], a.Code[:1]) }) {
+		t.Fatalf("log sorted by code, descending (GLD-056): %v", err)
 	}
 }

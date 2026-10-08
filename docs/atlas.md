@@ -498,7 +498,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
 - `cmd/goeland-server/goeland-front/src/composables/useMyAccess.ts` — The caller's level on a subject (contribute, manage, full control) to hide what the server would refuse.
-- `cmd/goeland-server/goeland-front/src/composables/usePagedRelationships.ts` — The relationships of a subject loaded page by page in both directions, with totals and "load more" (GLD-053).
+- `cmd/goeland-server/goeland-front/src/composables/usePagedRelationships.ts` — The relationships of a subject in both directions, loaded page by page with totals and "load more" (GLD-053) and sorted on the server (GLD-056).
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).

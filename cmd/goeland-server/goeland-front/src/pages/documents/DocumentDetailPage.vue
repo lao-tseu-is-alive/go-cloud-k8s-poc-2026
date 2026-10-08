@@ -41,7 +41,7 @@
   const doc = ref<GoDocument | null>(null)
   const {
     relationships, hasMore: relHasMore, loading: relLoading, total: relTotal, capped: relCapped,
-    reload: reloadRelationships, loadMore: loadMoreRelationships,
+    sort: relSort, reload: reloadRelationships, loadMore: loadMoreRelationships,
   } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
@@ -296,6 +296,7 @@
 
             <v-card-text>
               <DocumentRelationshipsPanel
+                v-model:sort="relSort"
                 :can-manage="editable"
                 :capped="relCapped"
                 :has-more="relHasMore"

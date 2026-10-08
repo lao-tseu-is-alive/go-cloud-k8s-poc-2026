@@ -1,14 +1,17 @@
 <script setup lang="ts">
   import type { AppRole, User, UserRole } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { grantUserRole, listAppRoles, listRoleHolders, listUserRoles, revokeUserRole } from '@/api/roleClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
   import UserPicker from '@/components/core/UserPicker.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
+  import { sortRows } from '@/utils/listSort'
   import { required } from '@/utils/validation'
 
   // Application roles stored in Goéland (GLD-047): the holders of a role, with
@@ -22,6 +25,10 @@
   const roles = ref<AppRole[]>([])
   const roleCode = ref('ADMIN')
   const holders = ref<User[]>([])
+  // Every holder of the role is loaded: sorted here (GLD-056).
+  const holderSort = ref<ListSort>()
+  const sortedHolders = computed(() => sortRows(holders.value, holderSort.value, (u, field) =>
+    field === 'email' ? u.email : (u.displayName || u.id)))
   const loading = ref(false)
 
   const granting = ref(false)
@@ -142,14 +149,14 @@
     <v-table v-else density="compact">
       <thead>
         <tr>
-          <th scope="col">{{ t('roles.fields.user') }}</th>
-          <th scope="col">{{ t('roles.fields.email') }}</th>
+          <SortableHeader v-model:sort="holderSort" field="user" :label="t('roles.fields.user')" />
+          <SortableHeader v-model:sort="holderSort" field="email" :label="t('roles.fields.email')" />
           <th scope="col" />
         </tr>
       </thead>
 
       <tbody>
-        <tr v-for="user in holders" :key="user.id">
+        <tr v-for="user in sortedHolders" :key="user.id">
           <td>{{ user.displayName || user.id }}</td>
           <td class="text-medium-emphasis">{{ user.email || '—' }}</td>
 

@@ -1897,6 +1897,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the log: "<field>" or "<field> desc", the field one of
+            occurred_at, catalogue, code, event (default: occurred_at desc). An
+            unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
       tags:
         - CoreService
   /api/relationship-types:
@@ -2349,7 +2357,9 @@ paths:
           required: true
           type: string
         - name: outgoing
-          description: outgoing selects edges from this subject when true, and edges into it when false.
+          description: |-
+            outgoing selects edges from this subject when true, and edges into it
+            when false; ignored when both_directions is set.
           in: query
           required: false
           type: boolean
@@ -2366,6 +2376,21 @@ paths:
           format: int32
         - name: pageToken
           description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+        - name: bothDirections
+          description: |-
+            both_directions lists the edges from and into the subject in one sorted
+            list (a detail page's table, GLD-056).
+          in: query
+          required: false
+          type: boolean
+        - name: orderBy
+          description: |-
+            order_by sorts the edges: "<field>" or "<field> desc", the field one of
+            type (label), source, target (display labels), role_detail, valid_from,
+            created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string

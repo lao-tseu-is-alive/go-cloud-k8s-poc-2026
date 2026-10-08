@@ -1,11 +1,14 @@
 <script setup lang="ts">
   import type { CatalogueConfig, CatalogueEntry, CatalogueField } from './referenceCatalogues'
+  import type { ListSort } from '@/utils/listSort'
   import { computed, onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { createReferenceEntry, updateReferenceEntry } from '@/api/referenceClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { useUiStore } from '@/stores/ui'
+  import { sortRows } from '@/utils/listSort'
   import { maxLength, required } from '@/utils/validation'
   import { CONFIDENTIAL_LEVEL, CONFIDENTIALITY_LEVELS, REFERENCE_CODE, SUBJECT_KINDS } from './referenceCatalogues'
 
@@ -30,6 +33,9 @@
   const form = ref()
 
   const columns = computed(() => props.config.fields.filter(f => f.column))
+  // The whole catalogue is loaded: sorted here by any column (GLD-056).
+  const sort = ref<ListSort>()
+  const sortedEntries = computed(() => sortRows(entries.value, sort.value, sortValue))
   const kindItems = computed(() => SUBJECT_KINDS.map(k => ({ value: k, title: enumLabel('SubjectKind', k) })))
   const confidentialityItems = computed(() => CONFIDENTIALITY_LEVELS.map(level => ({ value: level, title: confidentialityLabel(level) })))
 
@@ -119,6 +125,15 @@
     if (field.kind === 'confidentiality') return confidentialityLabel(typeof value === 'number' ? value : 0)
     return typeof value === 'string' && value !== '' ? value : '—'
   }
+
+  // The sort key of a column: what the cell shows (an empty cell last), active entries first.
+  function sortValue (entry: CatalogueEntry, key: string): string | number | undefined {
+    if (key === 'code') return entry.code
+    if (key === 'isActive') return isActive(entry) ? 0 : 1
+    const field = columns.value.find(f => f.key === key)
+    const shown = field ? cell(entry, field) : undefined
+    return shown === '—' ? undefined : shown
+  }
 </script>
 
 <template>
@@ -143,15 +158,23 @@
     <v-table density="compact">
       <thead>
         <tr>
-          <th scope="col">{{ t('fields.reference.code') }}</th>
-          <th v-for="field in columns" :key="field.key" scope="col">{{ t(`fields.reference.${field.key}`) }}</th>
-          <th scope="col">{{ t('fields.reference.isActive') }}</th>
+          <SortableHeader v-model:sort="sort" field="code" :label="t('fields.reference.code')" />
+
+          <SortableHeader
+            v-for="field in columns"
+            :key="field.key"
+            v-model:sort="sort"
+            :field="field.key"
+            :label="t(`fields.reference.${field.key}`)"
+          />
+
+          <SortableHeader v-model:sort="sort" field="isActive" :label="t('fields.reference.isActive')" />
           <th scope="col" />
         </tr>
       </thead>
 
       <tbody>
-        <tr v-for="entry in entries" :key="entry.code" :class="{ 'text-disabled': !isActive(entry) }">
+        <tr v-for="entry in sortedEntries" :key="entry.code" :class="{ 'text-disabled': !isActive(entry) }">
           <td><code>{{ entry.code }}</code></td>
           <td v-for="field in columns" :key="field.key">{{ cell(entry, field) }}</td>
 

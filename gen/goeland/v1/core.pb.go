@@ -2986,14 +2986,22 @@ type ListRelationshipsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// subject_id is the subject whose edges are listed.
 	SubjectId string `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
-	// outgoing selects edges from this subject when true, and edges into it when false.
+	// outgoing selects edges from this subject when true, and edges into it
+	// when false; ignored when both_directions is set.
 	Outgoing bool `protobuf:"varint,2,opt,name=outgoing,proto3" json:"outgoing,omitempty"`
 	// relationship_type_code restricts the list to one type; empty means any.
 	RelationshipTypeCode string `protobuf:"bytes,3,opt,name=relationship_type_code,json=relationshipTypeCode,proto3" json:"relationship_type_code,omitempty"`
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,4,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the next_page_token of the previous page; empty for the first page.
-	PageToken     string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,5,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// both_directions lists the edges from and into the subject in one sorted
+	// list (a detail page's table, GLD-056).
+	BothDirections bool `protobuf:"varint,6,opt,name=both_directions,json=bothDirections,proto3" json:"both_directions,omitempty"`
+	// order_by sorts the edges: "<field>" or "<field> desc", the field one of
+	// type (label), source, target (display labels), role_detail, valid_from,
+	// created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3059,6 +3067,20 @@ func (x *ListRelationshipsRequest) GetPageSize() int32 {
 func (x *ListRelationshipsRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListRelationshipsRequest) GetBothDirections() bool {
+	if x != nil {
+		return x.BothDirections
+	}
+	return false
+}
+
+func (x *ListRelationshipsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -3374,7 +3396,11 @@ type ListReferenceChangesRequest struct {
 	// page_size is the page length; 0 means the default (25), at most 200.
 	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
 	// page_token is the opaque cursor returned as next_page_token.
-	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	PageToken string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the log: "<field>" or "<field> desc", the field one of
+	// occurred_at, catalogue, code, event (default: occurred_at desc). An
+	// unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,4,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -3426,6 +3452,13 @@ func (x *ListReferenceChangesRequest) GetPageSize() int32 {
 func (x *ListReferenceChangesRequest) GetPageToken() string {
 	if x != nil {
 		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListReferenceChangesRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
 	}
 	return ""
 }
@@ -4204,7 +4237,7 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x17EndRelationshipResponse\x12C\n" +
 	"\frelationship\x18\x01 \x01(\v2\x1f.goeland.v1.SubjectRelationshipR\frelationship\x127\n" +
 	"\vaudit_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent\"\xf0\x01\n" +
+	"auditEvent\"\xd9\x02\n" +
 	"\x18ListRelationshipsRequest\x12'\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12\x1a\n" +
@@ -4213,7 +4246,9 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\tpage_size\x18\x04 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
-	"page_token\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xd5\x01\n" +
+	"page_token\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12'\n" +
+	"\x0fboth_directions\x18\x06 \x01(\bR\x0ebothDirections\x12>\n" +
+	"\border_by\x18\a \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xd5\x01\n" +
 	"\x19ListRelationshipsResponse\x12E\n" +
 	"\rrelationships\x18\x01 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
@@ -4241,14 +4276,15 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\fbefore_state\x18\a \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\vbeforeState\x12=\n" +
 	"\vafter_state\x18\b \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\n" +
 	"afterState\x12\x1b\n" +
-	"\x06reason\x18\t \x01(\tB\x03\xe0A\x03R\x06reason\"\xf7\x01\n" +
+	"\x06reason\x18\t \x01(\tB\x03\xe0A\x03R\x06reason\"\xb7\x02\n" +
 	"\x1bListReferenceChangesRequest\x12\x8f\x01\n" +
 	"\tcatalogue\x18\x01 \x01(\tBq\xbaHnrlR\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
 	"thing_typeR\rorg_unit_typeR\ttask_typeR\tcatalogue\x12'\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12\x1d\n" +
 	"\n" +
-	"page_token\x18\x03 \x01(\tR\tpageToken\"\x9c\x01\n" +
+	"page_token\x18\x03 \x01(\tR\tpageToken\x12>\n" +
+	"\border_by\x18\x04 \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\x9c\x01\n" +
 	"\x1cListReferenceChangesResponse\x125\n" +
 	"\achanges\x18\x01 \x03(\v2\x1b.goeland.v1.ReferenceChangeR\achanges\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

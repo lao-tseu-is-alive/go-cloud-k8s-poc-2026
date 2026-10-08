@@ -77,11 +77,15 @@ type ReferenceFilter struct {
 	Limit int
 	// Offset is the zero-based number of rows to skip.
 	Offset int
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
+	// Sort is the order of the log (referenceChangeSortFields); the zero value is the default.
+	Sort Sort
 }
 
 // ReferenceResult is a page of the reference_change log.
 type ReferenceResult struct {
-	// Changes is the requested page, newest first.
+	// Changes is the requested page, in the requested order (newest first by default).
 	Changes []*ReferenceChange
 	// TotalSize is the number of matching entries across all pages.
 	TotalSize int32

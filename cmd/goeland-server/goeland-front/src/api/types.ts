@@ -498,7 +498,7 @@ export interface SearchCasesParams {
   orderBy?: string
 }
 
-/** A page of the relationships of a subject in one direction. */
+/** A page of the relationships of a subject, in one direction or both. */
 export interface ListRelationshipsResponse {
   relationships?: SubjectRelationship[]
   nextPageToken?: string

@@ -377,14 +377,17 @@ Remarks of the product owner after seeing the POC on the imported production dat
   Done 2026-10-02: `SortableHeader` (aria-sort, keyboard), 0.04–0.3 s on ~512k cases and ~2.3M
   documents except the document "final" and "type" columns (~1.2 s, few distinct values over the
   whole table). The detail panels (relationships, grants, timeline) keep their order for now.
-- [ ] **GLD-056 — Sortable detail tables** (first action of the next session): the tables inside
-  the detail pages sort by their headers too — first the "Intervenants, documents et sujets
-  liés" table of a case (`RelationshipTable`, server-paged: `order_by` on `ListRelationships`,
-  e.g. type, other end, validity, creation), then the other tables still on plain `<th>`: group
-  members (`GroupDetailPage`), document versions (`DocumentVersionsPanel`), the admin
-  catalogues, reference change log and role holders (`ReferenceCatalogPanel`,
-  `ReferenceChangesPanel`, `RolesAdminPanel`), and the lists rendered as `v-list` (grants of the
-  access panel, unit members, circulations).
+- [~] **GLD-056 — Sortable detail tables**: the tables inside the detail pages sort by their
+  headers too. The relationships of a case, document, actor, thing or unit ("Intervenants,
+  documents et sujets liés") are one list in both directions sorted on the server
+  (`both_directions` and `order_by` on `ListRelationships`: type, source, target, role detail,
+  validity, creation), and so is the reference change log (`order_by` on
+  `ListReferenceChanges`); the group members, document versions, catalogues and role holders,
+  loaded in full, sort in the browser. The lists without headers keep a fixed order: grants live
+  first then by level, unit members by name, circulations newest first. Done 2026-10-08: on the
+  imported data the default order takes ~0.1 s for the most linked subject (~124k edges, both
+  directions merged from their indexes); a label sort takes 0.03–0.15 s for ~2.5k edges and up
+  to ~1.4 s for the 59 subjects above 10k edges (every edge read to sort it).
 - [ ] **GLD-057 — Ordered type pickers** (first action of the next session): every type picker
   (case, document, thing, task, org unit, relationship types, organization categories) lists
   its entries by label, not by code: the catalogue RPCs order by `code` (`ORDER BY code` in each

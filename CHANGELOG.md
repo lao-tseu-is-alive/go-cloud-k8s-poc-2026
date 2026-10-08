@@ -25,6 +25,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   thing, task and group lists (`orderBy` on `SearchCases`, `SearchDocuments`, `SearchActors`,
   `SearchThings`, `ListMyTasks` and `ListCaseTasks`: `"<field>"` or `"<field> desc"`, an unknown
   field answers 400); indexes on the sorted columns (migration `0027`).
+- **GLD-056** — Sortable detail tables: the relationship table of the detail pages is one list
+  in both directions sorted by its headers (`bothDirections` and `orderBy` on
+  `ListRelationships`), the reference change log sorts on the server (`orderBy` on
+  `ListReferenceChanges`), and the group members, document versions, reference catalogues and
+  role holders sort in the browser; unit members are listed by name.
 - **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
   details), their actor roles and cases, links between cases (parent, related), documents as
   metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),

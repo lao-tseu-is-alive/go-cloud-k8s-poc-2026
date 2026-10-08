@@ -98,6 +98,9 @@ func (s *Service) ListReferenceChanges(ctx context.Context, filter ReferenceFilt
 		return ReferenceResult{}, err
 	}
 	filter.Limit, filter.Offset = limit, max(filter.Offset, 0)
+	if filter.Sort, err = ParseOrderBy(filter.OrderBy, SortNames(referenceChangeSortFields), defaultReferenceChangeSort); err != nil {
+		return ReferenceResult{}, err
+	}
 	return s.repo.ListReferenceChanges(ctx, filter)
 }
 
@@ -140,7 +143,7 @@ func (r *PostgresRepository) UpdateRelationshipType(ctx context.Context, code st
 
 // ListReferenceChanges returns a page of the reference change log.
 func (r *PostgresRepository) ListReferenceChanges(ctx context.Context, filter ReferenceFilter) (ReferenceResult, error) {
-	rows, err := r.pool.Query(ctx, listReferenceChangesSQL, pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, SortedQuery(listReferenceChangesSQL, filter.Sort, defaultReferenceChangeSort), pgx.NamedArgs{
 		"catalogue": filter.Catalogue, "limit": filter.Limit, "offset": filter.Offset,
 	})
 	if err != nil {

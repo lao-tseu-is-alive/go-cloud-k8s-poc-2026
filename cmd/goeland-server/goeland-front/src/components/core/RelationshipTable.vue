@@ -1,9 +1,11 @@
 <script setup lang="ts">
   import type { SubjectRelationship } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { ref } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { formatDate, formatDateTime, formatTotal } from '@/utils/formatters'
   import EndRelationshipDialog from './EndRelationshipDialog.vue'
+  import SortableHeader from './SortableHeader.vue'
   import SubjectLink from './SubjectLink.vue'
 
   defineProps<{
@@ -17,6 +19,8 @@
     capped?: boolean
   }>()
   const emit = defineEmits<{ 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship], 'load-more': [] }>()
+  // the order the server sorts the edges in (GLD-056); a header click changes it
+  const sort = defineModel<ListSort | undefined>('sort')
   const { t } = useI18n()
 
   const endOpen = ref(false)
@@ -42,12 +46,12 @@
     <v-table v-else density="comfortable">
       <thead>
         <tr>
-          <th scope="col">{{ t('fields.relationship.source') }}</th>
-          <th scope="col">{{ t('fields.relationship.type') }}</th>
-          <th scope="col">{{ t('fields.relationship.target') }}</th>
-          <th scope="col">{{ t('fields.relationship.role_detail') }}</th>
-          <th scope="col">{{ t('fields.relationship.validity') }}</th>
-          <th scope="col">{{ t('fields.relationship.created_at') }}</th>
+          <SortableHeader v-model:sort="sort" field="source" :label="t('fields.relationship.source')" />
+          <SortableHeader v-model:sort="sort" field="type" :label="t('fields.relationship.type')" />
+          <SortableHeader v-model:sort="sort" field="target" :label="t('fields.relationship.target')" />
+          <SortableHeader v-model:sort="sort" field="role_detail" :label="t('fields.relationship.role_detail')" />
+          <SortableHeader v-model:sort="sort" field="valid_from" :label="t('fields.relationship.validity')" />
+          <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.relationship.created_at')" />
           <th v-if="canUnlink" scope="col" />
         </tr>
       </thead>

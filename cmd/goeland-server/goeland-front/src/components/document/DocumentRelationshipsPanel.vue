@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { SubjectRelationship } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { useI18n } from 'vue-i18n'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
 
@@ -14,6 +15,7 @@
     capped?: boolean
   }>()
   const emit = defineEmits<{ 'add-link': [], 'unlink': [rel: SubjectRelationship], 'ended': [rel: SubjectRelationship], 'load-more': [] }>()
+  const sort = defineModel<ListSort | undefined>('sort')
   const { t } = useI18n()
 </script>
 
@@ -32,6 +34,7 @@
     </div>
 
     <RelationshipTable
+      v-model:sort="sort"
       :can-unlink="canManage"
       :capped="capped"
       :has-more="hasMore"

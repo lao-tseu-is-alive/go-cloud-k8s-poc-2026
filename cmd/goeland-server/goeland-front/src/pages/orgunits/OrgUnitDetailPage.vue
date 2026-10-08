@@ -21,6 +21,7 @@
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
+  import { sortRows } from '@/utils/listSort'
   import { required } from '@/utils/validation'
 
   const { t } = useI18n()
@@ -38,7 +39,7 @@
   const children = ref<OrgUnitNode[]>([])
   const memberships = ref<SubjectRelationship[]>([])
   const {
-    relationships, hasMore: relHasMore, loading: relLoading, reload: reloadRelationships, loadMore: loadMoreRelationships,
+    relationships, hasMore: relHasMore, loading: relLoading, sort: relSort, reload: reloadRelationships, loadMore: loadMoreRelationships,
   } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
@@ -54,7 +55,8 @@
   // Membership (USER_MEMBER_OF_ORG_UNIT) has its own section, loaded whole (a few
   // hundred at most); the table pages through the rest (GLD-053).
   const MEMBER_TYPE = 'USER_MEMBER_OF_ORG_UNIT'
-  const members = computed(() => memberships.value.filter(r => !r.validTo))
+  // The current members, by name (GLD-056: a chip list has no header to sort it by).
+  const members = computed(() => sortRows(memberships.value.filter(r => !r.validTo), { field: 'name', desc: false }, r => r.source?.displayLabel))
   const otherRelationships = computed(() => relationships.value.filter(r => r.relationshipType?.code !== MEMBER_TYPE))
   const memberPick = ref<string | undefined>()
   const memberBusy = ref(false)
@@ -294,6 +296,7 @@
               <p class="text-caption text-medium-emphasis mb-2">{{ t('orgUnits.relationshipsHint') }}</p>
 
               <RelationshipTable
+                v-model:sort="relSort"
                 :can-unlink="false"
                 :has-more="relHasMore"
                 :loading="relLoading"

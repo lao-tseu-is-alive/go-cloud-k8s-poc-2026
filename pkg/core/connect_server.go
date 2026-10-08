@@ -227,6 +227,8 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 		RelationshipTypeCode: req.Msg.RelationshipTypeCode,
 		Limit:                int(req.Msg.PageSize),
 		Offset:               offset,
+		BothDirections:       req.Msg.BothDirections,
+		OrderBy:              req.Msg.OrderBy,
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -457,7 +459,7 @@ func (s *ConnectServer) ListReferenceChanges(ctx context.Context, req *connect.R
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
-	result, err := s.service.ListReferenceChanges(ctx, ReferenceFilter{Catalogue: req.Msg.Catalogue, Limit: int(req.Msg.PageSize), Offset: offset})
+	result, err := s.service.ListReferenceChanges(ctx, ReferenceFilter{Catalogue: req.Msg.Catalogue, Limit: int(req.Msg.PageSize), Offset: offset, OrderBy: req.Msg.OrderBy})
 	if err != nil {
 		return nil, s.mapError(err)
 	}

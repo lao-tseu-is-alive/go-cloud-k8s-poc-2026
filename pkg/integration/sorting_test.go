@@ -5,6 +5,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
@@ -40,5 +41,55 @@ func TestListSorting(t *testing.T) {
 	}
 	if _, err := env.taskSvc.ListMine(env.ctx, task.MineFilter{UserID: testOperator, OrderBy: "due_at desc"}); err != nil {
 		t.Fatalf("my tasks sorted by deadline: %v", err)
+	}
+}
+
+// TestRelationshipSorting covers the sorted relationship table of a detail
+// page (GLD-056): both directions in one list, ordered by the other end's
+// label or the type, and an unknown field refused.
+func TestRelationshipSorting(t *testing.T) {
+	env := newTestEnv(t)
+	token := uniqueToken()
+	c := openCase(t, env, "Relations "+token)
+	for _, name := range []string{"Zinc " + token, "acier " + token} {
+		a, _, err := env.actorSvc.Create(env.ctx, actor.CreateInput{ActorKind: actor.KindOrganization, DisplayName: name, LegalName: name, OperatorID: testOperator})
+		if err != nil {
+			t.Fatalf("create actor: %v", err)
+		}
+		link(t, env, c.ID, core.LinkInput{TargetSubjectID: a.ID, RelationshipTypeCode: "CASE_HAS_ACTOR_REQUESTER"})
+	}
+	related := openCase(t, env, "Bureau "+token)
+	link(t, env, related.ID, core.LinkInput{TargetSubjectID: c.ID, RelationshipTypeCode: "CASE_RELATED_TO_CASE"})
+
+	labels := func(orderBy string, other func(*core.SubjectRelationship) *core.SubjectRef) []string {
+		res, err := env.coreSvc.ListRelationships(env.ctx, core.RelationshipFilter{SubjectID: c.ID, BothDirections: true, OrderBy: orderBy, Viewer: operatorViewer})
+		if err != nil {
+			t.Fatalf("relationships ordered by %q: %v", orderBy, err)
+		}
+		if res.TotalSize != 3 {
+			t.Fatalf("both directions: want 3 edges, got %d", res.TotalSize)
+		}
+		out := make([]string, len(res.Relationships))
+		for i, rel := range res.Relationships {
+			out[i] = strings.TrimSuffix(other(rel).DisplayLabel, " "+token)
+		}
+		return out
+	}
+	target := func(rel *core.SubjectRelationship) *core.SubjectRef { return rel.Target }
+	if got := labels("target", target); got[0] != "acier" || got[1] != "Relations" || got[2] != "Zinc" {
+		t.Fatalf("ascending by target (the incoming edge targets the case, case-insensitive): %v", got)
+	}
+	if got := labels("target desc", target); got[0] != "Zinc" || got[2] != "acier" {
+		t.Fatalf("descending by target: %v", got)
+	}
+	source := func(rel *core.SubjectRelationship) *core.SubjectRef { return rel.Source }
+	if got := labels("source", source); got[0] != "Bureau" || got[1] != "Relations" {
+		t.Fatalf("ascending by source: %v", got)
+	}
+	if got := labels("type", source); got[2] != "Bureau" {
+		t.Fatalf("by type label, \"Affaire liée à affaire\" comes last: %v", got)
+	}
+	if _, err := env.coreSvc.ListRelationships(env.ctx, core.RelationshipFilter{SubjectID: c.ID, OrderBy: "deleted_at"}); !errors.Is(err, core.ErrInvalidInput) {
+		t.Fatalf("an unknown sort field: want ErrInvalidInput, got %v", err)
 	}
 }

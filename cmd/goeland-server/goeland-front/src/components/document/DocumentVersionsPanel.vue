@@ -1,12 +1,15 @@
 <script setup lang="ts">
   import type { DocumentVersion, UploadResult } from '@/api/types'
-  import { onMounted, ref, watch } from 'vue'
+  import type { ListSort } from '@/utils/listSort'
+  import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { addDocumentVersion, listDocumentVersions } from '@/api/documentClient'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import DocumentUploadField from '@/components/document/DocumentUploadField.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
   import { formatBytes, formatDateTime, shortHash } from '@/utils/formatters'
+  import { sortRows } from '@/utils/listSort'
 
   // Lists the append-only versions of a document (newest first) and, when the
   // document is editable, adds a new current version from an uploaded file.
@@ -17,6 +20,12 @@
   const { report } = useApiErrors()
   const ui = useUiStore()
   const versions = ref<DocumentVersion[]>([])
+  // Every version is loaded: sorted here (GLD-056), by number, content type or date.
+  const sort = ref<ListSort>()
+  const sortedVersions = computed(() => sortRows(versions.value, sort.value, (v, field) => {
+    if (field === 'content') return v.content?.mimeType
+    return field === 'created_at' ? v.createdAt : v.versionNo
+  }))
   const loading = ref(false)
   const adding = ref(false)
   const busy = ref(false)
@@ -65,15 +74,15 @@
     <v-table v-if="versions.length > 0" density="compact">
       <thead>
         <tr>
-          <th scope="col">{{ t('versions.number') }}</th>
-          <th scope="col">{{ t('versions.content') }}</th>
+          <SortableHeader v-model:sort="sort" field="number" :label="t('versions.number')" />
+          <SortableHeader v-model:sort="sort" field="content" :label="t('versions.content')" />
           <th scope="col" />
-          <th scope="col">{{ t('fields.common.created_at') }}</th>
+          <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
         </tr>
       </thead>
 
       <tbody>
-        <tr v-for="v in versions" :key="v.id">
+        <tr v-for="v in sortedVersions" :key="v.id">
           <td>
             {{ v.versionNo }}
             <v-chip v-if="v.id === currentVersionId" class="ml-1" color="primary" size="x-small">{{ t('versions.current') }}</v-chip>

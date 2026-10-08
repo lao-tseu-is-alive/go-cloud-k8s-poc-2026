@@ -37,7 +37,7 @@
   const current = ref<GoCase | null>(null)
   const {
     relationships, hasMore: relHasMore, loading: relLoading, total: relTotal, capped: relCapped,
-    reload: reloadRelationships, loadMore: loadMoreRelationships,
+    sort: relSort, reload: reloadRelationships, loadMore: loadMoreRelationships,
   } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
@@ -333,6 +333,7 @@
               <p class="text-caption text-medium-emphasis mb-2">{{ t('messages.case.relationshipsHint') }}</p>
 
               <RelationshipTable
+                v-model:sort="relSort"
                 :can-unlink="linkable"
                 :capped="relCapped"
                 :has-more="relHasMore"

@@ -44,7 +44,7 @@ export async function updateReferenceEntry (catalogue: ReferenceCatalogue, code:
 
 /** A page of the reference change log, newest first. */
 export function listReferenceChanges (
-  params: { catalogue?: ReferenceCatalogue, pageSize?: number, pageToken?: string } = {},
+  params: { catalogue?: ReferenceCatalogue, orderBy?: string, pageSize?: number, pageToken?: string } = {},
 ): Promise<ListReferenceChangesResponse> {
   return apiFetch<ListReferenceChangesResponse>('/api/reference-changes', { query: params as Record<string, unknown> })
 }

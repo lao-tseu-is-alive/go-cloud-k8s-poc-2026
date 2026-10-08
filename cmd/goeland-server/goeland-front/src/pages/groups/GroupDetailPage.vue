@@ -1,5 +1,6 @@
 <script setup lang="ts">
   import type { AuditEvent, GroupMember, SecurityGroup } from '@/api/types'
+  import type { ListSort } from '@/utils/listSort'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
@@ -7,12 +8,14 @@
   import { listAuditEvents } from '@/api/coreClient'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
+  import SortableHeader from '@/components/core/SortableHeader.vue'
   import UserLabel from '@/components/core/UserLabel.vue'
   import UserPicker from '@/components/core/UserPicker.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useMyAccess } from '@/composables/useMyAccess'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
+  import { sortRows } from '@/utils/listSort'
   import { maxLength, required } from '@/utils/validation'
 
   // A security group: its members (MANAGE adds and removes them), its name
@@ -27,6 +30,10 @@
   const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
   const group = ref<SecurityGroup | null>(null)
   const members = ref<GroupMember[]>([])
+  // Every member is loaded with the group: sorted here (GLD-056).
+  const memberSort = ref<ListSort>()
+  const sortedMembers = computed(() => sortRows(members.value, memberSort.value, (m, field) =>
+    field === 'since' ? m.since : (m.user?.displayName || m.user?.id)))
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
   const live = computed(() => !group.value?.archivedAt)
@@ -137,14 +144,14 @@
               <v-table v-else density="compact">
                 <thead>
                   <tr>
-                    <th scope="col">{{ t('groups.fields.user') }}</th>
-                    <th scope="col">{{ t('groups.fields.since') }}</th>
+                    <SortableHeader v-model:sort="memberSort" field="user" :label="t('groups.fields.user')" />
+                    <SortableHeader v-model:sort="memberSort" field="since" :label="t('groups.fields.since')" />
                     <th scope="col" />
                   </tr>
                 </thead>
 
                 <tbody>
-                  <tr v-for="m in members" :key="m.relationshipId">
+                  <tr v-for="m in sortedMembers" :key="m.relationshipId">
                     <td>{{ m.user?.displayName || m.user?.id }}</td>
                     <td class="text-caption">{{ formatDateTime(m.since) }} · <UserLabel :id="m.addedBy" /></td>
 

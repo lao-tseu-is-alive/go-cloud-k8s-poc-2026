@@ -1,62 +1,68 @@
 import type { SubjectRelationship } from '@/api/types'
+import type { ListSort } from '@/utils/listSort'
 /**
- * The relationships of a subject, loaded page by page in both directions
+ * The relationships of a subject in both directions, loaded page by page
  * (GLD-053): a unit or an employee may take part in tens of thousands of
  * cases, so a detail page shows the latest ones and loads more on demand.
+ * The table sorts on the server (GLD-056): a new sort reloads the first page.
  */
 import type { Ref } from 'vue'
-import { computed, ref } from 'vue'
+import { ref, watch } from 'vue'
 import { listRelationshipsPage } from '@/api/coreClient'
+import { useApiErrors } from '@/composables/useApiErrors'
+import { toOrderBy } from '@/utils/listSort'
 
 const PAGE_SIZE = 50
 
-interface Direction {
-  outgoing: boolean
-  nextPageToken?: string
-  total: number
-  capped: boolean
-  rows: SubjectRelationship[]
-}
-
 export function usePagedRelationships (subjectId: Ref<string>) {
-  const directions = ref<Direction[]>([])
+  const { report } = useApiErrors()
+  const relationships = ref<SubjectRelationship[]>([])
+  const nextPageToken = ref<string>()
+  const hasMore = ref(false)
+  const total = ref(0)
+  const capped = ref(false)
   const loading = ref(false)
+  const sort = ref<ListSort>()
+  // Each reload supersedes the pages still in flight (a quick second click on a header).
+  let generation = 0
 
-  const relationships = computed(() => directions.value.flatMap(d => d.rows))
-  const hasMore = computed(() => directions.value.some(d => !!d.nextPageToken))
-  const total = computed(() => directions.value.reduce((sum, d) => sum + d.total, 0))
-  const capped = computed(() => directions.value.some(d => d.capped))
-
-  async function fetchPage (d: Direction) {
-    const res = await listRelationshipsPage(subjectId.value, { outgoing: d.outgoing, pageSize: PAGE_SIZE, pageToken: d.nextPageToken })
-    d.rows = [...d.rows, ...(res.relationships ?? [])]
-    d.nextPageToken = res.nextPageToken || undefined
-    d.total = res.totalSize ?? d.rows.length
-    d.capped = !!res.totalSizeCapped
-  }
-
-  async function run (pick: (d: Direction) => boolean) {
+  async function fetchPage (pageToken: string | undefined, gen: number) {
     loading.value = true
     try {
-      await Promise.all(directions.value.filter(d => pick(d)).map(d => fetchPage(d)))
+      const res = await listRelationshipsPage(subjectId.value, {
+        bothDirections: true, orderBy: toOrderBy(sort.value), pageSize: PAGE_SIZE, pageToken,
+      })
+      if (gen !== generation) {
+        return
+      }
+      relationships.value = [...(pageToken ? relationships.value : []), ...(res.relationships ?? [])]
+      nextPageToken.value = res.nextPageToken || undefined
+      hasMore.value = !!nextPageToken.value
+      total.value = res.totalSize ?? relationships.value.length
+      capped.value = !!res.totalSizeCapped
     } finally {
-      loading.value = false
+      if (gen === generation) {
+        loading.value = false
+      }
     }
   }
 
-  /** Reloads the first page of both directions (outgoing first). */
+  /** Reloads the first page in the current sort. */
   async function reload () {
-    directions.value = [
-      { outgoing: true, total: 0, capped: false, rows: [] },
-      { outgoing: false, total: 0, capped: false, rows: [] },
-    ]
-    await run(() => true)
+    generation++
+    await fetchPage(undefined, generation)
   }
 
-  /** Loads the next page of the directions that have one. */
+  /** Loads the next page, if any. */
   async function loadMore () {
-    await run(d => !!d.nextPageToken)
+    if (nextPageToken.value) {
+      await fetchPage(nextPageToken.value, generation)
+    }
   }
 
-  return { relationships, loading, hasMore, total, capped, reload, loadMore }
+  watch(sort, () => {
+    reload().catch(error => report(error))
+  })
+
+  return { relationships, loading, hasMore, total, capped, sort, reload, loadMore }
 }

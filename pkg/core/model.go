@@ -288,6 +288,13 @@ type RelationshipFilter struct {
 	Limit int
 	// Offset is the zero-based number of rows to skip; negative becomes 0.
 	Offset int
+	// BothDirections lists the edges from and into SubjectID together;
+	// Outgoing is then ignored.
+	BothDirections bool
+	// OrderBy is the requested order ("<field> [asc|desc]"), parsed into Sort by the service.
+	OrderBy string
+	// Sort is the order of the edges (relationshipSortFields); the zero value is the default.
+	Sort Sort
 }
 
 // RelationshipResult holds a page of relationships and the total count before pagination.

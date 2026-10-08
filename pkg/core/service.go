@@ -187,6 +187,9 @@ func (s *Service) ListRelationships(ctx context.Context, filter RelationshipFilt
 		filter.Offset = 0
 	}
 	filter.RelationshipTypeCode = strings.TrimSpace(filter.RelationshipTypeCode)
+	if filter.Sort, err = ParseOrderBy(filter.OrderBy, SortNames(relationshipSortFields), defaultRelationshipSort); err != nil {
+		return RelationshipResult{}, err
+	}
 	return s.repo.ListRelationships(ctx, filter)
 }
 
