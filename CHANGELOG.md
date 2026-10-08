@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.12.0] - 2026-10-08
+
+This release shows the POC on production data: a one-shot local import of the legacy Goéland
+data (**GLD-051**, **GLD-052**, **GLD-054**; real data never leaves the machine), searches and
+relationship lists that hold at that volume (**GLD-053**), and the UI remarks made on it —
+sortable lists and detail tables (**GLD-055**, **GLD-056**) and type pickers ordered by label
+and searchable (**GLD-057**). Migrations `0025` to `0027` apply automatically at startup.
+Search and relationship totals are now counted up to 10 000 (`totalSizeCapped` tells a client
+that the real total is higher).
+
 ### Added
 
 - **GLD-051** — Legacy data import framework: `cmd/goeland-import` loads a brand-new local
@@ -21,6 +31,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   as business reference `GOELAND`), grants, actors with checked contacts and a correspondence
   address, and the actor, employee and unit roles on cases.
 
+- **GLD-053** — Production volume: search and relationship totals are counted up to 10 000
+  (`totalSizeCapped` on `SearchCases`, `SearchDocuments`, `SearchActors`, `SearchThings` and
+  `ListRelationships`; the SPA shows "10 000+"), indexes on the sort keys (migration `0026`), and
+  detail pages load relationships page by page ("Charger plus"). Document searches scoped to a
+  case or a thing start from its links, and the unscoped one counts within the newest 20 000
+  documents.
+- **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
+  details), their actor roles and cases, links between cases (parent, related), documents as
+  metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),
+  the readers of the confidential documents, their cases, things and actors, and the case
+  follow-ups as timeline entries with their cited documents and final status.
 - **GLD-055** — Sortable lists: a click on a column header sorts the case, document, actor,
   thing, task and group lists (`orderBy` on `SearchCases`, `SearchDocuments`, `SearchActors`,
   `SearchThings`, `ListMyTasks` and `ListCaseTasks`: `"<field>"` or `"<field> desc"`, an unknown
@@ -34,17 +55,6 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   relationship types, organization categories) come ordered by label, code as tie-break, and the
   case, document, thing, relationship type and organization category pickers filter as you
   type, ignoring accents and case.
-- **GLD-054** — Import wave 2: things (approximate LV95 location, parcel and building
-  details), their actor roles and cases, links between cases (parent, related), documents as
-  metadata with their current content known by its SHA-256 (the bytes stay in the legacy store),
-  the readers of the confidential documents, their cases, things and actors, and the case
-  follow-ups as timeline entries with their cited documents and final status.
-- **GLD-053** — Production volume: search and relationship totals are counted up to 10 000
-  (`totalSizeCapped` on `SearchCases`, `SearchDocuments`, `SearchActors`, `SearchThings` and
-  `ListRelationships`; the SPA shows "10 000+"), indexes on the sort keys (migration `0026`), and
-  detail pages load relationships page by page ("Charger plus"). Document searches scoped to a
-  case or a thing start from its links, and the unscoped one counts within the newest 20 000
-  documents.
 
 ### Changed
 

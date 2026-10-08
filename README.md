@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.11.0** — pre-1.0 POC.
+Current version: **v0.12.0** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0023 (dbmate format)
+      └── db/migrations/  0001..0027 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,

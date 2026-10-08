@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.11.0**.
+Tracked version: **v0.12.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -32,8 +32,9 @@ v0.7.0, the Thing slice (GLD-016) in v0.8.0, and the case spine — Timeline (GL
 security, is under way: real authorization (GLD-017, in steps GLD-047 to GLD-050) is complete —
 roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD-050) in v0.11.0;
 the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on production
-data) is done, and so are the UI remarks on real data — sortable detail tables (GLD-056) and
-ordered type pickers (GLD-057); next is the sensitive read audit (GLD-033).
+data), the behaviour at production volume (GLD-053) and the UI remarks on real data — sortable
+lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — shipped in v0.12.0;
+next is the sensitive read audit (GLD-033).
 
 ## Cross-cutting quality
 
@@ -285,9 +286,9 @@ covered by an integration test.
 
 ## Phase 7 — Provenance, outbox, export (v2 §36-38, §51)
 
-- [~] **GLD-027 — Provenance**: `subject_provenance` (source system, source
-  id, import batch); legacy IDs are provenance, never the new UUIDs. May be
-  pulled forward with GLD-019.
+- [x] **GLD-027 — Provenance**: `subject_provenance` (source system, source
+  id, import batch); legacy IDs are provenance, never the new UUIDs. Shipped with
+  the legacy import (GLD-051, migration `0025`) in v0.12.0.
 - [ ] **GLD-028 — Transactional outbox**: `outbox_event` written in the same
   transaction as the mutation and its audit event (v2 §38 event list); from
   then on the v2 §54 "mutation + audit + outbox" criterion applies.
@@ -329,14 +330,14 @@ reruns are idempotent and relationships can be rebuilt later; GLD-027 records
 the legacy IDs as provenance. Profiling stays aggregates-only. The rules and the
 runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
 
-- [~] **GLD-051 — Import framework** (started 2026-10-01): `cmd/goeland-import` from the
+- [x] **GLD-051 — Import framework** (started 2026-10-01): `cmd/goeland-import` from the
   replica into a brand-new local database rebuilt on every run (`scripts/import_rebuild.sh`),
   deterministic UUIDv5 ids, provenance and one `import_batch` marker per run (GLD-027 pulled
   forward), set-based loading, a counts-only rejects report, dry run by default.
-- [~] **GLD-052 — Import wave 1**: employees (`app_user`, unit membership), org units, security
+- [x] **GLD-052 — Import wave 1**: employees (`app_user`, unit membership), org units, security
   groups, case types, cases with status and confidentiality, grants, actors with contacts and a
   correspondence address, and the actor, employee and unit roles on cases.
-- [~] **GLD-053 — Behaviour at production volume**: measure searches, the read filter, pagination
+- [x] **GLD-053 — Behaviour at production volume**: measure searches, the read filter, pagination
   totals and detail pages on the imported data (~610k subjects, ~2.4M grants, ~2.8M
   relationships) and fix what does not hold (indexes, estimated totals, ...). Done 2026-10-01:
   totals counted up to 10 000 (`total_size_capped`, `core.CappedPageSQL`), governance joined
@@ -348,7 +349,7 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
   (2 s → 20–90 ms) and the unscoped one counts within a window of the newest 20 000 documents
   (`core.WindowedPageSQL`); with the confirmed document levels every document search takes
   30–120 ms (a table where most rows are unreadable stays the read filter's worst case).
-- [~] **GLD-054 — Import wave 2**: timeline entries, document metadata (external reference, no
+- [x] **GLD-054 — Import wave 2**: timeline entries, document metadata (external reference, no
   bytes), things, links between cases. Done 2026-10-01 (see IMPORT_MAPPING.md): things with an
   approximate location, parcel and building details, documents with their current content known
   by its SHA-256, readers of the confidential documents (levels of the legacy UI, confirmed),
@@ -370,14 +371,14 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
 
 Remarks of the product owner after seeing the POC on the imported production data.
 
-- [~] **GLD-055 — Sortable lists**: every list sorts by a click on a column header. The paged
+- [x] **GLD-055 — Sortable lists**: every list sorts by a click on a column header. The paged
   lists (cases, documents, actors, things, my tasks, the tasks of a case) sort on the server
   (`order_by` on their RPC, a whitelist of fields per list, `core.ParseOrderBy` /
   `core.SortedQueries`, indexes of migration `0027`); the short lists (groups) in the browser.
   Done 2026-10-02: `SortableHeader` (aria-sort, keyboard), 0.04–0.3 s on ~512k cases and ~2.3M
   documents except the document "final" and "type" columns (~1.2 s, few distinct values over the
   whole table). The detail panels (relationships, grants, timeline) keep their order for now.
-- [~] **GLD-056 — Sortable detail tables**: the tables inside the detail pages sort by their
+- [x] **GLD-056 — Sortable detail tables**: the tables inside the detail pages sort by their
   headers too. The relationships of a case, document, actor, thing or unit ("Intervenants,
   documents et sujets liés") are one list in both directions sorted on the server
   (`both_directions` and `order_by` on `ListRelationships`: type, source, target, role detail,
@@ -388,7 +389,7 @@ Remarks of the product owner after seeing the POC on the imported production dat
   imported data the default order takes ~0.1 s for the most linked subject (~124k edges, both
   directions merged from their indexes); a label sort takes 0.03–0.15 s for ~2.5k edges and up
   to ~1.4 s for the 59 subjects above 10k edges (every edge read to sort it).
-- [~] **GLD-057 — Ordered type pickers**: every type picker (case, document, thing, task, org
+- [x] **GLD-057 — Ordered type pickers**: every type picker (case, document, thing, task, org
   unit, relationship types, organization categories) lists its entries by label, not by code:
   the catalogue RPCs ordered by `code`, which with the ~325 imported `LEG_<id>` case types and
   ~110 thing types gave an unusable order. Done 2026-10-08: the catalogues are ordered by label
