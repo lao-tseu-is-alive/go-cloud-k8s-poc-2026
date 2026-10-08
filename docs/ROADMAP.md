@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.12.0**.
+Tracked version: **v0.12.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -54,7 +54,7 @@ next is the sensitive read audit (GLD-033).
 - [ ] **GLD-005 — Partial actor rename**: `UpdateActorRequest.display_name`
   is required by validation, which makes the adapter's "empty means unchanged"
   branch unreachable; make it truly optional or document it as required.
-- [~] **GLD-006 — Document incoming relationships**: `GetDocument` returned only
+- [x] **GLD-006 — Document incoming relationships**: `GetDocument` returned only
   outgoing edges, so the `CASE_HAS_DOCUMENT` links to cases were not shown with
   the document. Needed for "same document in several cases" (v2 §20). The SPA panel
   shows both directions since GLD-053/GLD-056 (`ListRelationships`); done 2026-10-08:
@@ -95,7 +95,7 @@ next is the sensitive read audit (GLD-033).
   outside loopback unless explicitly allowed; `X-Request-ID` is bounded; server configuration
   tests. The CI pinning rule is reworded instead (third-party actions by SHA, GitHub's own on
   their major tag).
-- [~] **GLD-058 — Third review follow-ups** (review `reports/report_20261005_gpt-5.md`, decided
+- [x] **GLD-058 — Third review follow-ups** (review `reports/report_20261005_gpt-5.md`, decided
   2026-10-08): the documentation had drifted after GLD-049 to GLD-055 while every gate stayed
   green. Done 2026-10-08: PRODUCTION_READINESS limitations (filtering and governed download done;
   sensitive read audit, DDL role and non-probative verification called out), the README (Access

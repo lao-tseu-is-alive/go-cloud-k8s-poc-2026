@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.12.1] - 2026-10-08
+
+A maintenance release after the review of 2026-10-05: `GetDocument` lists the cases holding a
+document (**GLD-006**), and the operator and contributor documentation matches the code again,
+with new checks that keep it so (**GLD-058**). No migration and no breaking change.
+
 ### Fixed
 
 - **GLD-006** — `GetDocument` with `includeRelationships` returns the document's relationships

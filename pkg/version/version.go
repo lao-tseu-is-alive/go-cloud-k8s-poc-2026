@@ -30,7 +30,7 @@ const (
 
 	// Version is the semantic version of the source tree, without the "v"
 	// prefix. A release tag must equal "v" + Version.
-	Version = "0.12.0"
+	Version = "0.12.1"
 )
 
 var (
