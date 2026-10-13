@@ -8,6 +8,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.12.2] - 2026-10-13
+
+Security patch: Go 1.27.2 and the `golang.org/x/*` updates fix the Trivy findings on the v0.12.1
+image. No migration, no API change.
+
+### Security
+
+- **Go 1.27.2** (`go.mod`; the `golang:1.27-alpine` builder sets `GOTOOLCHAIN=local`, so an older
+  image now fails the build instead of shipping 1.27.1): standard library fixes for the Trivy
+  findings on the v0.12.1 image (CVE-2026-78667, CVE-2026-78669, CVE-2026-97031, CVE-2026-56866,
+  CVE-2026-78663, CVE-2026-94439, CVE-2026-94448, CVE-2026-97032, CVE-2026-56857, CVE-2026-78659,
+  CVE-2026-78660, CVE-2026-94440, CVE-2026-97030: `net/http`, HTTP/2, `crypto/tls`,
+  `html/template`, `mime/multipart`, `os`).
+- `golang.org/x/net` v0.59.0 → v0.61.0 (CVE-2026-78669, HIGH, and CVE-2026-78663, CVE-2026-97032,
+  CVE-2026-78659, CVE-2026-78660: `x/net/http2`); `x/crypto` v0.58.0, `x/sys`, `x/text`, `x/sync`,
+  `x/tools` and `x/telemetry` follow. `.trivyignore` `GO-2026-5932` re-verified against
+  x/crypto v0.58.0 (still no openpgp package linked).
+
 ## [0.12.1] - 2026-10-08
 
 A maintenance release after the review of 2026-10-05: `GetDocument` lists the cases holding a

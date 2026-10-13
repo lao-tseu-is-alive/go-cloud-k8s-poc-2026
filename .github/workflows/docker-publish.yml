@@ -31,7 +31,7 @@ jobs:
       - name: Set up Go
         uses: actions/setup-go@v5
         with:
-          # Single source of truth: the version required in go.mod (currently 1.27.1).
+          # Single source of truth: the version required in go.mod (currently 1.27.2).
           go-version-file: go.mod
 
       - name: Set up Bun

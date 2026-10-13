@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.12.1**.
+Tracked version: **v0.12.2**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
