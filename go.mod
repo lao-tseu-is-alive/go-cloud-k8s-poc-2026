@@ -3,12 +3,12 @@ module github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026
 go 1.27.2
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
-	connectrpc.com/connect v1.20.0
-	connectrpc.com/validate v0.7.0
-	connectrpc.com/vanguard v0.3.0
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
+	connectrpc.com/connect v1.21.0
+	connectrpc.com/validate v0.9.0
+	connectrpc.com/vanguard v0.5.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.10.0
+	github.com/jackc/pgx/v5 v5.11.0
 	github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs v0.6.3
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688
 	google.golang.org/protobuf v1.36.12
@@ -18,6 +18,7 @@ require (
 	buf.build/go/protovalidate v1.4.0 // indirect
 	cel.dev/cel-go v0.32.0 // indirect
 	cel.dev/expr v0.25.3 // indirect
+	connectrpc.com/connect/v2 v2.0.0 // indirect
 	github.com/antlr4-go/antlr/v4 v4.13.1 // indirect
 	github.com/cristalhq/jwt/v5 v5.4.0 // indirect
 	github.com/jackc/pgpassfile v1.0.0 // indirect
