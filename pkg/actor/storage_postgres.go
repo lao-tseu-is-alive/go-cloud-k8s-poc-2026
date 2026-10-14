@@ -137,6 +137,13 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 	if _, err := core.EnsureMutableTx(ctx, tx, id, false); err != nil {
 		return nil, nil, err
 	}
+	var kind Kind
+	if err := tx.QueryRow(ctx, actorKindSQL, pgx.NamedArgs{"id": id}).Scan(&kind); err != nil {
+		return nil, nil, mapDBError(err)
+	}
+	if err := checkUpdateKind(kind, in); err != nil {
+		return nil, nil, err
+	}
 
 	act, err := updateActorRow(ctx, tx, id, in)
 	if err != nil {
@@ -148,22 +155,16 @@ func (r *PostgresRepository) Update(ctx context.Context, id uuid.UUID, in Update
 			return nil, nil, fmt.Errorf("sync subject label: %w", err)
 		}
 	}
-	if in.ReplaceContacts {
-		if err := replaceContacts(ctx, tx, id, in.Contacts); err != nil {
-			return nil, nil, err
-		}
-	}
-	if in.ReplaceAddresses {
-		if err := replaceAddresses(ctx, tx, id, in.Addresses, in.OperatorID); err != nil {
-			return nil, nil, err
-		}
+	state := actorAuditState(act)
+	if err := replaceCollections(ctx, tx, id, in, state); err != nil {
+		return nil, nil, err
 	}
 	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID:   id,
 		EventType:   "ACTOR_UPDATED",
 		ActorUserID: in.OperatorID,
 		Reason:      in.Reason,
-		AfterState:  updateAuditState(act, in),
+		AfterState:  state,
 	})
 	if err != nil {
 		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
@@ -221,15 +222,6 @@ func updateActorRow(ctx context.Context, tx pgx.Tx, id uuid.UUID, in UpdateInput
 		return nil, mapDBError(err)
 	}
 	return act, nil
-}
-
-// replaceContacts swaps the whole contact list of an actor (see GLD-007 about
-// keeping the replaced contacts).
-func replaceContacts(ctx context.Context, tx pgx.Tx, id uuid.UUID, contacts []ContactInput) error {
-	if _, err := tx.Exec(ctx, deleteContactsSQL, pgx.NamedArgs{"actor_id": id}); err != nil {
-		return fmt.Errorf("clear contacts: %w", err)
-	}
-	return insertContacts(ctx, tx, id, contacts)
 }
 
 // actorListRow adds the window total to the actor columns for search scanning.
@@ -480,24 +472,32 @@ func insertAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID, add
 	return nil
 }
 
-// replaceAddresses ends the actor's current address links (kept as history)
-// and links the new set.
-func replaceAddresses(ctx context.Context, q core.Querier, actorID uuid.UUID, addresses []AddressInput, operatorID string) error {
-	if _, err := q.Exec(ctx, endActorAddressesSQL, pgx.NamedArgs{"actor_id": actorID, "operator_id": operatorID}); err != nil {
-		return fmt.Errorf("end actor addresses: %w", err)
-	}
-	return insertAddresses(ctx, q, actorID, addresses, operatorID)
-}
-
-// updateAuditState is the actor's audited identity plus which collections the
-// update replaced.
-func updateAuditState(act *Actor, in UpdateInput) map[string]any {
-	state := actorAuditState(act)
+// replaceCollections applies the contact and address replacements of in and
+// adds to the audit state how many rows each ended and added, when any changed.
+func replaceCollections(ctx context.Context, q core.Querier, id uuid.UUID, in UpdateInput, state map[string]any) error {
 	if in.ReplaceContacts {
-		state["contacts_replaced"] = len(in.Contacts)
+		counts, err := replaceContacts(ctx, q, id, in.Contacts, in.OperatorID)
+		if err != nil {
+			return err
+		}
+		auditCounts(state, "contacts", counts)
 	}
 	if in.ReplaceAddresses {
-		state["addresses_replaced"] = len(in.Addresses)
+		counts, err := replaceAddresses(ctx, q, id, in.Addresses, in.OperatorID)
+		if err != nil {
+			return err
+		}
+		auditCounts(state, "addresses", counts)
 	}
-	return state
+	return nil
+}
+
+// auditCounts records "<name>_ended" and "<name>_added" when a replacement changed rows.
+func auditCounts(state map[string]any, name string, counts replaceCounts) {
+	if counts.Ended > 0 {
+		state[name+"_ended"] = counts.Ended
+	}
+	if counts.Added > 0 {
+		state[name+"_added"] = counts.Added
+	}
 }

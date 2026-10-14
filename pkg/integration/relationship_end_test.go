@@ -113,3 +113,22 @@ func assertEndedKeptAsHistory(t *testing.T, env *testEnv, caseID, endedID, openI
 		t.Fatalf("open edge missing or ended in %v", ended)
 	}
 }
+
+// TestRelationshipKindsCheckedInDatabase covers GLD-060: an edge written
+// directly (as the legacy import does) must still match its type's kinds.
+func TestRelationshipKindsCheckedInDatabase(t *testing.T) {
+	env := newTestEnv(t)
+	a, b := newActor(t, env), newActor(t, env)
+	c := openCase(t, env, "Dossier "+uniqueToken())
+	insert := func(source, target uuid.UUID, code string) error {
+		_, err := env.pool.Exec(env.ctx, `INSERT INTO subject_relationship (source_subject_id, target_subject_id, relationship_type_id)
+			SELECT $1, $2, id FROM relationship_type WHERE code = $3`, source, target, code)
+		return err
+	}
+	if _, ok := core.PgErrorWithCode(insert(a.ID, b.ID, "CASE_HAS_ACTOR_REQUESTER"), core.PgCheckViolation); !ok {
+		t.Fatal("an actor-to-actor edge of a case type must be refused by the database")
+	}
+	if err := insert(c.ID, a.ID, "CASE_HAS_ACTOR_REQUESTER"); err != nil {
+		t.Fatalf("a matching edge is accepted: %v", err)
+	}
+}

@@ -363,34 +363,35 @@ message GetActorResponse {
 message UpdateActorRequest {
   // id is the actor UUID; a locked or deleted actor is rejected.
   string id = 1 [(buf.validate.field).string.uuid = true];
-  // display_name is the new name (1-200 characters). Validation currently
-  // requires it on every update, so it is always applied.
+  // display_name is the new name (at most 200 characters); empty keeps the
+  // current one.
   string display_name = 2 [
-    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE,
     (buf.validate.field).string.max_len = 200
   ];
   // is_active activates or deactivates the actor when present.
   optional bool is_active = 3;
   // publication_code replaces the publication code when present.
   optional int32 publication_code = 4 [(buf.validate.field).int32.gte = 0];
-  // specialization, when set, replaces all fields of the matching kind block.
-  // Non-empty fields of the other kind violate a database constraint, which
-  // currently surfaces as INTERNAL.
+  // specialization, when set, replaces all fields of the matching kind block;
+  // non-empty fields of the other kind are rejected as INVALID_ARGUMENT.
   oneof specialization {
     // person replaces the PERSON fields.
     PersonDetails person = 5;
     // organization replaces the ORGANIZATION fields.
     OrganizationDetails organization = 6;
   }
-  // replace_contacts, when true, makes contacts the new full set; when false,
-  // contacts is ignored and the existing ones are kept.
+  // replace_contacts, when true, makes contacts the new full set (contacts
+  // that left it are ended, not deleted, and identical ones are kept); when
+  // false, contacts is ignored and the existing ones are kept.
   bool replace_contacts = 7;
   // contacts is the new contact set, used only with replace_contacts.
   repeated ActorContact contacts = 8;
   // reason is the justification recorded on the audit event (at most 2000 characters).
   string reason = 9 [(buf.validate.field).string.max_len = 2000];
-  // replace_addresses, when true, makes addresses the new full set (previous
-  // links are ended, not deleted); when false, addresses is ignored.
+  // replace_addresses, when true, makes addresses the new full set (links
+  // that left it are ended, not deleted, and identical ones are kept); when
+  // false, addresses is ignored.
   bool replace_addresses = 10;
   // addresses is the new address set (at most 20), used only with replace_addresses.
   repeated ActorAddress addresses = 11 [(buf.validate.field).repeated.max_items = 20];

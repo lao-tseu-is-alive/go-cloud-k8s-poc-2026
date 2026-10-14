@@ -224,6 +224,20 @@ func normalizePersonUpdate(in *UpdateInput) error {
 	return nil
 }
 
+// checkUpdateKind rejects details of the other kind (GLD-004): organization
+// details on a person, person details on an organization. Empty values are
+// accepted, since they leave the other kind's columns empty as they must be.
+func checkUpdateKind(kind Kind, in UpdateInput) error {
+	switch {
+	case kind == KindPerson && (deref(in.LegalName) != "" || deref(in.CategoryCode) != "" || deref(in.OrgComplement) != ""):
+		return fmt.Errorf("%w: organization details cannot be set on a person", core.ErrInvalidInput)
+	case kind == KindOrganization && (derefBool(in.IsCHRegister) || deref(in.CHRegisterRef) != "" ||
+		derefSalutation(in.Salutation) != 0 || deref(in.LastName) != "" || deref(in.FirstName) != ""):
+		return fmt.Errorf("%w: person details cannot be set on an organization", core.ErrInvalidInput)
+	}
+	return nil
+}
+
 // validatePersonIdentity checks a person's minimal identity: a known
 // salutation, a required last name and bounded names.
 func validatePersonIdentity(salutation Salutation, last, first string) error {

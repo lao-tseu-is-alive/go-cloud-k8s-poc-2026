@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.13.0** — pre-1.0 POC.
+Current version: **v0.13.1** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0028 (dbmate format)
+      └── db/migrations/  0001..0029 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -382,6 +382,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0026_search_order_indexes.sql  indexes on the order of the searches and lists (production volume)
 0027_sort_indexes.sql        indexes on the sortable columns of the lists
 0028_access_audit.sql        access_audit_event: append-only sensitive read audit (confidential reads and downloads)
+0029_contact_history_relationship_kinds.sql  replaced contacts ended, not deleted; relationship kinds checked by a trigger
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

@@ -8,6 +8,29 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.13.1] - 2026-10-14
+
+Actor correctness batch. Migration `0029` (contact history, relationship kind trigger); no new RPC.
+
+### Fixed
+
+- **GLD-004** — `UpdateActor` with details of the other kind (person details on an organization,
+  organization details on a person) answers `INVALID_ARGUMENT` instead of `INTERNAL`.
+- **GLD-005** — `UpdateActorRequest.display_name` is truly optional: empty keeps the current name
+  (it was required by validation, so the "unchanged" case was unreachable).
+- **GLD-007** — Replacing an actor's contacts no longer deletes them: the contacts that left the
+  list are ended (`actor_contact.ended_at`, `ended_by`, migration `0029`) and kept. Contacts and
+  address links identical to the new list stay untouched, so saving an actor without touching
+  them writes nothing; `ACTOR_UPDATED` records `contacts_ended` / `contacts_added` and
+  `addresses_ended` / `addresses_added` when they change (replacing `contacts_replaced` and
+  `addresses_replaced`).
+
+### Added
+
+- **GLD-060** — The database checks that a relationship's source and target kinds match its type
+  (trigger `trg_subject_relationship_kinds`, migration `0029`), so the legacy import and future
+  workers that write edges directly cannot create an invalid one.
+
 ## [0.13.0] - 2026-10-14
 
 Sensitive read audit (GLD-033). Migration `0028` (new append-only table); new RPC

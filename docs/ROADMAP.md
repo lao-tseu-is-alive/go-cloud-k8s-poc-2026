@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.13.0**.
+Tracked version: **v0.13.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -34,7 +34,8 @@ roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD
 the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on production
 data), the behaviour at production volume (GLD-053) and the UI remarks on real data — sortable
 lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — shipped in v0.12.0;
-the sensitive read audit (GLD-033) shipped in v0.13.0.
+the sensitive read audit (GLD-033) shipped in v0.13.0; the actor correctness batch (GLD-004,
+GLD-005, GLD-007, GLD-060) shipped in v0.13.1.
 
 ## Cross-cutting quality
 
@@ -48,22 +49,28 @@ the sensitive read audit (GLD-033) shipped in v0.13.0.
 - [-] **GLD-003 — Duplicate digest error**: superseded by GLD-023 — uniqueness
   moves to `content_blob` and an identical upload reuses the existing content
   and document instead of failing.
-- [ ] **GLD-004 — Cross-kind actor update error**: non-empty fields of the
+- [x] **GLD-004 — Cross-kind actor update error**: non-empty fields of the
   other kind in `UpdateActor` violate a CHECK constraint and surface as
-  `INTERNAL`; reject them as `INVALID_ARGUMENT` in the service.
-- [ ] **GLD-005 — Partial actor rename**: `UpdateActorRequest.display_name`
+  `INTERNAL`; reject them as `INVALID_ARGUMENT` in the service. Done 2026-10-14: the update
+  reads the actor's kind in its transaction and refuses details of the other kind.
+- [x] **GLD-005 — Partial actor rename**: `UpdateActorRequest.display_name`
   is required by validation, which makes the adapter's "empty means unchanged"
-  branch unreachable; make it truly optional or document it as required.
+  branch unreachable; make it truly optional or document it as required. Done 2026-10-14:
+  optional (`IGNORE_IF_ZERO_VALUE`), empty keeps the current name.
 - [x] **GLD-006 — Document incoming relationships**: `GetDocument` returned only
   outgoing edges, so the `CASE_HAS_DOCUMENT` links to cases were not shown with
   the document. Needed for "same document in several cases" (v2 §20). The SPA panel
   shows both directions since GLD-053/GLD-056 (`ListRelationships`); done 2026-10-08:
   `include_relationships` returns the outgoing then incoming edges, like the case and
   the actor, checked by the §50 scenario (one document in two cases).
-- [ ] **GLD-007 — Non-destructive contact replacement**: `replace_contacts`
+- [x] **GLD-007 — Non-destructive contact replacement**: `replace_contacts`
   physically deletes `actor_contact` rows and the audit event keeps only the
   display name; preserve the replaced contacts (soft delete or before/after
-  state), as v2 §35 requires.
+  state), as v2 §35 requires. Model decided 2026-10-14 (user picked every recommendation):
+  replaced contacts are ended like addresses (migration `0029`, `ended_at`/`ended_by`), rows
+  identical to the new list are kept (contacts and addresses alike, since the SPA replaces both
+  on every save), and `ACTOR_UPDATED` records only ended/added counts (no contact values in the
+  append-only audit). Done 2026-10-14.
 - [ ] **GLD-008 — Generated-code reproducibility gate**: add a
   `generated-check` (regenerate, diff `gen/` and `api/openapi/`) to
   `make release-check`; needs network access for the remote OpenAPI plugin.
@@ -110,9 +117,10 @@ the sensitive read audit (GLD-033) shipped in v0.13.0.
   (`oven/bun`, `golang`, `postgis/postgis`) by digest with an update bot (Renovate or Dependabot),
   and publish a license inventory and a CycloneDX SBOM with each release (v2 §43; Trivy can
   produce it in the release workflow).
-- [ ] **GLD-060 — Relationship rules in the database**: a trigger checking that the source and
+- [x] **GLD-060 — Relationship rules in the database**: a trigger checking that the source and
   target kinds of `subject_relationship` match its `relationship_type`, as the service does, so
   the legacy import and any future worker that bypass the service cannot write an invalid edge.
+  Done 2026-10-14: `trg_subject_relationship_kinds` (migration `0029`, `check_violation`).
 - [ ] **GLD-061 — Migration checksums** (low priority): record a checksum of each applied
   migration in `schema_migrations` and refuse to start when an applied migration file changed.
 

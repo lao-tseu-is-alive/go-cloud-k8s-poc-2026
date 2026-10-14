@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.13.0**.
+Tracked version: **v0.13.1**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -254,6 +254,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0026_search_order_indexes.sql` — Schema migration: indexes on the sort keys of the searches and of the relationship lists of a subject (GLD-053).
 - `pkg/core/module/db/migrations/0027_sort_indexes.sql` — Schema migration: indexes on the sortable columns of the case, document and thing lists and on the business reference sort (GLD-055).
 - `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
+- `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -289,6 +290,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/actor/doc.go` — Package documentation for the external persons and organizations domain.
 - `pkg/actor/mappers.go` — Actor domain ↔ proto mappers.
 - `pkg/actor/model.go` — Actor domain model with `db` tags: kinds, contact types and their names, categories, inputs, filter.
+- `pkg/actor/replace.go` — Non-destructive replacement of an actor's contacts and addresses: rows that left the list are ended, identical ones kept (GLD-007).
+- `pkg/actor/replace_test.go` — Tests the matching of current rows against the wanted list and the cross-kind update check.
 - `pkg/actor/reference_admin.go` — Organization category administration (create, update, deactivate) over `core.MutateReference`.
 - `pkg/actor/repository.go` — Actor persistence interface.
 - `pkg/actor/service.go` — Actor business rules: validation, per-type contact normalization, search, soft delete.

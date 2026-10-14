@@ -51,6 +51,9 @@ SET display_name             = CASE WHEN @set_display_name THEN @display_name EL
 WHERE a.id = @id
 RETURNING ` + actorColumns + `;`
 
+// actorKindSQL reads the kind of an actor (an update checks its fields against it).
+const actorKindSQL = `SELECT actor_kind FROM actor WHERE id = @id;`
+
 // --- actor_contact -----------------------------------------------------------
 
 const contactColumns = `id, actor_id, contact_type, value, is_primary, label, created_at`
@@ -62,10 +65,14 @@ VALUES (@actor_id, @contact_type, @value, @is_primary, @label);`
 const listContactsByActorsSQL = `
 SELECT ` + contactColumns + `
 FROM actor_contact
-WHERE actor_id = ANY(@ids::uuid[])
-ORDER BY actor_id, contact_type, created_at;`
+WHERE actor_id = ANY(@ids::uuid[]) AND ended_at IS NULL
+ORDER BY actor_id, contact_type, created_at, id;`
 
-const deleteContactsSQL = `DELETE FROM actor_contact WHERE actor_id = @actor_id;`
+// endContactsSQL ends replaced contacts (non-destructive replace, GLD-007).
+const endContactsSQL = `
+UPDATE actor_contact
+SET ended_at = now(), ended_by = @operator_id
+WHERE id = ANY(@ids::uuid[]) AND ended_at IS NULL;`
 
 // --- organization_category ---------------------------------------------------
 
@@ -129,11 +136,11 @@ const insertActorAddressSQL = `
 INSERT INTO actor_address (actor_id, address_id, address_type, is_principal, label, created_by)
 VALUES (@actor_id, @address_id, @address_type, @is_principal, @label, @created_by);`
 
-// endActorAddressesSQL ends the current links of an actor (non-destructive replace).
+// endActorAddressesSQL ends replaced address links (non-destructive replace).
 const endActorAddressesSQL = `
 UPDATE actor_address
 SET ended_at = now(), ended_by = @operator_id
-WHERE actor_id = @actor_id AND ended_at IS NULL;`
+WHERE id = ANY(@ids::uuid[]) AND ended_at IS NULL;`
 
 const listAddressesByActorsSQL = `
 SELECT aa.id, aa.actor_id, aa.address_id, aa.address_type, aa.is_principal, aa.label, aa.created_at,

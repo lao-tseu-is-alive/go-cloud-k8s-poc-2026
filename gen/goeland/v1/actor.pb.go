@@ -1316,31 +1316,32 @@ type UpdateActorRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the actor UUID; a locked or deleted actor is rejected.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// display_name is the new name (1-200 characters). Validation currently
-	// requires it on every update, so it is always applied.
+	// display_name is the new name (at most 200 characters); empty keeps the
+	// current one.
 	DisplayName string `protobuf:"bytes,2,opt,name=display_name,json=displayName,proto3" json:"display_name,omitempty"`
 	// is_active activates or deactivates the actor when present.
 	IsActive *bool `protobuf:"varint,3,opt,name=is_active,json=isActive,proto3,oneof" json:"is_active,omitempty"`
 	// publication_code replaces the publication code when present.
 	PublicationCode *int32 `protobuf:"varint,4,opt,name=publication_code,json=publicationCode,proto3,oneof" json:"publication_code,omitempty"`
-	// specialization, when set, replaces all fields of the matching kind block.
-	// Non-empty fields of the other kind violate a database constraint, which
-	// currently surfaces as INTERNAL.
+	// specialization, when set, replaces all fields of the matching kind block;
+	// non-empty fields of the other kind are rejected as INVALID_ARGUMENT.
 	//
 	// Types that are valid to be assigned to Specialization:
 	//
 	//	*UpdateActorRequest_Person
 	//	*UpdateActorRequest_Organization
 	Specialization isUpdateActorRequest_Specialization `protobuf_oneof:"specialization"`
-	// replace_contacts, when true, makes contacts the new full set; when false,
-	// contacts is ignored and the existing ones are kept.
+	// replace_contacts, when true, makes contacts the new full set (contacts
+	// that left it are ended, not deleted, and identical ones are kept); when
+	// false, contacts is ignored and the existing ones are kept.
 	ReplaceContacts bool `protobuf:"varint,7,opt,name=replace_contacts,json=replaceContacts,proto3" json:"replace_contacts,omitempty"`
 	// contacts is the new contact set, used only with replace_contacts.
 	Contacts []*ActorContact `protobuf:"bytes,8,rep,name=contacts,proto3" json:"contacts,omitempty"`
 	// reason is the justification recorded on the audit event (at most 2000 characters).
 	Reason string `protobuf:"bytes,9,opt,name=reason,proto3" json:"reason,omitempty"`
-	// replace_addresses, when true, makes addresses the new full set (previous
-	// links are ended, not deleted); when false, addresses is ignored.
+	// replace_addresses, when true, makes addresses the new full set (links
+	// that left it are ended, not deleted, and identical ones are kept); when
+	// false, addresses is ignored.
 	ReplaceAddresses bool `protobuf:"varint,10,opt,name=replace_addresses,json=replaceAddresses,proto3" json:"replace_addresses,omitempty"`
 	// addresses is the new address set (at most 20), used only with replace_addresses.
 	Addresses     []*ActorAddress `protobuf:"bytes,11,rep,name=addresses,proto3" json:"addresses,omitempty"`
@@ -2272,11 +2273,10 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x10GetActorResponse\x12'\n" +
 	"\x05actor\x18\x01 \x01(\v2\x11.goeland.v1.ActorR\x05actor\x12E\n" +
 	"\rrelationships\x18\x02 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x129\n" +
-	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xdb\x04\n" +
+	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xdc\x04\n" +
 	"\x12UpdateActorRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12-\n" +
-	"\fdisplay_name\x18\x02 \x01(\tB\n" +
-	"\xbaH\ar\x05\x10\x01\x18\xc8\x01R\vdisplayName\x12 \n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12.\n" +
+	"\fdisplay_name\x18\x02 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\x18\xc8\x01R\vdisplayName\x12 \n" +
 	"\tis_active\x18\x03 \x01(\bH\x01R\bisActive\x88\x01\x01\x127\n" +
 	"\x10publication_code\x18\x04 \x01(\x05B\a\xbaH\x04\x1a\x02(\x00H\x02R\x0fpublicationCode\x88\x01\x01\x123\n" +
 	"\x06person\x18\x05 \x01(\v2\x19.goeland.v1.PersonDetailsH\x00R\x06person\x12E\n" +

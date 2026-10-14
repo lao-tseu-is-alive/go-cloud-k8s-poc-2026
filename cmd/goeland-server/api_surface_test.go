@@ -212,6 +212,11 @@ func (s *surface) actors() {
 	s.ok("GET", "/api/actors/"+id, nil)
 	s.fails(codeNotFound, "GET", missing("/api/actors"), nil)
 	s.ok("PATCH", "/api/actors/"+id, map[string]any{"displayName": "Surface Sàrl " + s.token, "isActive": true, "reason": "test"})
+	// an empty display name keeps the current one (GLD-005); person details on an organization are refused (GLD-004)
+	if got := str(s.ok("PATCH", "/api/actors/"+id, map[string]any{"isActive": true}), "actor", "displayName"); got != "Surface Sàrl "+s.token {
+		s.t.Fatalf("an update without display name keeps it: %q", got)
+	}
+	s.fails(codeInvalidArgument, "PATCH", "/api/actors/"+id, map[string]any{"person": map[string]any{"lastName": "Muster"}})
 	found := s.ok("GET", "/api/actors/search?query="+s.token, nil)
 	if len(list(found, "actors")) != 1 {
 		s.t.Fatalf("actor search: %v", found)

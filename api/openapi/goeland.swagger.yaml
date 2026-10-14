@@ -3483,8 +3483,8 @@ definitions:
       displayName:
         type: string
         description: |-
-          display_name is the new name (1-200 characters). Validation currently
-          requires it on every update, so it is always applied.
+          display_name is the new name (at most 200 characters); empty keeps the
+          current one.
       isActive:
         type: boolean
         description: is_active activates or deactivates the actor when present.
@@ -3501,8 +3501,9 @@ definitions:
       replaceContacts:
         type: boolean
         description: |-
-          replace_contacts, when true, makes contacts the new full set; when false,
-          contacts is ignored and the existing ones are kept.
+          replace_contacts, when true, makes contacts the new full set (contacts
+          that left it are ended, not deleted, and identical ones are kept); when
+          false, contacts is ignored and the existing ones are kept.
       contacts:
         type: array
         items:
@@ -3515,8 +3516,9 @@ definitions:
       replaceAddresses:
         type: boolean
         description: |-
-          replace_addresses, when true, makes addresses the new full set (previous
-          links are ended, not deleted); when false, addresses is ignored.
+          replace_addresses, when true, makes addresses the new full set (links
+          that left it are ended, not deleted, and identical ones are kept); when
+          false, addresses is ignored.
       addresses:
         type: array
         items:

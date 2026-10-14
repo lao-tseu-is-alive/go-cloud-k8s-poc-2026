@@ -71,7 +71,9 @@ whenever a task starts, completes, changes scope or order.
   in `utils/contactRules.ts` — change both together (both test suites read the shared cases in
   `pkg/actor/testdata/contact_values.json`, so a one-sided change fails `make check`). Addresses (GLD-014) are `address` rows
   linked M:N by `actor_address` with a role (head office, branch, correspondence, billing,
-  residence, other) and one principal; replacing them ends the old links. A branch acting as a
+  residence, other) and one principal. Replacing contacts or addresses is non-destructive (GLD-007): the
+  rows that left the list are ended (`ended_at`, `ended_by`), identical ones are kept untouched, and the
+  audit records only the counts (`contacts_ended`, `addresses_added`, ...). A branch acting as a
   distinct party or a contact person is another actor linked by `ACTOR_BRANCH_OF_ACTOR` /
   `ACTOR_CONTACT_PERSON_OF_ACTOR`.
 - **case** (`pkg/casefile`) — the affaire: `case_type` (with a business-reference
@@ -169,7 +171,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0028 (dbmate format)
+  │   └── db/migrations/     0001..0029 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -511,7 +513,8 @@ only the struct + SQL projection.
   `record_metadata.deleted_at` / soft-delete relationships. Every mutation must
   write an `audit_event` (in the same transaction as the mutation).
 - Relationships are typed and validated: source/target kinds must match the
-  `relationship_type`; a partial unique index allows one *open* edge (not unlinked,
+  `relationship_type` (checked by `core.LinkSubjectsTx` and, for writers that bypass it such as
+  the legacy import, by the `trg_subject_relationship_kinds` trigger, GLD-060); a partial unique index allows one *open* edge (not unlinked,
   no `valid_to`) per (source, target, type). Two distinct operations: `EndRelationship`
   sets `valid_to` (the relationship ended; kept as history, `RELATIONSHIP_ENDED`) and
   `UnlinkSubjects` soft-deletes a mistaken edge (`RELATIONSHIP_UNLINKED`).
