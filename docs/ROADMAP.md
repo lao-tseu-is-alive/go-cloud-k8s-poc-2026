@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.14.0**.
+Tracked version: **v0.14.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -36,7 +36,8 @@ data), the behaviour at production volume (GLD-053) and the UI remarks on real d
 lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — shipped in v0.12.0;
 the sensitive read audit (GLD-033) shipped in v0.13.0; the actor correctness batch (GLD-004,
 GLD-005, GLD-007, GLD-060) shipped in v0.13.1; immutable build inputs and the SBOM (GLD-059) and
-the case export (GLD-029) shipped in v0.14.0.
+the case export (GLD-029) shipped in v0.14.0, the reproducible generated code (GLD-008) and the
+triaged dependency updates in v0.14.1.
 
 ## Cross-cutting quality
 
@@ -72,9 +73,12 @@ the case export (GLD-029) shipped in v0.14.0.
   identical to the new list are kept (contacts and addresses alike, since the SPA replaces both
   on every save), and `ACTOR_UPDATED` records only ended/added counts (no contact values in the
   append-only audit). Done 2026-10-14.
-- [ ] **GLD-008 — Generated-code reproducibility gate**: add a
+- [x] **GLD-008 — Generated-code reproducibility gate**: add a
   `generated-check` (regenerate, diff `gen/` and `api/openapi/`) to
-  `make release-check`; needs network access for the remote OpenAPI plugin.
+  `make release-check`; needs network access for the remote OpenAPI plugin. Done 2026-10-14:
+  `protoc-gen-go` / `protoc-gen-connect-go` pinned as `go.mod` tools, the OpenAPI plugin at
+  v2.31.0, `scripts/check_generated.sh` in `release-check` (the committed files were stamped
+  by a locally installed `protoc-gen-go` v1.36.11; now v1.36.12, the module's version).
 - [~] **GLD-009 — Frontend tests**: add unit/component tests to the SPA. Started with
   GLD-042: Vitest on the pure `utils/` modules in `make front-check`, the contact rules checked
   against the server's own cases (shared fixture); component tests remain.

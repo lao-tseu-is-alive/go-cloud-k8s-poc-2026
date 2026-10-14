@@ -1,22 +1,17 @@
 #!/bin/bash
 #
 # install_go_protobuf_tools.sh
-# Install the local code-generation toolchain used by `make generate`
-# (scripts/buf_generate.sh): buf plus the two local protoc plugins.
-# The OpenAPI plugin is pulled remotely by buf, so it does not need installing.
+# Install buf, the code-generation driver of `make generate`
+# (scripts/buf_generate.sh), at the version CI uses. The two Go protoc plugins
+# run as go.mod tools (`go tool protoc-gen-go`, GLD-008) and the OpenAPI plugin
+# is pulled remotely by buf at a pinned version, so neither needs installing.
 #
 # Run once per machine (or after a Go upgrade). Binaries land in $(go env GOBIN)
 # or $(go env GOPATH)/bin — make sure that directory is on your PATH.
 set -euo pipefail
 
 echo "## installing buf ..."
-go install github.com/bufbuild/buf/cmd/buf@latest
-
-echo "## installing protoc-gen-go ..."
-go install google.golang.org/protobuf/cmd/protoc-gen-go@latest
-
-echo "## installing protoc-gen-connect-go ..."
-go install connectrpc.com/connect/cmd/protoc-gen-connect-go@latest
+go install github.com/bufbuild/buf/cmd/buf@v1.70.0
 
 echo "## done. Verify with:"
-echo "   buf --version && which protoc-gen-go protoc-gen-connect-go"
+echo "   buf --version && go tool protoc-gen-go --version"

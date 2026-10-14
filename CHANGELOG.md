@@ -8,13 +8,25 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.14.1] - 2026-10-14
+
+Reproducible generated code (GLD-008) and the triaged dependency updates. No migration, no API change.
+
+### Added
+
+- **GLD-008** — Generated-code reproducibility gate: `protoc-gen-go` and `protoc-gen-connect-go`
+  run as `go.mod` tools at the module versions, the remote OpenAPI plugin is pinned (v2.31.0), and
+  `make generated-check` (part of `make release-check`, hence CI) regenerates into a temporary
+  directory and fails when the committed `gen/` or `api/openapi/` differ. The generated Go files
+  were regenerated (only their `protoc-gen-go` version stamp changes).
+
 ### Changed
 
 - Dependency updates (Dependabot triage of 2026-10-14): pgx 5.11, Connect 1.21, protovalidate;
   Vue 3.5.43, Vuetify 4.2, vue-router 5.4, vue-i18n 11.4, Pinia 4, Vite 8.3, ESLint 10 and the
   other SPA minors; GitHub's own actions (checkout 7, setup-go 7, codeql 4) and the pinned
   third-party ones at release tags (setup-trivy 0.3.1, docker actions, action-gh-release 3).
-  Left out: Vanguard 0.5 / validate 0.9 (Connect v2, GLD-062), TypeScript 7 (not supported by
+  Left out: Vanguard 0.5 / validate 0.9 (Connect v2, a planned roadmap task), TypeScript 7 (not supported by
   vue-tsc), @types/node 26 (the SPA targets Node 22) and an hours-old untagged trivy-action
   commit; Dependabot now ignores the first three.
 

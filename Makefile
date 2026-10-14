@@ -109,6 +109,11 @@ cognitive-check:
 build-inputs-check:
 	bash scripts/check_build_inputs.sh
 
+.PHONY: generated-check
+## generated-check:	gen/ and api/openapi/ equal a fresh buf generate with the pinned generators (needs network; GLD-008)
+generated-check:
+	bash scripts/check_generated.sh
+
 .PHONY: sbom
 ## sbom:	CycloneDX SBOM + license inventory of the release in bin/sbom (needs trivy; GLD-059)
 sbom:
@@ -191,8 +196,8 @@ release-traceability-check:
 	bash scripts/check_release_traceability.sh
 
 .PHONY: release-check
-## release-check:	check + version/changelog/roadmap/traceability + binary reporting the version (CI runs this)
-release-check: check vuln-check version-check changelog-check scripts-check roadmap-check release-traceability-check binary
+## release-check:	check + generated code + version/changelog/roadmap/traceability + binary reporting the version (CI runs this)
+release-check: check vuln-check generated-check version-check changelog-check scripts-check roadmap-check release-traceability-check binary
 	@./bin/$(APP_EXECUTABLE) --version | grep -qF '$(version_prefix)' || { echo "release-check: binary does not report $(version_prefix)"; exit 1; }
 	@echo "release-check: v$(APP_VERSION) OK"
 

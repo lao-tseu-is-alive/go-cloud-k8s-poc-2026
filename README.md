@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.14.0** — pre-1.0 POC.
+Current version: **v0.14.1** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -417,7 +417,7 @@ make docs-check   GoDoc coverage + atlas inventory + executable doc claims
 make check        front-check + fmt-check + lint + build-inputs-check + test + docs-check (run before handoff)
 make sbom         CycloneDX SBOM + license inventory in bin/sbom (needs trivy)
 make vuln-check   govulncheck: fail on vulnerabilities the code can reach
-make release-check  check + vuln-check + version/changelog/roadmap traceability + binary --version (what CI runs)
+make release-check  check + vuln-check + generated-check + version/changelog/roadmap traceability + binary --version (what CI runs)
 make release      CONFIRM_RELEASE=vX.Y.Z: guarded annotated tag + atomic push of main and tag
 make db-up        apply migrations (dbmate)
 ```
@@ -460,7 +460,8 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | Script | Purpose                                                                                               |
 |--------|-------------------------------------------------------------------------------------------------------|
 | `createLocalDBAndUser.sh <name>` | Create a local role + database, enable pgcrypto/pg_trgm/unaccent/postgis (as admin), and write `.env` |
-| `install_go_protobuf_tools.sh`   | Install `buf`, `protoc-gen-go`, `protoc-gen-connect-go`                                               |
+| `install_go_protobuf_tools.sh`   | Install `buf` 1.70.0 (the Go protoc plugins are `go.mod` tools)                                       |
+| `check_generated.sh`             | `gen/` and `api/openapi/` equal a fresh `buf generate` (`make generated-check`, in `release-check`)   |
 | `buf_generate.sh`                | `buf lint` + `buf dep update` + `buf generate` (used by `make generate`)                              |
 | `getAppInfo.sh`                  | Export `APP_NAME`/`APP_VERSION`/… from `pkg/version/version.go` (sourced by other scripts)            |
 | `GoRunWithEnv.sh [main] [env]`   | `go run` the server with version ldflags + a dotenv loaded                                            |

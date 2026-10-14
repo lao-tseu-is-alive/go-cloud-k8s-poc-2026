@@ -232,6 +232,7 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   ESLint, build) + `fmt-check` + `lint` + `cognitive-check` + `build-inputs-check` + `test` +
   `docs-check` + `git diff --check`.
 - `make release-check` — `check` + `vuln-check` (govulncheck: reachable vulnerabilities fail) +
+  `generated-check` (`gen/` and `api/openapi/` must equal a fresh `buf generate`; needs network) +
   version/changelog/scripts consistency + roadmap and
   bidirectional roadmap↔changelog traceability + binary build whose `--version` must report
   `Version`. This is exactly what CI (`ci.yml`) runs on every push and PR, and what the
@@ -479,8 +480,10 @@ relevant `src/api/*` client + component, then `bun run type-check && bun run lin
 - After changing protos, run `make generate` then `make lint`.
 - `make generate` may change `buf.lock`, `gen/` and `api/openapi/` — review and
   commit intended generated changes together.
-- Requires `buf`, local `protoc-gen-go` + `protoc-gen-connect-go`, and the remote
-  OpenAPI plugin.
+- Requires `buf` (1.70.0, like CI); `protoc-gen-go` and `protoc-gen-connect-go` run as
+  `go.mod` tools (`go tool …`) and the remote OpenAPI plugin is pinned by version in
+  `buf.gen.yaml`, so the output is reproducible: `make generated-check` (in `release-check`)
+  fails when the committed `gen/` or `api/openapi/` differ from a fresh generation (GLD-008).
 - protovalidate's `ignore` enum in the pinned buf schema is
   **`IGNORE_IF_ZERO_VALUE`** (not `IGNORE_IF_UNPOPULATED`). It is used on
   `RecordMetadata.subject_id` so that message doubles as an input (initial

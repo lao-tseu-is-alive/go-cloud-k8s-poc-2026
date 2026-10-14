@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.14.0**.
+Tracked version: **v0.14.1**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -50,6 +50,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_tag.sh` — Fails unless a release tag equals `v` + the `Version` constant; used by the publication workflows.
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
+- `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/` or `api/openapi/` differ (`make generated-check`, GLD-008).
 - `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
@@ -60,7 +61,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
 - `scripts/get_jwt_token.sh` — Fetches a JWT from the auth server for `jwt`-mode testing and prints it on stdout.
 - `scripts/sbom.sh` — CycloneDX SBOM and license inventory of the release with Trivy (`make sbom`, release workflow).
-- `scripts/install_go_protobuf_tools.sh` — Installs `buf`, `protoc-gen-go` and `protoc-gen-connect-go`.
+- `scripts/install_go_protobuf_tools.sh` — Installs `buf` at the CI version; the Go protoc plugins are `go.mod` tools.
 
 ## API contracts and generated bindings
 
