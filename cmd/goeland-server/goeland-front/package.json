@@ -30,7 +30,7 @@
     "@types/node": "^24.12.0",
     "@vitejs/plugin-vue": "^6.0.5",
     "@vue/tsconfig": "^0.9.0",
-    "eslint": "^9.39.4",
+    "eslint": "^10.12.0",
     "eslint-config-vuetify": "^4.3.4",
     "eslint-plugin-sonarjs": "^4.2.1",
     "eslint-plugin-vuejs-accessibility": "^2.6.0",
