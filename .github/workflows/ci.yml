@@ -25,7 +25,7 @@ jobs:
     # makes them fail rather than skip if the database is ever missing.
     services:
       postgis:
-        image: postgis/postgis:17-3.5
+        image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
         env:
           POSTGRES_DB: goeland_ci
           # Ephemeral CI container reachable only from this job: no password.

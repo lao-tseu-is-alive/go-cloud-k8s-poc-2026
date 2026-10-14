@@ -1,0 +1,48 @@
+# Dependency update proposals (GLD-059). Build inputs are pinned (images by
+# digest, third-party actions by commit SHA, `make build-inputs-check`), so a
+# moved upstream tag never changes a build silently; Dependabot opens the pull
+# requests that move the pins, and CI (`make release-check`) gates each one.
+# Weekly and grouped to keep the noise low.
+version: 2
+updates:
+  # Dockerfile base images (oven/bun, golang): tag and digest together. A new Go
+  # minor is a deliberate change with go.mod (the builder must match its minor),
+  # so only patches of golang are proposed. The postgis image of ci.yml and
+  # deployments/k8s is moved by hand (docs/PRODUCTION_READINESS.md).
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+    ignore:
+      - dependency-name: golang
+        update-types: ["version-update:semver-major", "version-update:semver-minor"]
+    groups:
+      base-images:
+        patterns: ["*"]
+
+  # Workflow actions (third-party ones pinned by SHA).
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      actions:
+        patterns: ["*"]
+
+  # Go modules (minor and patch grouped; a major stays its own pull request).
+  - package-ecosystem: gomod
+    directory: /
+    schedule:
+      interval: weekly
+    groups:
+      go-modules:
+        update-types: [minor, patch]
+
+  # The embedded SPA's packages (bun.lock).
+  - package-ecosystem: bun
+    directory: /cmd/goeland-server/goeland-front
+    schedule:
+      interval: weekly
+    groups:
+      spa-packages:
+        update-types: [minor, patch]

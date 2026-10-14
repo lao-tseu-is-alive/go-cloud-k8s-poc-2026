@@ -174,3 +174,19 @@ export async function apiFetchBlob (path: string): Promise<Blob> {
   }
   return await res.blob()
 }
+
+/**
+ * GETs a binary resource with the token and makes the browser save it as
+ * filename (a plain <a href> could not carry the bearer token).
+ */
+export async function downloadAs (path: string, filename: string): Promise<void> {
+  const blob = await apiFetchBlob(path)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  document.body.append(a)
+  a.click()
+  a.remove()
+  URL.revokeObjectURL(url)
+}

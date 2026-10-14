@@ -22,6 +22,8 @@ const (
 	defaultRequestTimeout = 10 * time.Second
 	defaultDocumentPath   = "./go_documents"
 	defaultMaxUploadBytes = 100 << 20 // 100 MiB
+	defaultExportTTL      = 24 * time.Hour
+	defaultExportPoll     = 5 * time.Second
 )
 
 // defaultDBConnectTimeout bounds how long startup waits for the database (a pod
@@ -73,6 +75,12 @@ type serverConfig struct {
 	DocumentPath string
 	// MaxUploadBytes caps the size of a single multipart upload.
 	MaxUploadBytes int64
+	// ExportTTL is how long a built case export stays downloadable
+	// (GOELAND_EXPORT_TTL_HOURS, default 24 h).
+	ExportTTL time.Duration
+	// ExportPollInterval is how often the export worker looks for work
+	// (GOELAND_EXPORT_POLL_SECONDS, default 5 s).
+	ExportPollInterval time.Duration
 	// BootstrapAdmins are the user ids granted the ADMIN role on their next
 	// request (GOELAND_BOOTSTRAP_ADMINS, comma-separated); the recovery path
 	// when no administrator is left.
@@ -196,6 +204,21 @@ func (c *serverConfig) readLimits() error {
 	c.RequestTimeout = time.Duration(requestTimeoutSeconds) * time.Second
 	c.DBConnectTimeout = time.Duration(dbConnectSeconds) * time.Second
 	c.MaxUploadBytes = maxUploadBytes
+	return c.readExportLimits()
+}
+
+// readExportLimits reads the case export worker settings.
+func (c *serverConfig) readExportLimits() error {
+	ttlHours, err := envInt64InRange("GOELAND_EXPORT_TTL_HOURS", int64(defaultExportTTL/time.Hour), 1, 720)
+	if err != nil {
+		return err
+	}
+	pollSeconds, err := envInt64InRange("GOELAND_EXPORT_POLL_SECONDS", int64(defaultExportPoll/time.Second), 1, 3600)
+	if err != nil {
+		return err
+	}
+	c.ExportTTL = time.Duration(ttlHours) * time.Hour
+	c.ExportPollInterval = time.Duration(pollSeconds) * time.Second
 	return nil
 }
 

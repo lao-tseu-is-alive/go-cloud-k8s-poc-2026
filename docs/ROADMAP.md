@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.13.1**.
+Tracked version: **v0.14.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -35,7 +35,8 @@ the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the PO
 data), the behaviour at production volume (GLD-053) and the UI remarks on real data — sortable
 lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — shipped in v0.12.0;
 the sensitive read audit (GLD-033) shipped in v0.13.0; the actor correctness batch (GLD-004,
-GLD-005, GLD-007, GLD-060) shipped in v0.13.1.
+GLD-005, GLD-007, GLD-060) shipped in v0.13.1; immutable build inputs and the SBOM (GLD-059) and
+the case export (GLD-029) shipped in v0.14.0.
 
 ## Cross-cutting quality
 
@@ -113,10 +114,14 @@ GLD-005, GLD-007, GLD-060) shipped in v0.13.1.
   forbids the removed `GET /download` and "not filtered yet" claims. GLD-006 is fixed in the same
   round; the other findings were already planned (GLD-004/005/007/008/009/010/020/021/033/045/046)
   or became GLD-059 to GLD-061.
-- [ ] **GLD-059 — Immutable build inputs and SBOM**: pin the Dockerfile and CI service images
+- [x] **GLD-059 — Immutable build inputs and SBOM**: pin the Dockerfile and CI service images
   (`oven/bun`, `golang`, `postgis/postgis`) by digest with an update bot (Renovate or Dependabot),
   and publish a license inventory and a CycloneDX SBOM with each release (v2 §43; Trivy can
-  produce it in the release workflow).
+  produce it in the release workflow). Done 2026-10-14: images pinned by digest, `make
+  build-inputs-check`, Dependabot (weekly, grouped; a Go minor stays deliberate; postgis moved by
+  hand), `scripts/sbom.sh` in the release workflow (CycloneDX + license table) and BuildKit SBOM
+  and provenance attestations on the image. The license inventory surfaced GPL-3.0 for
+  `go-cloud-k8s-common-libs` in this MIT repository (PRODUCTION_READINESS, known limitations).
 - [x] **GLD-060 — Relationship rules in the database**: a trigger checking that the source and
   target kinds of `subject_relationship` match its `relationship_type`, as the service does, so
   the legacy import and any future worker that bypass the service cannot write an invalid edge.
@@ -327,9 +332,13 @@ covered by an integration test.
 - [ ] **GLD-028 — Transactional outbox**: `outbox_event` written in the same
   transaction as the mutation and its audit event (v2 §38 event list); from
   then on the v2 §54 "mutation + audit + outbox" criterion applies.
-- [ ] **GLD-029 — ExportCase**: JSON + blobs in a ZIP (case, timeline, tasks,
+- [x] **GLD-029 — ExportCase**: JSON + blobs in a ZIP (case, timeline, tasks,
   circulations, relationships, documents, versions, blob metadata and hashes,
-  audit summary, provenance, retention), each blob stored once.
+  audit summary, provenance, retention), each blob stored once. Model decided 2026-10-14
+  (IMPLEMENTATION_STATUS §3j): MANAGE, contents filtered with withheld counts, every export
+  audited, all versions, background job. Done 2026-10-14: migration `0030` (`case_export`),
+  `CaseExportService` (request, get, list), `pkg/caseexport` worker (`SKIP LOCKED`, retry,
+  expiry), `GET /api/case-exports/{id}/content`, SPA panel on the case page, §50 step 31.
 - [ ] **GLD-032 — Retention policy**: `retention_policy` + `subject_retention`
   evolving `record_metadata.retention_until` / `sort_final` without breaking
   them, and a governed, proven disposition path (§3g).

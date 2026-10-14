@@ -46,13 +46,6 @@ tags:
       exposes it as REST/JSON (and the generated OpenAPI documents that surface).
       REST paths follow the spec (§13.3) with sensible additions for the extra RPCs.
       The Connect/gRPC path /goeland.v1.DocumentService/<Method> remains available too.
-  - name: OrgUnitService
-    description: |-
-      OrgUnitService manages the organizational units of the Goéland POC. Every RPC
-      carries a google.api.http annotation so Vanguard also exposes it as
-      REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
-  - name: ThingService
-    description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
   - name: TimelineService
     description: |-
       TimelineService is the case timeline component of the Goéland POC. Every RPC
@@ -60,6 +53,17 @@ tags:
       REST/JSON; the Connect/gRPC path /goeland.v1.TimelineService/<Method> stays
       available. Mutations fail with FAILED_PRECONDITION when the case is closed,
       locked or deleted, or when the entry is no longer a draft.
+  - name: CaseExportService
+    description: |-
+      CaseExportService queues and follows case exports; the archive itself is
+      downloaded from GET /api/case-exports/{id}/content.
+  - name: OrgUnitService
+    description: |-
+      OrgUnitService manages the organizational units of the Goéland POC. Every RPC
+      carries a google.api.http annotation so Vanguard also exposes it as
+      REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
+  - name: ThingService
+    description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
 consumes:
   - application/json
 produces:
@@ -365,6 +369,27 @@ paths:
           type: string
       tags:
         - CoreService
+  /api/case-exports/{id}:
+    get:
+      summary: Retrieve an export job. Requires goeland:read.
+      operationId: GetCaseExport
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetCaseExportResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the export UUID; only its requester (or an administrator) may read it.
+          in: path
+          required: true
+          type: string
+      tags:
+        - CaseExportService
   /api/case-types:
     get:
       summary: |-
@@ -618,6 +643,54 @@ paths:
             $ref: '#/definitions/CirculationServiceCreateCirculationBody'
       tags:
         - CirculationService
+  /api/cases/{caseId}/exports:
+    get:
+      summary: List the caller's exports of a case. Requires goeland:read.
+      operationId: ListCaseExports
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListCaseExportsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case; the caller sees its own exports (an administrator all).
+          in: path
+          required: true
+          type: string
+      tags:
+        - CaseExportService
+    post:
+      summary: |-
+        Queue an export of a case. Requires goeland:write and MANAGE on the case;
+        the request is recorded as EXPORT, granted or refused.
+      operationId: RequestCaseExport
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RequestCaseExportResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case to export; the caller needs MANAGE on it.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/CaseExportServiceRequestCaseExportBody'
+      tags:
+        - CaseExportService
   /api/cases/{caseId}/tasks:
     get:
       summary: List the tasks of a case. Requires goeland:read.
@@ -3545,6 +3618,13 @@ definitions:
     description: |-
       UpdateOrganizationCategoryRequest changes a organization category (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  CaseExportServiceRequestCaseExportBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the justification recorded with the export (at most 2000 characters).
+    description: RequestCaseExportRequest queues an export of a case.
   CaseServiceSetCaseTypeDefaultGrantsBody:
     type: object
     properties:
@@ -4788,6 +4868,76 @@ definitions:
     description: Case is an administrative business file, 1:1 with SubjectRef (id == subject id).
     required:
       - title
+  v1CaseExport:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the export UUID.
+      caseId:
+        type: string
+        description: case_id is the exported case.
+      status:
+        $ref: '#/definitions/v1CaseExportStatus'
+        description: status is the job state.
+      requestedBy:
+        type: string
+        description: |-
+          requested_by is the operator who requested the export (the only one who
+          may download it).
+      reason:
+        type: string
+        description: reason is the justification given with the request.
+      requestedAt:
+        type: string
+        format: date-time
+        description: requested_at is when the export was requested.
+        readOnly: true
+      startedAt:
+        type: string
+        format: date-time
+        description: started_at is when the worker started building it.
+        readOnly: true
+      finishedAt:
+        type: string
+        format: date-time
+        description: finished_at is when it was built or failed.
+        readOnly: true
+      expiresAt:
+        type: string
+        format: date-time
+        description: expires_at is when a built archive is removed.
+        readOnly: true
+      sizeBytes:
+        type: string
+        format: int64
+        description: size_bytes is the archive size once built.
+      sha256:
+        type: string
+        description: sha256 is the lower-case hex digest of the archive once built.
+      error:
+        type: string
+        description: error explains a failed export; empty otherwise.
+    description: CaseExport is one export job of a case.
+  v1CaseExportStatus:
+    type: string
+    enum:
+      - CASE_EXPORT_STATUS_UNSPECIFIED
+      - CASE_EXPORT_STATUS_QUEUED
+      - CASE_EXPORT_STATUS_RUNNING
+      - CASE_EXPORT_STATUS_DONE
+      - CASE_EXPORT_STATUS_FAILED
+      - CASE_EXPORT_STATUS_EXPIRED
+    default: CASE_EXPORT_STATUS_UNSPECIFIED
+    description: |-
+      CaseExportStatus is the state of an export job.
+
+       - CASE_EXPORT_STATUS_UNSPECIFIED: CASE_EXPORT_STATUS_UNSPECIFIED is the zero value; never stored.
+       - CASE_EXPORT_STATUS_QUEUED: CASE_EXPORT_STATUS_QUEUED is a requested export waiting for the worker.
+       - CASE_EXPORT_STATUS_RUNNING: CASE_EXPORT_STATUS_RUNNING is an export the worker is building.
+       - CASE_EXPORT_STATUS_DONE: CASE_EXPORT_STATUS_DONE is a built archive, downloadable until expires_at.
+       - CASE_EXPORT_STATUS_FAILED: CASE_EXPORT_STATUS_FAILED is an export that could not be built (see error).
+       - CASE_EXPORT_STATUS_EXPIRED: CASE_EXPORT_STATUS_EXPIRED is a built archive whose bytes were removed.
   v1CaseStatus:
     type: string
     enum:
@@ -5995,6 +6145,13 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetActorResponse returns an actor and the requested context.
+  v1GetCaseExportResponse:
+    type: object
+    properties:
+      export:
+        $ref: '#/definitions/v1CaseExport'
+        description: export is the job.
+    description: GetCaseExportResponse returns the export.
   v1GetCaseResponse:
     type: object
     properties:
@@ -6313,6 +6470,16 @@ definitions:
           $ref: '#/definitions/v1Circulation'
         description: circulations are the case circulations, newest first.
     description: ListCaseCirculationsResponse returns the circulations with their recipients.
+  v1ListCaseExportsResponse:
+    type: object
+    properties:
+      exports:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1CaseExport'
+        description: exports is the list.
+    description: ListCaseExportsResponse returns the exports, newest first (at most 50).
   v1ListCaseTasksResponse:
     type: object
     properties:
@@ -6962,6 +7129,13 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: status_event is the TASK_REOPENED audit event.
     description: ReopenTaskResponse returns the reopened task.
+  v1RequestCaseExportResponse:
+    type: object
+    properties:
+      export:
+        $ref: '#/definitions/v1CaseExport'
+        description: export is the new job, QUEUED.
+    description: RequestCaseExportResponse returns the queued export.
   v1RespondToCirculationResponse:
     type: object
     properties:

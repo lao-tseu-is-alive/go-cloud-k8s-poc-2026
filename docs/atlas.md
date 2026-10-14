@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.13.1**.
+Tracked version: **v0.14.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -17,7 +17,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `.trivyignore` — Documented, expiring (`exp:`) Trivy suppressions for advisories proven not to apply to the binary.
 - `AGENTS.md` — Durable instructions for coding agents: conventions, layers to keep in sync, gotchas.
 - `CHANGELOG.md` — Versioned history of delivered changes (Keep a Changelog); authoritative for what a release shipped.
-- `Dockerfile` — Self-contained multi-stage image: bun frontend stage, Go build with provenance ldflags, `scratch` runtime.
+- `Dockerfile` — Self-contained multi-stage image: bun frontend stage, Go build with provenance ldflags, `scratch` runtime; base images pinned by digest.
 - `LICENSE` — MIT license of the project.
 - `Makefile` — Reproducible entry point for generation, run, build, quality gates (`check`, `release-check`) and dbmate.
 - `README.md` — Project overview, operator walkthrough and current-version banner.
@@ -33,10 +33,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## CI and release workflows
 
+- `.github/dependabot.yml` — Weekly grouped update proposals for the base images, actions, Go modules and SPA packages (GLD-059).
 - `.github/workflows/ci.yml` — Runs `make release-check` on every push and pull request to `main`.
 - `.github/workflows/cve-trivy-scan.yml` — Builds the image and fails on fixable HIGH/CRITICAL CVEs on push, PR and a weekly schedule.
-- `.github/workflows/docker-publish.yml` — On version tags: tag = version check, `make release-check`, Trivy-gated image build and GHCR publish.
-- `.github/workflows/release.yml` — On version tags: tag = version check, `make release-check`, linux amd64/arm64 binaries, release notes from the changelog.
+- `.github/workflows/docker-publish.yml` — On version tags: tag = version check, `make release-check`, Trivy-gated image build and GHCR publish with SBOM and provenance attestations.
+- `.github/workflows/release.yml` — On version tags: tag = version check, `make release-check`, linux amd64/arm64 binaries, SBOM and license inventory, release notes from the changelog.
 
 ## Scripts
 
@@ -49,6 +50,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_tag.sh` — Fails unless a release tag equals `v` + the `Version` constant; used by the publication workflows.
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
+- `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
 - `scripts/k8s_smoke_test.sh` — Deploys the published image with a disposable PostGIS on a local cluster and checks rollout, probes, version, SPA and API.
@@ -57,6 +59,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/execWithEnv.sh` — Runs a compiled binary with a dotenv file loaded.
 - `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
 - `scripts/get_jwt_token.sh` — Fetches a JWT from the auth server for `jwt`-mode testing and prints it on stdout.
+- `scripts/sbom.sh` — CycloneDX SBOM and license inventory of the release with Trivy (`make sbom`, release workflow).
 - `scripts/install_go_protobuf_tools.sh` — Installs `buf`, `protoc-gen-go` and `protoc-gen-connect-go`.
 
 ## API contracts and generated bindings
@@ -68,6 +71,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/goeland/v1/actor.proto` — Authoritative `ActorService` contract: persons, organizations, typed contacts, categories.
 - `proto/goeland/v1/case.proto` — Authoritative `CaseService` contract: case types, case lifecycle (open → close/reopen), search.
 - `proto/goeland/v1/access.proto` — Authoritative `AccessService` contract: grants (levels, grantee kinds, history), effective access and its source, security groups and members.
+- `proto/goeland/v1/export.proto` — Authoritative `CaseExportService` contract: export jobs (request, get, list) and the `CaseExportManifest` written as `manifest.json` in each archive.
 - `proto/goeland/v1/circulation.proto` — Authoritative `CirculationService` contract: circulations, recipients by step, responses, cancellation.
 - `proto/goeland/v1/core.proto` — Authoritative `CoreService` contract: subjects, governance, typed relationships, audit.
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
@@ -79,6 +83,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/actor.pb.go` — Go messages generated from `actor.proto`; never edit by hand.
 - `gen/goeland/v1/case.pb.go` — Go messages generated from `case.proto`; never edit by hand.
 - `gen/goeland/v1/access.pb.go` — Go messages generated from `access.proto`; never edit by hand.
+- `gen/goeland/v1/export.pb.go` — Go messages generated from `export.proto`; never edit by hand.
 - `gen/goeland/v1/circulation.pb.go` — Go messages generated from `circulation.proto`; never edit by hand.
 - `gen/goeland/v1/core.pb.go` — Go messages generated from `core.proto`; never edit by hand.
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
@@ -89,6 +94,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/case.connect.go` — ConnectRPC stubs generated for `CaseService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/access.connect.go` — ConnectRPC stubs generated for `AccessService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/export.connect.go` — ConnectRPC client/handler generated from `export.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/circulation.connect.go` — ConnectRPC stubs generated for `CirculationService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/core.connect.go` — ConnectRPC stubs generated for `CoreService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
@@ -123,6 +129,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
 - `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
+- `cmd/goeland-server/export.go` — Out-of-proto case export download: streams a built archive to its requester (MANAGE on the case), with a longer write deadline.
 - `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and governed content download (READ on the document) endpoints with their own bearer and scope check, and the frontend config handler.
 
 ## Shared Go packages
@@ -169,6 +176,19 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/access/storage_postgres.go` — pgx storage: audited grant set / change / revoke keeping history and the last FULL_CONTROL, groups as GROUP subjects, membership as relationships.
 - `pkg/access/module/module.go` — Bundleable access module: dependency validation and lifecycle.
 - `pkg/access/module/routes.go` — Access module routes: Vanguard services for bundling and standalone registration.
+
+## Case export (`pkg/caseexport`)
+
+- `pkg/caseexport/archive.go` — Archive assembly as the requester (case, timeline, tasks, circulations, readable relationships and documents with all versions, audit, provenance, withheld counts) and ZIP streaming with digest checks.
+- `pkg/caseexport/connect_server.go` — `CaseExportService` ConnectRPC adapter: request, get and list exports.
+- `pkg/caseexport/doc.go` — Package documentation for the case export (GLD-029).
+- `pkg/caseexport/mappers.go` — Export job domain → proto mapper (the storage reference stays internal).
+- `pkg/caseexport/model.go` — Export job model and states, request input, worker configuration and archive layout constants.
+- `pkg/caseexport/service.go` — Export requests (MANAGE, EXPORT recorded granted or refused), requester-only reads and archive opening.
+- `pkg/caseexport/sql.go` — Raw SQL of the export jobs: queue claim with `SKIP LOCKED`, finish, fail, requeue, expiry, withheld counts, provenance.
+- `pkg/caseexport/worker.go` — Background worker: claims and builds exports, records EXPORT for confidential documents, expires archives.
+- `pkg/caseexport/module/module.go` — Bundleable case export module: dependency validation, worker run.
+- `pkg/caseexport/module/routes.go` — Case export module routes: Vanguard services for bundling and standalone registration.
 
 ## Circulation domain (`pkg/circulation`)
 
@@ -255,6 +275,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0027_sort_indexes.sql` — Schema migration: indexes on the sortable columns of the case, document and thing lists and on the business reference sort (GLD-055).
 - `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
 - `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
+- `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -385,6 +406,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/access_enforcement_test.go` — DB test: access checked in the transactions of timeline entries, tasks, circulations and relationships, and a document deposited from a case.
 - `pkg/integration/access_test.go` — DB test: effective level precedence (units and sub-units, groups, personal, roles, confidentiality) and grant rules (who grants, history, last FULL_CONTROL).
 - `pkg/integration/access_audit_test.go` — DB test: confidential reads and downloads recorded granted or denied (with the version served), public reads not, labels hidden from non-readers, filters.
+- `pkg/integration/case_export_test.go` — DB test of the case export: MANAGE and its refusal recorded, archive contents filtered and deduplicated, EXPORT rows, requester-only download, expiry, revoked MANAGE.
 - `pkg/integration/read_filter_test.go` — DB test: confidential subjects absent from searches, totals and relationship lists without a grant, governed download and reuse among readable documents, timeline visibility by level.
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
@@ -428,9 +450,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/taskClient.ts` — REST client for `TaskService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/circulationClient.ts` — REST client for `CirculationService` bindings.
-- `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`.
+- `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`, authenticated file download.
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
+- `cmd/goeland-server/goeland-front/src/api/exportClient.ts` — REST client for `CaseExportService` plus the archive download.
 - `cmd/goeland-server/goeland-front/src/api/types.ts` — Hand-maintained proto3-JSON projections of the goeland.v1 messages; keep in sync with the protos.
 - `cmd/goeland-server/goeland-front/src/assets/logo.png` — Raster logo asset.
 - `cmd/goeland-server/goeland-front/src/assets/logo.svg` — Vector logo asset.
@@ -456,6 +479,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchFilters.vue` — Actor search filter bar.
 - `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
+- `cmd/goeland-server/goeland-front/src/components/case/CaseExportPanel.vue` — Case export panel: request with a reason, the caller's exports refreshed while building, download of a ready archive.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
 - `cmd/goeland-server/goeland-front/src/components/case/caseForm.ts` — Case form model, status list and the client mirror of the transition table.

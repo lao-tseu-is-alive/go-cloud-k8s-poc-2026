@@ -8,6 +8,33 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.14.0] - 2026-10-14
+
+Case export (GLD-029) and immutable build inputs with SBOM (GLD-059). Migration `0030` (`case_export`);
+new `CaseExportService`.
+
+### Added
+
+- **GLD-029** — Case export (v2 §51): a holder of MANAGE asks for a ZIP of a case
+  (`CaseExportService.RequestCaseExport`, `POST /api/cases/{case_id}/exports`); a background
+  worker (every replica, `FOR UPDATE SKIP LOCKED`, migration `0030` `case_export`) builds it as the
+  requester: `manifest.json` (`CaseExportManifest`: case and governance, timeline, tasks,
+  circulations, relationships, documents with all their versions, audit, provenance, withheld
+  counts) and each content blob once under `blobs/<sha256>`, digests checked. Only what the
+  requester may read is exported. Every request is recorded as EXPORT in the sensitive read audit,
+  granted or refused, and so is each confidential document included. The requester downloads it
+  from `GET /api/case-exports/{id}/content` until it expires (`GOELAND_EXPORT_TTL_HOURS`, default
+  24; `GOELAND_EXPORT_POLL_SECONDS`, default 5). SPA: "Export de l'affaire" panel on the case page.
+  The §50 scenario now plays step 31.
+
+- **GLD-059** — Immutable build inputs and SBOM: the Dockerfile base images (`oven/bun:1.4.3`,
+  `golang:1.27.2`) and the `postgis/postgis:17-3.5` image of CI and the smoke manifests are pinned
+  by digest; `make build-inputs-check` (in `make check`) refuses an image without digest, a
+  third-party action without commit SHA and a Go builder older than `go.mod`. Dependabot
+  (`.github/dependabot.yml`) proposes weekly grouped updates. Each GitHub release carries a
+  CycloneDX SBOM with licenses and a license inventory (`scripts/sbom.sh`, `make sbom`, Trivy), and
+  the published image SBOM and provenance attestations.
+
 ## [0.13.1] - 2026-10-14
 
 Actor correctness batch. Migration `0029` (contact history, relationship kind trigger); no new RPC.

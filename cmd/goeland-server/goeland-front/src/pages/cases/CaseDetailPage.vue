@@ -5,6 +5,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
   import AccessPanel from '@/components/access/AccessPanel.vue'
+  import CaseExportPanel from '@/components/case/CaseExportPanel.vue'
   import { CASE_TRANSITIONS, transitionNeedsReason } from '@/components/case/caseForm'
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
   import CaseCirculationsPanel from '@/components/circulation/CaseCirculationsPanel.vue'
@@ -354,6 +355,11 @@
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
             <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+          </v-card>
+
+          <v-card v-if="canManage" class="mb-4">
+            <v-card-title class="text-subtitle-1">{{ t('export.title') }}</v-card-title>
+            <v-card-text><CaseExportPanel :case-id="id" /></v-card-text>
           </v-card>
 
           <v-card class="mb-4">

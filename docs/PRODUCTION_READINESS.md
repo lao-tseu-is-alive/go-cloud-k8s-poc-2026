@@ -78,6 +78,12 @@ a `content_blob` (unique SHA-256, so identical content is stored once) reference
 - `GOELAND_DOCUMENT_PATH` — blob directory (default `./go_documents`).
 - `GOELAND_MAX_UPLOAD_BYTES` — per-upload cap (default 100 MiB).
 
+The case export archives (GLD-029) are written to the same store and removed when they expire
+(`GOELAND_EXPORT_TTL_HOURS`, default 24, 1–720); the worker that builds them runs in every
+replica (`GOELAND_EXPORT_POLL_SECONDS`, default 5, 1–3600), sharing the queue through the
+database, so any replica may build an archive that another one serves: one more reason for a
+shared volume.
+
 **This is node-local.** For more than one replica, or on ephemeral containers, this path
 **must** be a shared/persistent volume with a single writer, or the deployment must be
 pinned to one replica. Object storage (MinIO/S3) is the intended replacement and is a
@@ -143,6 +149,8 @@ so a pod started before its database does not crash-loop.
 | `LOG_LEVEL`                         | `info`           | `debug` / `info` / `warn` / `error`. |
 | `GOELAND_ALLOW_INSECURE_AUTH_URL`   | `false`          | Accept a plain-http `AUTH_SERVER_URL` outside loopback (§4). |
 | `GOELAND_BOOTSTRAP_ADMINS`          | —                | User ids granted the ADMIN role on their next request (§4); at most 20. |
+| `GOELAND_EXPORT_TTL_HOURS`          | `24`             | How long a case export archive stays downloadable (1–720, §3). |
+| `GOELAND_EXPORT_POLL_SECONDS`       | `5`              | How often the export worker looks for queued exports and expired archives (1–3600). |
 
 ## 7. Secrets
 
@@ -156,6 +164,24 @@ your secret manager):
 Non-secret settings can go in a ConfigMap. `scripts/create_k8s_configmap_from_env.sh`
 renders only non-secret keys and never prints secret values; Secret creation is handled
 separately.
+
+## 8. Supply chain
+
+- **Pinned build inputs (GLD-059):** the Dockerfile base images (`oven/bun`, `golang`) and the
+  `postgis/postgis` image of CI and the smoke manifests are pinned by digest, third-party actions
+  by commit SHA; `make build-inputs-check` (part of `make check`) refuses a bare tag and a Go
+  builder older than `go.mod`. Dependabot (`.github/dependabot.yml`) proposes weekly grouped
+  updates of the base images, actions, Go modules and SPA packages; a new Go minor stays a
+  deliberate change. The `postgis/postgis` digest is moved by hand: resolve it with
+  `docker buildx imagetools inspect postgis/postgis:<tag>` and update `ci.yml` and
+  `deployments/k8s/10-postgis.yaml` together.
+- **SBOM and licenses:** each GitHub release carries `goeland-server-sbom.cdx.json` (CycloneDX,
+  with licenses) and `goeland-server-licenses.txt`, made by `scripts/sbom.sh` (`make sbom`
+  locally) from `go.mod` and the SPA's runtime packages; the published image carries BuildKit
+  SBOM and provenance attestations
+  (`docker buildx imagetools inspect <image> --format '{{ json .SBOM }}'`).
+- **Vulnerabilities:** `make vuln-check` (govulncheck, reachable code) gates every release and
+  docker-publish scans the image with Trivy before pushing it (fixable HIGH/CRITICAL fail).
 
 ## Known limitations
 
@@ -180,6 +206,10 @@ These are the gaps that make this a POC rather than a production service:
 - **Observability is logs only.** No metrics or tracing endpoints yet.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
+- **License compatibility to settle.** The license inventory (§8) lists
+  `go-cloud-k8s-common-libs` under GPL-3.0 while this repository is MIT; linking it into the
+  distributed binary makes the combined work subject to the GPL. Relicense the library (same
+  owner) or accept GPL-3.0 for the distributed binary and image before production.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),
   but request rates are not limited: an in-process limiter would be per pod, so this belongs to
   the ingress or API gateway in front of the replicas.

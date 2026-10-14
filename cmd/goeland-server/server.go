@@ -22,11 +22,15 @@ import (
 	accessmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access/module"
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/caseexport"
+	caseexportmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/caseexport/module"
 	casemodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile/module"
 	circulationmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	orgunitmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit/module"
 	taskmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task/module"
@@ -48,6 +52,8 @@ type application struct {
 	pool    *pgxpool.Pool
 	handler http.Handler
 	log     *slog.Logger
+	// exports builds the case export archives; serve runs its worker.
+	exports *caseexport.Service
 }
 
 // newApplication opens the pool, migrates the schema, wires the core + document
@@ -117,7 +123,9 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)
 	}
-	domainMods, err := buildDomainModules(ctx, config, pool, verifier, coreMod.Service(), log)
+	domainMods, exportMod, err := buildDomainModules(ctx, config, moduleDeps{
+		pool: pool, verifier: verifier, coreSvc: coreMod.Service(), docSvc: docMod.Service(), store: blobStore, log: log,
+	})
 	if err != nil {
 		return nil, err
 	}
@@ -152,6 +160,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		httpAuthMiddleware(verifier, log, core.ScopeWrite, http.MaxBytesHandler(uploadHandler(docMod.Service(), log), config.MaxUploadBytes)))
 	mux.Handle("GET /api/documents/{id}/content",
 		httpAuthMiddleware(verifier, log, core.ScopeRead, contentHandler(docMod.Service(), blobStore, log)))
+	mux.Handle("GET /api/case-exports/{id}/content",
+		httpAuthMiddleware(verifier, log, core.ScopeRead, exportContentHandler(exportMod.Service(), log)))
 
 	if err := mountTranscoder(mux, transcoder, serviceNames); err != nil {
 		return nil, err
@@ -171,6 +181,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		pool:    pool,
 		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, securityHeadersMiddleware(contentSecurityPolicy(config), mux)))),
 		log:     log,
+		exports: exportMod.Service(),
 	}, nil
 }
 
@@ -244,44 +255,70 @@ type bundledModule interface {
 	ServiceNames() []string
 }
 
+// moduleDeps are the shared dependencies of the domain modules.
+type moduleDeps struct {
+	pool     *pgxpool.Pool
+	verifier authadapter.TokenVerifier
+	coreSvc  *core.Service
+	docSvc   *document.Service
+	store    blobstore.Store
+	log      *slog.Logger
+}
+
 // buildDomainModules wires the subject domains that share the same
 // dependencies (pool, verifier, core service, logger): actor, case, thing,
-// org unit, the case timeline, tasks and circulations.
-func buildDomainModules(ctx context.Context, config serverConfig, pool *pgxpool.Pool, verifier authadapter.TokenVerifier, coreSvc *core.Service, log *slog.Logger) ([]bundledModule, error) {
+// org unit, the case timeline, tasks, circulations and access, then the case
+// export over their services; the export module is also returned for its
+// worker and download route.
+func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDeps) ([]bundledModule, *caseexportmodule.Module, error) {
+	pool, verifier, coreSvc, log := deps.pool, deps.verifier, deps.coreSvc, deps.log
 	timeout := config.RequestTimeout
 	actorMod, err := actormodule.New(ctx, actormodule.Config{RequestTimeout: timeout}, actormodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("actor module: %w", err)
+		return nil, nil, fmt.Errorf("actor module: %w", err)
 	}
 	caseMod, err := casemodule.New(ctx, casemodule.Config{RequestTimeout: timeout}, casemodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("case module: %w", err)
+		return nil, nil, fmt.Errorf("case module: %w", err)
 	}
 	thingMod, err := thingmodule.New(ctx, thingmodule.Config{RequestTimeout: timeout}, thingmodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("thing module: %w", err)
+		return nil, nil, fmt.Errorf("thing module: %w", err)
 	}
 	orgUnitMod, err := orgunitmodule.New(ctx, orgunitmodule.Config{RequestTimeout: timeout}, orgunitmodule.Deps{Pool: pool, Verifier: verifier, CoreService: coreSvc, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("org unit module: %w", err)
+		return nil, nil, fmt.Errorf("org unit module: %w", err)
 	}
 	timelineMod, err := timelinemodule.New(ctx, timelinemodule.Config{RequestTimeout: timeout}, timelinemodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("timeline module: %w", err)
+		return nil, nil, fmt.Errorf("timeline module: %w", err)
 	}
 	taskMod, err := taskmodule.New(ctx, taskmodule.Config{RequestTimeout: timeout}, taskmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("task module: %w", err)
+		return nil, nil, fmt.Errorf("task module: %w", err)
 	}
 	circulationMod, err := circulationmodule.New(ctx, circulationmodule.Config{RequestTimeout: timeout}, circulationmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("circulation module: %w", err)
+		return nil, nil, fmt.Errorf("circulation module: %w", err)
 	}
 	accessMod, err := accessmodule.New(ctx, accessmodule.Config{RequestTimeout: timeout}, accessmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
 	if err != nil {
-		return nil, fmt.Errorf("access module: %w", err)
+		return nil, nil, fmt.Errorf("access module: %w", err)
 	}
-	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod, accessMod}, nil
+	exportMod, err := caseexportmodule.New(ctx, caseexportmodule.Config{
+		RequestTimeout: timeout,
+		Worker:         caseexport.Config{TTL: config.ExportTTL, PollInterval: config.ExportPollInterval},
+	}, caseexportmodule.Deps{
+		Pool: pool, Verifier: verifier, BlobStore: deps.store, Logger: log,
+		Sources: caseexport.Sources{
+			Core: coreSvc, Cases: caseMod.Service(), Timeline: timelineMod.Service(), Tasks: taskMod.Service(),
+			Circulations: circulationMod.Service(), Documents: deps.docSvc,
+		},
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("case export module: %w", err)
+	}
+	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod, accessMod, exportMod}, exportMod, nil
 }
 
 // buildRecordingVerifier wraps the auth-mode verifier so every verified caller
@@ -343,6 +380,14 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(listener) }()
+	// The case export worker stops with serve; serve waits for it to return.
+	workerCtx, stopWorker := context.WithCancel(ctx)
+	workerDone := make(chan struct{})
+	go func() {
+		defer close(workerDone)
+		a.exports.Run(workerCtx)
+	}()
+	defer func() { stopWorker(); <-workerDone }()
 
 	select {
 	case err := <-errCh:

@@ -13,7 +13,9 @@ import (
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/caseexport"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -48,6 +50,10 @@ type testEnv struct {
 	accessSvc *access.Service
 	// blobDir is the per-test directory holding uploaded bytes.
 	blobDir string
+	// exportSvc is the case export service (its worker is driven by the tests).
+	exportSvc *caseexport.Service
+	// store is the per-test blob store.
+	store blobstore.Store
 }
 
 // newTestEnv connects to the test database named by GOELAND_TEST_DATABASE_URL,
@@ -178,7 +184,13 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("access service: %v", err)
 	}
-	return &testEnv{ctx: ctx, accessSvc: accessSvc, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root()}
+	exportSvc, err := caseexport.NewService(pool, store, caseexport.Sources{
+		Core: coreSvc, Cases: caseSvc, Timeline: timelineSvc, Tasks: taskSvc, Circulations: circulationSvc, Documents: docSvc,
+	}, caseexport.Config{}, log)
+	if err != nil {
+		t.Fatalf("build case export service: %v", err)
+	}
+	return &testEnv{ctx: ctx, accessSvc: accessSvc, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root(), exportSvc: exportSvc, store: store}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

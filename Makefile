@@ -104,6 +104,16 @@ fmt-check:
 cognitive-check:
 	go tool gocognit -over 15 $$(git ls-files --cached --others --exclude-standard '*.go' | grep -v '_test\.go$$' | grep -v '^gen/')
 
+.PHONY: build-inputs-check
+## build-inputs-check:	images pinned by digest, third-party actions by SHA, Go builder >= go.mod (GLD-059)
+build-inputs-check:
+	bash scripts/check_build_inputs.sh
+
+.PHONY: sbom
+## sbom:	CycloneDX SBOM + license inventory of the release in bin/sbom (needs trivy; GLD-059)
+sbom:
+	bash scripts/sbom.sh
+
 .PHONY: vuln-check
 ## vuln-check:	govulncheck (pinned go.mod tool): fail on any vulnerability the code can reach
 vuln-check:
@@ -140,7 +150,7 @@ docs-check: godoc-check atlas-check docs-assert
 
 .PHONY: check
 ## check:	full local quality gate (frontend, format, lint, tests, documentation)
-check: front-check fmt-check lint cognitive-check test docs-check
+check: front-check fmt-check lint cognitive-check build-inputs-check test docs-check
 	git diff --check
 
 .PHONY: version-check

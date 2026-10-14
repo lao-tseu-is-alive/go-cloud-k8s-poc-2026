@@ -123,6 +123,16 @@ whenever a task starts, completes, changes scope or order.
   unit (covering its sub-units); changes keep history, are audited on the subject, and the last
   FULL_CONTROL is kept. Membership is `USER_MEMBER_OF_GROUP`. The effective level lives in `core`
   (see "Authorization" below).
+- **caseexport** (`pkg/caseexport`) — the case export (GLD-029, v2 §51) → `CaseExportService`:
+  `RequestCaseExport` (MANAGE on the case, recorded as EXPORT in `access_audit_event` whether
+  granted or refused, any confidentiality) queues a `case_export` row; `Service.Run`, started by
+  `serve` on every replica, claims jobs with `FOR UPDATE SKIP LOCKED`, rebuilds the requester's
+  view (`core.ViewerTx`, the domain read services) and streams a ZIP into the blob store:
+  `manifest.json` (a `CaseExportManifest`, protojson) and each blob once at `blobs/<sha256>`
+  (digest checked while copying), plus EXPORT rows for the confidential documents included. Only
+  the requester downloads (`GET /api/case-exports/{id}/content`, `cmd/goeland-server/export.go`)
+  while it holds MANAGE, until `GOELAND_EXPORT_TTL_HOURS` (default 24) expires the bytes. It
+  imports the domains; no domain imports it.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete, addresses), the Case
@@ -135,7 +145,7 @@ whenever a task starts, completes, changes scope or order.
 ### Not yet built (same foundation)
 
 Storage (MinIO),
-search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
+search (Meilisearch), provenance and outbox, AI proposals, workflow. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
@@ -163,7 +173,7 @@ conversation. Rules and runbook: `docs/IMPORT_MAPPING.md`; rebuild with `scripts
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto  (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto, access.proto, export.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -171,7 +181,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0029 (dbmate format)
+  │   └── db/migrations/     0001..0030 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -187,6 +197,8 @@ pkg/orgunit/                 organizational units (ORG_UNIT subjects in one tree
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/access/                  grants and security groups (AccessService; the effective level is in core)
   └── module/                bundleable module (NO migrations; core owns schema)
+pkg/caseexport/              case export jobs: ZIP archive builder, worker, expiry (CaseExportService)
+  └── module/                bundleable module (NO migrations; core owns schema) + worker
 pkg/circulation/             case circulations (recipients by step, answers in the timeline)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/task/                    case tasks (assignment history, lifecycle, "my tasks")
@@ -197,6 +209,7 @@ pkg/integration/             env-gated DB integration tests (migrations + docume
 cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
   ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
   ├── upload.go              out-of-proto POST /upload + GET /{id}/content (own bearer check)
+  ├── export.go              out-of-proto GET /api/case-exports/{id}/content (archive download)
   ├── config.go              server config incl. GOELAND_DOCUMENT_PATH / _MAX_UPLOAD_BYTES / GET /config
   └── goeland-front/         Vue 3 + Vuetify 4 SPA (bun/Vite); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas inventory)
@@ -216,7 +229,8 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
 - `make docs-check` — `godoc-check` + `atlas-check` (both `cmd/doccheck`) + `docs-assert`
   (`scripts/check_documentation_claims.sh`). See `docs/DOCUMENTATION.md`.
 - `make check` — the full local gate: `front-check` (frozen bun install, type-check,
-  ESLint, build) + `fmt-check` + `lint` + `test` + `docs-check` + `git diff --check`.
+  ESLint, build) + `fmt-check` + `lint` + `cognitive-check` + `build-inputs-check` + `test` +
+  `docs-check` + `git diff --check`.
 - `make release-check` — `check` + `vuln-check` (govulncheck: reachable vulnerabilities fail) +
   version/changelog/scripts consistency + roadmap and
   bidirectional roadmap↔changelog traceability + binary build whose `--version` must report
@@ -299,7 +313,8 @@ New RPCs must add their check.
 `access_audit_event` (READ_SENSITIVE, GRANTED or DENIED) before answering and fails the read when
 it cannot. A confidential case's timeline is audited the same way, and the governed download
 records DOWNLOAD with the version served (`core.RequireAuditedTx` / `core.RecordGrantedAccessTx`).
-Lists, searches and secondary reads are not logged. `ListAccessAuditEvents`
+A case export is logged as EXPORT whatever the confidentiality (GLD-029). Lists, searches and
+secondary reads are not logged. `ListAccessAuditEvents`
 (`GET /api/access-audit-events`) needs `goeland:admin`, or FULL_CONTROL on its `subject_id`, and
 shows a label only for a readable subject. A new primary read of a subject uses `AuditedRead`.
 
@@ -414,6 +429,7 @@ AccessService: `/api/subjects/{subject_id}/access`, `/api/subjects/{subject_id}/
 `/{group_id}/members[/{user_id}/remove]`;
 OrgUnitService: `/api/org-units` (flat tree), `/api/org-units/search`, `/api/org-units/{id}`,
 `/api/org-units/{id}/dissolve`, `/api/org-unit-types`;
+CaseExportService: `/api/cases/{case_id}/exports` (request, list), `/api/case-exports/{id}`;
 TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` with
 `/validate`, `/lock`, `/withdraw` and `/documents[/{document_id}]`).
 
@@ -590,7 +606,9 @@ enforced locally so they fail `make check` instead of reappearing on the dashboa
   maintainer is a supply-chain risk); GitHub's own actions (`actions/*`, `github/*`) may use
   their major tag, since they come from the platform that runs the workflow (decided
   2026-09-30). Downloaded tools are verified by checksum (e.g. `bufbuild/buf-action` with
-  `checksum`), never `go install tool@version` in a workflow.
+  `checksum`), never `go install tool@version` in a workflow. Container images (Dockerfile, CI
+  services, k8s manifests) are pinned by digest (GLD-059); `make build-inputs-check` enforces both
+  pins and a Go builder image at least at the `go.mod` version.
 - **Contexts:** never replace an available `ctx` by `context.Background()`; to outlive a
   cancelled context keep its values with `context.WithoutCancel(ctx)`.
 - A genuine false positive is fixed at the source (`.sonarcloud.properties`) or, for one line,

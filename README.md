@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.13.1** — pre-1.0 POC.
+Current version: **v0.14.0** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -105,14 +105,14 @@ and writes an `audit_event`. Finalizing/locking a document makes it immutable.
 ## Project structure
 
 ```
-proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto  (API contract)
+proto/goeland/v1/        core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto, access.proto, export.proto  (API contract)
 gen/goeland/v1/          generated Go + ConnectRPC          (do not edit)
 api/openapi/             generated OpenAPI (goeland.swagger.yaml, from google.api.http)
 pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0029 (dbmate format)
+      └── db/migrations/  0001..0030 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -133,10 +133,13 @@ pkg/timeline/            case timeline (suivis): drafts, validation, corrections
   └── module/            bundleable module (schema owned by core)
 pkg/access/              grants and security groups (the effective level is computed in core)
   └── module/            bundleable module (schema owned by core)
+pkg/caseexport/          case export: background ZIP archives (manifest + blobs), worker, expiry
+  └── module/            bundleable module (schema owned by core) running the export worker
 pkg/legacyimport/        one-shot legacy data import (set-based, deterministic ids, provenance)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations, every domain, rights and read filter)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /{id}/content endpoints
+  ├── export.go          out-of-proto GET /api/case-exports/{id}/content (archive download)
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
 cmd/doccheck/            documentation checker (GoDoc coverage + exact atlas inventory)
 cmd/goeland-import-orgunits/  optional import of the legacy org unit tree (structure only, dry run by default)
@@ -245,6 +248,9 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
 - **Access** — every detail page shows the caller's level and where it comes from, and lists the
   grants; a FULL_CONTROL holder gives (to a user, a group or a unit), changes and revokes them.
   Actions the caller's level does not allow are hidden (the server refuses them anyway).
+- **Case export** — a MANAGE holder asks for a ZIP of the case (manifest and every document
+  version's bytes, only what the requester may read); it is built in the background and
+  downloadable by its requester until it expires (GLD-029).
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
@@ -383,6 +389,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0027_sort_indexes.sql        indexes on the sortable columns of the lists
 0028_access_audit.sql        access_audit_event: append-only sensitive read audit (confidential reads and downloads)
 0029_contact_history_relationship_kinds.sql  replaced contacts ended, not deleted; relationship kinds checked by a trigger
+0030_case_export.sql         case_export: background case export jobs (queue, archive reference, expiry)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -407,7 +414,8 @@ make test         go test -race with coverage
 make lint         go vet + buf lint
 make fmt          gofmt -w .
 make docs-check   GoDoc coverage + atlas inventory + executable doc claims
-make check        front-check + fmt-check + lint + test + docs-check (run before handoff)
+make check        front-check + fmt-check + lint + build-inputs-check + test + docs-check (run before handoff)
+make sbom         CycloneDX SBOM + license inventory in bin/sbom (needs trivy)
 make vuln-check   govulncheck: fail on vulnerabilities the code can reach
 make release-check  check + vuln-check + version/changelog/roadmap traceability + binary --version (what CI runs)
 make release      CONFIRM_RELEASE=vX.Y.Z: guarded annotated tag + atomic push of main and tag
@@ -436,7 +444,9 @@ CI lives in [`.github/workflows`](.github/workflows): `ci` (runs `make release-c
 every push/PR to `main`, the same gate as locally, with a PostGIS service so the database
 integration and end-to-end tests run too), `cve-trivy-scan` (image CVE scan on
 push/PR to `main` **and a weekly schedule**), `docker-publish` (unit tests + build/scan/publish
-the image on version tags), and `release` (cross-compiled binaries on version tags). Both Trivy
+the image on version tags), and `release` (cross-compiled binaries, SBOM and license inventory on version tags).
+Build inputs are pinned (images by digest, third-party actions by SHA) and Dependabot proposes
+the updates. Both Trivy
 jobs upload SARIF to the Security tab **and fail on fixable HIGH/CRITICAL findings** — in
 `docker-publish` this gates the publish step, so a vulnerable image is never pushed. Documented
 non-applicable advisories are suppressed in [`.trivyignore`](.trivyignore). The Go version is
@@ -466,6 +476,8 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
 | `import_rebuild.sh <goeland_import…> [--dry-run]` | Recreate a local import database and load it from the legacy replica (`docs/IMPORT_MAPPING.md`) |
+| `check_build_inputs.sh`          | Images pinned by digest, third-party actions by SHA, Go builder >= `go.mod` (`make build-inputs-check`) |
+| `sbom.sh [dir]`                  | CycloneDX SBOM + license inventory with Trivy (`make sbom`; attached to each GitHub release)          |
 | `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
 
 ## Design rules honoured
@@ -487,6 +499,6 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Not built yet
 
-MinIO storage, Meilisearch, the outbox, export, AI
+MinIO storage, Meilisearch, the outbox, AI
 proposals and workflow integration — all designed to sit on top of the same
 subject/relationship/audit foundation. The order lives in [`docs/ROADMAP.md`](docs/ROADMAP.md).

@@ -1,7 +1,9 @@
 # Stage 1 – Frontend build
 # Builds the embedded Vue/Vuetify SPA so the image is reproducible from a clean
 # checkout (dist/ is git-ignored). Mirrors the `make front-build` step.
-FROM oven/bun:1-alpine AS frontend
+# Base images are pinned by digest (GLD-059): a moved tag cannot change the build;
+# Dependabot proposes the updates and `make build-inputs-check` refuses a bare tag.
+FROM oven/bun:1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS frontend
 WORKDIR /app/cmd/goeland-server/goeland-front
 # Install deps first (cached until the manifest/lockfile change).
 COPY cmd/goeland-server/goeland-front/package.json cmd/goeland-server/goeland-front/bun.lock ./
@@ -14,8 +16,9 @@ RUN bun run build-only
 
 # Stage 2 – Go binary
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
-# Pin the builder to the module's Go minor version for reproducibility.
-FROM golang:1.27-alpine AS builder
+# The builder's Go version must be at least go.mod's (GOTOOLCHAIN=local in the
+# image refuses an older one); `make build-inputs-check` verifies it.
+FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
 LABEL maintainer="cgil"
 # git: for module VCS metadata; ca-certificates: copied into the scratch runtime.
 RUN apk add --no-cache git ca-certificates

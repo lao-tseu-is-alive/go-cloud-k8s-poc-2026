@@ -1,6 +1,7 @@
 package main
 
 import (
+	"archive/zip"
 	"bytes"
 	"context"
 	"encoding/json"
@@ -28,8 +29,7 @@ import (
 //	GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_e2e?sslmode=disable' \
 //	    go test ./cmd/goeland-server -run TestScenarioV2
 //
-// Steps 26-27 (AI proposal, GLD-030) and 31 (ExportCase, GLD-029) are not built
-// yet and are logged as skipped.
+// Steps 26-27 (AI proposal, GLD-030) are not built yet and are logged as skipped.
 
 const (
 	adminToken  = "e2e-admin-token"
@@ -41,6 +41,8 @@ type e2e struct {
 	t      *testing.T
 	admin  *httptest.Server
 	writer *httptest.Server
+	// adminApp is the application behind admin; tests drive its export worker.
+	adminApp *application
 }
 
 // newE2E starts two servers on the test database: one whose dev user is an
@@ -48,6 +50,7 @@ type e2e struct {
 func newE2E(t *testing.T) *e2e {
 	t.Helper()
 	dsn := coretest.TestDatabaseURL(t, "end-to-end tests")
+	var adminApp *application
 	start := func(token string, userID int64, name string, admin bool) *httptest.Server {
 		cfg := serverConfig{
 			DatabaseURL: dsn, AuthMode: "dev", DevToken: token, DevUserID: userID, DevUserEmail: name + "@e2e.test",
@@ -60,14 +63,19 @@ func newE2E(t *testing.T) *e2e {
 		}
 		srv := httptest.NewServer(app.handler)
 		t.Cleanup(func() { srv.Close(); app.close() })
+		if admin {
+			adminApp = app
+		}
 		return srv
 	}
 	base := 900_000 + rand.Int64N(90_000)
-	return &e2e{
+	e := &e2e{
 		t:      t,
 		admin:  start(adminToken, base, "Admin E2E", true),
 		writer: start(writerToken, base+1, "Writer E2E", false),
 	}
+	e.adminApp = adminApp
+	return e
 }
 
 // reply is a decoded JSON response.
@@ -199,7 +207,7 @@ func TestScenarioV2(t *testing.T) {
 	s.step28()
 	s.step29()
 	s.step30()
-	t.Log("step 31 (ExportCase) skipped: GLD-029 not built")
+	s.step31()
 }
 
 // platform checks the probes, the SPA fallback and authentication.
@@ -411,4 +419,60 @@ func (s *scenario) step30() {
 			s.t.Errorf("step 30: the case audit misses %s (has %v)", want, seen)
 		}
 	}
+}
+
+// step31 exports the closed case (GLD-029): queued over REST, built by the
+// worker, listed, then downloaded as a ZIP holding the manifest and the bytes
+// of the case documents; another user neither sees nor downloads it.
+func (s *scenario) step31() {
+	id := str(s.ok("POST", "/api/cases/"+s.caseA+"/exports", map[string]any{"reason": "scénario v2"}), "export", "id")
+	if processed, err := s.adminApp.exports.ProcessNext(context.Background()); err != nil || !processed {
+		s.t.Fatalf("step 31: the worker builds the export: %v (%v)", processed, err)
+	}
+	if got := str(s.ok("GET", "/api/case-exports/"+id, nil), "export", "status"); got != "CASE_EXPORT_STATUS_DONE" {
+		s.t.Fatalf("step 31: export status %s", got)
+	}
+	if got := list(s.ok("GET", "/api/cases/"+s.caseA+"/exports", nil), "exports"); len(got) != 1 {
+		s.t.Fatalf("step 31: the case lists its export: %v", got)
+	}
+	s.fails(codeNotFound, "GET", missing("/api/case-exports"), nil)
+	s.expect(s.call(s.writer, writerToken, "GET", "/api/case-exports/"+id, nil), codeNotFound, "step 31: another user's export")
+
+	status, _ := s.download(s.writer, writerToken, "/api/case-exports/"+id+"/content")
+	if status != http.StatusNotFound {
+		s.t.Fatalf("step 31: another user downloads the archive: HTTP %d", status)
+	}
+	status, raw := s.download(s.admin, adminToken, "/api/case-exports/"+id+"/content")
+	zr, err := zip.NewReader(bytes.NewReader(raw), int64(len(raw)))
+	if status != http.StatusOK || err != nil {
+		s.t.Fatalf("step 31: download the archive: HTTP %d (%v)", status, err)
+	}
+	names := map[string]bool{}
+	blobs := 0
+	for _, f := range zr.File {
+		names[f.Name] = true
+		if strings.HasPrefix(f.Name, "blobs/") {
+			blobs++
+		}
+	}
+	if !names["manifest.json"] || blobs == 0 {
+		s.t.Fatalf("step 31: the archive holds the manifest and the document bytes: %v", names)
+	}
+}
+
+// download GETs path from srv with token and returns the status and raw body.
+func (e *e2e) download(srv *httptest.Server, token, path string) (int, []byte) {
+	e.t.Helper()
+	req, err := http.NewRequest(http.MethodGet, srv.URL+path, nil)
+	if err != nil {
+		e.t.Fatalf("request %s: %v", path, err)
+	}
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := http.DefaultClient.Do(req)
+	if err != nil {
+		e.t.Fatalf("GET %s: %v", path, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, _ := io.ReadAll(resp.Body)
+	return resp.StatusCode, raw
 }

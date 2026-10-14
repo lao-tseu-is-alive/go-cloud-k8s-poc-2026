@@ -132,6 +132,12 @@ func RecordGrantedAccessTx(ctx context.Context, q Querier, userID string, access
 	return insertAccessAuditTx(ctx, q, userID, access, action, AccessGranted, versionID)
 }
 
+// RecordAccessTx records an access whatever the subject's confidentiality: a
+// case export is logged even for an ordinary case (GLD-029).
+func RecordAccessTx(ctx context.Context, q Querier, userID string, access Access, action AccessAction, outcome AccessOutcome) error {
+	return insertAccessAuditTx(ctx, q, userID, access, action, outcome, nil)
+}
+
 // AuditedAccessTx is EnsureAccessTx for a sensitive read: it requires need on
 // subjectID and records action, allowed or refused, when the subject is
 // confidential. It returns the caller's access.

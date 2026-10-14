@@ -16,7 +16,7 @@ import type {
  * All business codes (document_type_code, relationship_type_code) are sent
  * as-is; never translated.
  */
-import { apiFetch, apiFetchBlob } from './client'
+import { apiFetch, downloadAs } from './client'
 
 export function searchDocuments (params: SearchDocumentsParams, signal?: AbortSignal): Promise<SearchDocumentsResponse> {
   return apiFetch<SearchDocumentsResponse>('/api/documents/search', {
@@ -124,15 +124,7 @@ export function uploadDocumentFile (file: File, signal?: AbortSignal): Promise<U
  * and READ on the document required, so we fetch with the token and trigger a
  * browser save rather than using a plain <a href>).
  */
-export async function downloadDocumentBlob (documentId: string, filename: string, versionId?: string): Promise<void> {
+export function downloadDocumentBlob (documentId: string, filename: string, versionId?: string): Promise<void> {
   const query = versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''
-  const blob = await apiFetchBlob(`/api/documents/${encodeURIComponent(documentId)}/content${query}`)
-  const url = URL.createObjectURL(blob)
-  const a = document.createElement('a')
-  a.href = url
-  a.download = filename || 'document'
-  document.body.append(a)
-  a.click()
-  a.remove()
-  URL.revokeObjectURL(url)
+  return downloadAs(`/api/documents/${encodeURIComponent(documentId)}/content${query}`, filename || 'document')
 }

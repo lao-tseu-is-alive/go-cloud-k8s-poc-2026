@@ -1163,3 +1163,39 @@ export interface GroupResponse {
   members?: GroupMember[]
   auditEvent?: AuditEvent
 }
+
+// --- Case export (GLD-029) ----------------------------------------------------
+
+/** State of a case export job. */
+export type CaseExportStatus
+  = | 'CASE_EXPORT_STATUS_UNSPECIFIED'
+    | 'CASE_EXPORT_STATUS_QUEUED'
+    | 'CASE_EXPORT_STATUS_RUNNING'
+    | 'CASE_EXPORT_STATUS_DONE'
+    | 'CASE_EXPORT_STATUS_FAILED'
+    | 'CASE_EXPORT_STATUS_EXPIRED'
+
+/** One export job of a case; only its requester downloads the archive. */
+export interface CaseExport {
+  id: string
+  caseId: string
+  status?: CaseExportStatus
+  requestedBy?: string
+  reason?: string
+  requestedAt?: string
+  startedAt?: string
+  finishedAt?: string
+  expiresAt?: string
+  /** int64 serialized as a string. */
+  sizeBytes?: string
+  sha256?: string
+  error?: string
+}
+
+export interface CaseExportResponse {
+  export?: CaseExport
+}
+
+export interface ListCaseExportsResponse {
+  exports?: CaseExport[]
+}

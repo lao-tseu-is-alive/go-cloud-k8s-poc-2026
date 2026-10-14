@@ -79,7 +79,7 @@
       "tab": "Sensitive access",
       "open": "Sensitive access log",
       "title": "Sensitive access log",
-      "hint": "Reads and downloads of confidential subjects, allowed or refused. Ordinary reads are not logged.",
+      "hint": "Reads and downloads of confidential subjects, and case exports, allowed or refused. Ordinary reads are not logged.",
       "empty": "No sensitive access logged.",
       "total": "{total} accesses",
       "occurredAt": "Date",
@@ -724,7 +724,29 @@
     "active": "Active",
     "inactive": "Inactive"
   },
+  "export": {
+    "title": "Case export",
+    "hint": "A ZIP archive of the case: data, timeline, tasks, circulations, links, documents with all their versions and the audit log. It holds only what you may read, is prepared in the background and stays downloadable by you alone until it expires. Every request is logged.",
+    "ask": "Request an export",
+    "reason": "Reason (optional)",
+    "submit": "Start the export",
+    "requested": "Export requested: the archive is being prepared.",
+    "empty": "No export of this case.",
+    "requestedAt": "Requested",
+    "requestedBy": "By",
+    "status": "Status",
+    "archive": "Archive",
+    "expires": "until {at}"
+  },
   "enums": {
+    "CaseExportStatus": {
+      "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
+      "CASE_EXPORT_STATUS_QUEUED": "Queued",
+      "CASE_EXPORT_STATUS_RUNNING": "Preparing",
+      "CASE_EXPORT_STATUS_DONE": "Ready",
+      "CASE_EXPORT_STATUS_FAILED": "Failed",
+      "CASE_EXPORT_STATUS_EXPIRED": "Expired"
+    },
     "AccessAuditAction": {
       "READ_SENSITIVE": "Read",
       "DOWNLOAD": "Download",

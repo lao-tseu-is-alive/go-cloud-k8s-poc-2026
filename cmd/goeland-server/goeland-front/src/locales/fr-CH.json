@@ -79,7 +79,7 @@
       "tab": "Accès sensibles",
       "open": "Journal des accès sensibles",
       "title": "Journal des accès sensibles",
-      "hint": "Lectures et téléchargements des sujets confidentiels, autorisés ou refusés. Les lectures ordinaires ne sont pas journalisées.",
+      "hint": "Lectures et téléchargements des sujets confidentiels, et exports d'affaires, autorisés ou refusés. Les lectures ordinaires ne sont pas journalisées.",
       "empty": "Aucun accès sensible journalisé.",
       "total": "{total} accès",
       "occurredAt": "Date",
@@ -724,7 +724,29 @@
     "active": "Actif",
     "inactive": "Inactif"
   },
+  "export": {
+    "title": "Export de l'affaire",
+    "hint": "Une archive ZIP de l'affaire : données, suivis, tâches, circulations, liens, documents avec toutes leurs versions et journal d'audit. Elle ne contient que ce que vous pouvez lire, est préparée en arrière-plan et reste téléchargeable par vous seul jusqu'à son expiration. Chaque demande est journalisée.",
+    "ask": "Demander un export",
+    "reason": "Motif (facultatif)",
+    "submit": "Lancer l'export",
+    "requested": "Export demandé : l'archive est en préparation.",
+    "empty": "Aucun export de cette affaire.",
+    "requestedAt": "Demandé le",
+    "requestedBy": "Par",
+    "status": "État",
+    "archive": "Archive",
+    "expires": "jusqu'au {at}"
+  },
   "enums": {
+    "CaseExportStatus": {
+      "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
+      "CASE_EXPORT_STATUS_QUEUED": "En attente",
+      "CASE_EXPORT_STATUS_RUNNING": "En préparation",
+      "CASE_EXPORT_STATUS_DONE": "Prête",
+      "CASE_EXPORT_STATUS_FAILED": "Échec",
+      "CASE_EXPORT_STATUS_EXPIRED": "Expirée"
+    },
     "AccessAuditAction": {
       "READ_SENSITIVE": "Consultation",
       "DOWNLOAD": "Téléchargement",

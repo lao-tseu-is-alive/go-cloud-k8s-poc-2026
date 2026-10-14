@@ -1,0 +1,231 @@
+// Goéland POC - Case export (spec v2 §51, roadmap GLD-029).
+//
+// Proto-first definition for CaseExportService + supporting messages. An
+// export is a background job: RequestCaseExport queues it, a worker builds a
+// ZIP archive (a CaseExportManifest as manifest.json, plus every content blob
+// once under blobs/<sha256>) into the blob store, and the requester downloads
+// it from GET /api/case-exports/{id}/content (out of proto, like document
+// content) until it expires.
+//
+// Exporting needs MANAGE on the case; the archive holds only what the
+// requester may read, and the manifest counts what was withheld. Every request,
+// granted or refused, is recorded as EXPORT in the sensitive read audit, and so
+// is each confidential document placed in an archive.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/case.proto";
+import "goeland/v1/circulation.proto";
+import "goeland/v1/core.proto";
+import "goeland/v1/document.proto";
+import "goeland/v1/task.proto";
+import "goeland/v1/timeline.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// CASE EXPORT JOB
+// =============================================
+
+// CaseExportStatus is the state of an export job.
+enum CaseExportStatus {
+  // CASE_EXPORT_STATUS_UNSPECIFIED is the zero value; never stored.
+  CASE_EXPORT_STATUS_UNSPECIFIED = 0;
+  // CASE_EXPORT_STATUS_QUEUED is a requested export waiting for the worker.
+  CASE_EXPORT_STATUS_QUEUED = 1;
+  // CASE_EXPORT_STATUS_RUNNING is an export the worker is building.
+  CASE_EXPORT_STATUS_RUNNING = 2;
+  // CASE_EXPORT_STATUS_DONE is a built archive, downloadable until expires_at.
+  CASE_EXPORT_STATUS_DONE = 3;
+  // CASE_EXPORT_STATUS_FAILED is an export that could not be built (see error).
+  CASE_EXPORT_STATUS_FAILED = 4;
+  // CASE_EXPORT_STATUS_EXPIRED is a built archive whose bytes were removed.
+  CASE_EXPORT_STATUS_EXPIRED = 5;
+}
+
+// CaseExport is one export job of a case.
+message CaseExport {
+  // id is the export UUID.
+  string id = 1;
+  // case_id is the exported case.
+  string case_id = 2;
+  // status is the job state.
+  CaseExportStatus status = 3;
+  // requested_by is the operator who requested the export (the only one who
+  // may download it).
+  string requested_by = 4;
+  // reason is the justification given with the request.
+  string reason = 5;
+  // requested_at is when the export was requested.
+  google.protobuf.Timestamp requested_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // started_at is when the worker started building it.
+  google.protobuf.Timestamp started_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // finished_at is when it was built or failed.
+  google.protobuf.Timestamp finished_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // expires_at is when a built archive is removed.
+  google.protobuf.Timestamp expires_at = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // size_bytes is the archive size once built.
+  int64 size_bytes = 10;
+  // sha256 is the lower-case hex digest of the archive once built.
+  string sha256 = 11;
+  // error explains a failed export; empty otherwise.
+  string error = 12;
+}
+
+// =============================================
+// ARCHIVE MANIFEST (manifest.json)
+// =============================================
+
+// CaseExportManifest is manifest.json at the root of an export archive. The
+// bytes of every document version it lists are in the archive once per
+// digest, at the path given by its ExportedBlob.
+message CaseExportManifest {
+  // format_version is the version of this layout (1).
+  int32 format_version = 1;
+  // export_id is the export job that built the archive.
+  string export_id = 2;
+  // exported_at is when the archive was built.
+  google.protobuf.Timestamp exported_at = 3;
+  // exported_by is the operator who requested it.
+  string exported_by = 4;
+  // case is the exported case with its governance (confidentiality, retention).
+  Case case = 5;
+  // timeline is every timeline entry of the case the requester may read.
+  repeated TimelineEntry timeline = 6;
+  // tasks is every task of the case.
+  repeated Task tasks = 7;
+  // circulations is every circulation of the case with its recipients.
+  repeated Circulation circulations = 8;
+  // relationships is every relationship of the case (open or ended, not
+  // unlinked) whose other end the requester may read; the ends carry the
+  // related subjects' reference and label.
+  repeated SubjectRelationship relationships = 9;
+  // documents is every document related to the case that the requester may read.
+  repeated ExportedDocument documents = 10;
+  // blobs lists the content files of the archive, one per digest.
+  repeated ExportedBlob blobs = 11;
+  // audit is the mutation audit of the case and of the exported documents.
+  repeated AuditEvent audit = 12;
+  // provenance is the legacy origin of the exported subjects, when imported.
+  repeated SubjectProvenance provenance = 13;
+  // withheld counts what the requester may not read (never which items).
+  ExportWithheld withheld = 14;
+}
+
+// ExportedDocument is a document of the archive with all its versions.
+message ExportedDocument {
+  // document is the document with its governance.
+  Document document = 1;
+  // versions is every version, oldest first; each content names its blob.
+  repeated DocumentVersion versions = 2;
+}
+
+// ExportedBlob is one content file of the archive.
+message ExportedBlob {
+  // sha256 is the lower-case hex digest of the bytes.
+  string sha256 = 1;
+  // size_bytes is the number of bytes.
+  int64 size_bytes = 2;
+  // mime_type is the media type recorded at upload.
+  string mime_type = 3;
+  // path is the file inside the archive (blobs/<sha256>).
+  string path = 4;
+}
+
+// SubjectProvenance is the legacy origin of an imported subject.
+message SubjectProvenance {
+  // subject_id is the subject.
+  string subject_id = 1;
+  // source_system names the legacy system.
+  string source_system = 2;
+  // source_table is the legacy table.
+  string source_table = 3;
+  // source_id is the legacy identifier.
+  string source_id = 4;
+  // import_batch_id is the import that created the subject.
+  string import_batch_id = 5;
+}
+
+// ExportWithheld counts the items left out of an archive because the
+// requester may not read them.
+message ExportWithheld {
+  // relationships is the number of relationships whose other end is unreadable.
+  int32 relationships = 1;
+  // timeline_entries is the number of timeline entries beyond the requester's visibility.
+  int32 timeline_entries = 2;
+}
+
+// =============================================
+// REQUESTS / RESPONSES
+// =============================================
+
+// RequestCaseExportRequest queues an export of a case.
+message RequestCaseExportRequest {
+  // case_id is the case to export; the caller needs MANAGE on it.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // reason is the justification recorded with the export (at most 2000 characters).
+  string reason = 2 [(buf.validate.field).string.max_len = 2000];
+}
+
+// RequestCaseExportResponse returns the queued export.
+message RequestCaseExportResponse {
+  // export is the new job, QUEUED.
+  CaseExport export = 1;
+}
+
+// GetCaseExportRequest retrieves one export.
+message GetCaseExportRequest {
+  // id is the export UUID; only its requester (or an administrator) may read it.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetCaseExportResponse returns the export.
+message GetCaseExportResponse {
+  // export is the job.
+  CaseExport export = 1;
+}
+
+// ListCaseExportsRequest lists the exports of a case.
+message ListCaseExportsRequest {
+  // case_id is the case; the caller sees its own exports (an administrator all).
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// ListCaseExportsResponse returns the exports, newest first (at most 50).
+message ListCaseExportsResponse {
+  // exports is the list.
+  repeated CaseExport exports = 1;
+}
+
+// =============================================
+// SERVICE
+// =============================================
+
+// CaseExportService queues and follows case exports; the archive itself is
+// downloaded from GET /api/case-exports/{id}/content.
+service CaseExportService {
+  // Queue an export of a case. Requires goeland:write and MANAGE on the case;
+  // the request is recorded as EXPORT, granted or refused.
+  rpc RequestCaseExport(RequestCaseExportRequest) returns (RequestCaseExportResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/exports"
+      body: "*"
+    };
+  }
+
+  // Retrieve an export job. Requires goeland:read.
+  rpc GetCaseExport(GetCaseExportRequest) returns (GetCaseExportResponse) {
+    option (google.api.http) = {get: "/api/case-exports/{id}"};
+  }
+
+  // List the caller's exports of a case. Requires goeland:read.
+  rpc ListCaseExports(ListCaseExportsRequest) returns (ListCaseExportsResponse) {
+    option (google.api.http) = {get: "/api/cases/{case_id}/exports"};
+  }
+}

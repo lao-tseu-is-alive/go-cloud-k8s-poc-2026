@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-10-14**, app version **0.13.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0029` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-10-14**, app version **0.14.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0030` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -55,6 +55,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
 | v2 §34 `access_audit_event` (sensitive read audit, append-only) | ✅ `0028` | ✅ `CoreService.ListAccessAuditEvents` + written by `Authorizer.AuditedRead` and the governed download | ✅ | GLD-033: reads (`Get*`, a confidential case's timeline) and downloads of confidential subjects, granted or denied, written before the answer (fail closed); read by administrators or FULL_CONTROL holders, labels only when readable |
+| v2 §51 ExportCase (JSON + blobs in a ZIP) | ✅ `0030` | ✅ `CaseExportService.*` (3 RPCs) + `GET /api/case-exports/{id}/content` | ✅ | GLD-029: background job (`case_export`, worker on every replica, `SKIP LOCKED`); MANAGE to request, contents filtered to what the requester may read with withheld counts, every version's bytes once per digest, EXPORT recorded for every request and each confidential document; requester-only download until expiry (24 h) |
 | §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | ✅ | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; GLD-049: searches and lists filtered in SQL (`core.ReadableSQL`, exact pagination), downloads through the document (`GET /api/documents/{id}/content`), timeline visibility by level, document reuse only among readable documents; GLD-050: a case type's minimum confidentiality and default grants (CREATOR_UNITS) copied once at creation |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
@@ -63,8 +64,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 ## 2. Minimal end-to-end scenario (spec §3.1)
 
 The v2 §50 scenario is now played end to end over HTTP by `cmd/goeland-server/scenario_test.go`
-(steps 1–25 and 28–30; 26–27 AI proposal and 31 ExportCase are logged as skipped until GLD-030 /
-GLD-029). The v1 16-step demo is complete too; in addition **Actor, Case and Thing are now done** (persons/organizations creatable and
+(steps 1–25 and 28–31; 26–27 AI proposal are logged as skipped until GLD-030). The v1 16-step demo is complete too; in addition **Actor, Case and Thing are now done** (persons/organizations creatable and
 linkable as relationship targets). Document- and actor-side steps are done and verified
 via ConnectRPC **and exercisable from the embedded web UI** (create → detail → verify/
 lifecycle → edit blocked when locked → audit):
@@ -421,6 +421,18 @@ Decisions for the POC (v2 §32):
   append-only and kept without limit in the POC. Administrators read the whole log, a holder of
   FULL_CONTROL its subject's; a label is shown only to who may read the subject; reading the log is
   not logged; the legacy access logs are not imported. `EXPORT` is reserved for the export task.
+- **Case export (decided 2026-10-14, GLD-029; the user picked MANAGE with filtered contents, every
+  export audited, all versions, and a background job):** exporting a case needs MANAGE (a full
+  offline copy is more than reading it); the archive holds only what the requester may read, and
+  the manifest counts the withheld relationships and timeline entries, never which. Every request
+  is recorded as EXPORT on the case, granted or refused, whatever its confidentiality (exports are
+  rare and "who took a copy" matters for any case), and each confidential document placed in an
+  archive gets its own EXPORT row. The bytes of every version are included, each digest once. The
+  archive is built by a background worker (claimed with `FOR UPDATE SKIP LOCKED`, retried when a
+  worker dies, requeued on shutdown) as the requester, who must still hold MANAGE then and at
+  download; only the requester downloads it, until it expires (`GOELAND_EXPORT_TTL_HOURS`). The
+  manifest is the typed `CaseExportManifest` message reusing the API messages; internal storage
+  references are blanked and each blob's digest is checked while it is copied.
 
 - 🚀 **Sortable tables (GLD-055, GLD-056, GLD-057, 2026-10-02/08)** — every list and detail table sorts by a
   click on its headers (the spec asks for none): paged lists on the server through a whitelisted

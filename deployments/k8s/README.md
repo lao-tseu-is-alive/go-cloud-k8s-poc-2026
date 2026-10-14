@@ -8,7 +8,7 @@ because blob storage is node-local (see [PRODUCTION_READINESS.md](../../docs/PRO
 | File | Content |
 |------|---------|
 | `00-namespace.yaml` | Namespace `goeland-poc` |
-| `10-postgis.yaml` | Disposable PostGIS (`postgis/postgis:17-3.5`) and its Service |
+| `10-postgis.yaml` | Disposable PostGIS (`postgis/postgis:17-3.5`, pinned by digest) and its Service |
 | `20-goeland.yaml` | ConfigMap, hardened Deployment (non-root, read-only root filesystem, no capabilities, probes) and Service |
 
 ## Prerequisites

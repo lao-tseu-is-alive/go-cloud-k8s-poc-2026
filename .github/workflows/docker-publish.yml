@@ -158,6 +158,10 @@ jobs:
             APP_REVISION=${{ steps.buildinfo.outputs.revision }}
             BUILD_STAMP=${{ steps.buildinfo.outputs.stamp }}
           labels: ${{ steps.meta.outputs.labels }}
+          # SBOM and build provenance attestations attached to the pushed image
+          # (GLD-059); `docker buildx imagetools inspect <image> --format '{{ json .SBOM }}'` reads them.
+          sbom: true
+          provenance: mode=max
           # Use build cache to speed up subsequent runs
           cache-from: type=gha
           cache-to: type=gha,mode=max
