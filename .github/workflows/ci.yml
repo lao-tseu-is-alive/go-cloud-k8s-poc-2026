@@ -42,10 +42,10 @@ jobs:
       GOELAND_REQUIRE_DB_TESTS: "true"
     steps:
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Setup Go
-        uses: actions/setup-go@v5
+        uses: actions/setup-go@v7
         with:
           # Single source of truth: the version required in go.mod.
           go-version-file: go.mod

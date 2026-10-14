@@ -30,19 +30,33 @@ updates:
         patterns: ["*"]
 
   # Go modules (minor and patch grouped; a major stays its own pull request).
+  # Vanguard 0.5 and validate 0.9 moved to Connect v2: a planned migration
+  # (GLD-062), not a routine bump, so their minors (breaking before 1.0) wait.
   - package-ecosystem: gomod
     directory: /
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: connectrpc.com/vanguard
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
+      - dependency-name: connectrpc.com/validate
+        update-types: ["version-update:semver-minor", "version-update:semver-major"]
     groups:
       go-modules:
         update-types: [minor, patch]
 
-  # The embedded SPA's packages (bun.lock).
+  # The embedded SPA's packages (bun.lock). TypeScript majors wait for vue-tsc
+  # support (TypeScript 7 does not load in vue-tsc 3); @types/node follows the
+  # Node line the SPA targets (@tsconfig/node22), not the newest Node.
   - package-ecosystem: bun
     directory: /cmd/goeland-server/goeland-front
     schedule:
       interval: weekly
+    ignore:
+      - dependency-name: typescript
+        update-types: ["version-update:semver-major"]
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
     groups:
       spa-packages:
         update-types: [minor, patch]

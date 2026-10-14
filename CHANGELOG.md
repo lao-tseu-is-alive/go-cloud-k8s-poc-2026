@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Changed
+
+- Dependency updates (Dependabot triage of 2026-10-14): pgx 5.11, Connect 1.21, protovalidate;
+  Vue 3.5.43, Vuetify 4.2, vue-router 5.4, vue-i18n 11.4, Pinia 4, Vite 8.3, ESLint 10 and the
+  other SPA minors; GitHub's own actions (checkout 7, setup-go 7, codeql 4) and the pinned
+  third-party ones at release tags (setup-trivy 0.3.1, docker actions, action-gh-release 3).
+  Left out: Vanguard 0.5 / validate 0.9 (Connect v2, GLD-062), TypeScript 7 (not supported by
+  vue-tsc), @types/node 26 (the SPA targets Node 22) and an hours-old untagged trivy-action
+  commit; Dependabot now ignores the first three.
+
 ## [0.14.0] - 2026-10-14
 
 Case export (GLD-029) and immutable build inputs with SBOM (GLD-059). Migration `0030` (`case_export`);

@@ -128,6 +128,12 @@ the case export (GLD-029) shipped in v0.14.0.
   Done 2026-10-14: `trg_subject_relationship_kinds` (migration `0029`, `check_violation`).
 - [ ] **GLD-061 — Migration checksums** (low priority): record a checksum of each applied
   migration in `schema_migrations` and refuse to start when an applied migration file changed.
+- [ ] **GLD-062 — Connect v2 migration**: Vanguard 0.5 and `connectrpc.com/validate` 0.9 (Dependabot
+  #1, October 2026) build on `connectrpc.com/connect/v2`, while every handler uses Connect v1; the
+  strict JSON codec (`core.NewStrictJSONCodec`) no longer compiles against `vanguard.RESTCodec`.
+  Move the handlers, interceptors and codecs to Connect v2 together once v2 has settled (released
+  2026-10-07), with the §50 scenario and API surface tests as the safety net. Dependabot ignores
+  those two modules' minors until then.
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
