@@ -7,7 +7,7 @@ configured, which probes to wire, and which values are secrets.
 > **Status: POC.** The server basics are production-shaped (timeouts, graceful shutdown,
 > health/readiness, structured logs, request IDs, non-root scratch image) and access is
 > enforced per subject, filtered in every search and list. What is **not** production-grade
-> yet is called out explicitly below — chiefly **no audit of sensitive reads**, **migrations
+> yet is called out explicitly below — chiefly **migrations
 > run by the runtime role** and **node-local blob storage**. Read
 > [Known limitations](#known-limitations) before exposing this to real data.
 
@@ -161,11 +161,13 @@ separately.
 
 These are the gaps that make this a POC rather than a production service:
 
-- **Sensitive reads are not audited.** Access is enforced on every mutation and read (GLD-048:
-  levels per subject for users, groups and org units; confidential subjects need an explicit
-  grant), searches and lists return only readable subjects, and document bytes are downloaded
-  through `GET /api/documents/{id}/content` with READ on the document (GLD-049). Mutations are
-  audited, but reading or downloading a confidential subject leaves no trace yet (GLD-033).
+- **The sensitive read audit has no retention policy.** Access is enforced on every mutation and
+  read (GLD-048), searches and lists return only readable subjects, and document bytes are
+  downloaded through `GET /api/documents/{id}/content` with READ on the document (GLD-049).
+  Reading or downloading a confidential subject, or being refused it, is recorded in the
+  append-only `access_audit_event` (GLD-033), but the table grows without limit: its legal
+  retention period (and partitioning to purge it) must be decided with the data protection
+  officer and the archivist before production. Ordinary reads and list results are not logged.
   Every authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
 - **Migrations run with the runtime role** (§2): the application role owns the DDL, so it could
   alter the schema or drop the append-only triggers, and a faulty migration blocks every new pod

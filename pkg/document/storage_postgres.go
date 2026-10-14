@@ -342,9 +342,15 @@ func (r *PostgresRepository) ListVersions(ctx context.Context, documentID uuid.U
 }
 
 // Content returns a version of a document hydrated with its blob, after
-// checking that operatorID may read the document (GLD-049).
+// checking that operatorID may read the document (GLD-049). The download of a
+// confidential document, or its refusal, is recorded in the sensitive read
+// audit with the version served (GLD-033).
 func (r *PostgresRepository) Content(ctx context.Context, operatorID string, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error) {
-	if err := core.EnsureAccessTx(ctx, r.pool, operatorID, documentID, core.LevelRead); err != nil {
+	access, err := core.EffectiveAccessTx(ctx, r.pool, operatorID, documentID)
+	if err != nil {
+		return nil, err
+	}
+	if err := core.RequireAuditedTx(ctx, r.pool, operatorID, access, core.LevelRead, core.AccessDownload); err != nil {
 		return nil, err
 	}
 	rows, err := r.pool.Query(ctx, contentVersionSQL, pgx.NamedArgs{"document_id": documentID, "version_id": versionID})
@@ -355,7 +361,13 @@ func (r *PostgresRepository) Content(ctx context.Context, operatorID string, doc
 	if err != nil {
 		return nil, mapDBError(err)
 	}
-	return version, hydrateVersions(ctx, r.pool, []*Version{version})
+	if err := hydrateVersions(ctx, r.pool, []*Version{version}); err != nil {
+		return nil, err
+	}
+	if version.Content == nil || version.Content.StorageRef == "" {
+		return version, nil // no bytes to serve: nothing downloaded, nothing to record
+	}
+	return version, core.RecordGrantedAccessTx(ctx, r.pool, operatorID, access, core.AccessDownload, &version.ID)
 }
 
 // RegisterBlob stores the metadata of freshly written content, or returns the

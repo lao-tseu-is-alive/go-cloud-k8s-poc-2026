@@ -81,6 +81,11 @@ func (StubRepository) ListReferenceChanges(context.Context, core.ReferenceFilter
 	return core.ReferenceResult{}, nil
 }
 
+// ListAccessAudit returns an empty page.
+func (StubRepository) ListAccessAudit(context.Context, core.AccessAuditFilter) (core.AccessAuditResult, error) {
+	return core.AccessAuditResult{}, nil
+}
+
 // RecordUser returns zero values.
 func (StubRepository) RecordUser(context.Context, core.UserProfile) (*core.AppUser, error) {
 	return nil, nil

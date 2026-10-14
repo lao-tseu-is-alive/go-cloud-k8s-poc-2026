@@ -4,7 +4,7 @@
  * members. Every change needs a level the server checks (FULL_CONTROL to grant,
  * MANAGE on a group to change its members).
  */
-import type { Access, AccessGrant, GetMyAccessResponse, GrantChangeResponse, GranteeKind, GroupResponse, ListGrantsResponse, ListGroupsResponse, Permission, SecurityGroup } from './types'
+import type { Access, AccessAuditAction, AccessAuditOutcome, AccessGrant, GetMyAccessResponse, GrantChangeResponse, GranteeKind, GroupResponse, ListAccessAuditEventsResponse, ListGrantsResponse, ListGroupsResponse, Permission, SecurityGroup } from './types'
 import { apiFetch } from './client'
 
 const subjectPath = (id: string) => `/api/subjects/${encodeURIComponent(id)}`
@@ -66,4 +66,20 @@ export function addGroupMember (id: string, userId: string): Promise<GroupRespon
 /** Removes a member (the membership is kept as history). */
 export function removeGroupMember (id: string, userId: string, reason: string): Promise<GroupResponse> {
   return apiFetch<GroupResponse>(`${groupPath(id)}/members/${encodeURIComponent(userId)}/remove`, { method: 'POST', body: { reason } })
+}
+
+/** Filters of the sensitive read audit; without subjectId the whole log (administrators only). */
+export interface AccessAuditQuery {
+  subjectId?: string
+  userId?: string
+  action?: AccessAuditAction
+  outcome?: AccessAuditOutcome
+  orderBy?: string
+  pageSize?: number
+  pageToken?: string
+}
+
+/** A page of the sensitive read audit (GLD-033), newest first by default. */
+export function listAccessAuditEvents (query: AccessAuditQuery): Promise<ListAccessAuditEventsResponse> {
+  return apiFetch<ListAccessAuditEventsResponse>('/api/access-audit-events', { query: { ...query } })
 }

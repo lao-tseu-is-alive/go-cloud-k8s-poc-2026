@@ -143,3 +143,44 @@ const knownUserSQL = `SELECT EXISTS (SELECT 1 FROM app_user WHERE user_id = @use
 const liveGroupGranteeSQL = `SELECT EXISTS (SELECT 1 FROM security_group WHERE id = @id AND archived_at IS NULL);`
 
 const liveUnitGranteeSQL = `SELECT EXISTS (SELECT 1 FROM org_unit WHERE id = @id AND dissolved_at IS NULL);`
+
+// --- sensitive read audit (GLD-033) ------------------------------------------------------
+
+const insertAccessAuditSQL = `
+INSERT INTO access_audit_event (user_id, subject_id, subject_kind, action, outcome, access_level,
+                                access_source, confidentiality_level, document_version_id, request_id)
+VALUES (@user_id, @subject_id, @subject_kind, @action, @outcome, @access_level,
+        @access_source, @confidentiality_level, @document_version_id, @request_id);`
+
+// accessAuditSortFields are the sortable columns of the sensitive read audit:
+// the log grows with every confidential read, so only its indexed date sorts.
+var accessAuditSortFields = map[string]SortField{
+	"occurred_at": {Expr: "e.occurred_at"},
+}
+
+// defaultAccessAuditSort lists the latest accesses first.
+var defaultAccessAuditSort = Sort{Field: "occurred_at", Desc: true}
+
+// accessAuditColumns projects a log row with the subject's business reference
+// and, only when the lister may read the subject, its label.
+var accessAuditColumns = `
+e.id, e.occurred_at, e.user_id, e.subject_id, e.subject_kind, e.action, e.outcome, e.access_level,
+e.access_source, e.confidentiality_level, e.document_version_id, e.request_id,
+(SELECT sr.business_ref FROM subject_ref sr WHERE sr.id = e.subject_id) AS business_ref,
+CASE WHEN ` + ReadableSQL("e.subject_id", "") + `
+     THEN (SELECT sr.display_label FROM subject_ref sr WHERE sr.id = e.subject_id) ELSE '' END AS subject_label`
+
+// listAccessAuditSQL pages the log, filtered by subject, reader, action,
+// outcome and period, in each sort (capped total, GLD-053).
+var listAccessAuditSQL = SortedQueries(accessAuditSortFields, func(f SortField, desc bool) string {
+	return CappedPageSQL(`
+SELECT e.id AS id, `+f.Expr+` AS sort_key
+FROM access_audit_event e
+WHERE (@subject_id::uuid IS NULL OR e.subject_id = @subject_id::uuid)
+  AND (@user_id = '' OR e.user_id = @user_id)
+  AND (@action = '' OR e.action = @action)
+  AND (@outcome = '' OR e.outcome = @outcome)
+  AND (@from::timestamptz IS NULL OR e.occurred_at >= @from::timestamptz)
+  AND (@to::timestamptz IS NULL OR e.occurred_at <= @to::timestamptz)`,
+		accessAuditColumns, "access_audit_event", "e", f.Order(desc))
+})

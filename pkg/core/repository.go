@@ -23,6 +23,7 @@ type Repository interface {
 	CreateRelationshipType(ctx context.Context, in RelationshipTypeInput) (*RelationshipType, *ReferenceChange, error)
 	UpdateRelationshipType(ctx context.Context, code string, in RelationshipTypeUpdate) (*RelationshipType, *ReferenceChange, error)
 	ListReferenceChanges(ctx context.Context, filter ReferenceFilter) (ReferenceResult, error)
+	ListAccessAudit(ctx context.Context, filter AccessAuditFilter) (AccessAuditResult, error)
 	RecordUser(ctx context.Context, profile UserProfile) (*AppUser, error)
 	GetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error)
 	SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error)

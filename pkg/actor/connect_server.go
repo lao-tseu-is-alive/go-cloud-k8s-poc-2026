@@ -79,7 +79,7 @@ func (s *ConnectServer) GetActor(ctx context.Context, req *connect.Request[goela
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	user, _, err := s.authz.AuditedRead(ctx, id)
 	if err != nil {
 		return nil, err
 	}

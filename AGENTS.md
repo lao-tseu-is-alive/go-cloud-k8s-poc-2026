@@ -132,7 +132,7 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-The sensitive read audit (GLD-033), storage (MinIO),
+Storage (MinIO),
 search (Meilisearch), provenance and outbox, export, AI proposals, workflow. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
@@ -169,7 +169,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0027 (dbmate format)
+  │   └── db/migrations/     0001..0028 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -292,6 +292,15 @@ Every new subject gets its creator's FULL_CONTROL and its owning unit's MANAGE
 confidentiality once (`core.CopyGrantsTx`), and attaching an existing document copies nothing.
 New RPCs must add their check.
 
+**Sensitive read audit (GLD-033):** the detail read of a subject goes through
+`core.Authorizer.AuditedRead` (not `Caller`): on a confidential subject it writes an
+`access_audit_event` (READ_SENSITIVE, GRANTED or DENIED) before answering and fails the read when
+it cannot. A confidential case's timeline is audited the same way, and the governed download
+records DOWNLOAD with the version served (`core.RequireAuditedTx` / `core.RecordGrantedAccessTx`).
+Lists, searches and secondary reads are not logged. `ListAccessAuditEvents`
+(`GET /api/access-audit-events`) needs `goeland:admin`, or FULL_CONTROL on its `subject_id`, and
+shows a label only for a readable subject. A new primary read of a subject uses `AuditedRead`.
+
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
@@ -388,7 +397,8 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 `CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
-`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`; ActorService:
+`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`,
+`/api/access-audit-events`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`; ThingService: `/api/things`, `/api/things/{id}`,

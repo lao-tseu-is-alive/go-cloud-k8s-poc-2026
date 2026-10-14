@@ -361,6 +361,7 @@ func (s *surface) access() {
 	}
 	s.expect(asWriter("GET", "/api/cases/"+secret, nil), codePermissionDenied, "a confidential case needs a grant")
 	s.readFilters(asWriter, secret)
+	s.accessAudit(asWriter, secret, writer)
 	s.expect(asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit"}), codePermissionDenied, "editing with READ")
 	if lvl := str(asWriter("GET", "/api/subjects/"+open+"/access", nil).body, "access", "level"); lvl != "PERMISSION_READ" {
 		s.t.Fatalf("the writer's baseline is READ: %s", lvl)
@@ -402,6 +403,28 @@ func (s *surface) readFilters(asWriter func(method, path string, body any) reply
 	if r := asWriter("GET", "/api/documents/"+doc+"/content", nil); r.status != 403 {
 		s.t.Fatalf("the content of a confidential document needs READ: HTTP %d", r.status)
 	}
+}
+
+// accessAudit covers the sensitive read audit (GLD-033) over HTTP: reads of a
+// confidential case are recorded, granted or denied, and the log is read by an
+// administrator (or a holder of FULL_CONTROL on the subject) only.
+func (s *surface) accessAudit(asWriter func(method, path string, body any) reply, secret, writer string) {
+	s.ok("GET", "/api/cases/"+secret, nil)
+	events := list(s.ok("GET", "/api/access-audit-events?subjectId="+secret+"&action=READ_SENSITIVE", nil), "events")
+	outcomes := map[string]bool{}
+	for _, e := range events {
+		outcomes[str(e, "outcome")] = true
+	}
+	if !outcomes["GRANTED"] || !outcomes["DENIED"] {
+		s.t.Fatalf("the creator's read and the writer's refusal are recorded: %v", events)
+	}
+	refused := list(s.ok("GET", "/api/access-audit-events?userId="+writer+"&outcome=DENIED&orderBy=occurred_at", nil), "events")
+	if len(refused) == 0 || str(refused[0], "subjectKind") != "SUBJECT_KIND_CASE" {
+		s.t.Fatalf("the writer's refusals are listed by reader and outcome: %v", refused)
+	}
+	s.expect(asWriter("GET", "/api/access-audit-events", nil), codePermissionDenied, "the whole log needs goeland:admin")
+	s.expect(asWriter("GET", "/api/access-audit-events?subjectId="+secret, nil), codePermissionDenied, "a subject's log needs FULL_CONTROL")
+	s.fails(codeInvalidArgument, "GET", "/api/access-audit-events?orderBy=user_id", nil)
 }
 
 // groups covers the security group RPCs.

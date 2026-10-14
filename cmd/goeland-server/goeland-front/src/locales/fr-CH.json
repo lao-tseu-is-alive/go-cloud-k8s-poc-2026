@@ -74,6 +74,23 @@
     "messages": {
       "granted": "Accès enregistré.",
       "revoked": "Accès retiré."
+    },
+    "audit": {
+      "tab": "Accès sensibles",
+      "open": "Journal des accès sensibles",
+      "title": "Journal des accès sensibles",
+      "hint": "Lectures et téléchargements des sujets confidentiels, autorisés ou refusés. Les lectures ordinaires ne sont pas journalisées.",
+      "empty": "Aucun accès sensible journalisé.",
+      "total": "{total} accès",
+      "occurredAt": "Date",
+      "reader": "Lecteur",
+      "subject": "Sujet",
+      "action": "Action",
+      "outcome": "Résultat",
+      "level": "Niveau d'accès",
+      "confidentiality": "confidentialité {level}",
+      "version": "version {id}…",
+      "hiddenLabel": "Libellé masqué : vous n'avez pas accès à ce sujet"
     }
   },
   "roles": {
@@ -708,6 +725,15 @@
     "inactive": "Inactif"
   },
   "enums": {
+    "AccessAuditAction": {
+      "READ_SENSITIVE": "Consultation",
+      "DOWNLOAD": "Téléchargement",
+      "EXPORT": "Export"
+    },
+    "AccessAuditOutcome": {
+      "GRANTED": "Autorisé",
+      "DENIED": "Refusé"
+    },
     "AccessSource": {
       "ACCESS_SOURCE_UNSPECIFIED": "—",
       "ACCESS_SOURCE_PERSONAL": "accès personnel",

@@ -101,71 +101,6 @@ func (GranteeKind) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_access_proto_rawDescGZIP(), []int{0}
 }
 
-// AccessSource tells which rule produced an effective level.
-type AccessSource int32
-
-const (
-	// ACCESS_SOURCE_UNSPECIFIED is the zero value.
-	AccessSource_ACCESS_SOURCE_UNSPECIFIED AccessSource = 0
-	// ACCESS_SOURCE_PERSONAL is a grant to the user.
-	AccessSource_ACCESS_SOURCE_PERSONAL AccessSource = 1
-	// ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
-	AccessSource_ACCESS_SOURCE_GROUP AccessSource = 2
-	// ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
-	AccessSource_ACCESS_SOURCE_ORG_UNIT AccessSource = 3
-	// ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
-	AccessSource_ACCESS_SOURCE_ROLE AccessSource = 4
-	// ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
-	AccessSource_ACCESS_SOURCE_BASELINE AccessSource = 5
-)
-
-// Enum value maps for AccessSource.
-var (
-	AccessSource_name = map[int32]string{
-		0: "ACCESS_SOURCE_UNSPECIFIED",
-		1: "ACCESS_SOURCE_PERSONAL",
-		2: "ACCESS_SOURCE_GROUP",
-		3: "ACCESS_SOURCE_ORG_UNIT",
-		4: "ACCESS_SOURCE_ROLE",
-		5: "ACCESS_SOURCE_BASELINE",
-	}
-	AccessSource_value = map[string]int32{
-		"ACCESS_SOURCE_UNSPECIFIED": 0,
-		"ACCESS_SOURCE_PERSONAL":    1,
-		"ACCESS_SOURCE_GROUP":       2,
-		"ACCESS_SOURCE_ORG_UNIT":    3,
-		"ACCESS_SOURCE_ROLE":        4,
-		"ACCESS_SOURCE_BASELINE":    5,
-	}
-)
-
-func (x AccessSource) Enum() *AccessSource {
-	p := new(AccessSource)
-	*p = x
-	return p
-}
-
-func (x AccessSource) String() string {
-	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
-}
-
-func (AccessSource) Descriptor() protoreflect.EnumDescriptor {
-	return file_goeland_v1_access_proto_enumTypes[1].Descriptor()
-}
-
-func (AccessSource) Type() protoreflect.EnumType {
-	return &file_goeland_v1_access_proto_enumTypes[1]
-}
-
-func (x AccessSource) Number() protoreflect.EnumNumber {
-	return protoreflect.EnumNumber(x)
-}
-
-// Deprecated: Use AccessSource.Descriptor instead.
-func (AccessSource) EnumDescriptor() ([]byte, []int) {
-	return file_goeland_v1_access_proto_rawDescGZIP(), []int{1}
-}
-
 // AccessGrant is one grant on a subject; a revoked grant is kept as history.
 type AccessGrant struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1899,14 +1834,7 @@ const file_goeland_v1_access_proto_rawDesc = "" +
 	"\x11GRANTEE_KIND_USER\x10\x01\x12\x16\n" +
 	"\x12GRANTEE_KIND_GROUP\x10\x02\x12\x19\n" +
 	"\x15GRANTEE_KIND_ORG_UNIT\x10\x03\x12\x1e\n" +
-	"\x1aGRANTEE_KIND_CREATOR_UNITS\x10\x04*\xb2\x01\n" +
-	"\fAccessSource\x12\x1d\n" +
-	"\x19ACCESS_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
-	"\x16ACCESS_SOURCE_PERSONAL\x10\x01\x12\x17\n" +
-	"\x13ACCESS_SOURCE_GROUP\x10\x02\x12\x1a\n" +
-	"\x16ACCESS_SOURCE_ORG_UNIT\x10\x03\x12\x16\n" +
-	"\x12ACCESS_SOURCE_ROLE\x10\x04\x12\x1a\n" +
-	"\x16ACCESS_SOURCE_BASELINE\x10\x052\xa5\n" +
+	"\x1aGRANTEE_KIND_CREATOR_UNITS\x10\x042\xa5\n" +
 	"\n" +
 	"\rAccessService\x12y\n" +
 	"\vGetMyAccess\x12\x1e.goeland.v1.GetMyAccessRequest\x1a\x1f.goeland.v1.GetMyAccessResponse\")\x82\xd3\xe4\x93\x02#\x12!/api/subjects/{subject_id}/access\x12v\n" +
@@ -1938,98 +1866,98 @@ func file_goeland_v1_access_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_access_proto_rawDescData
 }
 
-var file_goeland_v1_access_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_goeland_v1_access_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
 var file_goeland_v1_access_proto_msgTypes = make([]protoimpl.MessageInfo, 26)
 var file_goeland_v1_access_proto_goTypes = []any{
 	(GranteeKind)(0),                  // 0: goeland.v1.GranteeKind
-	(AccessSource)(0),                 // 1: goeland.v1.AccessSource
-	(*AccessGrant)(nil),               // 2: goeland.v1.AccessGrant
-	(*Access)(nil),                    // 3: goeland.v1.Access
-	(*SecurityGroup)(nil),             // 4: goeland.v1.SecurityGroup
-	(*GroupMember)(nil),               // 5: goeland.v1.GroupMember
-	(*GetMyAccessRequest)(nil),        // 6: goeland.v1.GetMyAccessRequest
-	(*GetMyAccessResponse)(nil),       // 7: goeland.v1.GetMyAccessResponse
-	(*ListGrantsRequest)(nil),         // 8: goeland.v1.ListGrantsRequest
-	(*ListGrantsResponse)(nil),        // 9: goeland.v1.ListGrantsResponse
-	(*SetGrantRequest)(nil),           // 10: goeland.v1.SetGrantRequest
-	(*SetGrantResponse)(nil),          // 11: goeland.v1.SetGrantResponse
-	(*RevokeGrantRequest)(nil),        // 12: goeland.v1.RevokeGrantRequest
-	(*RevokeGrantResponse)(nil),       // 13: goeland.v1.RevokeGrantResponse
-	(*ListGroupsRequest)(nil),         // 14: goeland.v1.ListGroupsRequest
-	(*ListGroupsResponse)(nil),        // 15: goeland.v1.ListGroupsResponse
-	(*GetGroupRequest)(nil),           // 16: goeland.v1.GetGroupRequest
-	(*GetGroupResponse)(nil),          // 17: goeland.v1.GetGroupResponse
-	(*CreateGroupRequest)(nil),        // 18: goeland.v1.CreateGroupRequest
-	(*CreateGroupResponse)(nil),       // 19: goeland.v1.CreateGroupResponse
-	(*UpdateGroupRequest)(nil),        // 20: goeland.v1.UpdateGroupRequest
-	(*UpdateGroupResponse)(nil),       // 21: goeland.v1.UpdateGroupResponse
-	(*ArchiveGroupRequest)(nil),       // 22: goeland.v1.ArchiveGroupRequest
-	(*ArchiveGroupResponse)(nil),      // 23: goeland.v1.ArchiveGroupResponse
-	(*AddGroupMemberRequest)(nil),     // 24: goeland.v1.AddGroupMemberRequest
-	(*AddGroupMemberResponse)(nil),    // 25: goeland.v1.AddGroupMemberResponse
-	(*RemoveGroupMemberRequest)(nil),  // 26: goeland.v1.RemoveGroupMemberRequest
-	(*RemoveGroupMemberResponse)(nil), // 27: goeland.v1.RemoveGroupMemberResponse
-	(Permission)(0),                   // 28: goeland.v1.Permission
-	(*timestamppb.Timestamp)(nil),     // 29: google.protobuf.Timestamp
-	(SubjectKind)(0),                  // 30: goeland.v1.SubjectKind
+	(*AccessGrant)(nil),               // 1: goeland.v1.AccessGrant
+	(*Access)(nil),                    // 2: goeland.v1.Access
+	(*SecurityGroup)(nil),             // 3: goeland.v1.SecurityGroup
+	(*GroupMember)(nil),               // 4: goeland.v1.GroupMember
+	(*GetMyAccessRequest)(nil),        // 5: goeland.v1.GetMyAccessRequest
+	(*GetMyAccessResponse)(nil),       // 6: goeland.v1.GetMyAccessResponse
+	(*ListGrantsRequest)(nil),         // 7: goeland.v1.ListGrantsRequest
+	(*ListGrantsResponse)(nil),        // 8: goeland.v1.ListGrantsResponse
+	(*SetGrantRequest)(nil),           // 9: goeland.v1.SetGrantRequest
+	(*SetGrantResponse)(nil),          // 10: goeland.v1.SetGrantResponse
+	(*RevokeGrantRequest)(nil),        // 11: goeland.v1.RevokeGrantRequest
+	(*RevokeGrantResponse)(nil),       // 12: goeland.v1.RevokeGrantResponse
+	(*ListGroupsRequest)(nil),         // 13: goeland.v1.ListGroupsRequest
+	(*ListGroupsResponse)(nil),        // 14: goeland.v1.ListGroupsResponse
+	(*GetGroupRequest)(nil),           // 15: goeland.v1.GetGroupRequest
+	(*GetGroupResponse)(nil),          // 16: goeland.v1.GetGroupResponse
+	(*CreateGroupRequest)(nil),        // 17: goeland.v1.CreateGroupRequest
+	(*CreateGroupResponse)(nil),       // 18: goeland.v1.CreateGroupResponse
+	(*UpdateGroupRequest)(nil),        // 19: goeland.v1.UpdateGroupRequest
+	(*UpdateGroupResponse)(nil),       // 20: goeland.v1.UpdateGroupResponse
+	(*ArchiveGroupRequest)(nil),       // 21: goeland.v1.ArchiveGroupRequest
+	(*ArchiveGroupResponse)(nil),      // 22: goeland.v1.ArchiveGroupResponse
+	(*AddGroupMemberRequest)(nil),     // 23: goeland.v1.AddGroupMemberRequest
+	(*AddGroupMemberResponse)(nil),    // 24: goeland.v1.AddGroupMemberResponse
+	(*RemoveGroupMemberRequest)(nil),  // 25: goeland.v1.RemoveGroupMemberRequest
+	(*RemoveGroupMemberResponse)(nil), // 26: goeland.v1.RemoveGroupMemberResponse
+	(Permission)(0),                   // 27: goeland.v1.Permission
+	(*timestamppb.Timestamp)(nil),     // 28: google.protobuf.Timestamp
+	(SubjectKind)(0),                  // 29: goeland.v1.SubjectKind
+	(AccessSource)(0),                 // 30: goeland.v1.AccessSource
 	(*SubjectRef)(nil),                // 31: goeland.v1.SubjectRef
 	(*User)(nil),                      // 32: goeland.v1.User
 	(*AuditEvent)(nil),                // 33: goeland.v1.AuditEvent
 }
 var file_goeland_v1_access_proto_depIdxs = []int32{
 	0,  // 0: goeland.v1.AccessGrant.grantee_kind:type_name -> goeland.v1.GranteeKind
-	28, // 1: goeland.v1.AccessGrant.level:type_name -> goeland.v1.Permission
-	29, // 2: goeland.v1.AccessGrant.granted_at:type_name -> google.protobuf.Timestamp
-	29, // 3: goeland.v1.AccessGrant.revoked_at:type_name -> google.protobuf.Timestamp
-	30, // 4: goeland.v1.Access.kind:type_name -> goeland.v1.SubjectKind
-	28, // 5: goeland.v1.Access.level:type_name -> goeland.v1.Permission
-	1,  // 6: goeland.v1.Access.source:type_name -> goeland.v1.AccessSource
+	27, // 1: goeland.v1.AccessGrant.level:type_name -> goeland.v1.Permission
+	28, // 2: goeland.v1.AccessGrant.granted_at:type_name -> google.protobuf.Timestamp
+	28, // 3: goeland.v1.AccessGrant.revoked_at:type_name -> google.protobuf.Timestamp
+	29, // 4: goeland.v1.Access.kind:type_name -> goeland.v1.SubjectKind
+	27, // 5: goeland.v1.Access.level:type_name -> goeland.v1.Permission
+	30, // 6: goeland.v1.Access.source:type_name -> goeland.v1.AccessSource
 	31, // 7: goeland.v1.SecurityGroup.subject_ref:type_name -> goeland.v1.SubjectRef
-	29, // 8: goeland.v1.SecurityGroup.archived_at:type_name -> google.protobuf.Timestamp
+	28, // 8: goeland.v1.SecurityGroup.archived_at:type_name -> google.protobuf.Timestamp
 	32, // 9: goeland.v1.GroupMember.user:type_name -> goeland.v1.User
-	29, // 10: goeland.v1.GroupMember.since:type_name -> google.protobuf.Timestamp
-	3,  // 11: goeland.v1.GetMyAccessResponse.access:type_name -> goeland.v1.Access
-	2,  // 12: goeland.v1.ListGrantsResponse.grants:type_name -> goeland.v1.AccessGrant
+	28, // 10: goeland.v1.GroupMember.since:type_name -> google.protobuf.Timestamp
+	2,  // 11: goeland.v1.GetMyAccessResponse.access:type_name -> goeland.v1.Access
+	1,  // 12: goeland.v1.ListGrantsResponse.grants:type_name -> goeland.v1.AccessGrant
 	0,  // 13: goeland.v1.SetGrantRequest.grantee_kind:type_name -> goeland.v1.GranteeKind
-	28, // 14: goeland.v1.SetGrantRequest.level:type_name -> goeland.v1.Permission
-	2,  // 15: goeland.v1.SetGrantResponse.grant:type_name -> goeland.v1.AccessGrant
+	27, // 14: goeland.v1.SetGrantRequest.level:type_name -> goeland.v1.Permission
+	1,  // 15: goeland.v1.SetGrantResponse.grant:type_name -> goeland.v1.AccessGrant
 	33, // 16: goeland.v1.SetGrantResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	2,  // 17: goeland.v1.RevokeGrantResponse.grant:type_name -> goeland.v1.AccessGrant
+	1,  // 17: goeland.v1.RevokeGrantResponse.grant:type_name -> goeland.v1.AccessGrant
 	33, // 18: goeland.v1.RevokeGrantResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	4,  // 19: goeland.v1.ListGroupsResponse.groups:type_name -> goeland.v1.SecurityGroup
-	4,  // 20: goeland.v1.GetGroupResponse.group:type_name -> goeland.v1.SecurityGroup
-	5,  // 21: goeland.v1.GetGroupResponse.members:type_name -> goeland.v1.GroupMember
-	4,  // 22: goeland.v1.CreateGroupResponse.group:type_name -> goeland.v1.SecurityGroup
+	3,  // 19: goeland.v1.ListGroupsResponse.groups:type_name -> goeland.v1.SecurityGroup
+	3,  // 20: goeland.v1.GetGroupResponse.group:type_name -> goeland.v1.SecurityGroup
+	4,  // 21: goeland.v1.GetGroupResponse.members:type_name -> goeland.v1.GroupMember
+	3,  // 22: goeland.v1.CreateGroupResponse.group:type_name -> goeland.v1.SecurityGroup
 	33, // 23: goeland.v1.CreateGroupResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	4,  // 24: goeland.v1.UpdateGroupResponse.group:type_name -> goeland.v1.SecurityGroup
+	3,  // 24: goeland.v1.UpdateGroupResponse.group:type_name -> goeland.v1.SecurityGroup
 	33, // 25: goeland.v1.UpdateGroupResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	4,  // 26: goeland.v1.ArchiveGroupResponse.group:type_name -> goeland.v1.SecurityGroup
+	3,  // 26: goeland.v1.ArchiveGroupResponse.group:type_name -> goeland.v1.SecurityGroup
 	33, // 27: goeland.v1.ArchiveGroupResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	5,  // 28: goeland.v1.AddGroupMemberResponse.member:type_name -> goeland.v1.GroupMember
+	4,  // 28: goeland.v1.AddGroupMemberResponse.member:type_name -> goeland.v1.GroupMember
 	33, // 29: goeland.v1.AddGroupMemberResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	33, // 30: goeland.v1.RemoveGroupMemberResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	6,  // 31: goeland.v1.AccessService.GetMyAccess:input_type -> goeland.v1.GetMyAccessRequest
-	8,  // 32: goeland.v1.AccessService.ListGrants:input_type -> goeland.v1.ListGrantsRequest
-	10, // 33: goeland.v1.AccessService.SetGrant:input_type -> goeland.v1.SetGrantRequest
-	12, // 34: goeland.v1.AccessService.RevokeGrant:input_type -> goeland.v1.RevokeGrantRequest
-	14, // 35: goeland.v1.AccessService.ListGroups:input_type -> goeland.v1.ListGroupsRequest
-	16, // 36: goeland.v1.AccessService.GetGroup:input_type -> goeland.v1.GetGroupRequest
-	18, // 37: goeland.v1.AccessService.CreateGroup:input_type -> goeland.v1.CreateGroupRequest
-	20, // 38: goeland.v1.AccessService.UpdateGroup:input_type -> goeland.v1.UpdateGroupRequest
-	22, // 39: goeland.v1.AccessService.ArchiveGroup:input_type -> goeland.v1.ArchiveGroupRequest
-	24, // 40: goeland.v1.AccessService.AddGroupMember:input_type -> goeland.v1.AddGroupMemberRequest
-	26, // 41: goeland.v1.AccessService.RemoveGroupMember:input_type -> goeland.v1.RemoveGroupMemberRequest
-	7,  // 42: goeland.v1.AccessService.GetMyAccess:output_type -> goeland.v1.GetMyAccessResponse
-	9,  // 43: goeland.v1.AccessService.ListGrants:output_type -> goeland.v1.ListGrantsResponse
-	11, // 44: goeland.v1.AccessService.SetGrant:output_type -> goeland.v1.SetGrantResponse
-	13, // 45: goeland.v1.AccessService.RevokeGrant:output_type -> goeland.v1.RevokeGrantResponse
-	15, // 46: goeland.v1.AccessService.ListGroups:output_type -> goeland.v1.ListGroupsResponse
-	17, // 47: goeland.v1.AccessService.GetGroup:output_type -> goeland.v1.GetGroupResponse
-	19, // 48: goeland.v1.AccessService.CreateGroup:output_type -> goeland.v1.CreateGroupResponse
-	21, // 49: goeland.v1.AccessService.UpdateGroup:output_type -> goeland.v1.UpdateGroupResponse
-	23, // 50: goeland.v1.AccessService.ArchiveGroup:output_type -> goeland.v1.ArchiveGroupResponse
-	25, // 51: goeland.v1.AccessService.AddGroupMember:output_type -> goeland.v1.AddGroupMemberResponse
-	27, // 52: goeland.v1.AccessService.RemoveGroupMember:output_type -> goeland.v1.RemoveGroupMemberResponse
+	5,  // 31: goeland.v1.AccessService.GetMyAccess:input_type -> goeland.v1.GetMyAccessRequest
+	7,  // 32: goeland.v1.AccessService.ListGrants:input_type -> goeland.v1.ListGrantsRequest
+	9,  // 33: goeland.v1.AccessService.SetGrant:input_type -> goeland.v1.SetGrantRequest
+	11, // 34: goeland.v1.AccessService.RevokeGrant:input_type -> goeland.v1.RevokeGrantRequest
+	13, // 35: goeland.v1.AccessService.ListGroups:input_type -> goeland.v1.ListGroupsRequest
+	15, // 36: goeland.v1.AccessService.GetGroup:input_type -> goeland.v1.GetGroupRequest
+	17, // 37: goeland.v1.AccessService.CreateGroup:input_type -> goeland.v1.CreateGroupRequest
+	19, // 38: goeland.v1.AccessService.UpdateGroup:input_type -> goeland.v1.UpdateGroupRequest
+	21, // 39: goeland.v1.AccessService.ArchiveGroup:input_type -> goeland.v1.ArchiveGroupRequest
+	23, // 40: goeland.v1.AccessService.AddGroupMember:input_type -> goeland.v1.AddGroupMemberRequest
+	25, // 41: goeland.v1.AccessService.RemoveGroupMember:input_type -> goeland.v1.RemoveGroupMemberRequest
+	6,  // 42: goeland.v1.AccessService.GetMyAccess:output_type -> goeland.v1.GetMyAccessResponse
+	8,  // 43: goeland.v1.AccessService.ListGrants:output_type -> goeland.v1.ListGrantsResponse
+	10, // 44: goeland.v1.AccessService.SetGrant:output_type -> goeland.v1.SetGrantResponse
+	12, // 45: goeland.v1.AccessService.RevokeGrant:output_type -> goeland.v1.RevokeGrantResponse
+	14, // 46: goeland.v1.AccessService.ListGroups:output_type -> goeland.v1.ListGroupsResponse
+	16, // 47: goeland.v1.AccessService.GetGroup:output_type -> goeland.v1.GetGroupResponse
+	18, // 48: goeland.v1.AccessService.CreateGroup:output_type -> goeland.v1.CreateGroupResponse
+	20, // 49: goeland.v1.AccessService.UpdateGroup:output_type -> goeland.v1.UpdateGroupResponse
+	22, // 50: goeland.v1.AccessService.ArchiveGroup:output_type -> goeland.v1.ArchiveGroupResponse
+	24, // 51: goeland.v1.AccessService.AddGroupMember:output_type -> goeland.v1.AddGroupMemberResponse
+	26, // 52: goeland.v1.AccessService.RemoveGroupMember:output_type -> goeland.v1.RemoveGroupMemberResponse
 	42, // [42:53] is the sub-list for method output_type
 	31, // [31:42] is the sub-list for method input_type
 	31, // [31:31] is the sub-list for extension type_name
@@ -2048,7 +1976,7 @@ func file_goeland_v1_access_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_access_proto_rawDesc), len(file_goeland_v1_access_proto_rawDesc)),
-			NumEnums:      2,
+			NumEnums:      1,
 			NumMessages:   26,
 			NumExtensions: 0,
 			NumServices:   1,

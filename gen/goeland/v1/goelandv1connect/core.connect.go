@@ -116,6 +116,9 @@ const (
 	// CoreServiceListAuditEventsProcedure is the fully-qualified name of the CoreService's
 	// ListAuditEvents RPC.
 	CoreServiceListAuditEventsProcedure = "/goeland.v1.CoreService/ListAuditEvents"
+	// CoreServiceListAccessAuditEventsProcedure is the fully-qualified name of the CoreService's
+	// ListAccessAuditEvents RPC.
+	CoreServiceListAccessAuditEventsProcedure = "/goeland.v1.CoreService/ListAccessAuditEvents"
 	// CoreServiceCreateRelationshipTypeProcedure is the fully-qualified name of the CoreService's
 	// CreateRelationshipType RPC.
 	CoreServiceCreateRelationshipTypeProcedure = "/goeland.v1.CoreService/CreateRelationshipType"
@@ -188,6 +191,10 @@ type CoreServiceClient interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
+	// Page the sensitive read audit (GLD-033): reads and downloads of
+	// confidential subjects, allowed or refused. Requires goeland:admin for the
+	// whole log, or FULL_CONTROL on subject_id for one subject's log.
+	ListAccessAuditEvents(context.Context, *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error)
 	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
 	// ALREADY_EXISTS for a taken code.
 	CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error)
@@ -318,6 +325,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("ListAuditEvents")),
 			connect.WithClientOptions(opts...),
 		),
+		listAccessAuditEvents: connect.NewClient[v1.ListAccessAuditEventsRequest, v1.ListAccessAuditEventsResponse](
+			httpClient,
+			baseURL+CoreServiceListAccessAuditEventsProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ListAccessAuditEvents")),
+			connect.WithClientOptions(opts...),
+		),
 		createRelationshipType: connect.NewClient[v1.CreateRelationshipTypeRequest, v1.CreateRelationshipTypeResponse](
 			httpClient,
 			baseURL+CoreServiceCreateRelationshipTypeProcedure,
@@ -359,6 +372,7 @@ type coreServiceClient struct {
 	listRelationships      *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
 	listRelationshipTypes  *connect.Client[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse]
 	listAuditEvents        *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
+	listAccessAuditEvents  *connect.Client[v1.ListAccessAuditEventsRequest, v1.ListAccessAuditEventsResponse]
 	createRelationshipType *connect.Client[v1.CreateRelationshipTypeRequest, v1.CreateRelationshipTypeResponse]
 	updateRelationshipType *connect.Client[v1.UpdateRelationshipTypeRequest, v1.UpdateRelationshipTypeResponse]
 	listReferenceChanges   *connect.Client[v1.ListReferenceChangesRequest, v1.ListReferenceChangesResponse]
@@ -454,6 +468,11 @@ func (c *coreServiceClient) ListAuditEvents(ctx context.Context, req *connect.Re
 	return c.listAuditEvents.CallUnary(ctx, req)
 }
 
+// ListAccessAuditEvents calls goeland.v1.CoreService.ListAccessAuditEvents.
+func (c *coreServiceClient) ListAccessAuditEvents(ctx context.Context, req *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error) {
+	return c.listAccessAuditEvents.CallUnary(ctx, req)
+}
+
 // CreateRelationshipType calls goeland.v1.CoreService.CreateRelationshipType.
 func (c *coreServiceClient) CreateRelationshipType(ctx context.Context, req *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error) {
 	return c.createRelationshipType.CallUnary(ctx, req)
@@ -530,6 +549,10 @@ type CoreServiceHandler interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
+	// Page the sensitive read audit (GLD-033): reads and downloads of
+	// confidential subjects, allowed or refused. Requires goeland:admin for the
+	// whole log, or FULL_CONTROL on subject_id for one subject's log.
+	ListAccessAuditEvents(context.Context, *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error)
 	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
 	// ALREADY_EXISTS for a taken code.
 	CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error)
@@ -656,6 +679,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("ListAuditEvents")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceListAccessAuditEventsHandler := connect.NewUnaryHandler(
+		CoreServiceListAccessAuditEventsProcedure,
+		svc.ListAccessAuditEvents,
+		connect.WithSchema(coreServiceMethods.ByName("ListAccessAuditEvents")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceCreateRelationshipTypeHandler := connect.NewUnaryHandler(
 		CoreServiceCreateRelationshipTypeProcedure,
 		svc.CreateRelationshipType,
@@ -712,6 +741,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceListRelationshipTypesHandler.ServeHTTP(w, r)
 		case CoreServiceListAuditEventsProcedure:
 			coreServiceListAuditEventsHandler.ServeHTTP(w, r)
+		case CoreServiceListAccessAuditEventsProcedure:
+			coreServiceListAccessAuditEventsHandler.ServeHTTP(w, r)
 		case CoreServiceCreateRelationshipTypeProcedure:
 			coreServiceCreateRelationshipTypeHandler.ServeHTTP(w, r)
 		case CoreServiceUpdateRelationshipTypeProcedure:
@@ -797,6 +828,10 @@ func (UnimplementedCoreServiceHandler) ListRelationshipTypes(context.Context, *c
 
 func (UnimplementedCoreServiceHandler) ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListAuditEvents is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ListAccessAuditEvents(context.Context, *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListAccessAuditEvents is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) CreateRelationshipType(context.Context, *connect.Request[v1.CreateRelationshipTypeRequest]) (*connect.Response[v1.CreateRelationshipTypeResponse], error) {

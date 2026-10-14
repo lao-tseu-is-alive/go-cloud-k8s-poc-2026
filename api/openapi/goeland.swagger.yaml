@@ -65,6 +65,77 @@ consumes:
 produces:
   - application/json
 paths:
+  /api/access-audit-events:
+    get:
+      summary: |-
+        Page the sensitive read audit (GLD-033): reads and downloads of
+        confidential subjects, allowed or refused. Requires goeland:admin for the
+        whole log, or FULL_CONTROL on subject_id for one subject's log.
+      operationId: ListAccessAuditEvents
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListAccessAuditEventsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: |-
+            subject_id restricts the log to one subject; empty means every subject
+            (administrators only).
+          in: query
+          required: false
+          type: string
+        - name: userId
+          description: user_id restricts the log to one reader (operator id); empty means any.
+          in: query
+          required: false
+          type: string
+        - name: action
+          description: action restricts the log to one action; empty means any.
+          in: query
+          required: false
+          type: string
+        - name: outcome
+          description: outcome restricts the log to GRANTED or DENIED accesses; empty means both.
+          in: query
+          required: false
+          type: string
+        - name: from
+          description: from is the inclusive lower bound on occurred_at; absent means unbounded.
+          in: query
+          required: false
+          type: string
+          format: date-time
+        - name: to
+          description: to is the inclusive upper bound on occurred_at; absent means unbounded.
+          in: query
+          required: false
+          type: string
+          format: date-time
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+        - name: orderBy
+          description: |-
+            order_by sorts the log: "occurred_at" or "occurred_at desc" (the default).
+            An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
+      tags:
+        - CoreService
   /api/actors:
     post:
       summary: |-
@@ -4133,6 +4204,74 @@ definitions:
         $ref: '#/definitions/v1AccessSource'
         description: source is the rule that produced the level.
     description: Access is the caller's effective level on a subject.
+  v1AccessAuditEvent:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the server-assigned row UUID.
+        readOnly: true
+      occurredAt:
+        type: string
+        format: date-time
+        description: occurred_at is when the access happened.
+        readOnly: true
+      userId:
+        type: string
+        description: user_id is the reader (operator id).
+        readOnly: true
+      subjectId:
+        type: string
+        description: subject_id is the subject read.
+        readOnly: true
+      subjectKind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: subject_kind is the subject's kind.
+        readOnly: true
+      action:
+        type: string
+        description: |-
+          action is READ_SENSITIVE (detail read or case timeline), DOWNLOAD (document
+          bytes) or EXPORT (reserved).
+        readOnly: true
+      outcome:
+        type: string
+        description: outcome is GRANTED or DENIED.
+        readOnly: true
+      accessLevel:
+        $ref: '#/definitions/v1Permission'
+        description: access_level is the reader's effective level then (PERMISSION_NONE when refused).
+        readOnly: true
+      accessSource:
+        $ref: '#/definitions/v1AccessSource'
+        description: access_source is the rule that produced access_level.
+        readOnly: true
+      confidentialityLevel:
+        type: integer
+        format: int32
+        description: confidentiality_level is the subject's confidentiality then (2 to 5).
+        readOnly: true
+      documentVersionId:
+        type: string
+        description: document_version_id is the version downloaded; empty unless DOWNLOAD granted.
+        readOnly: true
+      requestId:
+        type: string
+        description: request_id is the HTTP request identifier of the access.
+        readOnly: true
+      businessRef:
+        type: string
+        description: business_ref is the subject's business reference; empty when it has none.
+        readOnly: true
+      subjectLabel:
+        type: string
+        description: |-
+          subject_label is the subject's label, only when the caller may read the
+          subject; empty otherwise (the log never discloses a label).
+        readOnly: true
+    description: |-
+      AccessAuditEvent is one row of the sensitive read audit (GLD-033): a read or
+      a download of a confidential subject, allowed or refused.
   v1AccessGrant:
     type: object
     properties:
@@ -6113,6 +6252,28 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: link_event is the TIMELINE_DOCUMENT_LINKED audit event.
     description: LinkTimelineDocumentResponse returns the entry with the new link.
+  v1ListAccessAuditEventsResponse:
+    type: object
+    properties:
+      events:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1AccessAuditEvent'
+        description: events are the rows of this page, in the requested order.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size is the number of matching rows across all pages.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped reports that total_size is a lower bound: counting stops
+          at 10000 matches, and so does paging (refine the filter to go further).
+    description: ListAccessAuditEventsResponse is one page of the sensitive read audit.
   v1ListAppRolesResponse:
     type: object
     properties:

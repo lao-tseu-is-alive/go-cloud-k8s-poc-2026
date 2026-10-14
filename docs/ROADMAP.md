@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.12.2**.
+Tracked version: **v0.13.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -34,7 +34,7 @@ roles and grants shipped in v0.10.0, filtering (GLD-049) and the follow-ups (GLD
 the legacy data import (GLD-051 to GLD-054, a one-shot local load to show the POC on production
 data), the behaviour at production volume (GLD-053) and the UI remarks on real data — sortable
 lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — shipped in v0.12.0;
-next is the sensitive read audit (GLD-033).
+the sensitive read audit (GLD-033) shipped in v0.13.0.
 
 ## Cross-cutting quality
 
@@ -302,9 +302,14 @@ covered by an integration test.
   the login otherwise, and keeps the user directory for administrators; request bodies with an
   unknown field answer 400 on REST and Connect (`core.StrictJSONOption`,
   `core.NewStrictJSONCodec`).
-- [ ] **GLD-033 — Sensitive read audit**: `access_audit_event` for
+- [x] **GLD-033 — Sensitive read audit**: `access_audit_event` for
   READ_SENSITIVE, DOWNLOAD and EXPORT on sensitive scopes, distinct from the
-  mutation audit.
+  mutation audit. Model decided 2026-10-14 (IMPLEMENTATION_STATUS §3j); done 2026-10-14:
+  migration `0028` (append-only), `core.Authorizer.AuditedRead` on the five `Get*` RPCs and a
+  confidential case's timeline, DOWNLOAD with the version served, refusals recorded, fail
+  closed; `CoreService.ListAccessAuditEvents` for administrators (SPA Administration → Accès
+  sensibles) and FULL_CONTROL holders (Accès panel → Journal des accès sensibles), labels only
+  when readable. Retention stays an open production item.
 
 ## Phase 7 — Provenance, outbox, export (v2 §36-38, §51)
 

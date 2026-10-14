@@ -8,6 +8,27 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.13.0] - 2026-10-14
+
+Sensitive read audit (GLD-033). Migration `0028` (new append-only table); new RPC
+`CoreService.ListAccessAuditEvents`.
+
+### Added
+
+- **GLD-033** — Sensitive read audit: reading a confidential subject (its detail, or a
+  confidential case's timeline) or downloading a confidential document, and every refusal of
+  either, writes an `access_audit_event` row (migration `0028`, append-only) before the answer; the
+  read fails when the row cannot be written. Ordinary reads and list results are not logged.
+  `CoreService.ListAccessAuditEvents` (`GET /api/access-audit-events`, filters by subject, reader,
+  action, outcome and period) serves administrators, and holders of FULL_CONTROL for their
+  subject; a subject's label is shown only to who may read it. SPA: Administration → Accès
+  sensibles, and "Journal des accès sensibles" in each subject's Accès panel.
+
+### Changed
+
+- The `AccessSource` enum moved from `access.proto` to `core.proto` (same package and values, no
+  wire change) so the audit rows reuse it.
+
 ## [0.12.2] - 2026-10-13
 
 Security patch: Go 1.27.2 and the `golang.org/x/*` updates fix the Trivy findings on the v0.12.1

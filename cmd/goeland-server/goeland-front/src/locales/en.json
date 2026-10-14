@@ -74,6 +74,23 @@
     "messages": {
       "granted": "Access saved.",
       "revoked": "Access revoked."
+    },
+    "audit": {
+      "tab": "Sensitive access",
+      "open": "Sensitive access log",
+      "title": "Sensitive access log",
+      "hint": "Reads and downloads of confidential subjects, allowed or refused. Ordinary reads are not logged.",
+      "empty": "No sensitive access logged.",
+      "total": "{total} accesses",
+      "occurredAt": "Date",
+      "reader": "Reader",
+      "subject": "Subject",
+      "action": "Action",
+      "outcome": "Outcome",
+      "level": "Access level",
+      "confidentiality": "confidentiality {level}",
+      "version": "version {id}…",
+      "hiddenLabel": "Label hidden: you have no access to this subject"
     }
   },
   "roles": {
@@ -708,6 +725,15 @@
     "inactive": "Inactive"
   },
   "enums": {
+    "AccessAuditAction": {
+      "READ_SENSITIVE": "Read",
+      "DOWNLOAD": "Download",
+      "EXPORT": "Export"
+    },
+    "AccessAuditOutcome": {
+      "GRANTED": "Allowed",
+      "DENIED": "Refused"
+    },
     "AccessSource": {
       "ACCESS_SOURCE_UNSPECIFIED": "—",
       "ACCESS_SOURCE_PERSONAL": "personal access",

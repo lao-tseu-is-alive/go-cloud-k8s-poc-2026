@@ -84,6 +84,22 @@ enum Permission {
   PERMISSION_FULL_CONTROL = 5;
 }
 
+// AccessSource tells which rule produced an effective level.
+enum AccessSource {
+  // ACCESS_SOURCE_UNSPECIFIED is the zero value.
+  ACCESS_SOURCE_UNSPECIFIED = 0;
+  // ACCESS_SOURCE_PERSONAL is a grant to the user.
+  ACCESS_SOURCE_PERSONAL = 1;
+  // ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
+  ACCESS_SOURCE_GROUP = 2;
+  // ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
+  ACCESS_SOURCE_ORG_UNIT = 3;
+  // ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
+  ACCESS_SOURCE_ROLE = 4;
+  // ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
+  ACCESS_SOURCE_BASELINE = 5;
+}
+
 // =============================================
 // CORE MESSAGES (transversal)
 // =============================================
@@ -886,6 +902,100 @@ message ListAuditEventsResponse {
   int32 total_size = 3;
 }
 
+// AccessAuditEvent is one row of the sensitive read audit (GLD-033): a read or
+// a download of a confidential subject, allowed or refused.
+message AccessAuditEvent {
+  // id is the server-assigned row UUID.
+  string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // occurred_at is when the access happened.
+  google.protobuf.Timestamp occurred_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // user_id is the reader (operator id).
+  string user_id = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // subject_id is the subject read.
+  string subject_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // subject_kind is the subject's kind.
+  SubjectKind subject_kind = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // action is READ_SENSITIVE (detail read or case timeline), DOWNLOAD (document
+  // bytes) or EXPORT (reserved).
+  string action = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // outcome is GRANTED or DENIED.
+  string outcome = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // access_level is the reader's effective level then (PERMISSION_NONE when refused).
+  Permission access_level = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // access_source is the rule that produced access_level.
+  AccessSource access_source = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // confidentiality_level is the subject's confidentiality then (2 to 5).
+  int32 confidentiality_level = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // document_version_id is the version downloaded; empty unless DOWNLOAD granted.
+  string document_version_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // request_id is the HTTP request identifier of the access.
+  string request_id = 12 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // business_ref is the subject's business reference; empty when it has none.
+  string business_ref = 13 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // subject_label is the subject's label, only when the caller may read the
+  // subject; empty otherwise (the log never discloses a label).
+  string subject_label = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// ListAccessAuditEventsRequest filters and pages the sensitive read audit.
+message ListAccessAuditEventsRequest {
+  // subject_id restricts the log to one subject; empty means every subject
+  // (administrators only).
+  string subject_id = 1 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // user_id restricts the log to one reader (operator id); empty means any.
+  string user_id = 2 [(buf.validate.field).string.max_len = 100];
+  // action restricts the log to one action; empty means any.
+  string action = 3 [(buf.validate.field).string = {
+    in: [
+      "",
+      "READ_SENSITIVE",
+      "DOWNLOAD",
+      "EXPORT"
+    ]
+  }];
+  // outcome restricts the log to GRANTED or DENIED accesses; empty means both.
+  string outcome = 4 [(buf.validate.field).string = {
+    in: [
+      "",
+      "GRANTED",
+      "DENIED"
+    ]
+  }];
+  // from is the inclusive lower bound on occurred_at; absent means unbounded.
+  google.protobuf.Timestamp from = 5;
+  // to is the inclusive upper bound on occurred_at; absent means unbounded.
+  google.protobuf.Timestamp to = 6;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 7 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 200
+  ];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 8 [(buf.validate.field).string.max_len = 1024];
+  // order_by sorts the log: "occurred_at" or "occurred_at desc" (the default).
+  // An unknown field is INVALID_ARGUMENT.
+  string order_by = 9 [(buf.validate.field).string = {
+    max_len: 64
+    pattern: "^$|^[a-z_]+( (asc|desc))?$"
+  }];
+}
+
+// ListAccessAuditEventsResponse is one page of the sensitive read audit.
+message ListAccessAuditEventsResponse {
+  // events are the rows of this page, in the requested order.
+  repeated AccessAuditEvent events = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size is the number of matching rows across all pages.
+  int32 total_size = 3;
+  // total_size_capped reports that total_size is a lower bound: counting stops
+  // at 10000 matches, and so does paging (refine the filter to go further).
+  bool total_size_capped = 4;
+}
+
 // =============================================
 // CORE SERVICE
 // =============================================
@@ -1024,6 +1134,13 @@ service CoreService {
   // Requires goeland:read.
   rpc ListAuditEvents(ListAuditEventsRequest) returns (ListAuditEventsResponse) {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/audit"};
+  }
+
+  // Page the sensitive read audit (GLD-033): reads and downloads of
+  // confidential subjects, allowed or refused. Requires goeland:admin for the
+  // whole log, or FULL_CONTROL on subject_id for one subject's log.
+  rpc ListAccessAuditEvents(ListAccessAuditEventsRequest) returns (ListAccessAuditEventsResponse) {
+    option (google.api.http) = {get: "/api/access-audit-events"};
   }
 
   // Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with

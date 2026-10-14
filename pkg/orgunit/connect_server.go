@@ -79,7 +79,7 @@ func (s *ConnectServer) GetOrgUnit(ctx context.Context, req *connect.Request[goe
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	user, _, err := s.authz.AuditedRead(ctx, id)
 	if err != nil {
 		return nil, err
 	}

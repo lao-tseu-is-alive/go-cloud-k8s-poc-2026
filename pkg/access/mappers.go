@@ -5,19 +5,11 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
-var sourceToProto = map[core.AccessSource]goelandv1.AccessSource{
-	core.SourcePersonal: goelandv1.AccessSource_ACCESS_SOURCE_PERSONAL,
-	core.SourceGroup:    goelandv1.AccessSource_ACCESS_SOURCE_GROUP,
-	core.SourceOrgUnit:  goelandv1.AccessSource_ACCESS_SOURCE_ORG_UNIT,
-	core.SourceRole:     goelandv1.AccessSource_ACCESS_SOURCE_ROLE,
-	core.SourceBaseline: goelandv1.AccessSource_ACCESS_SOURCE_BASELINE,
-}
-
 // AccessToProto converts an effective access.
 func AccessToProto(a core.Access) *goelandv1.Access {
 	return &goelandv1.Access{
 		SubjectId: a.SubjectID.String(), Kind: core.SubjectKindToProto(a.Kind), Confidential: a.Confidential,
-		Level: core.LevelToProto(a.Level), Source: sourceToProto[a.Source],
+		Level: core.LevelToProto(a.Level), Source: core.AccessSourceToProto(a.Source),
 	}
 }
 

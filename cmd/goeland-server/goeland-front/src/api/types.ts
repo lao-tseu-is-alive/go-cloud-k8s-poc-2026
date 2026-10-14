@@ -1076,6 +1076,38 @@ export interface Access {
   source?: AccessSource
 }
 
+/** What a sensitive access did (GLD-033). */
+export type AccessAuditAction = 'READ_SENSITIVE' | 'DOWNLOAD' | 'EXPORT'
+
+/** Whether a sensitive access was allowed. */
+export type AccessAuditOutcome = 'GRANTED' | 'DENIED'
+
+/** One row of the sensitive read audit: a read or download of a confidential subject. */
+export interface AccessAuditEvent {
+  id: string
+  occurredAt?: string
+  userId?: string
+  subjectId: string
+  subjectKind?: SubjectKind
+  action?: AccessAuditAction
+  outcome?: AccessAuditOutcome
+  accessLevel?: Permission
+  accessSource?: AccessSource
+  confidentialityLevel?: number
+  documentVersionId?: string
+  requestId?: string
+  businessRef?: string
+  /** Empty when the caller may not read the subject: the log never discloses a label. */
+  subjectLabel?: string
+}
+
+export interface ListAccessAuditEventsResponse {
+  events?: AccessAuditEvent[]
+  nextPageToken?: string
+  totalSize?: number
+  totalSizeCapped?: boolean
+}
+
 /** One grant on a subject; a revoked one is kept as history. */
 export interface AccessGrant {
   id: string

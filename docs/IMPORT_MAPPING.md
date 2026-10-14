@@ -89,7 +89,8 @@ legacy id: the imported grants then apply exactly as in production.
 
 Not imported: the type-specific tables of 172 case types and of the things, the bytes of the
 documents and their earlier versions, tasks and circulations (none in the legacy form), access
-logs (GLD-033).
+logs (the legacy `AffaireLogAcces` / `DocumentLogAcces`, ~37M rows, stay in the legacy archive;
+the POC's sensitive read audit, GLD-033, starts empty).
 
 ## First run (2026-10-01, replica of 2026-05-18)
 

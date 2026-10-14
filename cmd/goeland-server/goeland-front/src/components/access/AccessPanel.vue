@@ -3,6 +3,7 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listGrants, revokeGrant, setGrant } from '@/api/accessClient'
+  import AccessAuditPanel from '@/components/access/AccessAuditPanel.vue'
   import { GRANTEE_ICONS, LEVEL_COLORS, LEVELS } from '@/components/access/grantees'
   import GroupPicker from '@/components/access/GroupPicker.vue'
   import SubjectPicker from '@/components/core/SubjectPicker.vue'
@@ -11,6 +12,7 @@
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { LEVEL_RANK } from '@/composables/useMyAccess'
+  import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
   import { required } from '@/utils/validation'
@@ -18,7 +20,8 @@
   // The grants of a subject (GLD-048): who may read, contribute, manage or
   // fully control it, and the caller's own level and its source. A holder of
   // FULL_CONTROL gives, changes and revokes grants (a reason each, audited); the
-  // last FULL_CONTROL is kept by the server.
+  // last FULL_CONTROL is kept by the server. The same holders (and the
+  // administrators) open the subject's sensitive read audit (GLD-033).
   const props = defineProps<{ subjectId: string, access?: Access }>()
   const emit = defineEmits<{ changed: [] }>()
   const { t } = useI18n()
@@ -38,7 +41,11 @@
   const revoking = ref<AccessGrant | null>(null)
   const busy = ref(false)
 
+  const auth = useAuthStore()
+  const showAudit = ref(false)
+
   const canGrant = computed(() => LEVEL_RANK[props.access?.level ?? 'PERMISSION_NONE'] >= LEVEL_RANK.PERMISSION_FULL_CONTROL)
+  const canAudit = computed(() => canGrant.value || auth.isAdmin)
 
   async function load () {
     loading.value = true
@@ -169,6 +176,28 @@
         </template>
       </v-list-item>
     </v-list>
+
+    <v-btn
+      v-if="canAudit"
+      class="mt-1"
+      prepend-icon="mdi-eye-lock-outline"
+      size="small"
+      variant="text"
+      @click="showAudit = true"
+    >
+      {{ t('access.audit.open') }}
+    </v-btn>
+
+    <v-dialog v-model="showAudit" max-width="900" scrollable>
+      <v-card :title="t('access.audit.title')">
+        <v-card-text><AccessAuditPanel v-if="showAudit" :subject-id="subjectId" /></v-card-text>
+
+        <v-card-actions>
+          <v-spacer />
+          <v-btn variant="text" @click="showAudit = false">{{ t('actions.common.close') }}</v-btn>
+        </v-card-actions>
+      </v-card>
+    </v-dialog>
 
     <v-dialog v-model="editing" max-width="520">
       <v-card :title="t('access.actions.grant')">

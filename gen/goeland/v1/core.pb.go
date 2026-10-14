@@ -197,6 +197,71 @@ func (Permission) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_core_proto_rawDescGZIP(), []int{1}
 }
 
+// AccessSource tells which rule produced an effective level.
+type AccessSource int32
+
+const (
+	// ACCESS_SOURCE_UNSPECIFIED is the zero value.
+	AccessSource_ACCESS_SOURCE_UNSPECIFIED AccessSource = 0
+	// ACCESS_SOURCE_PERSONAL is a grant to the user.
+	AccessSource_ACCESS_SOURCE_PERSONAL AccessSource = 1
+	// ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
+	AccessSource_ACCESS_SOURCE_GROUP AccessSource = 2
+	// ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
+	AccessSource_ACCESS_SOURCE_ORG_UNIT AccessSource = 3
+	// ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
+	AccessSource_ACCESS_SOURCE_ROLE AccessSource = 4
+	// ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
+	AccessSource_ACCESS_SOURCE_BASELINE AccessSource = 5
+)
+
+// Enum value maps for AccessSource.
+var (
+	AccessSource_name = map[int32]string{
+		0: "ACCESS_SOURCE_UNSPECIFIED",
+		1: "ACCESS_SOURCE_PERSONAL",
+		2: "ACCESS_SOURCE_GROUP",
+		3: "ACCESS_SOURCE_ORG_UNIT",
+		4: "ACCESS_SOURCE_ROLE",
+		5: "ACCESS_SOURCE_BASELINE",
+	}
+	AccessSource_value = map[string]int32{
+		"ACCESS_SOURCE_UNSPECIFIED": 0,
+		"ACCESS_SOURCE_PERSONAL":    1,
+		"ACCESS_SOURCE_GROUP":       2,
+		"ACCESS_SOURCE_ORG_UNIT":    3,
+		"ACCESS_SOURCE_ROLE":        4,
+		"ACCESS_SOURCE_BASELINE":    5,
+	}
+)
+
+func (x AccessSource) Enum() *AccessSource {
+	p := new(AccessSource)
+	*p = x
+	return p
+}
+
+func (x AccessSource) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (AccessSource) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_core_proto_enumTypes[2].Descriptor()
+}
+
+func (AccessSource) Type() protoreflect.EnumType {
+	return &file_goeland_v1_core_proto_enumTypes[2]
+}
+
+func (x AccessSource) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use AccessSource.Descriptor instead.
+func (AccessSource) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{2}
+}
+
 // SubjectRef is the canonical identity of any business subject.
 // Every Case, Document, Thing and Actor owns exactly one SubjectRef entry.
 type SubjectRef struct {
@@ -3995,6 +4060,366 @@ func (x *ListAuditEventsResponse) GetTotalSize() int32 {
 	return 0
 }
 
+// AccessAuditEvent is one row of the sensitive read audit (GLD-033): a read or
+// a download of a confidential subject, allowed or refused.
+type AccessAuditEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the server-assigned row UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// occurred_at is when the access happened.
+	OccurredAt *timestamppb.Timestamp `protobuf:"bytes,2,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	// user_id is the reader (operator id).
+	UserId string `protobuf:"bytes,3,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// subject_id is the subject read.
+	SubjectId string `protobuf:"bytes,4,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// subject_kind is the subject's kind.
+	SubjectKind SubjectKind `protobuf:"varint,5,opt,name=subject_kind,json=subjectKind,proto3,enum=goeland.v1.SubjectKind" json:"subject_kind,omitempty"`
+	// action is READ_SENSITIVE (detail read or case timeline), DOWNLOAD (document
+	// bytes) or EXPORT (reserved).
+	Action string `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
+	// outcome is GRANTED or DENIED.
+	Outcome string `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
+	// access_level is the reader's effective level then (PERMISSION_NONE when refused).
+	AccessLevel Permission `protobuf:"varint,8,opt,name=access_level,json=accessLevel,proto3,enum=goeland.v1.Permission" json:"access_level,omitempty"`
+	// access_source is the rule that produced access_level.
+	AccessSource AccessSource `protobuf:"varint,9,opt,name=access_source,json=accessSource,proto3,enum=goeland.v1.AccessSource" json:"access_source,omitempty"`
+	// confidentiality_level is the subject's confidentiality then (2 to 5).
+	ConfidentialityLevel int32 `protobuf:"varint,10,opt,name=confidentiality_level,json=confidentialityLevel,proto3" json:"confidentiality_level,omitempty"`
+	// document_version_id is the version downloaded; empty unless DOWNLOAD granted.
+	DocumentVersionId string `protobuf:"bytes,11,opt,name=document_version_id,json=documentVersionId,proto3" json:"document_version_id,omitempty"`
+	// request_id is the HTTP request identifier of the access.
+	RequestId string `protobuf:"bytes,12,opt,name=request_id,json=requestId,proto3" json:"request_id,omitempty"`
+	// business_ref is the subject's business reference; empty when it has none.
+	BusinessRef string `protobuf:"bytes,13,opt,name=business_ref,json=businessRef,proto3" json:"business_ref,omitempty"`
+	// subject_label is the subject's label, only when the caller may read the
+	// subject; empty otherwise (the log never discloses a label).
+	SubjectLabel  string `protobuf:"bytes,14,opt,name=subject_label,json=subjectLabel,proto3" json:"subject_label,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *AccessAuditEvent) Reset() {
+	*x = AccessAuditEvent{}
+	mi := &file_goeland_v1_core_proto_msgTypes[52]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *AccessAuditEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*AccessAuditEvent) ProtoMessage() {}
+
+func (x *AccessAuditEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[52]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use AccessAuditEvent.ProtoReflect.Descriptor instead.
+func (*AccessAuditEvent) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{52}
+}
+
+func (x *AccessAuditEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *AccessAuditEvent) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetSubjectKind() SubjectKind {
+	if x != nil {
+		return x.SubjectKind
+	}
+	return SubjectKind_SUBJECT_KIND_UNSPECIFIED
+}
+
+func (x *AccessAuditEvent) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetAccessLevel() Permission {
+	if x != nil {
+		return x.AccessLevel
+	}
+	return Permission_PERMISSION_UNSPECIFIED
+}
+
+func (x *AccessAuditEvent) GetAccessSource() AccessSource {
+	if x != nil {
+		return x.AccessSource
+	}
+	return AccessSource_ACCESS_SOURCE_UNSPECIFIED
+}
+
+func (x *AccessAuditEvent) GetConfidentialityLevel() int32 {
+	if x != nil {
+		return x.ConfidentialityLevel
+	}
+	return 0
+}
+
+func (x *AccessAuditEvent) GetDocumentVersionId() string {
+	if x != nil {
+		return x.DocumentVersionId
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetRequestId() string {
+	if x != nil {
+		return x.RequestId
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetBusinessRef() string {
+	if x != nil {
+		return x.BusinessRef
+	}
+	return ""
+}
+
+func (x *AccessAuditEvent) GetSubjectLabel() string {
+	if x != nil {
+		return x.SubjectLabel
+	}
+	return ""
+}
+
+// ListAccessAuditEventsRequest filters and pages the sensitive read audit.
+type ListAccessAuditEventsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// subject_id restricts the log to one subject; empty means every subject
+	// (administrators only).
+	SubjectId string `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// user_id restricts the log to one reader (operator id); empty means any.
+	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
+	// action restricts the log to one action; empty means any.
+	Action string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
+	// outcome restricts the log to GRANTED or DENIED accesses; empty means both.
+	Outcome string `protobuf:"bytes,4,opt,name=outcome,proto3" json:"outcome,omitempty"`
+	// from is the inclusive lower bound on occurred_at; absent means unbounded.
+	From *timestamppb.Timestamp `protobuf:"bytes,5,opt,name=from,proto3" json:"from,omitempty"`
+	// to is the inclusive upper bound on occurred_at; absent means unbounded.
+	To *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=to,proto3" json:"to,omitempty"`
+	// page_size is the page length; 0 means the default (25), at most 200.
+	PageSize int32 `protobuf:"varint,7,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token is the next_page_token of the previous page; empty for the first page.
+	PageToken string `protobuf:"bytes,8,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	// order_by sorts the log: "occurred_at" or "occurred_at desc" (the default).
+	// An unknown field is INVALID_ARGUMENT.
+	OrderBy       string `protobuf:"bytes,9,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListAccessAuditEventsRequest) Reset() {
+	*x = ListAccessAuditEventsRequest{}
+	mi := &file_goeland_v1_core_proto_msgTypes[53]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessAuditEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessAuditEventsRequest) ProtoMessage() {}
+
+func (x *ListAccessAuditEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[53]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessAuditEventsRequest.ProtoReflect.Descriptor instead.
+func (*ListAccessAuditEventsRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{53}
+}
+
+func (x *ListAccessAuditEventsRequest) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsRequest) GetUserId() string {
+	if x != nil {
+		return x.UserId
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsRequest) GetAction() string {
+	if x != nil {
+		return x.Action
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsRequest) GetOutcome() string {
+	if x != nil {
+		return x.Outcome
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsRequest) GetFrom() *timestamppb.Timestamp {
+	if x != nil {
+		return x.From
+	}
+	return nil
+}
+
+func (x *ListAccessAuditEventsRequest) GetTo() *timestamppb.Timestamp {
+	if x != nil {
+		return x.To
+	}
+	return nil
+}
+
+func (x *ListAccessAuditEventsRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListAccessAuditEventsRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsRequest) GetOrderBy() string {
+	if x != nil {
+		return x.OrderBy
+	}
+	return ""
+}
+
+// ListAccessAuditEventsResponse is one page of the sensitive read audit.
+type ListAccessAuditEventsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// events are the rows of this page, in the requested order.
+	Events []*AccessAuditEvent `protobuf:"bytes,1,rep,name=events,proto3" json:"events,omitempty"`
+	// next_page_token fetches the next page; empty on the last page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// total_size is the number of matching rows across all pages.
+	TotalSize int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	// total_size_capped reports that total_size is a lower bound: counting stops
+	// at 10000 matches, and so does paging (refine the filter to go further).
+	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *ListAccessAuditEventsResponse) Reset() {
+	*x = ListAccessAuditEventsResponse{}
+	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListAccessAuditEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListAccessAuditEventsResponse) ProtoMessage() {}
+
+func (x *ListAccessAuditEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListAccessAuditEventsResponse.ProtoReflect.Descriptor instead.
+func (*ListAccessAuditEventsResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *ListAccessAuditEventsResponse) GetEvents() []*AccessAuditEvent {
+	if x != nil {
+		return x.Events
+	}
+	return nil
+}
+
+func (x *ListAccessAuditEventsResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListAccessAuditEventsResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+func (x *ListAccessAuditEventsResponse) GetTotalSizeCapped() bool {
+	if x != nil {
+		return x.TotalSizeCapped
+	}
+	return false
+}
+
 var File_goeland_v1_core_proto protoreflect.FileDescriptor
 
 const file_goeland_v1_core_proto_rawDesc = "" +
@@ -4338,7 +4763,45 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x16.goeland.v1.AuditEventR\x06events\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize*\xd7\x01\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x91\x05\n" +
+	"\x10AccessAuditEvent\x12\x13\n" +
+	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12@\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"occurredAt\x12\x1c\n" +
+	"\auser_id\x18\x03 \x01(\tB\x03\xe0A\x03R\x06userId\x12\"\n" +
+	"\n" +
+	"subject_id\x18\x04 \x01(\tB\x03\xe0A\x03R\tsubjectId\x12?\n" +
+	"\fsubject_kind\x18\x05 \x01(\x0e2\x17.goeland.v1.SubjectKindB\x03\xe0A\x03R\vsubjectKind\x12\x1b\n" +
+	"\x06action\x18\x06 \x01(\tB\x03\xe0A\x03R\x06action\x12\x1d\n" +
+	"\aoutcome\x18\a \x01(\tB\x03\xe0A\x03R\aoutcome\x12>\n" +
+	"\faccess_level\x18\b \x01(\x0e2\x16.goeland.v1.PermissionB\x03\xe0A\x03R\vaccessLevel\x12B\n" +
+	"\raccess_source\x18\t \x01(\x0e2\x18.goeland.v1.AccessSourceB\x03\xe0A\x03R\faccessSource\x128\n" +
+	"\x15confidentiality_level\x18\n" +
+	" \x01(\x05B\x03\xe0A\x03R\x14confidentialityLevel\x123\n" +
+	"\x13document_version_id\x18\v \x01(\tB\x03\xe0A\x03R\x11documentVersionId\x12\"\n" +
+	"\n" +
+	"request_id\x18\f \x01(\tB\x03\xe0A\x03R\trequestId\x12&\n" +
+	"\fbusiness_ref\x18\r \x01(\tB\x03\xe0A\x03R\vbusinessRef\x12(\n" +
+	"\rsubject_label\x18\x0e \x01(\tB\x03\xe0A\x03R\fsubjectLabel\"\xd1\x03\n" +
+	"\x1cListAccessAuditEventsRequest\x12*\n" +
+	"\n" +
+	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12 \n" +
+	"\auser_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06userId\x12A\n" +
+	"\x06action\x18\x03 \x01(\tB)\xbaH&r$R\x00R\x0eREAD_SENSITIVER\bDOWNLOADR\x06EXPORTR\x06action\x122\n" +
+	"\aoutcome\x18\x04 \x01(\tB\x18\xbaH\x15r\x13R\x00R\aGRANTEDR\x06DENIEDR\aoutcome\x12.\n" +
+	"\x04from\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x04from\x12*\n" +
+	"\x02to\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x02to\x12'\n" +
+	"\tpage_size\x18\a \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
+	"\n" +
+	"page_token\x18\b \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
+	"\border_by\x18\t \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xc8\x01\n" +
+	"\x1dListAccessAuditEventsResponse\x124\n" +
+	"\x06events\x18\x01 \x03(\v2\x1c.goeland.v1.AccessAuditEventR\x06events\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped*\xd7\x01\n" +
 	"\vSubjectKind\x12\x1c\n" +
 	"\x18SUBJECT_KIND_UNSPECIFIED\x10\x00\x12\x15\n" +
 	"\x11SUBJECT_KIND_CASE\x10\x01\x12\x19\n" +
@@ -4355,7 +4818,14 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x0fPERMISSION_READ\x10\x02\x12\x19\n" +
 	"\x15PERMISSION_CONTRIBUTE\x10\x03\x12\x15\n" +
 	"\x11PERMISSION_MANAGE\x10\x04\x12\x1b\n" +
-	"\x17PERMISSION_FULL_CONTROL\x10\x052\xc4\x15\n" +
+	"\x17PERMISSION_FULL_CONTROL\x10\x05*\xb2\x01\n" +
+	"\fAccessSource\x12\x1d\n" +
+	"\x19ACCESS_SOURCE_UNSPECIFIED\x10\x00\x12\x1a\n" +
+	"\x16ACCESS_SOURCE_PERSONAL\x10\x01\x12\x17\n" +
+	"\x13ACCESS_SOURCE_GROUP\x10\x02\x12\x1a\n" +
+	"\x16ACCESS_SOURCE_ORG_UNIT\x10\x03\x12\x16\n" +
+	"\x12ACCESS_SOURCE_ROLE\x10\x04\x12\x1a\n" +
+	"\x16ACCESS_SOURCE_BASELINE\x10\x052\xd5\x16\n" +
 	"\vCoreService\x12w\n" +
 	"\x10CreateSubjectRef\x12#.goeland.v1.CreateSubjectRefRequest\x1a$.goeland.v1.CreateSubjectRefResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/subjects\x12p\n" +
 	"\rGetSubjectRef\x12 .goeland.v1.GetSubjectRefRequest\x1a!.goeland.v1.GetSubjectRefResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/subjects/{id}\x12\x94\x01\n" +
@@ -4374,7 +4844,8 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x0fEndRelationship\x12\".goeland.v1.EndRelationshipRequest\x1a#.goeland.v1.EndRelationshipResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/relationships/{relationship_id}/end\x12\x92\x01\n" +
 	"\x11ListRelationships\x12$.goeland.v1.ListRelationshipsRequest\x1a%.goeland.v1.ListRelationshipsResponse\"0\x82\xd3\xe4\x93\x02*\x12(/api/subjects/{subject_id}/relationships\x12\x8d\x01\n" +
 	"\x15ListRelationshipTypes\x12(.goeland.v1.ListRelationshipTypesRequest\x1a).goeland.v1.ListRelationshipTypesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/relationship-types\x12\x84\x01\n" +
-	"\x0fListAuditEvents\x12\".goeland.v1.ListAuditEventsRequest\x1a#.goeland.v1.ListAuditEventsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/subjects/{subject_id}/audit\x12\x93\x01\n" +
+	"\x0fListAuditEvents\x12\".goeland.v1.ListAuditEventsRequest\x1a#.goeland.v1.ListAuditEventsResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/subjects/{subject_id}/audit\x12\x8e\x01\n" +
+	"\x15ListAccessAuditEvents\x12(.goeland.v1.ListAccessAuditEventsRequest\x1a).goeland.v1.ListAccessAuditEventsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/access-audit-events\x12\x93\x01\n" +
 	"\x16CreateRelationshipType\x12).goeland.v1.CreateRelationshipTypeRequest\x1a*.goeland.v1.CreateRelationshipTypeResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/relationship-types\x12\x9a\x01\n" +
 	"\x16UpdateRelationshipType\x12).goeland.v1.UpdateRelationshipTypeRequest\x1a*.goeland.v1.UpdateRelationshipTypeResponse\")\x82\xd3\xe4\x93\x02#:\x01*2\x1e/api/relationship-types/{code}\x12\x89\x01\n" +
 	"\x14ListReferenceChanges\x12'.goeland.v1.ListReferenceChangesRequest\x1a(.goeland.v1.ListReferenceChangesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/reference-changesB\xb1\x01\n" +
@@ -4394,187 +4865,200 @@ func file_goeland_v1_core_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_core_proto_rawDescData
 }
 
-var file_goeland_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
-var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 53)
+var file_goeland_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 3)
+var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 56)
 var file_goeland_v1_core_proto_goTypes = []any{
 	(SubjectKind)(0),                       // 0: goeland.v1.SubjectKind
 	(Permission)(0),                        // 1: goeland.v1.Permission
-	(*SubjectRef)(nil),                     // 2: goeland.v1.SubjectRef
-	(*BusinessRefRequest)(nil),             // 3: goeland.v1.BusinessRefRequest
-	(*RecordMetadata)(nil),                 // 4: goeland.v1.RecordMetadata
-	(*AuditEvent)(nil),                     // 5: goeland.v1.AuditEvent
-	(*RelationshipType)(nil),               // 6: goeland.v1.RelationshipType
-	(*SubjectRelationship)(nil),            // 7: goeland.v1.SubjectRelationship
-	(*CreateSubjectRefRequest)(nil),        // 8: goeland.v1.CreateSubjectRefRequest
-	(*CreateSubjectRefResponse)(nil),       // 9: goeland.v1.CreateSubjectRefResponse
-	(*GetSubjectRefRequest)(nil),           // 10: goeland.v1.GetSubjectRefRequest
-	(*GetSubjectRefResponse)(nil),          // 11: goeland.v1.GetSubjectRefResponse
-	(*AssignBusinessRefRequest)(nil),       // 12: goeland.v1.AssignBusinessRefRequest
-	(*AssignBusinessRefResponse)(nil),      // 13: goeland.v1.AssignBusinessRefResponse
-	(*LookupSubjectsRequest)(nil),          // 14: goeland.v1.LookupSubjectsRequest
-	(*LookupSubjectsResponse)(nil),         // 15: goeland.v1.LookupSubjectsResponse
-	(*User)(nil),                           // 16: goeland.v1.User
-	(*GetCurrentUserRequest)(nil),          // 17: goeland.v1.GetCurrentUserRequest
-	(*GetCurrentUserResponse)(nil),         // 18: goeland.v1.GetCurrentUserResponse
-	(*BatchGetUsersRequest)(nil),           // 19: goeland.v1.BatchGetUsersRequest
-	(*BatchGetUsersResponse)(nil),          // 20: goeland.v1.BatchGetUsersResponse
-	(*SearchUsersRequest)(nil),             // 21: goeland.v1.SearchUsersRequest
-	(*SearchUsersResponse)(nil),            // 22: goeland.v1.SearchUsersResponse
-	(*AppRole)(nil),                        // 23: goeland.v1.AppRole
-	(*UserRole)(nil),                       // 24: goeland.v1.UserRole
-	(*ListAppRolesRequest)(nil),            // 25: goeland.v1.ListAppRolesRequest
-	(*ListAppRolesResponse)(nil),           // 26: goeland.v1.ListAppRolesResponse
-	(*ListRoleHoldersRequest)(nil),         // 27: goeland.v1.ListRoleHoldersRequest
-	(*ListRoleHoldersResponse)(nil),        // 28: goeland.v1.ListRoleHoldersResponse
-	(*ListUserRolesRequest)(nil),           // 29: goeland.v1.ListUserRolesRequest
-	(*ListUserRolesResponse)(nil),          // 30: goeland.v1.ListUserRolesResponse
-	(*GrantUserRoleRequest)(nil),           // 31: goeland.v1.GrantUserRoleRequest
-	(*GrantUserRoleResponse)(nil),          // 32: goeland.v1.GrantUserRoleResponse
-	(*RevokeUserRoleRequest)(nil),          // 33: goeland.v1.RevokeUserRoleRequest
-	(*RevokeUserRoleResponse)(nil),         // 34: goeland.v1.RevokeUserRoleResponse
-	(*LinkSubjectsRequest)(nil),            // 35: goeland.v1.LinkSubjectsRequest
-	(*LinkSubjectsResponse)(nil),           // 36: goeland.v1.LinkSubjectsResponse
-	(*UnlinkSubjectsRequest)(nil),          // 37: goeland.v1.UnlinkSubjectsRequest
-	(*UnlinkSubjectsResponse)(nil),         // 38: goeland.v1.UnlinkSubjectsResponse
-	(*EndRelationshipRequest)(nil),         // 39: goeland.v1.EndRelationshipRequest
-	(*EndRelationshipResponse)(nil),        // 40: goeland.v1.EndRelationshipResponse
-	(*ListRelationshipsRequest)(nil),       // 41: goeland.v1.ListRelationshipsRequest
-	(*ListRelationshipsResponse)(nil),      // 42: goeland.v1.ListRelationshipsResponse
-	(*ListRelationshipTypesRequest)(nil),   // 43: goeland.v1.ListRelationshipTypesRequest
-	(*ListRelationshipTypesResponse)(nil),  // 44: goeland.v1.ListRelationshipTypesResponse
-	(*ReferenceChange)(nil),                // 45: goeland.v1.ReferenceChange
-	(*ListReferenceChangesRequest)(nil),    // 46: goeland.v1.ListReferenceChangesRequest
-	(*ListReferenceChangesResponse)(nil),   // 47: goeland.v1.ListReferenceChangesResponse
-	(*CreateRelationshipTypeRequest)(nil),  // 48: goeland.v1.CreateRelationshipTypeRequest
-	(*CreateRelationshipTypeResponse)(nil), // 49: goeland.v1.CreateRelationshipTypeResponse
-	(*UpdateRelationshipTypeRequest)(nil),  // 50: goeland.v1.UpdateRelationshipTypeRequest
-	(*UpdateRelationshipTypeResponse)(nil), // 51: goeland.v1.UpdateRelationshipTypeResponse
-	(*ListAuditEventsRequest)(nil),         // 52: goeland.v1.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),        // 53: goeland.v1.ListAuditEventsResponse
-	nil,                                    // 54: goeland.v1.RecordMetadata.MetadataEntry
-	(*timestamppb.Timestamp)(nil),          // 55: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                // 56: google.protobuf.Struct
+	(AccessSource)(0),                      // 2: goeland.v1.AccessSource
+	(*SubjectRef)(nil),                     // 3: goeland.v1.SubjectRef
+	(*BusinessRefRequest)(nil),             // 4: goeland.v1.BusinessRefRequest
+	(*RecordMetadata)(nil),                 // 5: goeland.v1.RecordMetadata
+	(*AuditEvent)(nil),                     // 6: goeland.v1.AuditEvent
+	(*RelationshipType)(nil),               // 7: goeland.v1.RelationshipType
+	(*SubjectRelationship)(nil),            // 8: goeland.v1.SubjectRelationship
+	(*CreateSubjectRefRequest)(nil),        // 9: goeland.v1.CreateSubjectRefRequest
+	(*CreateSubjectRefResponse)(nil),       // 10: goeland.v1.CreateSubjectRefResponse
+	(*GetSubjectRefRequest)(nil),           // 11: goeland.v1.GetSubjectRefRequest
+	(*GetSubjectRefResponse)(nil),          // 12: goeland.v1.GetSubjectRefResponse
+	(*AssignBusinessRefRequest)(nil),       // 13: goeland.v1.AssignBusinessRefRequest
+	(*AssignBusinessRefResponse)(nil),      // 14: goeland.v1.AssignBusinessRefResponse
+	(*LookupSubjectsRequest)(nil),          // 15: goeland.v1.LookupSubjectsRequest
+	(*LookupSubjectsResponse)(nil),         // 16: goeland.v1.LookupSubjectsResponse
+	(*User)(nil),                           // 17: goeland.v1.User
+	(*GetCurrentUserRequest)(nil),          // 18: goeland.v1.GetCurrentUserRequest
+	(*GetCurrentUserResponse)(nil),         // 19: goeland.v1.GetCurrentUserResponse
+	(*BatchGetUsersRequest)(nil),           // 20: goeland.v1.BatchGetUsersRequest
+	(*BatchGetUsersResponse)(nil),          // 21: goeland.v1.BatchGetUsersResponse
+	(*SearchUsersRequest)(nil),             // 22: goeland.v1.SearchUsersRequest
+	(*SearchUsersResponse)(nil),            // 23: goeland.v1.SearchUsersResponse
+	(*AppRole)(nil),                        // 24: goeland.v1.AppRole
+	(*UserRole)(nil),                       // 25: goeland.v1.UserRole
+	(*ListAppRolesRequest)(nil),            // 26: goeland.v1.ListAppRolesRequest
+	(*ListAppRolesResponse)(nil),           // 27: goeland.v1.ListAppRolesResponse
+	(*ListRoleHoldersRequest)(nil),         // 28: goeland.v1.ListRoleHoldersRequest
+	(*ListRoleHoldersResponse)(nil),        // 29: goeland.v1.ListRoleHoldersResponse
+	(*ListUserRolesRequest)(nil),           // 30: goeland.v1.ListUserRolesRequest
+	(*ListUserRolesResponse)(nil),          // 31: goeland.v1.ListUserRolesResponse
+	(*GrantUserRoleRequest)(nil),           // 32: goeland.v1.GrantUserRoleRequest
+	(*GrantUserRoleResponse)(nil),          // 33: goeland.v1.GrantUserRoleResponse
+	(*RevokeUserRoleRequest)(nil),          // 34: goeland.v1.RevokeUserRoleRequest
+	(*RevokeUserRoleResponse)(nil),         // 35: goeland.v1.RevokeUserRoleResponse
+	(*LinkSubjectsRequest)(nil),            // 36: goeland.v1.LinkSubjectsRequest
+	(*LinkSubjectsResponse)(nil),           // 37: goeland.v1.LinkSubjectsResponse
+	(*UnlinkSubjectsRequest)(nil),          // 38: goeland.v1.UnlinkSubjectsRequest
+	(*UnlinkSubjectsResponse)(nil),         // 39: goeland.v1.UnlinkSubjectsResponse
+	(*EndRelationshipRequest)(nil),         // 40: goeland.v1.EndRelationshipRequest
+	(*EndRelationshipResponse)(nil),        // 41: goeland.v1.EndRelationshipResponse
+	(*ListRelationshipsRequest)(nil),       // 42: goeland.v1.ListRelationshipsRequest
+	(*ListRelationshipsResponse)(nil),      // 43: goeland.v1.ListRelationshipsResponse
+	(*ListRelationshipTypesRequest)(nil),   // 44: goeland.v1.ListRelationshipTypesRequest
+	(*ListRelationshipTypesResponse)(nil),  // 45: goeland.v1.ListRelationshipTypesResponse
+	(*ReferenceChange)(nil),                // 46: goeland.v1.ReferenceChange
+	(*ListReferenceChangesRequest)(nil),    // 47: goeland.v1.ListReferenceChangesRequest
+	(*ListReferenceChangesResponse)(nil),   // 48: goeland.v1.ListReferenceChangesResponse
+	(*CreateRelationshipTypeRequest)(nil),  // 49: goeland.v1.CreateRelationshipTypeRequest
+	(*CreateRelationshipTypeResponse)(nil), // 50: goeland.v1.CreateRelationshipTypeResponse
+	(*UpdateRelationshipTypeRequest)(nil),  // 51: goeland.v1.UpdateRelationshipTypeRequest
+	(*UpdateRelationshipTypeResponse)(nil), // 52: goeland.v1.UpdateRelationshipTypeResponse
+	(*ListAuditEventsRequest)(nil),         // 53: goeland.v1.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),        // 54: goeland.v1.ListAuditEventsResponse
+	(*AccessAuditEvent)(nil),               // 55: goeland.v1.AccessAuditEvent
+	(*ListAccessAuditEventsRequest)(nil),   // 56: goeland.v1.ListAccessAuditEventsRequest
+	(*ListAccessAuditEventsResponse)(nil),  // 57: goeland.v1.ListAccessAuditEventsResponse
+	nil,                                    // 58: goeland.v1.RecordMetadata.MetadataEntry
+	(*timestamppb.Timestamp)(nil),          // 59: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                // 60: google.protobuf.Struct
 }
 var file_goeland_v1_core_proto_depIdxs = []int32{
-	0,  // 0: goeland.v1.SubjectRef.kind:type_name -> goeland.v1.SubjectKind
-	55, // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
-	55, // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
-	55, // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
-	55, // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
-	55, // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
-	54, // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
-	55, // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	56, // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
-	56, // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
-	56, // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
-	0,  // 11: goeland.v1.RelationshipType.source_kind:type_name -> goeland.v1.SubjectKind
-	0,  // 12: goeland.v1.RelationshipType.target_kind:type_name -> goeland.v1.SubjectKind
-	2,  // 13: goeland.v1.SubjectRelationship.source:type_name -> goeland.v1.SubjectRef
-	2,  // 14: goeland.v1.SubjectRelationship.target:type_name -> goeland.v1.SubjectRef
-	6,  // 15: goeland.v1.SubjectRelationship.relationship_type:type_name -> goeland.v1.RelationshipType
-	55, // 16: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
-	55, // 17: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
-	55, // 18: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
-	55, // 19: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
-	0,  // 20: goeland.v1.CreateSubjectRefRequest.kind:type_name -> goeland.v1.SubjectKind
-	4,  // 21: goeland.v1.CreateSubjectRefRequest.initial_metadata:type_name -> goeland.v1.RecordMetadata
-	3,  // 22: goeland.v1.CreateSubjectRefRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
-	2,  // 23: goeland.v1.CreateSubjectRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
-	4,  // 24: goeland.v1.CreateSubjectRefResponse.metadata:type_name -> goeland.v1.RecordMetadata
-	5,  // 25: goeland.v1.CreateSubjectRefResponse.created_event:type_name -> goeland.v1.AuditEvent
-	2,  // 26: goeland.v1.GetSubjectRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
-	4,  // 27: goeland.v1.GetSubjectRefResponse.metadata:type_name -> goeland.v1.RecordMetadata
-	5,  // 28: goeland.v1.GetSubjectRefResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	3,  // 29: goeland.v1.AssignBusinessRefRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
-	2,  // 30: goeland.v1.AssignBusinessRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
-	5,  // 31: goeland.v1.AssignBusinessRefResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	0,  // 32: goeland.v1.LookupSubjectsRequest.kind:type_name -> goeland.v1.SubjectKind
-	2,  // 33: goeland.v1.LookupSubjectsResponse.subject_refs:type_name -> goeland.v1.SubjectRef
-	55, // 34: goeland.v1.User.first_seen_at:type_name -> google.protobuf.Timestamp
-	55, // 35: goeland.v1.User.last_seen_at:type_name -> google.protobuf.Timestamp
-	16, // 36: goeland.v1.GetCurrentUserResponse.user:type_name -> goeland.v1.User
-	16, // 37: goeland.v1.BatchGetUsersResponse.users:type_name -> goeland.v1.User
-	16, // 38: goeland.v1.SearchUsersResponse.users:type_name -> goeland.v1.User
-	55, // 39: goeland.v1.UserRole.granted_at:type_name -> google.protobuf.Timestamp
-	55, // 40: goeland.v1.UserRole.revoked_at:type_name -> google.protobuf.Timestamp
-	23, // 41: goeland.v1.ListAppRolesResponse.roles:type_name -> goeland.v1.AppRole
-	16, // 42: goeland.v1.ListRoleHoldersResponse.users:type_name -> goeland.v1.User
-	24, // 43: goeland.v1.ListUserRolesResponse.roles:type_name -> goeland.v1.UserRole
-	24, // 44: goeland.v1.GrantUserRoleResponse.role:type_name -> goeland.v1.UserRole
-	5,  // 45: goeland.v1.GrantUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	24, // 46: goeland.v1.RevokeUserRoleResponse.role:type_name -> goeland.v1.UserRole
-	5,  // 47: goeland.v1.RevokeUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	55, // 48: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
-	7,  // 49: goeland.v1.LinkSubjectsResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	5,  // 50: goeland.v1.LinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	5,  // 51: goeland.v1.UnlinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	55, // 52: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
-	7,  // 53: goeland.v1.EndRelationshipResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	5,  // 54: goeland.v1.EndRelationshipResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	7,  // 55: goeland.v1.ListRelationshipsResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	0,  // 56: goeland.v1.ListRelationshipTypesRequest.source_kind:type_name -> goeland.v1.SubjectKind
-	0,  // 57: goeland.v1.ListRelationshipTypesRequest.target_kind:type_name -> goeland.v1.SubjectKind
-	6,  // 58: goeland.v1.ListRelationshipTypesResponse.relationship_types:type_name -> goeland.v1.RelationshipType
-	55, // 59: goeland.v1.ReferenceChange.occurred_at:type_name -> google.protobuf.Timestamp
-	56, // 60: goeland.v1.ReferenceChange.before_state:type_name -> google.protobuf.Struct
-	56, // 61: goeland.v1.ReferenceChange.after_state:type_name -> google.protobuf.Struct
-	45, // 62: goeland.v1.ListReferenceChangesResponse.changes:type_name -> goeland.v1.ReferenceChange
-	0,  // 63: goeland.v1.CreateRelationshipTypeRequest.source_kind:type_name -> goeland.v1.SubjectKind
-	0,  // 64: goeland.v1.CreateRelationshipTypeRequest.target_kind:type_name -> goeland.v1.SubjectKind
-	6,  // 65: goeland.v1.CreateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
-	45, // 66: goeland.v1.CreateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	6,  // 67: goeland.v1.UpdateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
-	45, // 68: goeland.v1.UpdateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	55, // 69: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
-	55, // 70: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
-	5,  // 71: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
-	8,  // 72: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
-	10, // 73: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
-	12, // 74: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
-	14, // 75: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
-	17, // 76: goeland.v1.CoreService.GetCurrentUser:input_type -> goeland.v1.GetCurrentUserRequest
-	19, // 77: goeland.v1.CoreService.BatchGetUsers:input_type -> goeland.v1.BatchGetUsersRequest
-	21, // 78: goeland.v1.CoreService.SearchUsers:input_type -> goeland.v1.SearchUsersRequest
-	25, // 79: goeland.v1.CoreService.ListAppRoles:input_type -> goeland.v1.ListAppRolesRequest
-	27, // 80: goeland.v1.CoreService.ListRoleHolders:input_type -> goeland.v1.ListRoleHoldersRequest
-	29, // 81: goeland.v1.CoreService.ListUserRoles:input_type -> goeland.v1.ListUserRolesRequest
-	31, // 82: goeland.v1.CoreService.GrantUserRole:input_type -> goeland.v1.GrantUserRoleRequest
-	33, // 83: goeland.v1.CoreService.RevokeUserRole:input_type -> goeland.v1.RevokeUserRoleRequest
-	35, // 84: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
-	37, // 85: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
-	39, // 86: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
-	41, // 87: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
-	43, // 88: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
-	52, // 89: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
-	48, // 90: goeland.v1.CoreService.CreateRelationshipType:input_type -> goeland.v1.CreateRelationshipTypeRequest
-	50, // 91: goeland.v1.CoreService.UpdateRelationshipType:input_type -> goeland.v1.UpdateRelationshipTypeRequest
-	46, // 92: goeland.v1.CoreService.ListReferenceChanges:input_type -> goeland.v1.ListReferenceChangesRequest
-	9,  // 93: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
-	11, // 94: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
-	13, // 95: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
-	15, // 96: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
-	18, // 97: goeland.v1.CoreService.GetCurrentUser:output_type -> goeland.v1.GetCurrentUserResponse
-	20, // 98: goeland.v1.CoreService.BatchGetUsers:output_type -> goeland.v1.BatchGetUsersResponse
-	22, // 99: goeland.v1.CoreService.SearchUsers:output_type -> goeland.v1.SearchUsersResponse
-	26, // 100: goeland.v1.CoreService.ListAppRoles:output_type -> goeland.v1.ListAppRolesResponse
-	28, // 101: goeland.v1.CoreService.ListRoleHolders:output_type -> goeland.v1.ListRoleHoldersResponse
-	30, // 102: goeland.v1.CoreService.ListUserRoles:output_type -> goeland.v1.ListUserRolesResponse
-	32, // 103: goeland.v1.CoreService.GrantUserRole:output_type -> goeland.v1.GrantUserRoleResponse
-	34, // 104: goeland.v1.CoreService.RevokeUserRole:output_type -> goeland.v1.RevokeUserRoleResponse
-	36, // 105: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
-	38, // 106: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
-	40, // 107: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
-	42, // 108: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
-	44, // 109: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
-	53, // 110: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
-	49, // 111: goeland.v1.CoreService.CreateRelationshipType:output_type -> goeland.v1.CreateRelationshipTypeResponse
-	51, // 112: goeland.v1.CoreService.UpdateRelationshipType:output_type -> goeland.v1.UpdateRelationshipTypeResponse
-	47, // 113: goeland.v1.CoreService.ListReferenceChanges:output_type -> goeland.v1.ListReferenceChangesResponse
-	93, // [93:114] is the sub-list for method output_type
-	72, // [72:93] is the sub-list for method input_type
-	72, // [72:72] is the sub-list for extension type_name
-	72, // [72:72] is the sub-list for extension extendee
-	0,  // [0:72] is the sub-list for field type_name
+	0,   // 0: goeland.v1.SubjectRef.kind:type_name -> goeland.v1.SubjectKind
+	59,  // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
+	59,  // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
+	59,  // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
+	59,  // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
+	59,  // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
+	58,  // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
+	59,  // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	60,  // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
+	60,  // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
+	60,  // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
+	0,   // 11: goeland.v1.RelationshipType.source_kind:type_name -> goeland.v1.SubjectKind
+	0,   // 12: goeland.v1.RelationshipType.target_kind:type_name -> goeland.v1.SubjectKind
+	3,   // 13: goeland.v1.SubjectRelationship.source:type_name -> goeland.v1.SubjectRef
+	3,   // 14: goeland.v1.SubjectRelationship.target:type_name -> goeland.v1.SubjectRef
+	7,   // 15: goeland.v1.SubjectRelationship.relationship_type:type_name -> goeland.v1.RelationshipType
+	59,  // 16: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
+	59,  // 17: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
+	59,  // 18: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
+	59,  // 19: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
+	0,   // 20: goeland.v1.CreateSubjectRefRequest.kind:type_name -> goeland.v1.SubjectKind
+	5,   // 21: goeland.v1.CreateSubjectRefRequest.initial_metadata:type_name -> goeland.v1.RecordMetadata
+	4,   // 22: goeland.v1.CreateSubjectRefRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
+	3,   // 23: goeland.v1.CreateSubjectRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
+	5,   // 24: goeland.v1.CreateSubjectRefResponse.metadata:type_name -> goeland.v1.RecordMetadata
+	6,   // 25: goeland.v1.CreateSubjectRefResponse.created_event:type_name -> goeland.v1.AuditEvent
+	3,   // 26: goeland.v1.GetSubjectRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
+	5,   // 27: goeland.v1.GetSubjectRefResponse.metadata:type_name -> goeland.v1.RecordMetadata
+	6,   // 28: goeland.v1.GetSubjectRefResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	4,   // 29: goeland.v1.AssignBusinessRefRequest.business_ref:type_name -> goeland.v1.BusinessRefRequest
+	3,   // 30: goeland.v1.AssignBusinessRefResponse.subject_ref:type_name -> goeland.v1.SubjectRef
+	6,   // 31: goeland.v1.AssignBusinessRefResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	0,   // 32: goeland.v1.LookupSubjectsRequest.kind:type_name -> goeland.v1.SubjectKind
+	3,   // 33: goeland.v1.LookupSubjectsResponse.subject_refs:type_name -> goeland.v1.SubjectRef
+	59,  // 34: goeland.v1.User.first_seen_at:type_name -> google.protobuf.Timestamp
+	59,  // 35: goeland.v1.User.last_seen_at:type_name -> google.protobuf.Timestamp
+	17,  // 36: goeland.v1.GetCurrentUserResponse.user:type_name -> goeland.v1.User
+	17,  // 37: goeland.v1.BatchGetUsersResponse.users:type_name -> goeland.v1.User
+	17,  // 38: goeland.v1.SearchUsersResponse.users:type_name -> goeland.v1.User
+	59,  // 39: goeland.v1.UserRole.granted_at:type_name -> google.protobuf.Timestamp
+	59,  // 40: goeland.v1.UserRole.revoked_at:type_name -> google.protobuf.Timestamp
+	24,  // 41: goeland.v1.ListAppRolesResponse.roles:type_name -> goeland.v1.AppRole
+	17,  // 42: goeland.v1.ListRoleHoldersResponse.users:type_name -> goeland.v1.User
+	25,  // 43: goeland.v1.ListUserRolesResponse.roles:type_name -> goeland.v1.UserRole
+	25,  // 44: goeland.v1.GrantUserRoleResponse.role:type_name -> goeland.v1.UserRole
+	6,   // 45: goeland.v1.GrantUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	25,  // 46: goeland.v1.RevokeUserRoleResponse.role:type_name -> goeland.v1.UserRole
+	6,   // 47: goeland.v1.RevokeUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	59,  // 48: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
+	8,   // 49: goeland.v1.LinkSubjectsResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	6,   // 50: goeland.v1.LinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	6,   // 51: goeland.v1.UnlinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	59,  // 52: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
+	8,   // 53: goeland.v1.EndRelationshipResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	6,   // 54: goeland.v1.EndRelationshipResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	8,   // 55: goeland.v1.ListRelationshipsResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	0,   // 56: goeland.v1.ListRelationshipTypesRequest.source_kind:type_name -> goeland.v1.SubjectKind
+	0,   // 57: goeland.v1.ListRelationshipTypesRequest.target_kind:type_name -> goeland.v1.SubjectKind
+	7,   // 58: goeland.v1.ListRelationshipTypesResponse.relationship_types:type_name -> goeland.v1.RelationshipType
+	59,  // 59: goeland.v1.ReferenceChange.occurred_at:type_name -> google.protobuf.Timestamp
+	60,  // 60: goeland.v1.ReferenceChange.before_state:type_name -> google.protobuf.Struct
+	60,  // 61: goeland.v1.ReferenceChange.after_state:type_name -> google.protobuf.Struct
+	46,  // 62: goeland.v1.ListReferenceChangesResponse.changes:type_name -> goeland.v1.ReferenceChange
+	0,   // 63: goeland.v1.CreateRelationshipTypeRequest.source_kind:type_name -> goeland.v1.SubjectKind
+	0,   // 64: goeland.v1.CreateRelationshipTypeRequest.target_kind:type_name -> goeland.v1.SubjectKind
+	7,   // 65: goeland.v1.CreateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
+	46,  // 66: goeland.v1.CreateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	7,   // 67: goeland.v1.UpdateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
+	46,  // 68: goeland.v1.UpdateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	59,  // 69: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
+	59,  // 70: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
+	6,   // 71: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
+	59,  // 72: goeland.v1.AccessAuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	0,   // 73: goeland.v1.AccessAuditEvent.subject_kind:type_name -> goeland.v1.SubjectKind
+	1,   // 74: goeland.v1.AccessAuditEvent.access_level:type_name -> goeland.v1.Permission
+	2,   // 75: goeland.v1.AccessAuditEvent.access_source:type_name -> goeland.v1.AccessSource
+	59,  // 76: goeland.v1.ListAccessAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
+	59,  // 77: goeland.v1.ListAccessAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
+	55,  // 78: goeland.v1.ListAccessAuditEventsResponse.events:type_name -> goeland.v1.AccessAuditEvent
+	9,   // 79: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
+	11,  // 80: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
+	13,  // 81: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
+	15,  // 82: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
+	18,  // 83: goeland.v1.CoreService.GetCurrentUser:input_type -> goeland.v1.GetCurrentUserRequest
+	20,  // 84: goeland.v1.CoreService.BatchGetUsers:input_type -> goeland.v1.BatchGetUsersRequest
+	22,  // 85: goeland.v1.CoreService.SearchUsers:input_type -> goeland.v1.SearchUsersRequest
+	26,  // 86: goeland.v1.CoreService.ListAppRoles:input_type -> goeland.v1.ListAppRolesRequest
+	28,  // 87: goeland.v1.CoreService.ListRoleHolders:input_type -> goeland.v1.ListRoleHoldersRequest
+	30,  // 88: goeland.v1.CoreService.ListUserRoles:input_type -> goeland.v1.ListUserRolesRequest
+	32,  // 89: goeland.v1.CoreService.GrantUserRole:input_type -> goeland.v1.GrantUserRoleRequest
+	34,  // 90: goeland.v1.CoreService.RevokeUserRole:input_type -> goeland.v1.RevokeUserRoleRequest
+	36,  // 91: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
+	38,  // 92: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
+	40,  // 93: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
+	42,  // 94: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
+	44,  // 95: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
+	53,  // 96: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
+	56,  // 97: goeland.v1.CoreService.ListAccessAuditEvents:input_type -> goeland.v1.ListAccessAuditEventsRequest
+	49,  // 98: goeland.v1.CoreService.CreateRelationshipType:input_type -> goeland.v1.CreateRelationshipTypeRequest
+	51,  // 99: goeland.v1.CoreService.UpdateRelationshipType:input_type -> goeland.v1.UpdateRelationshipTypeRequest
+	47,  // 100: goeland.v1.CoreService.ListReferenceChanges:input_type -> goeland.v1.ListReferenceChangesRequest
+	10,  // 101: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
+	12,  // 102: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
+	14,  // 103: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
+	16,  // 104: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
+	19,  // 105: goeland.v1.CoreService.GetCurrentUser:output_type -> goeland.v1.GetCurrentUserResponse
+	21,  // 106: goeland.v1.CoreService.BatchGetUsers:output_type -> goeland.v1.BatchGetUsersResponse
+	23,  // 107: goeland.v1.CoreService.SearchUsers:output_type -> goeland.v1.SearchUsersResponse
+	27,  // 108: goeland.v1.CoreService.ListAppRoles:output_type -> goeland.v1.ListAppRolesResponse
+	29,  // 109: goeland.v1.CoreService.ListRoleHolders:output_type -> goeland.v1.ListRoleHoldersResponse
+	31,  // 110: goeland.v1.CoreService.ListUserRoles:output_type -> goeland.v1.ListUserRolesResponse
+	33,  // 111: goeland.v1.CoreService.GrantUserRole:output_type -> goeland.v1.GrantUserRoleResponse
+	35,  // 112: goeland.v1.CoreService.RevokeUserRole:output_type -> goeland.v1.RevokeUserRoleResponse
+	37,  // 113: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
+	39,  // 114: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
+	41,  // 115: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
+	43,  // 116: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
+	45,  // 117: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
+	54,  // 118: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
+	57,  // 119: goeland.v1.CoreService.ListAccessAuditEvents:output_type -> goeland.v1.ListAccessAuditEventsResponse
+	50,  // 120: goeland.v1.CoreService.CreateRelationshipType:output_type -> goeland.v1.CreateRelationshipTypeResponse
+	52,  // 121: goeland.v1.CoreService.UpdateRelationshipType:output_type -> goeland.v1.UpdateRelationshipTypeResponse
+	48,  // 122: goeland.v1.CoreService.ListReferenceChanges:output_type -> goeland.v1.ListReferenceChangesResponse
+	101, // [101:123] is the sub-list for method output_type
+	79,  // [79:101] is the sub-list for method input_type
+	79,  // [79:79] is the sub-list for extension type_name
+	79,  // [79:79] is the sub-list for extension extendee
+	0,   // [0:79] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_core_proto_init() }
@@ -4592,8 +5076,8 @@ func file_goeland_v1_core_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_core_proto_rawDesc), len(file_goeland_v1_core_proto_rawDesc)),
-			NumEnums:      2,
-			NumMessages:   53,
+			NumEnums:      3,
+			NumMessages:   56,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

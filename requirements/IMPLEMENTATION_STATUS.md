@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-10-13**, app version **0.12.2** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0027` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-10-14**, app version **0.13.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0028` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -54,6 +54,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.4 `actor` + `actor_contact` + `organization_category` + v2 addresses | ✅ `0006` (+ `0013`, `0014`) | ✅ `ActorService.*` (6 RPCs) | ✅ | PERSON / ORGANIZATION; typed complements (IDE/TVA/ABACUS/RC, phones, e-mail...) validated and normalized per type (GLD-038); 33 seeded categories; roles kept as relationships; persons carry a minimal identity (salutation, last and first name; `0013`, GLD-039) plus the register link; typed M:N addresses with one principal and non-destructive replacement, branches and contact persons as linked actors (GLD-014) |
 | v2 §5.7 / §31 ORG_UNIT (`org_unit_type` + `org_unit`) | ✅ `0018` | ✅ `OrgUnitService.*` (9 RPCs) | ✅ | GLD-041: one tree without cycles (service + trigger, serialized mutations), labels unique among live siblings, non-unique abbreviation, immutable `external_ref`, dissolution instead of deletion; typed `record_metadata.owner_org_id`; `CASE_HAS_ORG_UNIT_LEADER` / `_MANAGER` / `_PARTICIPANT`; optional import of the real tree (`cmd/goeland-import-orgunits`); SPA tree + detail |
 | §4.1 / v2 §28 `case_task` (+ `task_type`, `case_task_assignment`) | ✅ `0019` | ✅ `TaskService.*` (13 RPCs) + `CoreService.SearchUsers` | ✅ | GLD-026: OPEN → IN_PROGRESS → DONE / CANCELLED, reopen with a reason, one assignee (user or unit) with history, `origin` for circulation / workflow / AI, "my tasks" (mine and my units' via `USER_MEMBER_OF_ORG_UNIT`), SYSTEM timeline entries on completion and cancellation, a case cannot close with open tasks; SPA case panel + "Mes tâches" + unit members |
+| v2 §34 `access_audit_event` (sensitive read audit, append-only) | ✅ `0028` | ✅ `CoreService.ListAccessAuditEvents` + written by `Authorizer.AuditedRead` and the governed download | ✅ | GLD-033: reads (`Get*`, a confidential case's timeline) and downloads of confidential subjects, granted or denied, written before the answer (fail closed); read by administrators or FULL_CONTROL holders, labels only when readable |
 | §10 `access_grant` + confidentiality enforcement | ✅ `0023` | ✅ `AccessService.*` (11 RPCs) | ✅ | GLD-048: grants to users, groups and units, most specific wins, confidentiality without bypass, enforced on mutations and single reads of every kind and on case-owned entities; GLD-049: searches and lists filtered in SQL (`core.ReadableSQL`, exact pagination), downloads through the document (`GET /api/documents/{id}/content`), timeline visibility by level, document reuse only among readable documents; GLD-050: a case type's minimum confidentiality and default grants (CREATOR_UNITS) copied once at creation |
 | §14.5/§14.6 seed: test users, org units, case types, thing types | 🟡 `0010`, `0016`, `0018` | — | 🟡 | case types `OPC_DEMANDE_PC` (OPC), `GENERIC_REQUEST` (GEN); thing types PARCEL, BUILDING, STREET, TREE, INFRASTRUCTURE, ADVERTISEMENT, SPORT_ZONE; org unit types (7); users are recorded from tokens; org units come from the optional import, not from seed data |
 
@@ -155,8 +156,8 @@ Not betterments, just a different-but-equivalent option chosen for consistency:
 ### 3c. Known gaps (LESS than the spec — backlog, not enhancements)
 
 - **Authorization follow-ups** — per-subject grants, confidentiality and filtered lists are
-  enforced (GLD-048, GLD-049) and case types carry default access (GLD-050); the sensitive
-  read audit (GLD-033) is not built yet. The labels of an org unit's ancestors and children and of
+  enforced (GLD-048, GLD-049), case types carry default access (GLD-050) and reads of
+  confidential subjects are audited (GLD-033; its legal retention period is still to set). The labels of an org unit's ancestors and children and of
   the documents cited by a timeline entry are shown without a read check.
 
 ### 3d. Review quick-wins applied (2026-07-07, from `reports/report_20260707_codex.md`)
@@ -410,6 +411,16 @@ Decisions for the POC (v2 §32):
   pulled forward) instead of per-row audit, legacy dates and creators kept. The legacy employee id
   is the POC user id (a shared environment needs the identity provider or the production F5 JWT
   service to issue it). Real data stays on the machine; the rules live in `docs/IMPORT_MAPPING.md`.
+
+- **Sensitive read audit (GLD-033, decided 2026-10-14)** — `access_audit_event`, distinct from
+  the mutation audit: only confidential subjects (level >= 2) are logged — their detail read, a
+  confidential case's timeline and a confidential document's download (with the version served),
+  plus the refusals (DENIED), which show probing. Lists and searches are not logged row by row,
+  and ordinary reads not at all (the legacy logged every case opened: 18.7M rows). The row is
+  written before the answer and the read fails without it (no trace, no read); the table is
+  append-only and kept without limit in the POC. Administrators read the whole log, a holder of
+  FULL_CONTROL its subject's; a label is shown only to who may read the subject; reading the log is
+  not logged; the legacy access logs are not imported. `EXPORT` is reserved for the export task.
 
 - 🚀 **Sortable tables (GLD-055, GLD-056, GLD-057, 2026-10-02/08)** — every list and detail table sorts by a
   click on its headers (the spec asks for none): paged lists on the server through a whitelisted

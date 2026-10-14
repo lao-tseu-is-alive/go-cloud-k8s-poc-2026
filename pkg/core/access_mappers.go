@@ -1,6 +1,9 @@
 package core
 
-import goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
+import (
+	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
+	"google.golang.org/protobuf/types/known/timestamppb"
+)
 
 var granteeKindToProto = map[GranteeKind]goelandv1.GranteeKind{
 	GranteeUser:         goelandv1.GranteeKind_GRANTEE_KIND_USER,
@@ -24,6 +27,19 @@ func GranteeKindFromProto(k goelandv1.GranteeKind) GranteeKind {
 	return ""
 }
 
+var accessSourceToProto = map[AccessSource]goelandv1.AccessSource{
+	SourcePersonal: goelandv1.AccessSource_ACCESS_SOURCE_PERSONAL,
+	SourceGroup:    goelandv1.AccessSource_ACCESS_SOURCE_GROUP,
+	SourceOrgUnit:  goelandv1.AccessSource_ACCESS_SOURCE_ORG_UNIT,
+	SourceRole:     goelandv1.AccessSource_ACCESS_SOURCE_ROLE,
+	SourceBaseline: goelandv1.AccessSource_ACCESS_SOURCE_BASELINE,
+}
+
+// AccessSourceToProto converts the rule behind an effective level (UNSPECIFIED when unknown).
+func AccessSourceToProto(s AccessSource) goelandv1.AccessSource {
+	return accessSourceToProto[s]
+}
+
 // LevelToProto converts an access level to the Permission enum (NONE for 0).
 func LevelToProto(l Level) goelandv1.Permission {
 	return goelandv1.Permission(int32(l) + 1)
@@ -35,4 +51,24 @@ func LevelFromProto(p goelandv1.Permission) Level {
 		return LevelNone
 	}
 	return Level(int32(p) - 1)
+}
+
+// AccessAuditEventToProto converts a sensitive read audit row.
+func AccessAuditEventToProto(e *AccessAuditEvent) *goelandv1.AccessAuditEvent {
+	return &goelandv1.AccessAuditEvent{
+		Id:                   e.ID.String(),
+		OccurredAt:           timestamppb.New(e.OccurredAt),
+		UserId:               e.UserID,
+		SubjectId:            e.SubjectID.String(),
+		SubjectKind:          SubjectKindToProto(e.SubjectKind),
+		Action:               string(e.Action),
+		Outcome:              string(e.Outcome),
+		AccessLevel:          LevelToProto(e.AccessLevel),
+		AccessSource:         AccessSourceToProto(e.AccessSource),
+		ConfidentialityLevel: e.ConfidentialityLevel,
+		DocumentVersionId:    UUIDPtrString(e.DocumentVersionID),
+		RequestId:            e.RequestID,
+		BusinessRef:          e.BusinessRef,
+		SubjectLabel:         e.SubjectLabel,
+	}
 }

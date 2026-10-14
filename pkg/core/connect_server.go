@@ -450,6 +450,53 @@ func (s *ConnectServer) UpdateRelationshipType(ctx context.Context, req *connect
 	}), nil
 }
 
+// ListAccessAuditEvents pages the sensitive read audit (GLD-033): the whole
+// log for an administrator, one subject's log for a holder of FULL_CONTROL on
+// it. Labels are shown only for subjects the caller may read.
+func (s *ConnectServer) ListAccessAuditEvents(ctx context.Context, req *connect.Request[goelandv1.ListAccessAuditEventsRequest]) (*connect.Response[goelandv1.ListAccessAuditEventsResponse], error) {
+	subjectID, err := OptionalUUID(req.Msg.SubjectId)
+	if err != nil {
+		return nil, err
+	}
+	user, err := RequireCaller(ctx, ScopeRead)
+	if err != nil {
+		return nil, err
+	}
+	if !user.HasScope(ScopeAdmin) {
+		if subjectID == nil {
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("the whole sensitive read audit needs goeland:admin; name a subject"))
+		}
+		if err := s.authz.Require(ctx, user, *subjectID, LevelFullControl); err != nil {
+			return nil, err
+		}
+	}
+	viewer, err := s.authz.ViewerOf(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	offset, err := ParsePageToken(req.Msg.PageToken)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	result, err := s.service.ListAccessAudit(ctx, AccessAuditFilter{
+		Viewer: viewer, SubjectID: subjectID, UserID: req.Msg.UserId,
+		Action: AccessAction(req.Msg.Action), Outcome: AccessOutcome(req.Msg.Outcome),
+		From: TimePtrFromProto(req.Msg.From), To: TimePtrFromProto(req.Msg.To),
+		Limit: int(req.Msg.PageSize), Offset: offset, OrderBy: req.Msg.OrderBy,
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.AccessAuditEvent, len(result.Events))
+	for i, e := range result.Events {
+		out[i] = AccessAuditEventToProto(e)
+	}
+	return connect.NewResponse(&goelandv1.ListAccessAuditEventsResponse{
+		Events: out, NextPageToken: NextPageToken(offset, len(out), result.TotalSize),
+		TotalSize: result.TotalSize, TotalSizeCapped: result.TotalCapped,
+	}), nil
+}
+
 // ListReferenceChanges pages the reference change log (administrators only).
 func (s *ConnectServer) ListReferenceChanges(ctx context.Context, req *connect.Request[goelandv1.ListReferenceChangesRequest]) (*connect.Response[goelandv1.ListReferenceChangesResponse], error) {
 	if _, err := RequireCaller(ctx, ScopeAdmin); err != nil {

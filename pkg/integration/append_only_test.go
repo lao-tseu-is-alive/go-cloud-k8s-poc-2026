@@ -10,8 +10,9 @@ import (
 )
 
 // TestAuditLogsAreAppendOnly checks that the database itself refuses to rewrite,
-// delete or truncate the audit trail and the reference change log (migration
-// 0021, GLD-044), even for a direct SQL session of the application role.
+// delete or truncate the audit trail, the reference change log (migration
+// 0021, GLD-044) and the sensitive read audit (migration 0028, GLD-033), even
+// for a direct SQL session of the application role.
 func TestAuditLogsAreAppendOnly(t *testing.T) {
 	env := newTestEnv(t)
 	c := openCase(t, env, "Journal inaltérable "+uniqueToken())
@@ -20,6 +21,14 @@ func TestAuditLogsAreAppendOnly(t *testing.T) {
 	if _, _, err := env.caseSvc.CreateCaseType(env.ctx, casefile.CaseTypeInput{Code: code, Label: "Append-only", OperatorID: testOperator, Reason: "test"}); err != nil {
 		t.Fatalf("create case type: %v", err)
 	}
+	// A sensitive read of its own, so the access_audit_event statements touch a row.
+	secret, _, err := env.caseSvc.Create(env.ctx, caseInput("Lecture inaltérable "+uniqueToken(), core.ConfidentialLevel))
+	if err != nil {
+		t.Fatalf("create confidential case: %v", err)
+	}
+	if _, err := core.AuditedAccessTx(env.ctx, env.pool, testOperator, secret.ID, core.LevelRead, core.AccessReadSensitive); err != nil {
+		t.Fatalf("audited read: %v", err)
+	}
 	statements := []string{
 		`UPDATE audit_event SET reason = 'réécrit' WHERE subject_id = '` + c.ID.String() + `'`,
 		`DELETE FROM audit_event WHERE subject_id = '` + c.ID.String() + `'`,
@@ -27,6 +36,9 @@ func TestAuditLogsAreAppendOnly(t *testing.T) {
 		`UPDATE reference_change SET reason = 'réécrit' WHERE code = '` + code + `'`,
 		`DELETE FROM reference_change WHERE code = '` + code + `'`,
 		`TRUNCATE reference_change`,
+		`UPDATE access_audit_event SET outcome = 'GRANTED' WHERE subject_id = '` + secret.ID.String() + `'`,
+		`DELETE FROM access_audit_event WHERE subject_id = '` + secret.ID.String() + `'`,
+		`TRUNCATE access_audit_event`,
 	}
 	for _, stmt := range statements {
 		err := pgx.BeginFunc(env.ctx, env.pool, func(tx pgx.Tx) error {

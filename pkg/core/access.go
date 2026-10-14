@@ -78,6 +78,8 @@ type Access struct {
 	Kind SubjectKind
 	// Confidential reports confidentiality_level >= ConfidentialLevel.
 	Confidential bool
+	// Confidentiality is the subject's confidentiality_level.
+	Confidentiality int32
 	// Level is the effective level.
 	Level Level
 	// Source is the rule that produced Level.
@@ -104,7 +106,7 @@ type accessRow struct {
 // resolve applies the precedence: personal, groups, nearest unit, then (not on
 // a confidential subject) role and baseline READ.
 func (r accessRow) resolve(subjectID uuid.UUID) Access {
-	a := Access{SubjectID: subjectID, Kind: r.Kind, Confidential: r.Confidentiality >= ConfidentialLevel}
+	a := Access{SubjectID: subjectID, Kind: r.Kind, Confidential: r.Confidentiality >= ConfidentialLevel, Confidentiality: r.Confidentiality}
 	switch {
 	case r.Personal != nil:
 		a.Level, a.Source = Level(*r.Personal), SourcePersonal
@@ -146,9 +148,14 @@ func EnsureAccessTx(ctx context.Context, q Querier, userID string, subjectID uui
 	if err != nil {
 		return err
 	}
-	if access.Level < need {
+	return access.Require(need)
+}
+
+// Require reports ErrPermissionDenied when the access is below need.
+func (a Access) Require(need Level) error {
+	if a.Level < need {
 		return fmt.Errorf("%w: this operation needs %s on the %s, the caller has %s", ErrPermissionDenied,
-			need, access.Kind, access.Level)
+			need, a.Kind, a.Level)
 	}
 	return nil
 }

@@ -64,7 +64,7 @@ func (s *ConnectServer) GetCase(ctx context.Context, req *connect.Request[goelan
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	user, _, err := s.authz.AuditedRead(ctx, id)
 	if err != nil {
 		return nil, err
 	}

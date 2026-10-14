@@ -44,22 +44,6 @@ enum GranteeKind {
   GRANTEE_KIND_CREATOR_UNITS = 4;
 }
 
-// AccessSource tells which rule produced an effective level.
-enum AccessSource {
-  // ACCESS_SOURCE_UNSPECIFIED is the zero value.
-  ACCESS_SOURCE_UNSPECIFIED = 0;
-  // ACCESS_SOURCE_PERSONAL is a grant to the user.
-  ACCESS_SOURCE_PERSONAL = 1;
-  // ACCESS_SOURCE_GROUP is the highest grant to one of the user's groups.
-  ACCESS_SOURCE_GROUP = 2;
-  // ACCESS_SOURCE_ORG_UNIT is the grant of the nearest of the user's units or their ancestors.
-  ACCESS_SOURCE_ORG_UNIT = 3;
-  // ACCESS_SOURCE_ROLE is an application role (ADMIN or a role covering the kind).
-  ACCESS_SOURCE_ROLE = 4;
-  // ACCESS_SOURCE_BASELINE is the default: READ unless the subject is confidential.
-  ACCESS_SOURCE_BASELINE = 5;
-}
-
 // AccessGrant is one grant on a subject; a revoked grant is kept as history.
 message AccessGrant {
   // id identifies the grant.

@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.12.2**.
+Tracked version: **v0.13.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -194,7 +194,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/access.go` — Access levels, the effective level (most specific grant wins) and `EnsureAccessTx`, creator grants, link and relationship-change rules, grant copy, assignee checks.
-- `pkg/core/access_mappers.go` — Proto mappings of grantee kinds and access levels, shared by the access and case domains.
+- `pkg/core/access_audit.go` — Sensitive read audit (GLD-033): reads and downloads of confidential subjects recorded, granted or denied, and the paged, filtered log.
+- `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and sensitive read audit rows, shared by the access and case domains.
 - `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
 - `pkg/core/strictjson.go` — Strict JSON codecs (Connect and Vanguard REST) refusing request bodies with unknown fields.
 - `pkg/core/access_test.go` — Tests the precedence rule of the effective level (personal, group, unit, role, baseline, confidentiality).
@@ -252,6 +253,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0025_import_provenance.sql` — Schema migration: `import_batch` (one marker per import run, with its counts) and `subject_provenance` (source system, table and id of an imported subject).
 - `pkg/core/module/db/migrations/0026_search_order_indexes.sql` — Schema migration: indexes on the sort keys of the searches and of the relationship lists of a subject (GLD-053).
 - `pkg/core/module/db/migrations/0027_sort_indexes.sql` — Schema migration: indexes on the sortable columns of the case, document and thing lists and on the business reference sort (GLD-055).
+- `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -375,10 +377,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Integration tests (`pkg/integration`)
 
 - `pkg/integration/business_ref_test.go` — DB test: allocation, namespace uniqueness, free references, assignment, deleted guard, rollback and concurrent allocation.
-- `pkg/integration/append_only_test.go` — DB test: the audit trail and the reference change log refuse UPDATE, DELETE and TRUNCATE.
+- `pkg/integration/append_only_test.go` — DB test: the audit trail, the reference change log and the sensitive read audit refuse UPDATE, DELETE and TRUNCATE.
 - `pkg/integration/roles_test.go` — DB test: roles granted and revoked with reasons, audited on the user, kept as history, derived admin flag and refusals.
 - `pkg/integration/access_enforcement_test.go` — DB test: access checked in the transactions of timeline entries, tasks, circulations and relationships, and a document deposited from a case.
 - `pkg/integration/access_test.go` — DB test: effective level precedence (units and sub-units, groups, personal, roles, confidentiality) and grant rules (who grants, history, last FULL_CONTROL).
+- `pkg/integration/access_audit_test.go` — DB test: confidential reads and downloads recorded granted or denied (with the version served), public reads not, labels hidden from non-readers, filters.
 - `pkg/integration/read_filter_test.go` — DB test: confidential subjects absent from searches, totals and relationship lists without a grant, governed download and reuse among readable documents, timeline visibility by level.
 - `pkg/integration/actor_address_test.go` — DB test: typed addresses with a principal, non-destructive replacement, branch linked to its head and listed from both.
 - `pkg/integration/actor_lifecycle_test.go` — DB test: seeded categories, organization lifecycle, person minimal identity (derived display name, search by names, required last name, audited update).
@@ -412,7 +415,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint, test).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
 - `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
-- `cmd/goeland-server/goeland-front/src/api/accessClient.ts` — REST client for `AccessService`: my access, grants, groups and members.
+- `cmd/goeland-server/goeland-front/src/api/accessClient.ts` — REST client for `AccessService` (my access, grants, groups and members) and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/roleClient.ts` — REST calls of the application roles: catalogue, holders, a user's history, grant and revoke.
@@ -437,7 +440,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
-- `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders.
+- `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders, who also open the subject's sensitive access log.
+- `cmd/goeland-server/goeland-front/src/components/access/AccessAuditPanel.vue` — Sensitive read audit: one subject's log, or the whole log filtered by reader, action and outcome; labels and links only for readable subjects.
 - `cmd/goeland-server/goeland-front/src/components/access/grantees.ts` — Shared presentation of grantees and access levels (icons, colors, level list).
 - `cmd/goeland-server/goeland-front/src/components/access/GroupPicker.vue` — Security group search (debounced, by name) bound to the group's subject id.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).
@@ -503,7 +507,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
-- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log and the application roles.
+- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log, the application roles and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.

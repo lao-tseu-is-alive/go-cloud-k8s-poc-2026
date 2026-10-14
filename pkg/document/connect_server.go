@@ -146,7 +146,7 @@ func (s *ConnectServer) GetDocument(ctx context.Context, req *connect.Request[go
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.authz.Caller(ctx, core.ScopeRead, id, core.LevelRead)
+	user, _, err := s.authz.AuditedRead(ctx, id)
 	if err != nil {
 		return nil, err
 	}

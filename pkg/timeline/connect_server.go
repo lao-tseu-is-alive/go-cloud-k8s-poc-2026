@@ -40,11 +40,8 @@ func (s *ConnectServer) ListTimelineEntries(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, err
 	}
-	user, err := s.authz.Caller(ctx, core.ScopeRead, caseID, core.LevelRead)
-	if err != nil {
-		return nil, err
-	}
-	access, err := s.authz.Access(ctx, user, caseID)
+	// the timeline holds the case's substance: reading it on a confidential case is audited (GLD-033)
+	user, access, err := s.authz.AuditedRead(ctx, caseID)
 	if err != nil {
 		return nil, err
 	}
