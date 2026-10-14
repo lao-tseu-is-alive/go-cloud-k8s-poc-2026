@@ -3,7 +3,7 @@ module github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026
 go 1.27.2
 
 require (
-	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.1
+	buf.build/gen/go/bufbuild/protovalidate/protocolbuffers/go v1.36.12-20260825204119-511051f7f437.2
 	connectrpc.com/connect v1.20.0
 	connectrpc.com/validate v0.7.0
 	connectrpc.com/vanguard v0.3.0
