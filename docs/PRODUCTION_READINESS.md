@@ -206,10 +206,6 @@ These are the gaps that make this a POC rather than a production service:
 - **Observability is logs only.** No metrics or tracing endpoints yet.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
-- **License compatibility to settle.** The license inventory (§8) lists
-  `go-cloud-k8s-common-libs` under GPL-3.0 while this repository is MIT; linking it into the
-  distributed binary makes the combined work subject to the GPL. Relicense the library (same
-  owner) or accept GPL-3.0 for the distributed binary and image before production.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),
   but request rates are not limited: an in-process limiter would be per pod, so this belongs to
   the ingress or API gateway in front of the replicas.

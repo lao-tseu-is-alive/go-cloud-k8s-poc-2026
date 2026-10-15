@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Changed
+
+- `go-cloud-k8s-common-libs` v0.6.4, relicensed by its author from GPL-3.0 to MIT, so every
+  dependency of the binary and the image is now under a permissive license (the GPL-3.0 entry
+  found by the GLD-059 license inventory is gone).
+
 ## [0.14.1] - 2026-10-14
 
 Reproducible generated code (GLD-008) and the triaged dependency updates. No migration, no API change.

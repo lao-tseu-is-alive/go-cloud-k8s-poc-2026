@@ -125,7 +125,7 @@ triaged dependency updates in v0.14.1.
   build-inputs-check`, Dependabot (weekly, grouped; a Go minor stays deliberate; postgis moved by
   hand), `scripts/sbom.sh` in the release workflow (CycloneDX + license table) and BuildKit SBOM
   and provenance attestations on the image. The license inventory surfaced GPL-3.0 for
-  `go-cloud-k8s-common-libs` in this MIT repository (PRODUCTION_READINESS, known limitations).
+  `go-cloud-k8s-common-libs`, relicensed MIT by its author in v0.6.4 (2026-10-15).
 - [x] **GLD-060 — Relationship rules in the database**: a trigger checking that the source and
   target kinds of `subject_relationship` match its `relationship_type`, as the service does, so
   the legacy import and any future worker that bypass the service cannot write an invalid edge.

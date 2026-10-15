@@ -9,7 +9,7 @@ require (
 	connectrpc.com/vanguard v0.3.0
 	github.com/google/uuid v1.6.0
 	github.com/jackc/pgx/v5 v5.11.0
-	github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs v0.6.3
+	github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs v0.6.4
 	google.golang.org/genproto/googleapis/api v0.0.0-20260819154853-08b0e4226688
 	google.golang.org/protobuf v1.36.12
 )
