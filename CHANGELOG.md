@@ -8,6 +8,24 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.16.0] - 2026-10-15
+
+The case and object pages follow the actor page's information hierarchy (GLD-068, GLD-069); the object
+page shows the object on the City of Lausanne's maps. No migration, no API change.
+
+### Added
+
+- **GLD-068** — The case page follows the actor page's model: a header (reference, status, type,
+  dates, what is ongoing, a status menu, jump links) and three tabs, « Déroulement » (timeline,
+  tasks, circulations), « Intervenants et pièces » (roles by kind then role) and « Gouvernance et
+  historique » (access, export, governance, audit, raw relationship table). Section titles of the
+  roles panel depend on the subject on screen ("Intervenants", "Pièces du dossier" on a case).
+- **GLD-069** — The object page takes the same header and tabs and shows the object on the City of
+  Lausanne's maps (plan, cadastral background, 2024 and 2016 orthophotos in LV95, OpenLayers 10.6.1
+  and proj4 2.19.10, adapted from the City's carte_mn95 application), with a link to the City's map
+  application; the SVG outline remains outside the City's tiles. The CSP allows
+  `https://tilesmn95.lausanne.ch` for images and connections.
+
 ## [0.15.0] - 2026-10-15
 
 Information hierarchy piloted on the actor page (GLD-063) and import fixes found with it (GLD-066, GLD-067);

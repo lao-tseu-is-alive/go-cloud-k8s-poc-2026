@@ -326,8 +326,11 @@ them, open cases, split by case or document type) and opens a group with `ListRe
 document / thing type, years, `other_query` text); the SPA titles a group
 with `utils/roleHeadings.ts` from the type's role (`role_label`, `role_label_plural`, `role_end`,
 `role_preposition`, migration `0031`) and renders it with `SubjectRolesPanel` / `RoleGroup`. A new
-relationship type names its role (the legacy import sets it from the legacy role name). Piloted on the
-actor page.
+relationship type names its role (the legacy import sets it from the legacy role name). Used by the
+actor, case (GLD-068) and thing (GLD-069) pages, which share `styles/detail-page.css`; a page passes its
+`subject-kind` so section titles read from it (`relGroups.by.<kind>` in the locales). The thing page's
+map (`components/thing/LausanneMap.vue`, `utils/lausanneMap.ts`) loads the City of Lausanne's WMTS
+tiles; their origin is in the CSP (`headers.go`), keep both in sync.
 
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its

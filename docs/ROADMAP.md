@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.15.0**.
+Tracked version: **v0.16.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -39,8 +39,8 @@ GLD-005, GLD-007, GLD-060) shipped in v0.13.1; immutable build inputs and the SB
 the case export (GLD-029) shipped in v0.14.0, the reproducible generated code (GLD-008) and the
 triaged dependency updates in v0.14.1. The information hierarchy pilot on the actor page (GLD-063),
 the strict JSON fix (GLD-065) and the import fixes for phone numbers with a note (GLD-066) and
-document families (GLD-067) shipped in v0.15.0; the case and object pages follow the same model
-next, then the global search (GLD-064).
+document families (GLD-067) shipped in v0.15.0; the case page (GLD-068) and the object page with
+the City's map (GLD-069) followed the same model in v0.16.0; next the global search (GLD-064).
 
 ## Cross-cutting quality
 
@@ -475,6 +475,20 @@ categories with their counts. Mockup with the decisions:
   documents unfold by family and things by type, the type column only when types mix) and a "Gouvernance et historique" tab; the app bar
   shows the server version and a richer user menu. Done 2026-10-15; the case, document and thing
   pages follow once the pilot is judged on the real data.
+- [x] **GLD-068 — Case page on the GLD-063 model**: a header (reference with its namespace, status
+  and type, opening and closing, what is ongoing: open tasks, circulations, draft entries; status
+  changes in one menu, deletion in the more menu, jump links), then three tabs: « Déroulement »
+  (timeline, tasks, circulations, loaded eagerly since closing needs their counts), « Intervenants
+  et pièces » (the roles panel) and « Gouvernance et historique » (access, export, governance,
+  audit, raw relationship table). Section titles follow the subject on screen ("Intervenants",
+  "Pièces du dossier", "Objets concernés" on a case). Done 2026-10-15.
+- [x] **GLD-069 — Object page and Lausanne map**: the object page takes the same header (parcel
+  number and commune, EGRID, surfaces / EGID, ECA, RegBL status, LV95 anchor) and tabs, and shows the
+  object on the City of Lausanne's maps (`LausanneMap.vue`, OpenLayers and proj4 adapted from the
+  City's carte_mn95 application: WMTS plan, cadastral background and 2024 / 2016 orthophotos in
+  LV95, a link to open the City's map there). Outside the City's tiles or when they fail, the SVG
+  outline stays. The CSP allows `https://tilesmn95.lausanne.ch` (images, capabilities). Done
+  2026-10-15.
 - [ ] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
   documents, actors and things, results grouped by kind with counts, only what the caller may read
   (the existing searches first; Meilisearch later), "/" to focus it.

@@ -11,8 +11,12 @@ import (
 // (Vuetify injects its theme and index.html declares the cascade layers). In jwt
 // mode the SPA also calls the auth server (token mint, logout), so its origin is
 // allowed in connect-src.
+// lausanneTilesOrigin serves the City of Lausanne's map tiles and their WMTS
+// capabilities, shown on the object pages (GLD-069, SPA utils/lausanneMap.ts).
+const lausanneTilesOrigin = "https://tilesmn95.lausanne.ch"
+
 func contentSecurityPolicy(config serverConfig) string {
-	connect := "'self'"
+	connect := "'self' " + lausanneTilesOrigin
 	if origin := authOrigin(config); origin != "" {
 		connect += " " + origin
 	}
@@ -20,7 +24,7 @@ func contentSecurityPolicy(config serverConfig) string {
 		"default-src 'self'",
 		"script-src 'self'",
 		"style-src 'self' 'unsafe-inline'",
-		"img-src 'self' data: blob:",
+		"img-src 'self' data: blob: " + lausanneTilesOrigin,
 		"font-src 'self' data:",
 		"connect-src " + connect,
 		"object-src 'none'",

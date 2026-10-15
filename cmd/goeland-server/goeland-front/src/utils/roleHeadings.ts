@@ -19,6 +19,10 @@ export interface RoleSection {
   anchor: string
   /** The number of edges of its groups. */
   total: number
+  /** The section title, read from the subject on screen ("Pièces du dossier"). */
+  title: string
+  /** The short name of the section in the page's jump links. */
+  label: string
   groups: { key: string, heading: string, group: RelationshipGroup }[]
 }
 

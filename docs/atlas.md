@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.15.0**.
+Tracked version: **v0.16.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -515,6 +515,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/task/TaskTable.vue` — Task table: assignee, deadline with overdue highlight, status and the actions it allows.
 - `cmd/goeland-server/goeland-front/src/components/task/taskForm.ts` — Task statuses, allowed moves mirroring the server, colors and assignee mapping.
 - `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
+- `cmd/goeland-server/goeland-front/src/components/thing/LausanneMap.vue` — An object on the City of Lausanne's maps (WMTS base layers, view fitted), outline fallback (GLD-069).
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingMainForm.vue` — Thing fields: detail block per specialization, texts and geometry with live preview.
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingTypeSelect.vue` — Thing type selector bound to the code, emitting the selected type.
 - `cmd/goeland-server/goeland-front/src/components/thing/thingForm.ts` — Thing form model and its mapping to create / update requests.
@@ -571,6 +572,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/stores/users.ts` — Operator id → user directory: batched `BatchGetUsers` calls and a page-lifetime cache.
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
+- `cmd/goeland-server/goeland-front/src/styles/detail-page.css` — Shared layout of the detail pages: header, facts, labels, jump links (GLD-063, GLD-068, GLD-069).
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
 - `cmd/goeland-server/goeland-front/src/utils/address.ts` — Postal code and country rules mirroring the server, address display lines and map link.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
@@ -585,6 +587,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
+- `cmd/goeland-server/goeland-front/src/utils/lausanneMap.ts` — City of Lausanne maps: LV95 projection, WMTS base layers from the capabilities, extent, map application link (GLD-069).
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
 - `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.

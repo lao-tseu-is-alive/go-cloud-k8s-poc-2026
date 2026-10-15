@@ -9,14 +9,14 @@ import (
 
 func TestContentSecurityPolicyAllowsTheAuthServerOnlyInJWTMode(t *testing.T) {
 	jwt := contentSecurityPolicy(serverConfig{AuthMode: "jwt", AuthServerURL: "http://localhost:9090/some/path"})
-	if !strings.Contains(jwt, "connect-src 'self' http://localhost:9090;") {
+	if !strings.Contains(jwt, "connect-src 'self' https://tilesmn95.lausanne.ch http://localhost:9090;") {
 		t.Fatalf("jwt mode must allow the auth origin in connect-src: %s", jwt)
 	}
 	dev := contentSecurityPolicy(serverConfig{AuthMode: "dev", AuthServerURL: "http://localhost:9090"})
-	if !strings.Contains(dev, "connect-src 'self';") {
+	if !strings.Contains(dev, "connect-src 'self' https://tilesmn95.lausanne.ch;") {
 		t.Fatalf("dev mode never calls the auth server: %s", dev)
 	}
-	if bad := contentSecurityPolicy(serverConfig{AuthMode: "jwt", AuthServerURL: "not a url"}); !strings.Contains(bad, "connect-src 'self';") {
+	if bad := contentSecurityPolicy(serverConfig{AuthMode: "jwt", AuthServerURL: "not a url"}); !strings.Contains(bad, "connect-src 'self' https://tilesmn95.lausanne.ch;") {
 		t.Fatalf("a relative auth URL adds no origin: %s", bad)
 	}
 	for _, directive := range []string{"script-src 'self'", "object-src 'none'", "frame-ancestors 'none'"} {

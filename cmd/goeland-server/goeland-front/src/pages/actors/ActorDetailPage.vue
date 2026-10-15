@@ -185,7 +185,7 @@
 </script>
 
 <template>
-  <v-container class="actor-page" fluid>
+  <v-container class="detail-page" fluid>
     <div class="d-flex align-center ga-1 mb-2 text-body-2 text-medium-emphasis">
       <v-btn
         :aria-label="t('pages.actors.list.title')"
@@ -209,7 +209,7 @@
             <v-icon :icon="isOrganization ? 'mdi-domain' : 'mdi-account'" size="28" />
           </v-avatar>
 
-          <div class="actor-page__title">
+          <div class="detail-page__title">
             <h1 id="actor-name" class="text-h5 font-weight-medium">{{ actor.displayName }}</h1>
 
             <div class="d-flex flex-wrap align-center ga-2 mt-1">
@@ -237,21 +237,21 @@
 
               <a
                 v-if="ide"
-                class="actor-page__register"
+                class="detail-page__register"
                 :href="contactHref(ide.contactType, ide.value)"
                 rel="noopener noreferrer"
                 target="_blank"
                 :title="t('actorPage.header.ideHint')"
-              >{{ t('actorPage.header.ide', { value: ide.value }) }}<v-icon icon="mdi-open-in-new" size="x-small" /><span class="sr-only"> ({{ t('actorPage.header.newTab') }})</span></a>
+              >{{ t('actorPage.header.ide', { value: ide.value }) }}<v-icon icon="mdi-open-in-new" size="x-small" /><span class="sr-only"> ({{ t('detailPage.newTab') }})</span></a>
 
               <a
                 v-if="abacus"
-                class="actor-page__register"
+                class="detail-page__register"
                 :href="contactHref(abacus.contactType, abacus.value)"
                 rel="noopener noreferrer"
                 target="_blank"
                 :title="t('actorPage.header.abacusHint')"
-              >{{ t('actorPage.header.abacus', { value: abacus.value }) }}<v-icon icon="mdi-open-in-new" size="x-small" /><span class="sr-only"> ({{ t('actorPage.header.newTab') }})</span></a>
+              >{{ t('actorPage.header.abacus', { value: abacus.value }) }}<v-icon icon="mdi-open-in-new" size="x-small" /><span class="sr-only"> ({{ t('detailPage.newTab') }})</span></a>
             </div>
           </div>
 
@@ -264,11 +264,11 @@
               prepend-icon="mdi-link-plus"
               variant="flat"
               @click="linkOpen = true"
-            >{{ t('actorPage.header.link') }}</v-btn>
+            >{{ t('detailPage.link') }}</v-btn>
 
             <v-menu v-if="editable || (!isDeleted && !isLocked && hasFullControl)" location="bottom end">
               <template #activator="{ props: menu }">
-                <v-btn v-bind="menu" :aria-label="t('actorPage.header.more')" icon="mdi-dots-vertical" variant="text" />
+                <v-btn v-bind="menu" :aria-label="t('detailPage.more')" icon="mdi-dots-vertical" variant="text" />
               </template>
 
               <v-list density="compact">
@@ -292,9 +292,9 @@
           </div>
         </div>
 
-        <div class="actor-page__facts">
+        <div class="detail-page__facts">
           <div>
-            <div class="actor-page__fact-label">{{ t('actorPage.header.address') }}</div>
+            <div class="detail-page__label">{{ t('actorPage.header.address') }}</div>
 
             <div v-if="principalAddress">
               <div v-for="(line, i) in addressLines(principalAddress)" :key="i">{{ line }}</div>
@@ -304,14 +304,14 @@
           </div>
 
           <div>
-            <div class="actor-page__fact-label">{{ t('actorPage.header.phone') }}</div>
+            <div class="detail-page__label">{{ t('actorPage.header.phone') }}</div>
 
             <div v-if="phone" class="d-flex flex-wrap align-baseline ga-2">
               <a :href="contactHref(phone.contactType, phone.value)">{{ formatContactValue(phone.contactType, phone.value) }}</a>
 
               <a
                 v-if="phoneDirectoryHref(phone.value)"
-                class="actor-page__directory"
+                class="detail-page__directory"
                 :href="phoneDirectoryHref(phone.value)"
                 rel="noopener noreferrer"
                 target="_blank"
@@ -323,31 +323,31 @@
           </div>
 
           <div>
-            <div class="actor-page__fact-label">{{ t('actorPage.header.email') }}</div>
+            <div class="detail-page__label">{{ t('actorPage.header.email') }}</div>
             <a v-if="email" :href="contactHref(email.contactType, email.value)">{{ email.value }}</a>
             <div v-else class="text-medium-emphasis">—</div>
           </div>
 
           <div>
-            <div class="actor-page__fact-label">{{ t('actorPage.header.website') }}</div>
+            <div class="detail-page__label">{{ t('actorPage.header.website') }}</div>
             <a v-if="website" :href="contactHref(website.contactType, website.value)" rel="noopener noreferrer" target="_blank">{{ website.value.replace(/^https?:\/\//, '') }}</a>
             <div v-else class="text-medium-emphasis">—</div>
           </div>
         </div>
 
         <nav v-if="sections.length > 0" aria-labelledby="actor-jump" class="mt-4">
-          <div id="actor-jump" class="actor-page__fact-label mb-1">{{ t('actorPage.header.jump') }}</div>
+          <div id="actor-jump" class="detail-page__label mb-1">{{ t('detailPage.jump') }}</div>
 
           <div class="d-flex flex-wrap ga-2">
             <a
               v-for="s in sections"
               :key="s.anchor"
-              class="actor-page__jump"
+              class="detail-page__jump"
               :href="`#${s.anchor}`"
               @click.prevent="goTo(s.anchor)"
             >
               <v-icon :icon="kindIcon(s.kind)" size="small" />
-              <span>{{ t(`relGroups.jump.${s.kind}`, t('relGroups.jump.other')) }}</span>
+              <span>{{ s.label }}</span>
               <strong>{{ s.total }}</strong>
               <v-icon icon="mdi-arrow-down" size="x-small" />
             </a>
@@ -389,14 +389,14 @@
 
       <v-tabs v-model="tab" class="mb-4" color="primary">
         <v-tab value="roles">{{ t('actorPage.tabs.roles') }}</v-tab>
-        <v-tab value="governance">{{ t('actorPage.tabs.governance') }}</v-tab>
+        <v-tab value="governance">{{ t('detailPage.tabs.governance') }}</v-tab>
       </v-tabs>
 
       <v-window v-model="tab">
         <v-window-item value="roles">
           <v-row>
             <v-col cols="12" md="8">
-              <SubjectRolesPanel :reload-key="rolesKey" :subject-id="id" @sections="sections = $event" />
+              <SubjectRolesPanel :reload-key="rolesKey" :subject-id="id" subject-kind="SUBJECT_KIND_ACTOR" @sections="sections = $event" />
             </v-col>
 
             <v-col cols="12" md="4">
@@ -441,7 +441,7 @@
                   <div class="d-flex justify-space-between ga-3 mb-2"><span class="text-medium-emphasis">{{ t('actorPage.brief.confidentiality') }}</span><span>{{ actor.recordMetadata?.confidentialityLevel ?? 0 }}</span></div>
                   <div class="d-flex justify-space-between ga-3 mb-2"><span class="text-medium-emphasis">{{ t('actorPage.brief.myAccess') }}</span><span>{{ enumLabel('Permission', access?.level) }}</span></div>
                   <div class="d-flex justify-space-between ga-3 mb-3"><span class="text-medium-emphasis">{{ t('actorPage.brief.updated') }}</span><span>{{ formatDateTime(actor.updatedAt) }}</span></div>
-                  <v-btn block variant="outlined" @click="tab = 'governance'">{{ t('actorPage.tabs.governance') }}</v-btn>
+                  <v-btn block variant="outlined" @click="tab = 'governance'">{{ t('detailPage.tabs.governance') }}</v-btn>
                 </v-card-text>
               </v-card>
             </v-col>
@@ -473,10 +473,10 @@
 
             <v-col cols="12">
               <v-card>
-                <v-card-title class="text-subtitle-1">{{ t('actorPage.allRelationships') }}</v-card-title>
+                <v-card-title class="text-subtitle-1">{{ t('detailPage.allRelationships') }}</v-card-title>
 
                 <v-card-text>
-                  <p class="text-caption text-medium-emphasis mb-2">{{ t('actorPage.allRelationshipsHint') }}</p>
+                  <p class="text-caption text-medium-emphasis mb-2">{{ t('detailPage.allRelationshipsHint') }}</p>
 
                   <RelationshipTable
                     v-model:sort="relSort"
@@ -524,70 +524,3 @@
     />
   </v-container>
 </template>
-
-<style scoped>
-  .actor-page {
-    max-width: 1320px;
-  }
-
-  .actor-page__title {
-    flex: 999 1 420px;
-    min-width: 0;
-  }
-
-  .actor-page__facts {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-    gap: 14px 24px;
-    margin-top: 18px;
-    padding-top: 16px;
-    border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-  }
-
-  .actor-page__fact-label {
-    font-size: 0.8rem;
-    color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
-    margin-bottom: 2px;
-  }
-
-  .actor-page__register {
-    display: inline-flex;
-    align-items: center;
-    gap: 4px;
-    font-family: ui-monospace, monospace;
-    font-size: 0.85rem;
-    text-underline-offset: 3px;
-    color: rgb(var(--v-theme-primary));
-  }
-
-  .actor-page__directory {
-    font-size: 0.75rem;
-    font-weight: 700;
-    padding: 0 6px;
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    border-radius: 4px;
-    text-decoration: none;
-  }
-
-  .actor-page__jump {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    min-height: 40px;
-    padding: 0 14px;
-    border-radius: 8px;
-    border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
-    background: rgba(var(--v-theme-primary), 0.04);
-    color: rgb(var(--v-theme-primary));
-    text-underline-offset: 3px;
-  }
-
-  .sr-only {
-    position: absolute;
-    width: 1px;
-    height: 1px;
-    overflow: hidden;
-    clip: rect(0 0 0 0);
-    white-space: nowrap;
-  }
-</style>

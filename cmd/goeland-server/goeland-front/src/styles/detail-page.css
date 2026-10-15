@@ -1,0 +1,74 @@
+/*
+ * The layout shared by the detail pages (GLD-063, GLD-068, GLD-069): the header
+ * card with its facts grid, register links, jump links and the screen-reader
+ * only text. Each page keeps only what is its own.
+ */
+.detail-page {
+  max-width: 1320px;
+}
+
+.detail-page__title {
+  flex: 999 1 420px;
+  min-width: 0;
+}
+
+.detail-page__facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 14px 24px;
+  margin-top: 18px;
+  padding-top: 16px;
+  border-top: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+}
+
+.detail-page__label {
+  font-size: 0.8rem;
+  color: rgba(var(--v-theme-on-surface), var(--v-medium-emphasis-opacity));
+  margin-bottom: 2px;
+}
+
+.detail-page__mono {
+  font-family: ui-monospace, monospace;
+  font-size: 0.9rem;
+}
+
+.detail-page__register {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: ui-monospace, monospace;
+  font-size: 0.85rem;
+  text-underline-offset: 3px;
+  color: rgb(var(--v-theme-primary));
+}
+
+.detail-page__directory {
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0 6px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  border-radius: 4px;
+  text-decoration: none;
+}
+
+.detail-page__jump {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 40px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid rgba(var(--v-border-color), var(--v-border-opacity));
+  background: rgba(var(--v-theme-primary), 0.04);
+  color: rgb(var(--v-theme-primary));
+  text-underline-offset: 3px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}

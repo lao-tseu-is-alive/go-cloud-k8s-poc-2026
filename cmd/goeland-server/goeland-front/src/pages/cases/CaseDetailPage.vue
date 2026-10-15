@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AuditEvent, CaseStatus, GoCase } from '@/api/types'
-  import { computed, ref, watch } from 'vue'
+  import type { RoleSection } from '@/utils/roleHeadings'
+  import { computed, nextTick, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
@@ -14,6 +15,7 @@
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
+  import SubjectRolesPanel from '@/components/core/SubjectRolesPanel.vue'
   import CaseTasksPanel from '@/components/task/CaseTasksPanel.vue'
   import CaseTimelinePanel from '@/components/timeline/CaseTimelinePanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -23,6 +25,7 @@
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
+  import { kindIcon } from '@/utils/subjects'
   import { maxLength, required } from '@/utils/validation'
 
   const { t } = useI18n()
@@ -42,6 +45,12 @@
   } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
+  // The case page (GLD-068, the GLD-063 model): the header, then the case's
+  // progress (timeline, tasks, circulations), its parties and documents
+  // grouped by role, and the technical side in its own tab.
+  const tab = ref<'progress' | 'parties' | 'governance'>('progress')
+  const sections = ref<RoleSection[]>([])
+  const rolesKey = ref(0)
 
   const editing = ref(false)
   const editTitle = ref('')
@@ -88,6 +97,7 @@
     try {
       const res = await getCase(id.value, { includeAudit: true })
       current.value = res.case ?? null
+      rolesKey.value++
       await reloadRelationships()
       audit.value = res.recentAudit ?? []
     } catch (error) {
@@ -159,25 +169,145 @@
     }
   }
 
+  /** Shows the parties tab and scrolls to a section of it. */
+  async function goTo (anchor: string) {
+    tab.value = 'parties'
+    await nextTick()
+    document.querySelector(`#${anchor}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
   // Reload on id change too: following a link to another subject reuses this page.
-  watch(id, reload, { immediate: true })
+  watch(id, () => {
+    tab.value = 'progress'
+    void reload()
+  }, { immediate: true })
 </script>
 
 <template>
-  <v-container fluid>
-    <div class="d-flex align-center ga-2 mb-2">
-      <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/cases')" />
-      <h1 class="text-h5 text-truncate">{{ current?.title ?? t('pages.cases.detail.title') }}</h1>
+  <v-container class="detail-page" fluid>
+    <div class="d-flex align-center ga-1 mb-2 text-body-2 text-medium-emphasis">
+      <v-btn
+        :aria-label="t('nav.cases')"
+        icon="mdi-arrow-left"
+        size="small"
+        variant="text"
+        @click="router.push('/cases')"
+      />
+
+      <router-link class="text-medium-emphasis" to="/cases">{{ t('nav.cases') }}</router-link>
+      <span aria-hidden="true">›</span>
+      <span class="text-truncate">{{ current?.title ?? t('pages.cases.detail.title') }}</span>
     </div>
 
-    <v-progress-linear v-if="loading" color="primary" indeterminate />
+    <v-progress-linear v-if="loading && !current" color="primary" indeterminate />
 
     <template v-if="current">
-      <div class="d-flex flex-wrap ga-2 mb-3 align-center">
-        <CaseStatusChip :status="current.status" />
-        <v-chip v-if="isLocked" color="grey" prepend-icon="mdi-lock" size="small">{{ t('states.locked') }}</v-chip>
-        <v-chip v-if="isDeleted" color="error" prepend-icon="mdi-delete" size="small">{{ t('states.deleted') }}</v-chip>
-      </div>
+      <v-card aria-labelledby="case-title" class="mb-4 pa-5" tag="section">
+        <div class="d-flex flex-wrap align-start ga-4">
+          <v-avatar color="primary" rounded="lg" size="52" variant="tonal"><v-icon icon="mdi-briefcase-outline" size="28" /></v-avatar>
+
+          <div class="detail-page__title">
+            <div v-if="current.subjectRef?.businessRef" class="detail-page__mono text-medium-emphasis">
+              {{ [current.subjectRef.businessRefNamespace, current.subjectRef.businessRef].filter(Boolean).join(' ') }}
+            </div>
+
+            <h1 id="case-title" class="text-h5 font-weight-medium">{{ current.title }}</h1>
+
+            <div class="d-flex flex-wrap align-center ga-2 mt-1">
+              <CaseStatusChip :status="current.status" />
+              <v-chip label size="small">{{ current.caseType?.label ?? current.caseType?.code }}</v-chip>
+
+              <v-chip
+                v-if="(current.recordMetadata?.confidentialityLevel ?? 0) > 0"
+                color="orange"
+                label
+                prepend-icon="mdi-eye-off"
+                size="small"
+              >{{ t('states.confidential') }}</v-chip>
+
+              <v-chip v-if="isLocked" label prepend-icon="mdi-lock" size="small">{{ t('states.locked') }}</v-chip>
+
+              <v-chip
+                v-if="isDeleted"
+                color="error"
+                label
+                prepend-icon="mdi-delete"
+                size="small"
+              >{{ t('states.deleted') }}</v-chip>
+            </div>
+          </div>
+
+          <div class="d-flex flex-wrap ga-2">
+            <v-btn v-if="editable && !editing" prepend-icon="mdi-pencil" variant="outlined" @click="startEdit">{{ t('actions.case.edit') }}</v-btn>
+
+            <v-btn
+              v-if="linkable"
+              color="primary"
+              prepend-icon="mdi-link-plus"
+              variant="flat"
+              @click="linkOpen = true"
+            >{{ t('detailPage.link') }}</v-btn>
+
+            <v-menu v-if="transitions.length > 0" location="bottom end">
+              <template #activator="{ props: menu }">
+                <v-btn v-bind="menu" append-icon="mdi-menu-down" prepend-icon="mdi-swap-horizontal" variant="tonal">{{ t('casePage.changeStatus') }}</v-btn>
+              </template>
+
+              <v-list density="compact">
+                <v-list-item
+                  v-for="target in transitions"
+                  :key="target"
+                  :prepend-icon="target === 'CASE_STATUS_CLOSED' ? 'mdi-archive-check' : 'mdi-swap-horizontal'"
+                  :title="t('actions.case.moveTo', { status: enumLabel('CaseStatus', target) })"
+                  @click="askTransition(target)"
+                />
+              </v-list>
+            </v-menu>
+
+            <v-menu v-if="!isDeleted && !isLocked && hasFullControl" location="bottom end">
+              <template #activator="{ props: menu }">
+                <v-btn v-bind="menu" :aria-label="t('detailPage.more')" icon="mdi-dots-vertical" variant="text" />
+              </template>
+
+              <v-list density="compact">
+                <v-list-item base-color="error" prepend-icon="mdi-delete" :title="t('actions.case.delete')" @click="deleteOpen = true" />
+              </v-list>
+            </v-menu>
+          </div>
+        </div>
+
+        <p v-if="current.description" class="text-body-2 mt-3 mb-0 case-description">{{ current.description }}</p>
+
+        <div class="detail-page__facts">
+          <div><div class="detail-page__label">{{ t('fields.case.opened_at') }}</div>{{ formatDateTime(current.openedAt) }}</div>
+
+          <template v-if="isClosed">
+            <div><div class="detail-page__label">{{ t('fields.case.closed_at') }}</div>{{ formatDateTime(current.closedAt) }}</div>
+            <div><div class="detail-page__label">{{ t('fields.case.closure_reason') }}</div>{{ current.closureReason || '—' }}</div>
+          </template>
+
+          <div><div class="detail-page__label">{{ t('casePage.activity') }}</div>{{ t('casePage.activitySummary', { tasks: openTasks, circulations: openCirculations, drafts: draftCount }) }}</div>
+        </div>
+
+        <nav v-if="sections.length > 0" aria-labelledby="case-jump" class="mt-4">
+          <div id="case-jump" class="detail-page__label mb-1">{{ t('detailPage.jump') }}</div>
+
+          <div class="d-flex flex-wrap ga-2">
+            <a
+              v-for="s in sections"
+              :key="s.anchor"
+              class="detail-page__jump"
+              :href="`#${s.anchor}`"
+              @click.prevent="goTo(s.anchor)"
+            >
+              <v-icon :icon="kindIcon(s.kind)" size="small" />
+              <span>{{ s.label }}</span>
+              <strong>{{ s.total }}</strong>
+              <v-icon icon="mdi-arrow-down" size="x-small" />
+            </a>
+          </div>
+        </nav>
+      </v-card>
 
       <v-alert
         v-if="isClosed && mutable"
@@ -185,9 +315,7 @@
         density="compact"
         type="info"
         variant="tonal"
-      >
-        {{ t('messages.case.closedReadOnly') }}
-      </v-alert>
+      >{{ t('messages.case.closedReadOnly') }}</v-alert>
 
       <v-alert
         v-if="isDeleted"
@@ -195,83 +323,40 @@
         density="compact"
         type="warning"
         variant="tonal"
-      >
-        {{ t('messages.case.deletedReadOnly') }}
-      </v-alert>
+      >{{ t('messages.case.deletedReadOnly') }}</v-alert>
 
-      <!-- action bar: metadata, lifecycle transitions, deletion -->
-      <div class="d-flex flex-wrap ga-2 mb-4">
-        <v-btn
-          v-if="editable && !editing"
-          color="primary"
-          prepend-icon="mdi-pencil"
-          variant="tonal"
-          @click="startEdit"
-        >
-          {{ t('actions.case.edit') }}
-        </v-btn>
+      <v-card v-if="editing" class="mb-4">
+        <v-card-title class="text-subtitle-1">{{ t('actions.case.edit') }}</v-card-title>
 
-        <v-btn
-          v-for="target in transitions"
-          :key="target"
-          :prepend-icon="target === 'CASE_STATUS_CLOSED' ? 'mdi-archive-check' : 'mdi-swap-horizontal'"
-          variant="tonal"
-          @click="askTransition(target)"
-        >
-          {{ t('actions.case.moveTo', { status: enumLabel('CaseStatus', target) }) }}
-        </v-btn>
+        <v-card-text>
+          <v-text-field v-model="editTitle" :label="t('fields.case.title')" :rules="[required(t), maxLength(t, 500)]" />
 
-        <v-btn
-          v-if="!isDeleted && !isLocked && hasFullControl"
-          color="error"
-          prepend-icon="mdi-delete"
-          variant="text"
-          @click="deleteOpen = true"
-        >
-          {{ t('actions.case.delete') }}
-        </v-btn>
-      </div>
+          <v-textarea
+            v-model="editDescription"
+            auto-grow
+            :label="t('fields.case.description')"
+            rows="3"
+            :rules="[maxLength(t, 4000)]"
+          />
 
-      <v-row>
-        <v-col cols="12" md="8">
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.case.summary') }}</v-card-title>
+          <v-text-field v-model="editReason" :label="t('finalize.reason')" />
 
-            <v-card-text>
-              <template v-if="editing">
-                <v-text-field v-model="editTitle" :label="t('fields.case.title')" :rules="[required(t), maxLength(t, 500)]" />
+          <div class="d-flex justify-end ga-2">
+            <v-btn variant="text" @click="editing = false">{{ t('actions.common.cancel') }}</v-btn>
+            <v-btn color="primary" :loading="saving" variant="flat" @click="saveEdit">{{ t('actions.common.save') }}</v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
 
-                <v-textarea
-                  v-model="editDescription"
-                  auto-grow
-                  :label="t('fields.case.description')"
-                  rows="3"
-                  :rules="[maxLength(t, 4000)]"
-                />
+      <v-tabs v-model="tab" class="mb-4" color="primary">
+        <v-tab value="progress">{{ t('casePage.tabs.progress') }}</v-tab>
+        <v-tab value="parties">{{ t('casePage.tabs.parties') }}</v-tab>
+        <v-tab value="governance">{{ t('detailPage.tabs.governance') }}</v-tab>
+      </v-tabs>
 
-                <v-text-field v-model="editReason" :label="t('finalize.reason')" />
-
-                <div class="d-flex justify-end ga-2">
-                  <v-btn variant="text" @click="editing = false">{{ t('actions.common.cancel') }}</v-btn>
-                  <v-btn color="primary" :loading="saving" variant="flat" @click="saveEdit">{{ t('actions.common.save') }}</v-btn>
-                </div>
-              </template>
-
-              <v-table v-else density="compact">
-                <tbody>
-                  <tr><td class="text-medium-emphasis" style="width:40%">{{ t('fields.case.case_type') }}</td><td>{{ current.caseType?.label ?? current.caseType?.code }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.case.description') }}</td><td>{{ current.description || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.case.opened_at') }}</td><td>{{ formatDateTime(current.openedAt) }}</td></tr>
-
-                  <template v-if="isClosed">
-                    <tr><td class="text-medium-emphasis">{{ t('fields.case.closed_at') }}</td><td>{{ formatDateTime(current.closedAt) }}</td></tr>
-                    <tr><td class="text-medium-emphasis">{{ t('fields.case.closure_reason') }}</td><td>{{ current.closureReason || '—' }}</td></tr>
-                  </template>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
-
+      <!-- eager: the panels report drafts, open tasks and circulations, which closing needs -->
+      <v-window v-model="tab">
+        <v-window-item eager value="progress">
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.case.timeline') }}</v-card-title>
 
@@ -282,20 +367,6 @@
                 :reload-key="timelineKey"
                 @changed="reload"
                 @drafts="draftCount = $event"
-              />
-            </v-card-text>
-          </v-card>
-
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.case.circulations') }}</v-card-title>
-
-            <v-card-text>
-              <CaseCirculationsPanel
-                :can-edit="editable"
-                :case-id="id"
-                :reload-key="timelineKey"
-                @changed="onTasksChanged"
-                @open="openCirculations = $event"
               />
             </v-card-text>
           </v-card>
@@ -315,64 +386,77 @@
           </v-card>
 
           <v-card class="mb-4">
-            <v-card-title class="d-flex align-center text-subtitle-1">
-              {{ t('sections.case.relationships') }}
-              <v-spacer />
-
-              <v-btn
-                v-if="linkable"
-                prepend-icon="mdi-link-plus"
-                size="small"
-                variant="tonal"
-                @click="linkOpen = true"
-              >
-                {{ t('actions.document.link') }}
-              </v-btn>
-            </v-card-title>
+            <v-card-title class="text-subtitle-1">{{ t('sections.case.circulations') }}</v-card-title>
 
             <v-card-text>
-              <p class="text-caption text-medium-emphasis mb-2">{{ t('messages.case.relationshipsHint') }}</p>
-
-              <RelationshipTable
-                v-model:sort="relSort"
-                :can-unlink="linkable"
-                :capped="relCapped"
-                :has-more="relHasMore"
-                :loading="relLoading"
-                :relationships="relationships"
-                :total="relTotal"
-                @ended="reload"
-                @load-more="loadMoreRelationships"
-                @unlink="doUnlink"
+              <CaseCirculationsPanel
+                :can-edit="editable"
+                :case-id="id"
+                :reload-key="timelineKey"
+                @changed="onTasksChanged"
+                @open="openCirculations = $event"
               />
             </v-card-text>
           </v-card>
-        </v-col>
+        </v-window-item>
 
-        <v-col cols="12" md="4">
-          <SubjectIdentityCard class="mb-4" :subject="current.subjectRef" />
+        <v-window-item eager value="parties">
+          <SubjectRolesPanel :reload-key="rolesKey" :subject-id="id" subject-kind="SUBJECT_KIND_CASE" @sections="sections = $event" />
+        </v-window-item>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
-            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
-          </v-card>
+        <v-window-item value="governance">
+          <v-row>
+            <v-col cols="12" md="6">
+              <SubjectIdentityCard class="mb-4" :subject="current.subjectRef" />
 
-          <v-card v-if="canManage" class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('export.title') }}</v-card-title>
-            <v-card-text><CaseExportPanel :case-id="id" /></v-card-text>
-          </v-card>
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+                <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+              </v-card>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>
-            <v-card-text><RecordMetadataPanel :metadata="current.recordMetadata" /></v-card-text>
-          </v-card>
+              <v-card v-if="canManage" class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('export.title') }}</v-card-title>
+                <v-card-text><CaseExportPanel :case-id="id" /></v-card-text>
+              </v-card>
+            </v-col>
 
-          <v-card>
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.audit') }}</v-card-title>
-            <v-card-text><AuditTimeline :events="audit" /></v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
+            <v-col cols="12" md="6">
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>
+                <v-card-text><RecordMetadataPanel :metadata="current.recordMetadata" /></v-card-text>
+              </v-card>
+
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.audit') }}</v-card-title>
+                <v-card-text><AuditTimeline :events="audit" /></v-card-text>
+              </v-card>
+            </v-col>
+
+            <v-col cols="12">
+              <v-card>
+                <v-card-title class="text-subtitle-1">{{ t('detailPage.allRelationships') }}</v-card-title>
+
+                <v-card-text>
+                  <p class="text-caption text-medium-emphasis mb-2">{{ t('detailPage.allRelationshipsHint') }}</p>
+
+                  <RelationshipTable
+                    v-model:sort="relSort"
+                    :can-unlink="linkable"
+                    :capped="relCapped"
+                    :has-more="relHasMore"
+                    :loading="relLoading"
+                    :relationships="relationships"
+                    :total="relTotal"
+                    @ended="reload"
+                    @load-more="loadMoreRelationships"
+                    @unlink="doUnlink"
+                  />
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-window-item>
+      </v-window>
 
       <LinkSubjectDialog
         v-model="linkOpen"
@@ -462,3 +546,10 @@
     </template>
   </v-container>
 </template>
+
+<style scoped>
+  .case-description {
+    white-space: pre-line;
+    max-width: 80ch;
+  }
+</style>

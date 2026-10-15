@@ -746,6 +746,34 @@
     "expires": "until {at}"
   },
   "relGroups": {
+    "by": {
+      "SUBJECT_KIND_CASE": {
+        "sections": {
+          "SUBJECT_KIND_CASE": "Related cases",
+          "SUBJECT_KIND_DOCUMENT": "Case documents",
+          "SUBJECT_KIND_THING": "Objects concerned",
+          "SUBJECT_KIND_ACTOR": "Parties",
+          "SUBJECT_KIND_ORG_UNIT": "Units",
+          "SUBJECT_KIND_USER": "Staff",
+          "SUBJECT_KIND_GROUP": "Groups"
+        },
+        "jump": {
+          "SUBJECT_KIND_CASE": "Related cases",
+          "SUBJECT_KIND_DOCUMENT": "Documents",
+          "SUBJECT_KIND_ACTOR": "Parties"
+        }
+      },
+      "SUBJECT_KIND_THING": {
+        "sections": {
+          "SUBJECT_KIND_THING": "With other objects",
+          "SUBJECT_KIND_ACTOR": "Actors"
+        },
+        "jump": {
+          "SUBJECT_KIND_THING": "Related objects",
+          "SUBJECT_KIND_ACTOR": "Actors"
+        }
+      }
+    },
     "empty": "No readable relationship.",
     "links": "no link | {n} link | {n} links",
     "roles": "no role | {n} role | {n} roles",
@@ -810,28 +838,60 @@
       "ideHint": "Entry in the Swiss business register (new tab)",
       "abacus": "ABACUS debtor {value}",
       "abacusHint": "ABACUS debtor entry (new tab)",
-      "newTab": "new tab",
       "phoneDirectory": "Look this number up in the Swiss directory (new tab)",
-      "link": "Link to…",
-      "more": "More actions",
       "address": "Main address",
       "phone": "Phone",
       "email": "E-mail",
-      "website": "Website",
-      "jump": "Go to section"
+      "website": "Website"
     },
     "tabs": {
-      "roles": "Actor roles",
-      "governance": "Governance and history"
+      "roles": "Actor roles"
     },
     "brief": {
       "title": "At a glance",
       "confidentiality": "Confidentiality",
       "myAccess": "My access",
       "updated": "Updated"
+    }
+  },
+  "detailPage": {
+    "link": "Link to…",
+    "more": "More actions",
+    "jump": "Go to section",
+    "newTab": "new tab",
+    "tabs": {
+      "governance": "Governance and history"
     },
     "allRelationships": "All relationships (technical view)",
-    "allRelationshipsHint": "The raw list of the actor's links, both ways, with the actions to end or unlink a link."
+    "allRelationshipsHint": "The raw list of links, both ways, with the actions to end or unlink a link."
+  },
+  "thingPage": {
+    "tabs": {
+      "object": "Object"
+    },
+    "map": {
+      "label": "Map of the object",
+      "baseLayer": "Base map",
+      "openCityMap": "Open in the City's map",
+      "noGeometry": "This object is not georeferenced.",
+      "outside": "This object lies outside the City of Lausanne's maps.",
+      "unavailable": "The City's maps are not available right now.",
+      "layers": {
+        "planVille": "City plan",
+        "cadastral": "Cadastral map",
+        "ortho2024": "Orthophoto 2024",
+        "ortho2016": "Orthophoto 2016"
+      }
+    }
+  },
+  "casePage": {
+    "tabs": {
+      "progress": "Progress",
+      "parties": "Parties and documents"
+    },
+    "changeStatus": "Change status",
+    "activity": "Ongoing",
+    "activitySummary": "{tasks} open task(s) · {circulations} circulation(s) · {drafts} draft timeline entr(ies)"
   },
   "enums": {
     "RoleEnd": {
@@ -839,7 +899,7 @@
       "ROLE_END_TARGET": "the target",
       "ROLE_END_SOURCE": "the source"
     },
-        "CaseExportStatus": {
+    "CaseExportStatus": {
       "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
       "CASE_EXPORT_STATUS_QUEUED": "Queued",
       "CASE_EXPORT_STATUS_RUNNING": "Preparing",

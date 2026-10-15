@@ -14,10 +14,12 @@
   // in each a group per role, titled from the subject on screen ("Client des
   // affaires suivantes") and sorted alphabetically, counted before it opens.
   // Only what the caller may read is counted. Emits the section totals for
-  // the page's jump links.
-  const props = defineProps<{ subjectId: string, reloadKey?: number }>()
+  // the page's jump links. Section titles depend on the subject on screen
+  // (relGroups.by.<kind>, e.g. a case has "Intervenants" where an actor is
+  // "Avec d'autres acteurs"), falling back to relGroups.sections / jump.
+  const props = defineProps<{ subjectId: string, subjectKind?: SubjectKind, reloadKey?: number }>()
   const emit = defineEmits<{ sections: [sections: RoleSection[]] }>()
-  const { t, locale } = useI18n()
+  const { t, te, locale } = useI18n()
   const { report } = useApiErrors()
 
   const KIND_ORDER: SubjectKind[] = [
@@ -30,6 +32,13 @@
 
   const lang = computed(() => (String(locale.value).startsWith('fr') ? 'fr' : 'en'))
 
+  /** The title or jump label of the section of kind, seen from the subject on screen. */
+  function sectionText (part: 'sections' | 'jump', kind: SubjectKind): string {
+    const own = `relGroups.by.${props.subjectKind}.${part}.${kind}`
+    if (props.subjectKind && te(own)) return t(own)
+    return t(`relGroups.${part}.${kind}`, t(`relGroups.${part}.other`))
+  }
+
   const sections = computed<RoleSection[]>(() => {
     const byKind = new Map<SubjectKind, RoleSection>()
     for (const g of groups.value) {
@@ -38,7 +47,14 @@
       if (!type) continue
       let section = byKind.get(kind)
       if (!section) {
-        section = { kind, anchor: `roles-${kind.replace('SUBJECT_KIND_', '').toLowerCase()}`, total: 0, groups: [] }
+        section = {
+          kind,
+          anchor: `roles-${kind.replace('SUBJECT_KIND_', '').toLowerCase()}`,
+          total: 0,
+          title: sectionText('sections', kind),
+          label: sectionText('jump', kind),
+          groups: [],
+        }
         byKind.set(kind, section)
       }
       section.total += g.count ?? 0
@@ -88,7 +104,7 @@
     >
       <div class="d-flex align-center ga-2 px-4 pt-4 pb-3">
         <v-icon color="primary" :icon="kindIcon(section.kind)" />
-        <h2 :id="`${section.anchor}-title`" class="text-h6">{{ t(`relGroups.sections.${section.kind}`, t('relGroups.sections.other')) }}</h2>
+        <h2 :id="`${section.anchor}-title`" class="text-h6">{{ section.title }}</h2>
         <span class="text-body-2 text-medium-emphasis">{{ t('relGroups.links', section.total) }} · {{ t('relGroups.roles', section.groups.length) }}</span>
       </div>
 

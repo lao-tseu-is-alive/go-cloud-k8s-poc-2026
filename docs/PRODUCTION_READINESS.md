@@ -120,7 +120,8 @@ its redirect allowlist and CORS origins (README, "Running locally with SSO").
 
 Every response carries browser security headers (`cmd/goeland-server/headers.go`): a
 Content-Security-Policy (`'self'` only, inline styles for Vuetify, the `AUTH_SERVER_URL` origin
-added to `connect-src` in `jwt` mode), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
+added to `connect-src` in `jwt` mode, and the City of Lausanne's map tiles
+`https://tilesmn95.lausanne.ch` in `img-src` and `connect-src` for the object maps, GLD-069), `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`,
 `Referrer-Policy`, `Cross-Origin-Opener-Policy` and `Permissions-Policy`. HSTS is left to the TLS
 terminator (ingress); set it there.
 
