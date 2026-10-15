@@ -18,6 +18,7 @@ type Repository interface {
 	UnlinkSubjects(ctx context.Context, relationshipID uuid.UUID, operatorID, reason string) (*SubjectRelationship, *AuditEvent, error)
 	EndRelationship(ctx context.Context, in EndInput) (*SubjectRelationship, *AuditEvent, error)
 	ListRelationships(ctx context.Context, filter RelationshipFilter) (RelationshipResult, error)
+	SummarizeRelationships(ctx context.Context, subjectID uuid.UUID, viewer Viewer) ([]*RelationshipGroup, error)
 	ListRelationshipTypes(ctx context.Context, onlyActive bool, sourceKind, targetKind SubjectKind) ([]*RelationshipType, error)
 	AppendAuditEvent(ctx context.Context, ev AuditEvent) (*AuditEvent, error)
 	CreateRelationshipType(ctx context.Context, in RelationshipTypeInput) (*RelationshipType, *ReferenceChange, error)

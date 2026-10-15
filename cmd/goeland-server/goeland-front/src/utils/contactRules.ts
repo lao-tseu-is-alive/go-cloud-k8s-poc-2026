@@ -59,6 +59,18 @@ export function contactPlaceholder (type?: ContactType): string {
   return PLACEHOLDERS[contactKind(type)]
 }
 
+/** The Swiss business register (UID/IDE) entry of an IDE number (GLD-063). */
+export const UID_REGISTER_URL = 'https://www.uid.admin.ch/Detail.aspx?uid_id='
+
+/** The City of Lausanne debtor application entry of an ABACUS debtor number (GLD-063). */
+export const ABACUS_DEBTOR_URL = 'https://debiteur.lausanne.ch/debiteur-ui/details-debiteur/'
+
+/** The Swiss phone directory search of a Swiss (+41) phone number, else undefined (GLD-063). */
+export function phoneDirectoryHref (value: string): string | undefined {
+  const e164 = normalizePhone(value)
+  return e164?.startsWith('+41') ? `https://map.search.ch/?tel=0${e164.slice(3)}` : undefined
+}
+
 /** E.164 form of a phone number, or undefined when it is not one. */
 export function normalizePhone (value: string): string | undefined {
   let n = value.replace(PHONE_SEPARATORS, '')
@@ -123,6 +135,13 @@ export function formatContactValue (type: ContactType | undefined, value: string
 /** Link for a complement (tel:, mailto:, web), or undefined when not linkable. */
 export function contactHref (type: ContactType | undefined, value: string): string | undefined {
   switch (contactKind(type)) {
+    case 'ide': {
+      // the Swiss business register (stored normalized: CHE-123.456.789)
+      return `${UID_REGISTER_URL}${encodeURIComponent(value)}`
+    }
+    case 'abacus': {
+      return `${ABACUS_DEBTOR_URL}${encodeURIComponent(value)}`
+    }
     case 'phone': {
       return `tel:${value}`
     }

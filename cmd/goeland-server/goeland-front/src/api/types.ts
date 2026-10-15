@@ -284,6 +284,51 @@ export interface RelationshipType {
   inverseLabel?: string
   description?: string
   isActive?: boolean
+  /** The role one end plays for the other, singular ("Client"); empty: shown by its labels (GLD-063). */
+  roleLabel?: string
+  /** The plural of roleLabel when not regular; empty: derived (utils/roleHeadings.ts). */
+  roleLabelPlural?: string
+  /** The end that plays the role. */
+  roleEnd?: RoleEnd
+  /** How the role joins the other kind ("de", "par", "sur", ...). */
+  rolePreposition?: string
+}
+
+/** Which end of a relationship type plays its role (GLD-063). */
+export type RoleEnd = 'ROLE_END_UNSPECIFIED' | 'ROLE_END_TARGET' | 'ROLE_END_SOURCE'
+
+/** What a relationship list shows of the other end (GLD-063); set with includeDetails. */
+export interface RelatedSubjectDetail {
+  typeCode?: string
+  typeLabel?: string
+  /** OPEN, IN_PROGRESS, SUSPENDED or CLOSED for a case. */
+  caseStatus?: string
+  /** A case's opening date or a document's official date (YYYY-MM-DD). */
+  date?: string
+}
+
+/** The edges of one relationship type in one direction, counted (GLD-063). */
+export interface RelationshipGroup {
+  relationshipType?: RelationshipType
+  /** True when the subject is the source of the edges. */
+  outgoing?: boolean
+  otherKind?: SubjectKind
+  count?: number
+  /** Other ends that are cases not closed. */
+  openCount?: number
+  /** The split by case type or document type. */
+  families?: RelationshipFamily[]
+}
+
+export interface RelationshipFamily {
+  code: string
+  label?: string
+  count?: number
+  openCount?: number
+}
+
+export interface SummarizeRelationshipsResponse {
+  groups?: RelationshipGroup[]
 }
 
 export interface SubjectRelationship {
@@ -297,6 +342,8 @@ export interface SubjectRelationship {
   createdAt?: string
   createdBy?: string
   deletedAt?: string
+  /** The other end, described (GLD-063); set by a list asked with includeDetails. */
+  otherDetail?: RelatedSubjectDetail
 }
 
 export interface AuditEvent {

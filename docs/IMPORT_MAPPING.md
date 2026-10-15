@@ -29,11 +29,12 @@ Prerequisites: the replica (`goeland`, read-only role) and a local PostgreSQL su
 recreate the target database.
 
 ```bash
+# 0. Once: the two connections in .env.import (Git-ignored, never in .env, which the
+#    Makefile exports to the server); the environment wins when set.
+cp .env.import.sample .env.import    # then replace <password>
 # 1. Refresh the replica first if the instant T must move (outside this repository).
-# 2. Rebuild the target from scratch and import (dry run without -apply):
-GOELAND_IMPORT_SOURCE_URL='postgres://goeland_read:<password>@localhost/goeland' \
-GOELAND_IMPORT_ADMIN_URL='postgres://postgres@127.0.0.1:5432/postgres' \
-    scripts/import_rebuild.sh goeland_import
+# 2. Rebuild the target from scratch and import (--dry-run rolls it back):
+scripts/import_rebuild.sh goeland_import
 # 3. Run the POC on the imported data: same .env, another database
 DB_NAME=goeland_import make run          # DATABASE_URL, when set, must name it too
 ```
@@ -64,7 +65,7 @@ legacy id: the imported grants then apply exactly as in production.
 | `affaire` (~512k) | `case_file` + CASE subject | status: terminated → CLOSED, suspended → SUSPENDED, otherwise OPEN; confidential → level 2; created date and creator kept |
 | `affaire_droit_emp_or_ou` (~2.4M) | `access_grant` | 1 Contrôle total → FULL_CONTROL, 2 Edition → MANAGE, 3 Ajout suivis/documents → CONTRIBUTE, 4 Consultation → READ; `E`/`e` → USER, `O` → ORG_UNIT, `G` → GROUP; 5 Aucun accès is not imported (no deny level, counted) |
 | `acteur` (~85k) + `act_physique` / `act_moral` | `actor` | person: salutation, last and first name only; organization: legal name, category (by label), complement |
-| `acteur_complement` (~165k) | `actor_contact` | typed by the legacy complement type; values failing the POC rules are counted and left out |
+| `acteur_complement` (~165k) | `actor_contact` | typed by the legacy complement type; values failing the POC rules are counted and left out, except a phone or fax followed by a note ("021 315 22 22 (secrétariat)", ~1,460 values): the number is kept and the note becomes the contact label (GLD-066, counted as adjusted) |
 | `acteur_adresse_corresp_denormalise` | `address` + `actor_address` | one principal CORRESPONDENCE address per actor when street, postal code and locality are known |
 | `acteur_role` on `Affaire` (~270k, 34 roles) | `CASE_HAS_ACTOR_<ROLE>` | existing types reused (requester, owner, ...), the others created |
 | `affaire_employe` (~840k, 15 roles) | `CASE_HAS_USER_<ROLE>` | participation roles, distinct from grants |
@@ -80,7 +81,8 @@ legacy id: the imported grants then apply exactly as in production.
 | `acteur_role` on `Thing` | `THING_HAS_ACTOR_<ROLE>` | owner reused, the others created |
 | `lien_thing_affaire` | `CASE_CONCERNS_THING` | |
 | `lien_affaire_affaire` | `CASE_PARENT_OF_CASE`, `CASE_RELATED_TO_CASE` | "Parent": case 1 is the parent of case 2 (the older one in 86% of the rows), "Enfant" is its mirror (not imported); "Lien" is stored both ways (kept once), "Lien unidirectionnel" keeps its direction |
-| `document` (~2.3M) | `document` + one `document_version` + `content_blob` | one generic type "Document Goéland" (the legacy type is a file format, which gives the media type); the current content is known by its SHA-256 only (no storage reference: the bytes stay in the legacy store); definitive → final; earlier versions not imported |
+| `doc_family` (114) | `document_type` | each legacy document family (the business classification: "Photo (objet)", "Plan d'objet", ...) becomes a document type coded `LEG_DOC_<IdDocFamily>` (GLD-067) |
+| `document` (~2.3M) | `document` + one `document_version` + `content_blob` | typed by its family (`LEG_DOC_<IdDocFamily>`; the generic "Document Goéland" only without a known family; the legacy type is a file format, which gives the media type); the current content is known by its SHA-256 only (no storage reference: the bytes stay in the legacy store); definitive → final; earlier versions not imported |
 | `doclevelconfidential` | confidentiality and `access_grant` | see the decision below (levels 0-6 of the legacy UI) |
 | `lien_affaire_document` / `lien_thing_document` | `CASE_HAS_DOCUMENT` / `DOCUMENT_REPRESENTS_THING` | |
 | `acteur_role` on `Document` | `DOCUMENT_AUTHORED_BY_ACTOR`, `DOCUMENT_HAS_ACTOR_<ROLE>` | |

@@ -121,6 +121,10 @@ func (s *surface) strictJSON() {
 	s.fails(codeInvalidArgument, "POST", "/api/cases", map[string]any{
 		"caseTypeCode": "GENERIC_REQUEST", "title": "Faute de frappe", "initialGovernance": map[string]any{"confidentialityLevl": 2},
 	})
+	// a route with path parameters decodes the body on another path (GLD-065)
+	id := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Chemin " + s.token}), "case", "subjectRef", "id")
+	s.fails(codeInvalidArgument, "PATCH", "/api/cases/"+id, map[string]any{"titl": "faute"})
+	s.fails(codeInvalidArgument, "POST", "/api/cases/"+id+"/transition", map[string]any{"target": "CASE_STATUS_CLOSED"})
 	req, err := http.NewRequest("POST", s.admin.URL+"/goeland.v1.CaseService/ListCaseTypes", strings.NewReader(`{"onlyActive":true,"onlyActiv":true}`))
 	if err != nil {
 		s.t.Fatal(err)
@@ -164,6 +168,17 @@ func (s *surface) core() {
 		s.t.Fatalf("both directions sorted (GLD-056): %v", both)
 	}
 	s.fails(codeInvalidArgument, "GET", "/api/subjects/"+s.caseID+"/relationships?orderBy=deleted_at", nil)
+	// relationship groups (GLD-063): counted, then opened with filters and details
+	summary := s.ok("GET", "/api/subjects/"+s.caseID+"/relationship-summary", nil)
+	if groups := list(summary, "groups"); len(groups) != 1 || str(groups[0], "relationshipType", "roleLabel") != "Affaire liée" {
+		s.t.Fatalf("relationship summary: %v", summary)
+	}
+	s.fails(codeNotFound, "GET", missing("/api/subjects")+"/relationship-summary", nil)
+	opened := s.ok("GET", "/api/subjects/"+s.caseID+"/relationships?outgoing=true&relationshipTypeCode=CASE_RELATED_TO_CASE&includeDetails=true&otherCaseStatus=open&otherTypeCode=GENERIC_REQUEST&otherYearFrom=2020", nil)
+	if rows := list(opened, "relationships"); len(rows) != 1 || str(rows[0], "otherDetail", "caseStatus") != "OPEN" {
+		s.t.Fatalf("a group opened with filters and details: %v", opened)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/subjects/"+s.caseID+"/relationships?otherCaseStatus=maybe", nil)
 
 	me := s.ok("GET", "/api/me", nil)
 	userID := str(me, "user", "id")

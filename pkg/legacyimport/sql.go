@@ -13,8 +13,8 @@ RETURNING id;`
 const finishBatchSQL = `UPDATE import_batch SET finished_at = now(), counts = @counts WHERE id = @id;`
 
 const insertRelationshipTypeSQL = `
-INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description)
-VALUES (@code, @label, @source_kind, @target_kind, true, @inverse_label, @description)
+INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description, role_label)
+VALUES (@code, @label, @source_kind, @target_kind, true, @inverse_label, @description, @role_label)
 RETURNING id;`
 
 // createThingStagingSQL holds the thing rows with their location as EWKT text.
@@ -31,7 +31,7 @@ FROM import_thing;`
 
 const insertLegacyDocumentTypeSQL = `
 INSERT INTO document_type (code, label, description, category)
-VALUES (@code, 'Document Goéland', 'Documents importés de Goéland (le type legacy est un format de fichier)', 'Goéland')
+VALUES (@code, 'Document Goéland', 'Documents importés de Goéland sans famille connue', 'Goéland')
 RETURNING id;`
 
 // setCurrentVersionsSQL points each imported document at its single version.
@@ -208,10 +208,17 @@ SELECT d.iddocument, coalesce(btrim(d.doctitle), ''), coalesce(d.docdescription,
        coalesce(d.docisdefinitive, false), coalesce(d.docisconfidential, false), coalesce(d.doclevelconfidential, 0),
        coalesce(btrim(d.sha256hash), ''), coalesce(d.docsizeinbyte, 0)::bigint, coalesce(d.nbrpage, 0),
        coalesce(btrim(t.mimetype), ''), coalesce(btrim(d.locfilename), '') || coalesce(btrim(d.locfileext), ''),
-       coalesce(d.docnumver, 1)
+       coalesce(d.docnumver, 1), coalesce(d.iddocfamily, 0)
 FROM document d
 LEFT JOIN type_document t ON t.idtypedocument = d.idtypedocument
 ORDER BY d.iddocument;`
+
+// documentFamiliesSQL reads the legacy document families, the business
+// classification of the documents (GLD-067).
+const documentFamiliesSQL = `
+SELECT f.iddocfamily AS id, coalesce(btrim(f.name), '') AS name, coalesce(btrim(f.description), '') AS description
+FROM doc_family f
+ORDER BY f.iddocfamily;`
 
 const documentGrantsSQL = `
 SELECT d.iddocument, d.iduserpost, coalesce(d.doclevelconfidential, 0)

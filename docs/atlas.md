@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.14.1**.
+Tracked version: **v0.15.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -12,6 +12,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
 - `.env_sample` — Secret-free example of the supported `GOELAND_*`, `DB_*` and JWT environment variables.
+- `.env.import.sample` — Secret-free example of `.env.import`, the replica and superuser connections of the legacy import (kept out of `.env`).
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
 - `.sonarcloud.properties` — SonarCloud automatic-analysis settings: tests declared as tests; generated code and PostgreSQL migrations excluded.
 - `.trivyignore` — Documented, expiring (`exp:`) Trivy suppressions for advisories proven not to apply to the binary.
@@ -55,7 +56,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
 - `scripts/k8s_smoke_test.sh` — Deploys the published image with a disposable PostGIS on a local cluster and checks rollout, probes, version, SPA and API.
-- `scripts/import_rebuild.sh` — Drops and recreates a local `goeland_import*` database (owner from `.env`, extensions as superuser) and runs the legacy import; never prints credentials.
+- `scripts/import_rebuild.sh` — Drops and recreates a local `goeland_import*` database (owner from `.env`, extensions as superuser) and runs the legacy import, its connections from the environment or `.env.import`; never prints credentials.
 - `scripts/create_k8s_configmap_from_env.sh` — Renders a Kubernetes ConfigMap from `.env` as a dry run.
 - `scripts/execWithEnv.sh` — Runs a compiled binary with a dotenv file loaded.
 - `scripts/getAppInfo.sh` — Exports `APP_NAME`, `APP_VERSION` and related values parsed from `pkg/version/version.go`.
@@ -237,6 +238,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/reference.go` — Reference catalogues, the change log model, code and text validation, and `MutateReference` (change + log in one transaction).
 - `pkg/core/reference_admin_test.go` — Tests that reference administration needs `goeland:admin` and the code rule.
 - `pkg/core/reference_relationship.go` — Relationship type administration (create, update, kinds immutable) and the change log listing.
+- `pkg/core/relationship_summary.go` — Relationship groups of a subject (GLD-063): counts per type and direction as the viewer may read them, open cases, split by case or document type; details of a list's other end.
 - `pkg/core/repository.go` — Core persistence interface.
 - `pkg/core/roles.go` — Application roles (GLD-047): ADMIN, role and assignment models, grant / revoke validation and the role-change listener.
 - `pkg/core/storage_roles.go` — PostgreSQL storage of roles: catalogue, holders, history, audited grant and revocation, last-administrator guard.
@@ -277,6 +279,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
 - `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
 - `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
+- `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
 - `pkg/core/module/db/migrations/0015_reference_change.sql` — Schema migration: the append-only `reference_change` log of reference data changes.
 - `pkg/core/module/db/migrations/0014_actor_address.sql` — Schema migration: `address` and the typed M:N `actor_address` (one principal, ended links kept), `ACTOR_BRANCH_OF_ACTOR` and `ACTOR_CONTACT_PERSON_OF_ACTOR` types.
@@ -414,6 +417,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/users_test.go` — DB test: user registration, unchanged refresh, audited profile change, batch lookup, concurrent first sight.
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
+- `pkg/integration/relationship_summary_test.go` — DB test of the relationship groups: counts filtered by the viewer, open cases, families, roles from migration 0031, list filters and details.
 - `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
 - `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
@@ -493,6 +497,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/LinkSubjectDialog.vue` — Input dialog for a typed subject link (type, then a searched target of its kind); the parent performs the call.
 - `cmd/goeland-server/goeland-front/src/components/core/RecordMetadataPanel.vue` — Read-only governance metadata panel.
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTable.vue` — Relationship table with links to both subjects, validity (ended / scheduled end) and optional end and unlink actions.
+- `cmd/goeland-server/goeland-front/src/components/core/RoleGroup.vue` — One relationship group of a detail page: heading and count, unfolded on demand into its edges with case filters and document families (GLD-063).
 - `cmd/goeland-server/goeland-front/src/components/core/SortableHeader.vue` — Column header that sorts its list (ascending then descending, aria-sort, keyboard).
 - `cmd/goeland-server/goeland-front/src/components/core/RelationshipTypeSelect.vue` — Relationship type selector filtered by subject kinds.
 - `cmd/goeland-server/goeland-front/src/components/core/UserPicker.vue` — Internal user search (debounced, by name or e-mail) bound to an operator id.
@@ -515,6 +520,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/thing/thingForm.ts` — Thing form model and its mapping to create / update requests.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
+- `cmd/goeland-server/goeland-front/src/components/core/SubjectRolesPanel.vue` — A subject's relationships by kind then role, titled from the subject on screen and counted (GLD-063).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
@@ -530,6 +536,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.
 - `cmd/goeland-server/goeland-front/src/composables/useApiErrors.ts` — Maps API errors and validation violations to translated snackbar messages.
 - `cmd/goeland-server/goeland-front/src/composables/useMyAccess.ts` — The caller's level on a subject (contribute, manage, full control) to hide what the server would refuse.
+- `cmd/goeland-server/goeland-front/src/composables/useAppInfo.ts` — The running server version from `/goAppInfo`, shown in the app bar and the user menu (GLD-063).
 - `cmd/goeland-server/goeland-front/src/composables/usePagedRelationships.ts` — The relationships of a subject in both directions, loaded page by page with totals and "load more" (GLD-053) and sorted on the server (GLD-056).
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
@@ -570,6 +577,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/listSort.test.ts` — Vitest unit tests of the list sort helpers.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/roleHeadings.test.ts` — Vitest unit tests of the relationship headings: viewpoints, French contractions, plurals, fallbacks.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/textSearch.test.ts` — Accent- and case-insensitive matching of the searchable pickers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/geometry.test.ts` — GeoJSON parsing, the geometry rule (type, Swiss extent) and the SVG projection.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/i18nStub.ts` — Translate stub returning the message key, for asserting rules without i18n.
@@ -578,6 +586,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
+- `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
 - `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon and SPA detail route.
 - `cmd/goeland-server/goeland-front/src/utils/textSearch.ts` — Accent folding and the filter of the searchable type pickers.

@@ -110,6 +110,9 @@ const (
 	// CoreServiceListRelationshipsProcedure is the fully-qualified name of the CoreService's
 	// ListRelationships RPC.
 	CoreServiceListRelationshipsProcedure = "/goeland.v1.CoreService/ListRelationships"
+	// CoreServiceSummarizeRelationshipsProcedure is the fully-qualified name of the CoreService's
+	// SummarizeRelationships RPC.
+	CoreServiceSummarizeRelationshipsProcedure = "/goeland.v1.CoreService/SummarizeRelationships"
 	// CoreServiceListRelationshipTypesProcedure is the fully-qualified name of the CoreService's
 	// ListRelationshipTypes RPC.
 	CoreServiceListRelationshipTypesProcedure = "/goeland.v1.CoreService/ListRelationshipTypes"
@@ -185,6 +188,10 @@ type CoreServiceClient interface {
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	// Requires goeland:read.
 	ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error)
+	// Count the edges of a subject per relationship type and direction, only
+	// those whose other end the caller may read, with the open cases and the
+	// split by case or document type (GLD-063). Requires goeland:read and READ.
+	SummarizeRelationships(context.Context, *connect.Request[v1.SummarizeRelationshipsRequest]) (*connect.Response[v1.SummarizeRelationshipsResponse], error)
 	// List the catalogue of allowed relationship types (optionally filtered).
 	// Requires goeland:read.
 	ListRelationshipTypes(context.Context, *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error)
@@ -313,6 +320,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("ListRelationships")),
 			connect.WithClientOptions(opts...),
 		),
+		summarizeRelationships: connect.NewClient[v1.SummarizeRelationshipsRequest, v1.SummarizeRelationshipsResponse](
+			httpClient,
+			baseURL+CoreServiceSummarizeRelationshipsProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("SummarizeRelationships")),
+			connect.WithClientOptions(opts...),
+		),
 		listRelationshipTypes: connect.NewClient[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse](
 			httpClient,
 			baseURL+CoreServiceListRelationshipTypesProcedure,
@@ -370,6 +383,7 @@ type coreServiceClient struct {
 	unlinkSubjects         *connect.Client[v1.UnlinkSubjectsRequest, v1.UnlinkSubjectsResponse]
 	endRelationship        *connect.Client[v1.EndRelationshipRequest, v1.EndRelationshipResponse]
 	listRelationships      *connect.Client[v1.ListRelationshipsRequest, v1.ListRelationshipsResponse]
+	summarizeRelationships *connect.Client[v1.SummarizeRelationshipsRequest, v1.SummarizeRelationshipsResponse]
 	listRelationshipTypes  *connect.Client[v1.ListRelationshipTypesRequest, v1.ListRelationshipTypesResponse]
 	listAuditEvents        *connect.Client[v1.ListAuditEventsRequest, v1.ListAuditEventsResponse]
 	listAccessAuditEvents  *connect.Client[v1.ListAccessAuditEventsRequest, v1.ListAccessAuditEventsResponse]
@@ -458,6 +472,11 @@ func (c *coreServiceClient) ListRelationships(ctx context.Context, req *connect.
 	return c.listRelationships.CallUnary(ctx, req)
 }
 
+// SummarizeRelationships calls goeland.v1.CoreService.SummarizeRelationships.
+func (c *coreServiceClient) SummarizeRelationships(ctx context.Context, req *connect.Request[v1.SummarizeRelationshipsRequest]) (*connect.Response[v1.SummarizeRelationshipsResponse], error) {
+	return c.summarizeRelationships.CallUnary(ctx, req)
+}
+
 // ListRelationshipTypes calls goeland.v1.CoreService.ListRelationshipTypes.
 func (c *coreServiceClient) ListRelationshipTypes(ctx context.Context, req *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error) {
 	return c.listRelationshipTypes.CallUnary(ctx, req)
@@ -543,6 +562,10 @@ type CoreServiceHandler interface {
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
 	// Requires goeland:read.
 	ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error)
+	// Count the edges of a subject per relationship type and direction, only
+	// those whose other end the caller may read, with the open cases and the
+	// split by case or document type (GLD-063). Requires goeland:read and READ.
+	SummarizeRelationships(context.Context, *connect.Request[v1.SummarizeRelationshipsRequest]) (*connect.Response[v1.SummarizeRelationshipsResponse], error)
 	// List the catalogue of allowed relationship types (optionally filtered).
 	// Requires goeland:read.
 	ListRelationshipTypes(context.Context, *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error)
@@ -667,6 +690,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("ListRelationships")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceSummarizeRelationshipsHandler := connect.NewUnaryHandler(
+		CoreServiceSummarizeRelationshipsProcedure,
+		svc.SummarizeRelationships,
+		connect.WithSchema(coreServiceMethods.ByName("SummarizeRelationships")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceListRelationshipTypesHandler := connect.NewUnaryHandler(
 		CoreServiceListRelationshipTypesProcedure,
 		svc.ListRelationshipTypes,
@@ -737,6 +766,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceEndRelationshipHandler.ServeHTTP(w, r)
 		case CoreServiceListRelationshipsProcedure:
 			coreServiceListRelationshipsHandler.ServeHTTP(w, r)
+		case CoreServiceSummarizeRelationshipsProcedure:
+			coreServiceSummarizeRelationshipsHandler.ServeHTTP(w, r)
 		case CoreServiceListRelationshipTypesProcedure:
 			coreServiceListRelationshipTypesHandler.ServeHTTP(w, r)
 		case CoreServiceListAuditEventsProcedure:
@@ -820,6 +851,10 @@ func (UnimplementedCoreServiceHandler) EndRelationship(context.Context, *connect
 
 func (UnimplementedCoreServiceHandler) ListRelationships(context.Context, *connect.Request[v1.ListRelationshipsRequest]) (*connect.Response[v1.ListRelationshipsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListRelationships is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) SummarizeRelationships(context.Context, *connect.Request[v1.SummarizeRelationshipsRequest]) (*connect.Response[v1.SummarizeRelationshipsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.SummarizeRelationships is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) ListRelationshipTypes(context.Context, *connect.Request[v1.ListRelationshipTypesRequest]) (*connect.Response[v1.ListRelationshipTypesResponse], error) {

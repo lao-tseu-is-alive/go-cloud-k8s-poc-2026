@@ -20,6 +20,7 @@
 /.env-testing-export
 /.env_for_github.txt
 /.env_original
+/.env.import
 
 # IDE
 .idea

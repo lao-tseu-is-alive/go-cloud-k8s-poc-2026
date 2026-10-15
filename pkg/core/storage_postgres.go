@@ -338,6 +338,11 @@ func (r *PostgresRepository) ListRelationships(ctx context.Context, filter Relat
 		"outgoing":               filter.Outgoing || filter.BothDirections,
 		"incoming":               !filter.Outgoing || filter.BothDirections,
 		"relationship_type_code": filter.RelationshipTypeCode,
+		"other_case_status":      filter.OtherCaseStatus,
+		"other_type_code":        filter.OtherTypeCode,
+		"other_year_from":        filter.OtherYearFrom,
+		"other_year_to":          filter.OtherYearTo,
+		"other_query":            filter.OtherQuery,
 		"limit":                  filter.Limit,
 		"offset":                 filter.Offset,
 	}))
@@ -356,6 +361,11 @@ func (r *PostgresRepository) ListRelationships(ctx context.Context, filter Relat
 	}
 	if err := r.hydrateRelationships(ctx, result.Relationships); err != nil {
 		return RelationshipResult{}, err
+	}
+	if filter.IncludeDetails && len(result.Relationships) > 0 {
+		if err := r.attachRelatedDetails(ctx, result.Relationships, filter.SubjectID); err != nil {
+			return RelationshipResult{}, err
+		}
 	}
 	result.TotalSize, result.TotalCapped = CapTotal(result.TotalSize)
 	return result, nil

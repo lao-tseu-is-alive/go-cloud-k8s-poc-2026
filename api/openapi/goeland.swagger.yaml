@@ -2478,6 +2478,30 @@ paths:
             $ref: '#/definitions/AccessServiceSetGrantBody'
       tags:
         - AccessService
+  /api/subjects/{subjectId}/relationship-summary:
+    get:
+      summary: |-
+        Count the edges of a subject per relationship type and direction, only
+        those whose other end the caller may read, with the open cases and the
+        split by case or document type (GLD-063). Requires goeland:read and READ.
+      operationId: SummarizeRelationships
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SummarizeRelationshipsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: subjectId
+          description: subject_id is the subject; the caller needs READ on it.
+          in: path
+          required: true
+          type: string
+      tags:
+        - CoreService
   /api/subjects/{subjectId}/relationships:
     get:
       summary: |-
@@ -2535,6 +2559,44 @@ paths:
             order_by sorts the edges: "<field>" or "<field> desc", the field one of
             type (label), source, target (display labels), role_detail, valid_from,
             created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
+        - name: includeDetails
+          description: include_details fills other_detail on each edge (GLD-063).
+          in: query
+          required: false
+          type: boolean
+        - name: otherCaseStatus
+          description: |-
+            other_case_status keeps the edges whose other end is a case "open" (not
+            closed) or "closed"; empty means any.
+          in: query
+          required: false
+          type: string
+        - name: otherTypeCode
+          description: other_type_code keeps the edges whose other end has this case, document or thing type.
+          in: query
+          required: false
+          type: string
+        - name: otherYearFrom
+          description: |-
+            other_year_from and other_year_to keep the edges whose other end (case
+            opening, document official date) falls in these years; 0 means unbounded.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: otherYearTo
+          description: other_year_to is the last year kept; 0 means unbounded.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: otherQuery
+          description: |-
+            other_query keeps the edges whose other end's label or business reference
+            contains it, accent- and case-insensitive (at most 200 characters).
           in: query
           required: false
           type: string
@@ -3808,6 +3870,18 @@ definitions:
       reason:
         type: string
         description: reason is the justification recorded in the reference change log (at most 2000 characters).
+      roleLabel:
+        type: string
+        description: role_label replaces the role when present (at most 100 characters; empty removes it).
+      roleLabelPlural:
+        type: string
+        description: 'role_label_plural replaces the plural when present (empty: derived).'
+      roleEnd:
+        $ref: '#/definitions/v1RoleEnd'
+        description: role_end replaces the end playing the role when present.
+      rolePreposition:
+        type: string
+        description: role_preposition replaces the preposition when present.
     description: |-
       UpdateRelationshipTypeRequest changes a relationship type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
@@ -5694,6 +5768,18 @@ definitions:
       reason:
         type: string
         description: reason is the justification recorded in the reference change log (at most 2000 characters).
+      roleLabel:
+        type: string
+        description: role_label names the role one end plays for the other, singular (at most 100 characters).
+      roleLabelPlural:
+        type: string
+        description: role_label_plural is its plural when not regular (at most 100 characters).
+      roleEnd:
+        $ref: '#/definitions/v1RoleEnd'
+        description: role_end is the end that plays the role; UNSPECIFIED means TARGET.
+      rolePreposition:
+        type: string
+        description: role_preposition joins the role to the other kind; empty means "de".
     description: CreateRelationshipTypeRequest adds a relationship type (administrators only).
     required:
       - code
@@ -7074,6 +7160,71 @@ definitions:
     description: |-
       ReferenceChange is one entry of the append-only log of reference data changes
       (case types, relationship types, organization categories, document types).
+  v1RelatedSubjectDetail:
+    type: object
+    properties:
+      typeCode:
+        type: string
+        description: type_code and type_label are the case type, document type or thing type; empty otherwise.
+      typeLabel:
+        type: string
+        description: type_label is the label of that type.
+      caseStatus:
+        type: string
+        description: case_status is the state of a case (OPEN, IN_PROGRESS, SUSPENDED, CLOSED); empty otherwise.
+      date:
+        type: string
+        description: date is the opening date of a case or the official date of a document (YYYY-MM-DD); empty when none.
+    description: |-
+      RelatedSubjectDetail is what a relationship list shows of the other end
+      beyond its reference and label (GLD-063).
+  v1RelationshipFamily:
+    type: object
+    properties:
+      code:
+        type: string
+        description: code is the type code.
+      label:
+        type: string
+        description: label is the type label.
+      count:
+        type: integer
+        format: int32
+        description: count is the number of edges.
+      openCount:
+        type: integer
+        format: int32
+        description: open_count is the number of those that are cases not closed.
+    description: RelationshipFamily is the share of a relationship group of one case type or document type.
+  v1RelationshipGroup:
+    type: object
+    properties:
+      relationshipType:
+        $ref: '#/definitions/v1RelationshipType'
+        description: relationship_type is the type of the edges.
+      outgoing:
+        type: boolean
+        description: outgoing is true when the subject is the source of the edges.
+      otherKind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: other_kind is the kind of the other ends.
+      count:
+        type: integer
+        format: int32
+        description: count is the number of edges.
+      openCount:
+        type: integer
+        format: int32
+        description: open_count is the number of other ends that are cases not closed.
+      families:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RelationshipFamily'
+        description: families splits the edges by case, document or thing type, by label.
+    description: |-
+      RelationshipGroup counts the edges of one relationship type in one
+      direction whose other end the caller may read (GLD-063).
   v1RelationshipType:
     type: object
     properties:
@@ -7106,6 +7257,26 @@ definitions:
       isActive:
         type: boolean
         description: is_active reports whether new links of this type may be created.
+      roleLabel:
+        type: string
+        description: |-
+          role_label names the role one end plays for the other, singular
+          ("Client", "Personne de contact"); empty when the type has no role and is
+          shown by its labels (GLD-063).
+      roleLabelPlural:
+        type: string
+        description: |-
+          role_label_plural is the plural of role_label when not regular ("Bureaux
+          d'étude"); empty means the client derives it.
+      roleEnd:
+        $ref: '#/definitions/v1RoleEnd'
+        description: role_end is the end that plays the role.
+      rolePreposition:
+        type: string
+        description: |-
+          role_preposition joins the role to the other end's kind in a heading seen
+          from the role's end: "de" (Client des affaires suivantes), "à", "par",
+          "sur", "dans", "avec" or "pour".
     description: |-
       RelationshipType defines an allowed typed relation between two subject kinds.
       Types are seeded reference data; a link is accepted only when the subjects'
@@ -7166,6 +7337,19 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the USER_ROLE_REVOKED event on the user's subject.
     description: RevokeUserRoleResponse returns the revoked assignment and its audit event.
+  v1RoleEnd:
+    type: string
+    enum:
+      - ROLE_END_UNSPECIFIED
+      - ROLE_END_TARGET
+      - ROLE_END_SOURCE
+    default: ROLE_END_UNSPECIFIED
+    description: |-
+      RoleEnd tells which end of a relationship type plays its role (GLD-063).
+
+       - ROLE_END_UNSPECIFIED: ROLE_END_UNSPECIFIED is the zero value; read as TARGET.
+       - ROLE_END_TARGET: ROLE_END_TARGET: the target plays the role (an actor client of a case).
+       - ROLE_END_SOURCE: ROLE_END_SOURCE: the source plays the role (a person contact of an organization).
   v1Salutation:
     type: string
     enum:
@@ -7459,10 +7643,26 @@ definitions:
         format: date-time
         description: deleted_at marks an unlinked (soft-deleted) edge; absent while active.
         readOnly: true
+      otherDetail:
+        $ref: '#/definitions/v1RelatedSubjectDetail'
+        description: |-
+          other_detail describes the end that is not the listed subject (its type,
+          state and date); set by ListRelationships with include_details (GLD-063).
+        readOnly: true
     description: |-
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
       an ended edge stays as history.
+  v1SummarizeRelationshipsResponse:
+    type: object
+    properties:
+      groups:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RelationshipGroup'
+        description: groups are the relationship groups, one per type and direction.
+    description: SummarizeRelationshipsResponse lists the relationship groups of a subject.
   v1Task:
     type: object
     properties:

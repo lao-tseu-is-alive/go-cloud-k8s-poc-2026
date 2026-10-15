@@ -141,7 +141,8 @@ LIMIT @limit OFFSET @offset;`
 // --- relationship_type -------------------------------------------------------
 
 const relationshipTypeColumns = `
-id, code, label, source_kind, target_kind, is_directed, inverse_label, description, is_active`
+id, code, label, source_kind, target_kind, is_directed, inverse_label, description, is_active,
+role_label, role_label_plural, role_end, role_preposition`
 
 const getRelationshipTypeByCodeSQL = `
 SELECT ` + relationshipTypeColumns + `
@@ -229,9 +230,84 @@ FROM subject_relationship sr
 WHERE @` + flag + `::boolean AND sr.deleted_at IS NULL AND sr.` + subjectCol + ` = @subject_id
   AND (@relationship_type_code = '' OR sr.relationship_type_id = (SELECT rt.id FROM relationship_type rt WHERE rt.code = @relationship_type_code))
   AND ` + ReadableSQL("sr."+otherCol, "") + `
+  AND ` + otherEndFilterSQL("sr."+otherCol) + `
 ORDER BY ` + sortOrderOf("", order) + `
 LIMIT @count_limit)`
 }
+
+// otherEndFilterSQL keeps the edges whose other end (other) matches the
+// optional filters of a relationship group (GLD-063): a case open or closed
+// (@other_case_status), a case, document or thing type (@other_type_code), the
+// year of a case's opening or a document's official date (@other_year_from,
+// @other_year_to; 0 is unbounded), and a text in its label or business
+// reference, accent- and case-insensitive (@other_query).
+func otherEndFilterSQL(other string) string {
+	return `(@other_query::text = '' OR EXISTS (
+       SELECT 1 FROM subject_ref os WHERE os.id = ` + other + `
+         AND strpos(immutable_unaccent(lower(os.display_label || ' ' || coalesce(os.business_ref, ''))),
+                    immutable_unaccent(lower(@other_query::text))) > 0))
+  AND (@other_case_status::text = '' OR EXISTS (
+       SELECT 1 FROM case_file oc WHERE oc.id = ` + other + ` AND (oc.status = 4) = (@other_case_status::text = 'closed')))
+  AND (@other_type_code::text = ''
+       OR EXISTS (SELECT 1 FROM case_file oc JOIN case_type oct ON oct.id = oc.case_type_id
+                  WHERE oc.id = ` + other + ` AND oct.code = @other_type_code::text)
+       OR EXISTS (SELECT 1 FROM document od JOIN document_type odt ON odt.id = od.document_type_id
+                  WHERE od.id = ` + other + ` AND odt.code = @other_type_code::text)
+       OR EXISTS (SELECT 1 FROM thing ot JOIN thing_type ott ON ott.id = ot.thing_type_id
+                  WHERE ot.id = ` + other + ` AND ott.code = @other_type_code::text))
+  AND ((@other_year_from::int = 0 AND @other_year_to::int = 0) OR EXTRACT(YEAR FROM coalesce(
+       (SELECT oc.opened_at FROM case_file oc WHERE oc.id = ` + other + `),
+       (SELECT od.official_date::timestamptz FROM document od WHERE od.id = ` + other + `)))
+       BETWEEN @other_year_from::int AND coalesce(NULLIF(@other_year_to::int, 0), 9999))`
+}
+
+// summarizeRelationshipsSQL counts a subject's non-unlinked edges per type,
+// direction and case, document or thing type of the other end, keeping those whose
+// other end the viewer may read (the same set the lists page through), with
+// the other ends that are cases not closed (GLD-063).
+var summarizeRelationshipsSQL = `
+WITH e AS (
+    SELECT sr.relationship_type_id AS type_id, true AS outgoing, sr.target_subject_id AS other_id
+    FROM subject_relationship sr
+    WHERE sr.deleted_at IS NULL AND sr.source_subject_id = @subject_id
+    UNION ALL
+    SELECT sr.relationship_type_id, false, sr.source_subject_id
+    FROM subject_relationship sr
+    WHERE sr.deleted_at IS NULL AND sr.target_subject_id = @subject_id
+)
+SELECT e.type_id, e.outgoing, s.kind AS other_kind,
+       coalesce(ct.code, dt.code, tt.code, '') AS fam_code, coalesce(ct.label, dt.label, tt.label, '') AS fam_label,
+       count(*)::int AS n,
+       (count(*) FILTER (WHERE cf.status IS NOT NULL AND cf.status <> 4))::int AS open_n
+FROM e
+JOIN subject_ref s ON s.id = e.other_id
+LEFT JOIN case_file cf ON cf.id = e.other_id
+LEFT JOIN case_type ct ON ct.id = cf.case_type_id
+LEFT JOIN document d ON d.id = e.other_id
+LEFT JOIN document_type dt ON dt.id = d.document_type_id
+LEFT JOIN thing t ON t.id = e.other_id
+LEFT JOIN thing_type tt ON tt.id = t.thing_type_id
+WHERE ` + ReadableSQL("e.other_id", "") + `
+GROUP BY e.type_id, e.outgoing, s.kind, fam_code, fam_label
+ORDER BY fam_label, fam_code;`
+
+// relatedDetailsSQL describes subjects for a relationship list: their case,
+// document or thing type, a case's state and the case opening or document
+// official date (GLD-063).
+const relatedDetailsSQL = `
+SELECT s.id,
+       coalesce(ct.code, dt.code, tt.code, '') AS type_code,
+       coalesce(ct.label, dt.label, tt.label, '') AS type_label,
+       CASE cf.status WHEN 1 THEN 'OPEN' WHEN 2 THEN 'IN_PROGRESS' WHEN 3 THEN 'SUSPENDED' WHEN 4 THEN 'CLOSED' ELSE '' END AS case_status,
+       coalesce(to_char(cf.opened_at, 'YYYY-MM-DD'), to_char(d.official_date, 'YYYY-MM-DD'), '') AS date
+FROM subject_ref s
+LEFT JOIN case_file cf ON cf.id = s.id
+LEFT JOIN case_type ct ON ct.id = cf.case_type_id
+LEFT JOIN document d ON d.id = s.id
+LEFT JOIN document_type dt ON dt.id = d.document_type_id
+LEFT JOIN thing t ON t.id = s.id
+LEFT JOIN thing_type tt ON tt.id = t.thing_type_id
+WHERE s.id = ANY(@ids::uuid[]);`
 
 // listRelationshipsSQL lists non-unlinked edges (open and ended) outgoing from
 // (@outgoing) and/or incoming to (@incoming) the given subject, optionally
@@ -382,8 +458,10 @@ LIMIT @limit OFFSET @offset;`
 })
 
 const insertRelationshipTypeSQL = `
-INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description)
-VALUES (@code, @label, @source_kind, @target_kind, @is_directed, @inverse_label, @description)
+INSERT INTO relationship_type (code, label, source_kind, target_kind, is_directed, inverse_label, description,
+    role_label, role_label_plural, role_end, role_preposition)
+VALUES (@code, @label, @source_kind, @target_kind, @is_directed, @inverse_label, @description,
+    @role_label, @role_label_plural, @role_end, @role_preposition)
 RETURNING ` + relationshipTypeColumns + `;`
 
 const getRelationshipTypeForUpdateSQL = `
@@ -399,7 +477,11 @@ UPDATE relationship_type
 SET label         = coalesce(@label::text, label),
     inverse_label = coalesce(@inverse_label::text, inverse_label),
     description   = coalesce(@description::text, description),
-    is_active     = coalesce(@is_active::boolean, is_active)
+    is_active     = coalesce(@is_active::boolean, is_active),
+    role_label        = coalesce(@role_label::text, role_label),
+    role_label_plural = coalesce(@role_label_plural::text, role_label_plural),
+    role_end          = coalesce(@role_end::text, role_end),
+    role_preposition  = coalesce(@role_preposition::text, role_preposition)
 WHERE code = @code
 RETURNING ` + relationshipTypeColumns + `;`
 

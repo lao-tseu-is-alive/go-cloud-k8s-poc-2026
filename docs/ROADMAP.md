@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.14.1**.
+Tracked version: **v0.15.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -37,7 +37,10 @@ lists and detail tables (GLD-055, GLD-056), ordered type pickers (GLD-057) — s
 the sensitive read audit (GLD-033) shipped in v0.13.0; the actor correctness batch (GLD-004,
 GLD-005, GLD-007, GLD-060) shipped in v0.13.1; immutable build inputs and the SBOM (GLD-059) and
 the case export (GLD-029) shipped in v0.14.0, the reproducible generated code (GLD-008) and the
-triaged dependency updates in v0.14.1.
+triaged dependency updates in v0.14.1. The information hierarchy pilot on the actor page (GLD-063),
+the strict JSON fix (GLD-065) and the import fixes for phone numbers with a note (GLD-066) and
+document families (GLD-067) shipped in v0.15.0; the case and object pages follow the same model
+next, then the global search (GLD-064).
 
 ## Cross-cutting quality
 
@@ -451,6 +454,46 @@ Remarks of the product owner after seeing the POC on the imported production dat
   document, thing, relationship type and organization category pickers are searchable
   (`v-autocomplete`, accent- and case-insensitive, Enter picks the first match); the short task
   and org unit type lists stay plain selects.
+
+## Information hierarchy (UI feedback of 2026-10-15)
+
+The detail pages showed every link in one flat paged table, and the technical panels as much as
+the business content. The legacy Goéland, ugly as it is, shows the essentials first and unfolds
+categories with their counts. Mockup with the decisions:
+<https://claude.ai/artifact/YSTg6sZJLfbeqmEdzEUT8g> (synthetic data).
+
+- [x] **GLD-063 — Actor page pilot**: decided 2026-10-15 (IMPLEMENTATION_STATUS §3, information
+  hierarchy). A relationship type names the role one end plays (migration `0031`: role, plural,
+  end, preposition; seeded types filled, imported roles taken from their legacy name), and the SPA
+  titles a group from the subject on screen ("Client des affaires suivantes", "Clients";
+  `utils/roleHeadings.ts`). `CoreService.SummarizeRelationships` counts the groups as the caller may
+  read them (open cases, split by case or document type); `ListRelationships` filters the other end
+  (case state, case or document type, years) and describes it (`include_details`). The actor page
+  shows a header (registers IDE and ABACUS linked, main contacts with the Swiss directory, jump
+  links with counts), the roles by kind then role (alphabetical; past 10 edges a text filter on
+  label and reference, a period for cases and documents and a type when there are several;
+  documents unfold by family and things by type, the type column only when types mix) and a "Gouvernance et historique" tab; the app bar
+  shows the server version and a richer user menu. Done 2026-10-15; the case, document and thing
+  pages follow once the pilot is judged on the real data.
+- [ ] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
+  documents, actors and things, results grouped by kind with counts, only what the caller may read
+  (the existing searches first; Meilisearch later), "/" to focus it.
+- [x] **GLD-067 — Document families lost by the import**: found on the pilot (2,481 documents of an
+  organization all typed "Document Goéland"): the import gave the 2.3M documents one generic type
+  and ignored the legacy family (`doc_family`, 114 entries, every document has one), the business
+  classification of the legacy UI. Done 2026-10-15: each family becomes a document type
+  `LEG_DOC_<IdDocFamily>` and the documents take it; with GLD-063 the documents of an actor or a case
+  unfold by family. Needs a re-import.
+- [x] **GLD-066 — Phone numbers with a note left out by the import**: found on the pilot (an
+  organization showed no phone): ~1,460 legacy phone and fax values are a valid number followed by a
+  note in parentheses or free text, and the import refused them whole. Done 2026-10-15: the import
+  keeps the number and moves the note to the contact label (counted as adjusted); a re-import
+  (`scripts/import_rebuild.sh`) brings them in.
+- [x] **GLD-065 — Unknown field on a path-parameter route answers 500**: a request body with an
+  unknown field answered 400 on `POST /api/cases` but UNKNOWN / HTTP 500 on routes with path
+  parameters (`PATCH /api/cases/{id}`, `POST /api/cases/{id}/transition`): Vanguard returns the
+  codec's error unwrapped there. Done 2026-10-15: the strict REST codec reports its errors as
+  INVALID_ARGUMENT; the API surface test covers both shapes.
 
 ## Infrastructure
 

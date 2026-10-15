@@ -16,7 +16,7 @@ func newTestImporter() *Importer {
 		employees: map[int64]bool{}, activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{},
 		liveUnits: map[uuid.UUID]bool{}, liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{},
 		caseClosedAt: map[uuid.UUID]time.Time{}, relTypes: map[string]uuid.UUID{}, unitTypes: map[int64]string{},
-		unitParents: map[int64]int64{}, allEmployeeUnits: map[int64]int64{}, entries: map[uuid.UUID]bool{}, thingTypes: map[int64]uuid.UUID{},
+		unitParents: map[int64]int64{}, allEmployeeUnits: map[int64]int64{}, entries: map[uuid.UUID]bool{}, thingTypes: map[int64]uuid.UUID{}, documentTypes: map[int64]uuid.UUID{},
 	}
 }
 
@@ -142,6 +142,18 @@ func TestContactAndAddressRows(t *testing.T) {
 	if row := imp.contactRow(actorID, 5, "Adresse E-mail", "not an e-mail", c); row != nil {
 		t.Fatal("an invalid e-mail is left out")
 	}
+	if row := imp.contactRow(actorID, 1, "Téléphone", "021 315 22 22 (secrétariat)", c); row == nil || row[2] != "+41213152222" || row[3] != "secrétariat" {
+		t.Fatalf("a phone with a note keeps the number and moves the note to the label: %v", row)
+	}
+	if row := imp.contactRow(actorID, 4, "Fax", "021 315 22 23 accueil", c); row == nil || row[2] != "+41213152223" || row[3] != "accueil" {
+		t.Fatalf("a fax followed by free text keeps the number: %v", row)
+	}
+	if row := imp.contactRow(actorID, 1, "Téléphone", "12 (bureau)", c); row != nil {
+		t.Fatal("a note does not rescue an invalid number")
+	}
+	if c.Adjusted["phone note moved to the label"] != 2 {
+		t.Fatalf("the moved notes are counted: %v", c.Adjusted)
+	}
 	if row := imp.contactRow(actorID, 19, "IBAN", "CH00", c); row != nil {
 		t.Fatal("bank references are not imported")
 	}
@@ -194,5 +206,19 @@ func TestDocumentLevels(t *testing.T) {
 		if got := imp.documentSubject(&sourceDocument{ID: 1, Title: "x", Level: level}).confidentiality; got != want {
 			t.Errorf("level %d: confidentiality %d, want %d", level, got, want)
 		}
+	}
+}
+
+// TestDocumentType covers GLD-067: a document takes the type of its legacy
+// family, the generic type when the family is unknown.
+func TestDocumentType(t *testing.T) {
+	imp := newTestImporter()
+	family, fallback := ID(keyDocumentType, 7), ID(keyDocumentType, 0)
+	imp.documentTypes[7] = family
+	if got := imp.documentType(&sourceDocument{FamilyID: 7}, fallback); got != family {
+		t.Fatalf("a document takes its family's type: %v", got)
+	}
+	if got := imp.documentType(&sourceDocument{FamilyID: 99}, fallback); got != fallback {
+		t.Fatalf("an unknown family falls back to the generic type: %v", got)
 	}
 }

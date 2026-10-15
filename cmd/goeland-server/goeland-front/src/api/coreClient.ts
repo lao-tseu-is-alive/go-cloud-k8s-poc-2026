@@ -1,14 +1,4 @@
-import type {
-  AuditEvent,
-  BatchGetUsersResponse,
-  GetCurrentUserResponse,
-  ListRelationshipsResponse,
-  RelationshipType,
-  SearchUsersResponse,
-  SubjectKind,
-  SubjectRelationship,
-  User,
-} from './types'
+import type { AuditEvent, BatchGetUsersResponse, GetCurrentUserResponse, ListRelationshipsResponse, RelationshipGroup, RelationshipType, SearchUsersResponse, SubjectKind, SubjectRelationship, SummarizeRelationshipsResponse, User } from './types'
 /**
  * CoreService REST calls: relationship types, relationships, audit, subjects.
  */
@@ -33,7 +23,7 @@ export async function listRelationshipTypes (
  */
 export function listRelationshipsPage (
   subjectId: string,
-  opts: { outgoing?: boolean, bothDirections?: boolean, relationshipTypeCode?: string, orderBy?: string, pageSize?: number, pageToken?: string },
+  opts: RelationshipPageQuery,
 ): Promise<ListRelationshipsResponse> {
   return apiFetch<ListRelationshipsResponse>(`/api/subjects/${encodeURIComponent(subjectId)}/relationships`, {
     query: {
@@ -43,8 +33,41 @@ export function listRelationshipsPage (
       orderBy: opts.orderBy,
       pageSize: opts.pageSize,
       pageToken: opts.pageToken,
+      includeDetails: opts.includeDetails || undefined,
+      otherCaseStatus: opts.otherCaseStatus || undefined,
+      otherTypeCode: opts.otherTypeCode || undefined,
+      otherYearFrom: opts.otherYearFrom || undefined,
+      otherYearTo: opts.otherYearTo || undefined,
+      otherQuery: opts.otherQuery || undefined,
     },
   })
+}
+
+/** A page of a subject's relationships, optionally filtered on the other end (GLD-063). */
+export interface RelationshipPageQuery {
+  outgoing?: boolean
+  bothDirections?: boolean
+  relationshipTypeCode?: string
+  orderBy?: string
+  pageSize?: number
+  pageToken?: string
+  /** Fill otherDetail (type, case state, date) on each edge. */
+  includeDetails?: boolean
+  /** Keep the edges whose other end is a case 'open' (not closed) or 'closed'. */
+  otherCaseStatus?: '' | 'open' | 'closed'
+  /** Keep the edges whose other end has this case or document type. */
+  otherTypeCode?: string
+  /** Bound the year of a case's opening or a document's official date (0: unbounded). */
+  otherYearFrom?: number
+  otherYearTo?: number
+  /** Keep the edges whose other end's label or business reference contains this text. */
+  otherQuery?: string
+}
+
+/** A subject's relationship groups (type and direction) as the caller sees them, counted (GLD-063). */
+export async function summarizeRelationships (subjectId: string): Promise<RelationshipGroup[]> {
+  const res = await apiFetch<SummarizeRelationshipsResponse>(`/api/subjects/${encodeURIComponent(subjectId)}/relationship-summary`)
+  return res.groups ?? []
 }
 
 /** Every relationship of one type and direction (for short lists such as the members of a unit). */

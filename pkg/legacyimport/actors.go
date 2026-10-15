@@ -183,11 +183,50 @@ func (imp *Importer) contactRow(actorID uuid.UUID, typeID int64, typeLabel, valu
 		contactType, label = actor.ContactTypeOther, typeLabel
 	}
 	normalized, err := actor.NormalizeContactValue(contactType, value)
+	if err != nil && phoneTypes[contactType] {
+		// "021 315 22 22 (secrétariat)": the number, its note as the label
+		if number, note, ok := splitPhoneNote(value); ok {
+			if normalized, err = actor.NormalizeContactValue(contactType, number); err == nil {
+				label = note
+				c.adjust("phone note moved to the label")
+			}
+		}
+	}
 	if err != nil || strings.TrimSpace(normalized) == "" {
 		c.skip(fmt.Sprintf("invalid %s", contactType))
 		return nil
 	}
 	return []any{actorID, int16(contactType), normalized, label}
+}
+
+// phoneTypes are the contact types holding a phone number.
+var phoneTypes = map[actor.ContactType]bool{
+	actor.ContactTypePhone: true, actor.ContactTypePhonePrivate: true, actor.ContactTypePhonePro: true,
+	actor.ContactTypeMobile: true, actor.ContactTypeFax: true,
+}
+
+// phoneWithNote is a number followed by a note, in parentheses or not:
+// "021 315 22 22 (secrétariat)", "079 123 45 67 Mme Exemple".
+var phoneWithNote = regexp.MustCompile(`^\s*(\+?[0-9][0-9 ./-]*[0-9])\s*(?:\((.*)\)|[,;:–-]?\s*(.+?))\s*$`)
+
+// maxNoteLength bounds the note kept as a contact label (code points).
+const maxNoteLength = 100
+
+// splitPhoneNote splits a legacy phone value into its number and its note
+// (GLD-063 follow-up: 1,443 legacy numbers carry one and were left out whole).
+func splitPhoneNote(value string) (number, note string, ok bool) {
+	m := phoneWithNote.FindStringSubmatch(value)
+	if m == nil {
+		return "", "", false
+	}
+	note = strings.TrimSpace(m[2] + m[3])
+	if note == "" {
+		return "", "", false
+	}
+	if runes := []rune(note); len(runes) > maxNoteLength {
+		note = string(runes[:maxNoteLength])
+	}
+	return m[1], note, true
 }
 
 // sourceAddress is the legacy correspondence address of an actor.

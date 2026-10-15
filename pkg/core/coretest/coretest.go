@@ -136,6 +136,11 @@ func (StubRepository) EndRelationship(context.Context, core.EndInput) (*core.Sub
 	return nil, nil, nil
 }
 
+// SummarizeRelationships returns no group.
+func (StubRepository) SummarizeRelationships(context.Context, uuid.UUID, core.Viewer) ([]*core.RelationshipGroup, error) {
+	return nil, nil
+}
+
 // ListRelationships returns an empty result.
 func (StubRepository) ListRelationships(context.Context, core.RelationshipFilter) (core.RelationshipResult, error) {
 	return core.RelationshipResult{}, nil

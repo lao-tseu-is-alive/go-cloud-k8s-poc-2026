@@ -2,7 +2,7 @@
   import type { ActorContact } from '@/api/types'
   import { useI18n } from 'vue-i18n'
   import { useI18nEnum } from '@/composables/useI18nEnum'
-  import { contactHref, formatContactValue } from '@/utils/contactRules'
+  import { contactHref, formatContactValue, phoneDirectoryHref } from '@/utils/contactRules'
 
   // Read-only display of an actor's typed contacts.
   defineProps<{ contacts?: ActorContact[] }>()
@@ -34,6 +34,16 @@
             >{{ formatContactValue(contact.contactType, contact.value) }}</a>
 
             <span v-else>{{ formatContactValue(contact.contactType, contact.value) }}</span>
+
+            <a
+              v-if="phoneDirectoryHref(contact.value) && contactHref(contact.contactType, contact.value)?.startsWith('tel:')"
+              class="ml-2 text-caption font-weight-bold"
+              :href="phoneDirectoryHref(contact.value)"
+              rel="noopener noreferrer"
+              target="_blank"
+              :title="t('actorPage.header.phoneDirectory')"
+            >CH</a>
+
             <span v-if="contact.label" class="text-caption text-medium-emphasis"> — {{ contact.label }}</span>
           </td>
         </tr>

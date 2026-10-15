@@ -57,6 +57,8 @@ type Importer struct {
 	entries map[uuid.UUID]bool
 	// thingTypes maps a legacy IdTypeThing to the POC thing type id.
 	thingTypes map[int64]uuid.UUID
+	// documentTypes maps a legacy document family (IdDocFamily) to the document type id.
+	documentTypes map[int64]uuid.UUID
 	// caseClosedAt holds the closing date of the closed cases.
 	caseClosedAt map[uuid.UUID]time.Time
 	// relTypes maps relationship type codes to their ids in the target.
@@ -88,7 +90,7 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 		source: source, tx: tx, report: &Report{}, now: time.Now(),
 		subjects: map[uuid.UUID]core.SubjectKind{}, employees: map[int64]bool{}, relTypes: map[string]uuid.UUID{},
 		activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{}, liveUnits: map[uuid.UUID]bool{},
-		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{}, thingTypes: map[int64]uuid.UUID{},
+		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{}, thingTypes: map[int64]uuid.UUID{}, documentTypes: map[int64]uuid.UUID{},
 		allEmployeeUnits: map[int64]int64{}, unitParents: map[int64]int64{}, unitTypes: map[int64]string{}, entries: map[uuid.UUID]bool{},
 	}
 	if err := tx.QueryRow(ctx, insertBatchSQL, pgx.NamedArgs{
@@ -145,6 +147,7 @@ func (imp *Importer) stages() []stage {
 		{"case_things", imp.linkStage(caseThingLink)},
 		{"parent_cases", imp.linkStage(parentCaseLink)},
 		{"related_cases", imp.linkStage(relatedCaseLink)},
+		{"document_types", imp.importDocumentTypes},
 		{"documents", imp.importDocuments},
 		{"document_grants", imp.importDocumentGrants},
 		{"document_access_lists", imp.importDocumentAccessLists},

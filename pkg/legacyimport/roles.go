@@ -176,6 +176,8 @@ func (imp *Importer) ensureRelationshipType(ctx context.Context, f roleFamily, c
 		"code": code, "label": fmt.Sprintf(f.label, name), "source_kind": string(f.source()),
 		"target_kind": string(f.targetKind), "inverse_label": fmt.Sprintf(f.inverse, name),
 		"description": "Rôle « " + role + " » de Goéland (import)",
+		// the participant (target) plays the role, written as in the legacy data (GLD-063)
+		"role_label": role,
 	}).Scan(&id); err != nil {
 		return uuid.Nil, fmt.Errorf("create relationship type %s: %w", code, err)
 	}

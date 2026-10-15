@@ -8,8 +8,45 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.15.0] - 2026-10-15
+
+Information hierarchy piloted on the actor page (GLD-063) and import fixes found with it (GLD-066, GLD-067);
+strict JSON on path-parameter routes (GLD-065). Migration `0031`; new RPC `CoreService.SummarizeRelationships`.
+The import fixes take effect on a re-import.
+
+### Added
+
+- **GLD-063** — Actor page pilot (information hierarchy): relationship types name the role one end
+  plays (migration `0031`: `role_label`, `role_label_plural`, `role_end`, `role_preposition`; seeded
+  types filled, imported roles from their legacy name; editable in Administration), and groups are
+  titled from the subject on screen ("Client des affaires suivantes", "Clients").
+  `CoreService.SummarizeRelationships` (`GET /api/subjects/{subject_id}/relationship-summary`)
+  counts the groups as the caller may read them, with the open cases and the split by case or
+  document type; `ListRelationships` filters on the other end (`other_case_status`,
+  `other_type_code`, `other_year_from`/`to`, `other_query`: text in the label or business reference)
+  and describes it (`include_details`). The actor page
+  has a header (IDE linked to the Swiss register, ABACUS debtor linked, main contacts with the
+  Swiss phone directory, jump links with counts), its roles by kind then role (alphabetical; past 10
+  edges a text filter, a period for cases and documents and a type filter; documents unfold by
+  family and objects by type) and a "Gouvernance et historique" tab; the app bar shows
+  the server version and the user menu reaches tasks, groups, administration and the version.
+
+### Fixed
+
+- **GLD-067** — The legacy import types each document by its family (`doc_family`, 114 families:
+  "Photo (objet)", "Plan d'objet", ...) as document types `LEG_DOC_<IdDocFamily>`, instead of one
+  generic "Document Goéland" type for all 2.3M documents. Takes effect on the next re-import.
+- **GLD-066** — The legacy import keeps a phone or fax number followed by a note
+  ("021 315 22 22 (secrétariat)", about 1,460 values left out until now): the number is imported and
+  the note becomes the contact label. Takes effect on the next re-import.
+- **GLD-065** — A request body with an unknown field answers 400 INVALID_ARGUMENT on routes with path
+  parameters too (`PATCH /api/cases/{id}`, `POST /api/cases/{id}/transition`, ...), not HTTP 500.
+
 ### Changed
 
+- `scripts/import_rebuild.sh` reads the replica and superuser connections from the environment or
+  from `.env.import` (Git-ignored, `.env.import.sample`), never from `.env`, which the Makefile
+  exports to the server; a placeholder password left in place is refused.
 - `go-cloud-k8s-common-libs` v0.6.4, relicensed by its author from GPL-3.0 to MIT, so every
   dependency of the binary and the image is now under a permissive license (the GPL-3.0 entry
   found by the GLD-059 license inventory is gone).

@@ -1,12 +1,14 @@
 <script setup lang="ts">
   import { storeToRefs } from 'pinia'
   import { useI18n } from 'vue-i18n'
+  import { buildHint, useAppInfo } from '@/composables/useAppInfo'
   import { useAuthStore } from '@/stores/auth'
   import DevTokenForm from './DevTokenForm.vue'
 
   const { t } = useI18n()
   const auth = useAuthStore()
   const { isAuthenticated, mode, displayName, me, isAdmin, scopes } = storeToRefs(auth)
+  const appInfo = useAppInfo()
 </script>
 
 <template>
@@ -33,7 +35,20 @@
         </v-list-item>
 
         <v-divider />
-        <v-list-item prepend-icon="mdi-logout" :title="t('auth.signOut')" @click="auth.signOut()" />
+        <v-list-item prepend-icon="mdi-checkbox-marked-circle-outline" :title="t('nav.myTasks')" to="/tasks/mine" />
+        <v-list-item prepend-icon="mdi-account-group-outline" :title="t('nav.groups')" to="/groups" />
+        <v-list-item v-if="isAdmin" prepend-icon="mdi-cog-outline" :title="t('nav.admin')" to="/admin" />
+        <v-divider />
+
+        <v-list-item
+          v-if="appInfo.version"
+          class="text-caption"
+          prepend-icon="mdi-information-outline"
+          :subtitle="buildHint(appInfo, t)"
+          :title="t('app.about', { version: appInfo.version })"
+        />
+
+        <v-list-item base-color="error" prepend-icon="mdi-logout" :title="t('auth.signOut')" @click="auth.signOut()" />
       </v-list>
     </v-menu>
 

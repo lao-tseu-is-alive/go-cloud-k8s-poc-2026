@@ -10,6 +10,7 @@ import (
 	"connectrpc.com/vanguard"
 	"google.golang.org/protobuf/encoding/protojson"
 	"google.golang.org/protobuf/proto"
+	"google.golang.org/protobuf/reflect/protoreflect"
 )
 
 // Request bodies naming an unknown field are refused (GLD-050): a misspelt
@@ -33,7 +34,37 @@ func StrictJSONOption() connect.Option {
 func NewStrictJSONCodec(res vanguard.TypeResolver) vanguard.Codec {
 	codec := vanguard.NewJSONCodec(res)
 	codec.UnmarshalOptions.DiscardUnknown = false
-	return codec
+	return strictRESTCodec{codec}
+}
+
+// strictRESTCodec reports a body it cannot decode as INVALID_ARGUMENT
+// (GLD-065): on a route with path parameters (PATCH /api/cases/{id}) Vanguard
+// returns the codec's error as it is, which became UNKNOWN / HTTP 500, while a
+// route without them already wrapped it.
+type strictRESTCodec struct {
+	*vanguard.JSONCodec
+}
+
+// Unmarshal decodes a request body, refusing unknown fields as INVALID_ARGUMENT.
+func (c strictRESTCodec) Unmarshal(data []byte, msg proto.Message) error {
+	return invalidBody(c.JSONCodec.Unmarshal(data, msg))
+}
+
+// UnmarshalField decodes one field of a request body, refusing unknown fields as INVALID_ARGUMENT.
+func (c strictRESTCodec) UnmarshalField(data []byte, msg proto.Message, field protoreflect.FieldDescriptor) error {
+	return invalidBody(c.JSONCodec.UnmarshalField(data, msg, field))
+}
+
+// invalidBody marks a body decoding error as the caller's (INVALID_ARGUMENT).
+func invalidBody(err error) error {
+	if err == nil {
+		return nil
+	}
+	var connectErr *connect.Error
+	if errors.As(err, &connectErr) {
+		return err
+	}
+	return connect.NewError(connect.CodeInvalidArgument, err)
 }
 
 // strictJSONCodec is connect-go's JSON codec without DiscardUnknown.

@@ -18,8 +18,9 @@ const OperatorID = "import:goeland"
 
 // Key kinds of the deterministic ids; subject kinds use their SubjectKind name.
 const (
-	keyCaseType = "CASE_TYPE"
-	keyAddress  = "ADDRESS"
+	keyCaseType     = "CASE_TYPE"
+	keyAddress      = "ADDRESS"
+	keyDocumentType = "DOCUMENT_TYPE"
 )
 
 // ID is the deterministic id of legacy row legacyID of kind (UUIDv5 of

@@ -229,6 +229,12 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 		Offset:               offset,
 		BothDirections:       req.Msg.BothDirections,
 		OrderBy:              req.Msg.OrderBy,
+		IncludeDetails:       req.Msg.IncludeDetails,
+		OtherCaseStatus:      req.Msg.OtherCaseStatus,
+		OtherTypeCode:        req.Msg.OtherTypeCode,
+		OtherYearFrom:        req.Msg.OtherYearFrom,
+		OtherYearTo:          req.Msg.OtherYearTo,
+		OtherQuery:           req.Msg.OtherQuery,
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -239,6 +245,28 @@ func (s *ConnectServer) ListRelationships(ctx context.Context, req *connect.Requ
 		TotalSize:       result.TotalSize,
 		TotalSizeCapped: result.TotalCapped,
 	}), nil
+}
+
+// SummarizeRelationships counts a subject's edges per type and direction,
+// as the caller may see them (GLD-063).
+func (s *ConnectServer) SummarizeRelationships(ctx context.Context, req *connect.Request[goelandv1.SummarizeRelationshipsRequest]) (*connect.Response[goelandv1.SummarizeRelationshipsResponse], error) {
+	id, err := ParseUUID(req.Msg.SubjectId)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.authz.Caller(ctx, ScopeRead, id, LevelRead)
+	if err != nil {
+		return nil, err
+	}
+	viewer, err := s.authz.ViewerOf(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	groups, err := s.service.SummarizeRelationships(ctx, id, viewer)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.SummarizeRelationshipsResponse{Groups: RelationshipGroupsToProto(groups)}), nil
 }
 
 // ListRelationshipTypes lists the catalogue of allowed relationship types.
@@ -421,6 +449,7 @@ func (s *ConnectServer) CreateRelationshipType(ctx context.Context, req *connect
 	rt, change, err := s.service.CreateRelationshipType(ctx, RelationshipTypeInput{
 		Code: m.Code, Label: m.Label, SourceKind: SubjectKindFromProto(m.SourceKind), TargetKind: SubjectKindFromProto(m.TargetKind),
 		IsDirected: m.IsDirected, InverseLabel: m.InverseLabel, Description: m.Description,
+		Role:       RoleInput{Label: m.RoleLabel, Plural: m.RoleLabelPlural, End: RoleEndFromProto(m.RoleEnd), Preposition: m.RolePreposition},
 		OperatorID: OperatorID(user), Reason: m.Reason,
 	})
 	if err != nil {
@@ -440,7 +469,9 @@ func (s *ConnectServer) UpdateRelationshipType(ctx context.Context, req *connect
 	m := req.Msg
 	rt, change, err := s.service.UpdateRelationshipType(ctx, m.Code, RelationshipTypeUpdate{
 		Label: m.Label, InverseLabel: m.InverseLabel, Description: m.Description, IsActive: m.IsActive,
-		OperatorID: OperatorID(user), Reason: m.Reason,
+		RoleLabel: m.RoleLabel, RoleLabelPlural: m.RoleLabelPlural, RoleEnd: optionalRoleEnd(m.RoleEnd),
+		RolePreposition: m.RolePreposition,
+		OperatorID:      OperatorID(user), Reason: m.Reason,
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -517,4 +548,13 @@ func (s *ConnectServer) ListReferenceChanges(ctx context.Context, req *connect.R
 	return connect.NewResponse(&goelandv1.ListReferenceChangesResponse{
 		Changes: out, NextPageToken: NextPageToken(offset, len(out), result.TotalSize), TotalSize: result.TotalSize,
 	}), nil
+}
+
+// optionalRoleEnd maps an optional proto role end (nil keeps the current one).
+func optionalRoleEnd(e *goelandv1.RoleEnd) *RoleEnd {
+	if e == nil {
+		return nil
+	}
+	end := RoleEndFromProto(*e)
+	return &end
 }

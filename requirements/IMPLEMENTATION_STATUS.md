@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-10-14**, app version **0.14.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0030` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-10-15**, app version **0.15.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0031` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -38,7 +38,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §5.2–5.3 `subject_kind`, `subject_ref` | ✅ `0001` | ✅ `CoreService.CreateSubjectRef/GetSubjectRef` | ✅ | canonical identity, composite `(id,kind)` FK used to pin document kind |
 | §5.4 `record_metadata` (governance) | ✅ `0001` | ✅ via Core (create/lock/soft-delete helpers) | ✅ | ownership/confidentiality/locking/versioning; non-destructive |
 | §5.5 `audit_event` (append-only) | ✅ `0001` (+ `0021`) | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx; the database refuses UPDATE, DELETE and TRUNCATE (`0021`, also on `reference_change`) |
-| §7 `relationship_type` + `subject_relationship` | ✅ `0002` (+ `0011`, `0029`) | ✅ `CoreService.LinkSubjects/EndRelationship/UnlinkSubjects/ListRelationships/ListRelationshipTypes` | ✅ | kind-compat validated (service, and a trigger since GLD-060); one open edge per (source, target, type); ended edges kept as history (GLD-034); unlink = soft delete of a mistake |
+| §7 `relationship_type` + `subject_relationship` | ✅ `0002` (+ `0011`, `0029`, `0031`) | ✅ `CoreService.LinkSubjects/EndRelationship/UnlinkSubjects/ListRelationships/SummarizeRelationships/ListRelationshipTypes` | ✅ | kind-compat validated (service, and a trigger since GLD-060); one open edge per (source, target, type); ended edges kept as history (GLD-034); unlink = soft delete of a mistake; types name the role one end plays, groups counted per type and direction (GLD-063) |
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | ✅ | every domain as a full slice in the browser (documents, actors, cases with timeline, tasks and circulations, things with geometry preview, org units, my tasks, reference data administration); core panels read-only |
@@ -434,6 +434,17 @@ Decisions for the POC (v2 §32):
   manifest is the typed `CaseExportManifest` message reusing the API messages; internal storage
   references are blanked and each blob's digest is checked while it is copied.
 
+- 🚀 **Information hierarchy (GLD-063, decided 2026-10-15 from the user's UI feedback)** — a detail
+  page shows the essentials first and unfolds the rest, instead of one flat table where every link
+  and every technical panel weighs the same (the legacy Goéland, ugly as it is, grouped by category
+  with counts). A relationship group is titled from the subject on screen: the role it plays and
+  the other kind ("Client des affaires suivantes", "Client de l'affaire suivante") or, from the other
+  end, the role itself ("Clients"); groups are sorted alphabetically, counted before opening (only
+  what the viewer may read), cases filter by state and, past 10, by type and period; document groups
+  unfold by family. The technical side (access, governance, audit, the raw relationship table with
+  end and unlink) sits in its own tab. The header links the registers the city uses (UID register,
+  ABACUS debtor, Swiss phone directory) and the app bar shows the server version for reports.
+  Piloted on the actor page; the other detail pages follow once judged on the real data.
 - 🚀 **Sortable tables (GLD-055, GLD-056, GLD-057, 2026-10-02/08)** — every list and detail table sorts by a
   click on its headers (the spec asks for none): paged lists on the server through a whitelisted
   `order_by`, short ones in the browser. A subject's relationships became one list in both

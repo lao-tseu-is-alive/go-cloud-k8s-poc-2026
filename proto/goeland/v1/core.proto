@@ -277,6 +277,29 @@ message RelationshipType {
   string description = 8 [(buf.validate.field).string.max_len = 2000];
   // is_active reports whether new links of this type may be created.
   bool is_active = 9;
+  // role_label names the role one end plays for the other, singular
+  // ("Client", "Personne de contact"); empty when the type has no role and is
+  // shown by its labels (GLD-063).
+  string role_label = 10 [(buf.validate.field).string.max_len = 100];
+  // role_label_plural is the plural of role_label when not regular ("Bureaux
+  // d'étude"); empty means the client derives it.
+  string role_label_plural = 11 [(buf.validate.field).string.max_len = 100];
+  // role_end is the end that plays the role.
+  RoleEnd role_end = 12;
+  // role_preposition joins the role to the other end's kind in a heading seen
+  // from the role's end: "de" (Client des affaires suivantes), "à", "par",
+  // "sur", "dans", "avec" or "pour".
+  string role_preposition = 13;
+}
+
+// RoleEnd tells which end of a relationship type plays its role (GLD-063).
+enum RoleEnd {
+  // ROLE_END_UNSPECIFIED is the zero value; read as TARGET.
+  ROLE_END_UNSPECIFIED = 0;
+  // ROLE_END_TARGET: the target plays the role (an actor client of a case).
+  ROLE_END_TARGET = 1;
+  // ROLE_END_SOURCE: the source plays the role (a person contact of an organization).
+  ROLE_END_SOURCE = 2;
 }
 
 // SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
@@ -305,6 +328,51 @@ message SubjectRelationship {
   string created_by = 9;
   // deleted_at marks an unlinked (soft-deleted) edge; absent while active.
   google.protobuf.Timestamp deleted_at = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // other_detail describes the end that is not the listed subject (its type,
+  // state and date); set by ListRelationships with include_details (GLD-063).
+  RelatedSubjectDetail other_detail = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
+// RelatedSubjectDetail is what a relationship list shows of the other end
+// beyond its reference and label (GLD-063).
+message RelatedSubjectDetail {
+  // type_code and type_label are the case type, document type or thing type; empty otherwise.
+  string type_code = 1;
+  // type_label is the label of that type.
+  string type_label = 2;
+  // case_status is the state of a case (OPEN, IN_PROGRESS, SUSPENDED, CLOSED); empty otherwise.
+  string case_status = 3;
+  // date is the opening date of a case or the official date of a document (YYYY-MM-DD); empty when none.
+  string date = 4;
+}
+
+// RelationshipGroup counts the edges of one relationship type in one
+// direction whose other end the caller may read (GLD-063).
+message RelationshipGroup {
+  // relationship_type is the type of the edges.
+  RelationshipType relationship_type = 1;
+  // outgoing is true when the subject is the source of the edges.
+  bool outgoing = 2;
+  // other_kind is the kind of the other ends.
+  SubjectKind other_kind = 3;
+  // count is the number of edges.
+  int32 count = 4;
+  // open_count is the number of other ends that are cases not closed.
+  int32 open_count = 5;
+  // families splits the edges by case, document or thing type, by label.
+  repeated RelationshipFamily families = 6;
+}
+
+// RelationshipFamily is the share of a relationship group of one case type or document type.
+message RelationshipFamily {
+  // code is the type code.
+  string code = 1;
+  // label is the type label.
+  string label = 2;
+  // count is the number of edges.
+  int32 count = 3;
+  // open_count is the number of those that are cases not closed.
+  int32 open_count = 4;
 }
 
 // =============================================
@@ -703,6 +771,45 @@ message ListRelationshipsRequest {
     max_len: 64
     pattern: "^$|^[a-z_]+( (asc|desc))?$"
   }];
+  // include_details fills other_detail on each edge (GLD-063).
+  bool include_details = 8;
+  // other_case_status keeps the edges whose other end is a case "open" (not
+  // closed) or "closed"; empty means any.
+  string other_case_status = 9 [(buf.validate.field).string = {
+    in: [
+      "",
+      "open",
+      "closed"
+    ]
+  }];
+  // other_type_code keeps the edges whose other end has this case, document or thing type.
+  string other_type_code = 10 [(buf.validate.field).string.max_len = 100];
+  // other_year_from and other_year_to keep the edges whose other end (case
+  // opening, document official date) falls in these years; 0 means unbounded.
+  int32 other_year_from = 11 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 9999
+  }];
+  // other_year_to is the last year kept; 0 means unbounded.
+  int32 other_year_to = 12 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 9999
+  }];
+  // other_query keeps the edges whose other end's label or business reference
+  // contains it, accent- and case-insensitive (at most 200 characters).
+  string other_query = 13 [(buf.validate.field).string.max_len = 200];
+}
+
+// SummarizeRelationshipsRequest asks for the relationship groups of a subject.
+message SummarizeRelationshipsRequest {
+  // subject_id is the subject; the caller needs READ on it.
+  string subject_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// SummarizeRelationshipsResponse lists the relationship groups of a subject.
+message SummarizeRelationshipsResponse {
+  // groups are the relationship groups, one per type and direction.
+  repeated RelationshipGroup groups = 1;
 }
 
 // ListRelationshipsResponse is one page of edges.
@@ -830,6 +937,25 @@ message CreateRelationshipTypeRequest {
   string description = 7 [(buf.validate.field).string.max_len = 2000];
   // reason is the justification recorded in the reference change log (at most 2000 characters).
   string reason = 8 [(buf.validate.field).string.max_len = 2000];
+  // role_label names the role one end plays for the other, singular (at most 100 characters).
+  string role_label = 9 [(buf.validate.field).string.max_len = 100];
+  // role_label_plural is its plural when not regular (at most 100 characters).
+  string role_label_plural = 10 [(buf.validate.field).string.max_len = 100];
+  // role_end is the end that plays the role; UNSPECIFIED means TARGET.
+  RoleEnd role_end = 11 [(buf.validate.field).enum.defined_only = true];
+  // role_preposition joins the role to the other kind; empty means "de".
+  string role_preposition = 12 [(buf.validate.field).string = {
+    in: [
+      "",
+      "de",
+      "à",
+      "par",
+      "sur",
+      "dans",
+      "avec",
+      "pour"
+    ]
+  }];
 }
 
 // CreateRelationshipTypeResponse returns the new relationship type and its log entry.
@@ -863,6 +989,27 @@ message UpdateRelationshipTypeRequest {
   optional bool is_active = 5;
   // reason is the justification recorded in the reference change log (at most 2000 characters).
   string reason = 6 [(buf.validate.field).string.max_len = 2000];
+  // role_label replaces the role when present (at most 100 characters; empty removes it).
+  optional string role_label = 7 [(buf.validate.field).string.max_len = 100];
+  // role_label_plural replaces the plural when present (empty: derived).
+  optional string role_label_plural = 8 [(buf.validate.field).string.max_len = 100];
+  // role_end replaces the end playing the role when present.
+  optional RoleEnd role_end = 9 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // role_preposition replaces the preposition when present.
+  optional string role_preposition = 10 [(buf.validate.field).string = {
+    in: [
+      "de",
+      "à",
+      "par",
+      "sur",
+      "dans",
+      "avec",
+      "pour"
+    ]
+  }];
 }
 
 // UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
@@ -1122,6 +1269,13 @@ service CoreService {
   // Requires goeland:read.
   rpc ListRelationships(ListRelationshipsRequest) returns (ListRelationshipsResponse) {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/relationships"};
+  }
+
+  // Count the edges of a subject per relationship type and direction, only
+  // those whose other end the caller may read, with the open cases and the
+  // split by case or document type (GLD-063). Requires goeland:read and READ.
+  rpc SummarizeRelationships(SummarizeRelationshipsRequest) returns (SummarizeRelationshipsResponse) {
+    option (google.api.http) = {get: "/api/subjects/{subject_id}/relationship-summary"};
   }
 
   // List the catalogue of allowed relationship types (optionally filtered).

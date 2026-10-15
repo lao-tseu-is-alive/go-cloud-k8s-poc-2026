@@ -329,8 +329,11 @@
     }
   },
   "app": {
+    "about": "Goéland POC v{version}",
+    "versionHint": "revision {revision} · built {build}",
     "title": "Goéland",
-    "subtitle": "POC — Document management",
+    "edition": "POC",
+    "subtitle": "Document management",
     "language": "Language"
   },
   "nav": {
@@ -585,6 +588,10 @@
       "targetKind": "Target kind",
       "isDirected": "Directed",
       "inverseLabel": "Inverse label",
+      "roleLabel": "Role",
+      "roleLabelPlural": "Role plural (if irregular)",
+      "roleEnd": "Role played by",
+      "rolePreposition": "Heading preposition",
       "isActive": "Active",
       "active": "Active",
       "inactive": "Inactive",
@@ -738,8 +745,101 @@
     "archive": "Archive",
     "expires": "until {at}"
   },
+  "relGroups": {
+    "empty": "No readable relationship.",
+    "links": "no link | {n} link | {n} links",
+    "roles": "no role | {n} role | {n} roles",
+    "active": "{n} active",
+    "activeHint": "Cases not closed (open, in progress or suspended)",
+    "noMatch": "Nothing matches.",
+    "shown": "{shown} of {total} shown",
+    "endedOn": "link ended on {date}",
+    "sections": {
+      "SUBJECT_KIND_CASE": "In cases",
+      "SUBJECT_KIND_DOCUMENT": "In documents",
+      "SUBJECT_KIND_THING": "On objects",
+      "SUBJECT_KIND_ACTOR": "With other actors",
+      "SUBJECT_KIND_ORG_UNIT": "With units",
+      "SUBJECT_KIND_USER": "With staff",
+      "SUBJECT_KIND_GROUP": "With groups",
+      "other": "Other relationships"
+    },
+    "jump": {
+      "SUBJECT_KIND_CASE": "Cases",
+      "SUBJECT_KIND_DOCUMENT": "Documents",
+      "SUBJECT_KIND_THING": "Objects",
+      "SUBJECT_KIND_ACTOR": "Related actors",
+      "SUBJECT_KIND_ORG_UNIT": "Units",
+      "SUBJECT_KIND_USER": "Staff",
+      "SUBJECT_KIND_GROUP": "Groups",
+      "other": "Other"
+    },
+    "columns": {
+      "reference": "Reference",
+      "date": "Date",
+      "type": "Type",
+      "state": "State",
+      "subject": {
+        "SUBJECT_KIND_CASE": "Case",
+        "SUBJECT_KIND_DOCUMENT": "Document",
+        "SUBJECT_KIND_THING": "Object",
+        "SUBJECT_KIND_ACTOR": "Actor",
+        "other": "Subject"
+      }
+    },
+    "filters": {
+      "all": "All",
+      "active": "Active ({n})",
+      "closed": "Closed",
+      "text": "Search the list",
+      "type": {
+        "SUBJECT_KIND_CASE": "Case type",
+        "SUBJECT_KIND_DOCUMENT": "Document family",
+        "SUBJECT_KIND_THING": "Object type",
+        "other": "Type"
+      },
+      "period": "Period",
+      "anyType": "All types",
+      "anyPeriod": "All periods",
+      "before": "Before {year}"
+    }
+  },
+  "actorPage": {
+    "header": {
+      "ide": "UID {value}",
+      "ideHint": "Entry in the Swiss business register (new tab)",
+      "abacus": "ABACUS debtor {value}",
+      "abacusHint": "ABACUS debtor entry (new tab)",
+      "newTab": "new tab",
+      "phoneDirectory": "Look this number up in the Swiss directory (new tab)",
+      "link": "Link to…",
+      "more": "More actions",
+      "address": "Main address",
+      "phone": "Phone",
+      "email": "E-mail",
+      "website": "Website",
+      "jump": "Go to section"
+    },
+    "tabs": {
+      "roles": "Actor roles",
+      "governance": "Governance and history"
+    },
+    "brief": {
+      "title": "At a glance",
+      "confidentiality": "Confidentiality",
+      "myAccess": "My access",
+      "updated": "Updated"
+    },
+    "allRelationships": "All relationships (technical view)",
+    "allRelationshipsHint": "The raw list of the actor's links, both ways, with the actions to end or unlink a link."
+  },
   "enums": {
-    "CaseExportStatus": {
+    "RoleEnd": {
+      "ROLE_END_UNSPECIFIED": "—",
+      "ROLE_END_TARGET": "the target",
+      "ROLE_END_SOURCE": "the source"
+    },
+        "CaseExportStatus": {
       "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
       "CASE_EXPORT_STATUS_QUEUED": "Queued",
       "CASE_EXPORT_STATUS_RUNNING": "Preparing",

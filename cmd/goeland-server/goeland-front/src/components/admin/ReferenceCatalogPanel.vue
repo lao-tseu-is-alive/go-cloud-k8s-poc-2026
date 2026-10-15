@@ -59,6 +59,9 @@
   function openCreate () {
     editing.value = null
     draft.value = { code: '', isActive: true, isDirected: true, defaultConfidentialityLevel: 0 }
+    for (const field of props.config.fields) {
+      if (field.initial !== undefined) draft.value[field.key] = field.initial
+    }
     reason.value = ''
     dialogOpen.value = true
   }
@@ -117,6 +120,10 @@
   // proto3 JSON omits false booleans: an entry is active only when isActive is true.
   function isActive (entry: CatalogueEntry): boolean {
     return entry.isActive === true
+  }
+
+  function choiceItems (field: CatalogueField) {
+    return (field.choices ?? []).map(value => ({ value, title: field.choiceEnum ? enumLabel(field.choiceEnum, value) : value }))
   }
 
   function cell (entry: CatalogueEntry, field: CatalogueField): string {
@@ -226,6 +233,16 @@
                 :items="kindItems"
                 :label="t(`fields.reference.${field.key}`)"
                 :rules="rules(field)"
+              />
+
+              <v-select
+                v-else-if="field.kind === 'choice'"
+                v-model="draft[field.key]"
+                class="mt-2"
+                item-title="title"
+                item-value="value"
+                :items="choiceItems(field)"
+                :label="t(`fields.reference.${field.key}`)"
               />
 
               <v-select

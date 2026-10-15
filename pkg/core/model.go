@@ -172,7 +172,32 @@ type RelationshipType struct {
 	Description string `db:"description"`
 	// IsActive reports whether new links of this type may be created.
 	IsActive bool `db:"is_active"`
+	// RoleLabel names the role one end plays for the other, singular
+	// ("Client"); empty when the type is shown by its labels (GLD-063).
+	RoleLabel string `db:"role_label"`
+	// RoleLabelPlural is the plural of RoleLabel when not regular; empty
+	// means the client derives it.
+	RoleLabelPlural string `db:"role_label_plural"`
+	// RoleEnd is the end that plays the role.
+	RoleEnd RoleEnd `db:"role_end"`
+	// RolePreposition joins the role to the other end's kind in a heading
+	// ("de", "par", ...); one of RolePrepositions.
+	RolePreposition string `db:"role_preposition"`
 }
+
+// RoleEnd tells which end of a relationship type plays its role (GLD-063).
+type RoleEnd string
+
+// Role ends.
+const (
+	// RoleEndTarget is a role played by the target (an actor client of a case).
+	RoleEndTarget RoleEnd = "TARGET"
+	// RoleEndSource is a role played by the source (a person contact of an organization).
+	RoleEndSource RoleEnd = "SOURCE"
+)
+
+// RolePrepositions are the prepositions a role heading may use; the first is the default.
+var RolePrepositions = []string{"de", "à", "par", "sur", "dans", "avec", "pour"}
 
 // SubjectRelationship is an actual typed edge between two subjects. The related
 // SubjectRef and RelationshipType are hydrated by the repository for read paths.
@@ -203,6 +228,9 @@ type SubjectRelationship struct {
 
 	// Source is the hydrated source subject on read paths; nil on writes.
 	Source *SubjectRef `db:"-"`
+	// OtherDetail describes the end that is not the listed subject, on lists
+	// asked with IncludeDetails (GLD-063); nil otherwise.
+	OtherDetail *RelatedDetail `db:"-"`
 	// Target is the hydrated target subject on read paths; nil on writes.
 	Target *SubjectRef `db:"-"`
 	// RelationshipType is the hydrated type on read paths; nil on writes.
@@ -295,6 +323,20 @@ type RelationshipFilter struct {
 	OrderBy string
 	// Sort is the order of the edges (relationshipSortFields); the zero value is the default.
 	Sort Sort
+	// IncludeDetails fills OtherDetail on each edge (GLD-063).
+	IncludeDetails bool
+	// OtherCaseStatus keeps the edges whose other end is a case "open" or "closed"; empty means any.
+	OtherCaseStatus string
+	// OtherTypeCode keeps the edges whose other end has this case or document type; empty means any.
+	OtherTypeCode string
+	// OtherYearFrom is the first year of a case's opening or a document's
+	// official date kept; 0 is unbounded.
+	OtherYearFrom int32
+	// OtherYearTo is the last year kept; 0 is unbounded.
+	OtherYearTo int32
+	// OtherQuery keeps the edges whose other end's label or business reference
+	// contains it (accent- and case-insensitive); empty means any.
+	OtherQuery string
 }
 
 // RelationshipResult holds a page of relationships and the total count before pagination.

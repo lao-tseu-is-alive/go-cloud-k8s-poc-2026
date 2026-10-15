@@ -1,7 +1,7 @@
 import type { ContactType } from '@/api/types'
 import { readFileSync } from 'node:fs'
 import { describe, expect, it } from 'vitest'
-import { contactHref, contactValueRule, formatContactValue, normalizePhone } from '../contactRules'
+import { contactHref, contactValueRule, formatContactValue, normalizePhone, phoneDirectoryHref } from '../contactRules'
 import { t } from './i18nStub'
 
 interface SharedCase {
@@ -54,6 +54,22 @@ describe('contact display', () => {
     expect(contactHref('CONTACT_TYPE_EMAIL', 'a@b.ch')).toBe('mailto:a@b.ch')
     expect(contactHref('CONTACT_TYPE_WEBSITE', 'https://x.ch')).toBe('https://x.ch')
     expect(contactHref('CONTACT_TYPE_COMMERCIAL_REGISTER', 'CH-550.1.012.345-6')).toBeUndefined()
-    expect(contactHref('CONTACT_TYPE_ABACUS_DEBTOR', '123')).toBeUndefined()
+    expect(contactHref('CONTACT_TYPE_VAT_NUMBER', 'CHE-105.851.230 TVA')).toBeUndefined()
+  })
+})
+
+describe('contact links (GLD-063)', () => {
+  it('links an IDE number to the Swiss business register', () => {
+    expect(contactHref('CONTACT_TYPE_IDE_FEDERAL', 'CHE-105.851.230')).toBe('https://www.uid.admin.ch/Detail.aspx?uid_id=CHE-105.851.230')
+  })
+
+  it('links an ABACUS debtor number to the debtor application', () => {
+    expect(contactHref('CONTACT_TYPE_ABACUS_DEBTOR', '20000506')).toBe('https://debiteur.lausanne.ch/debiteur-ui/details-debiteur/20000506')
+  })
+
+  it('searches only Swiss phone numbers in the Swiss directory', () => {
+    expect(phoneDirectoryHref('+41218071515')).toBe('https://map.search.ch/?tel=0218071515')
+    expect(phoneDirectoryHref('021 807 15 15')).toBe('https://map.search.ch/?tel=0218071515')
+    expect(phoneDirectoryHref('+33142000000')).toBeUndefined()
   })
 })

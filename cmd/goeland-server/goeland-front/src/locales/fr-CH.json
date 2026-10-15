@@ -329,8 +329,11 @@
     }
   },
   "app": {
+    "about": "Goéland POC v{version}",
+    "versionHint": "révision {revision} · construit le {build}",
     "title": "Goéland",
-    "subtitle": "POC — Gestion documentaire",
+    "edition": "POC",
+    "subtitle": "Gestion documentaire",
     "language": "Langue"
   },
   "nav": {
@@ -585,6 +588,10 @@
       "targetKind": "Type de la cible",
       "isDirected": "Relation orientée",
       "inverseLabel": "Libellé inverse",
+      "roleLabel": "Rôle",
+      "roleLabelPlural": "Rôle au pluriel (si irrégulier)",
+      "roleEnd": "Rôle joué par",
+      "rolePreposition": "Préposition du titre",
       "isActive": "Active",
       "active": "Active",
       "inactive": "Inactive",
@@ -738,8 +745,101 @@
     "archive": "Archive",
     "expires": "jusqu'au {at}"
   },
+  "relGroups": {
+    "empty": "Aucune relation lisible.",
+    "links": "aucun lien | {n} lien | {n} liens",
+    "roles": "aucun rôle | {n} rôle | {n} rôles",
+    "active": "{n} actives",
+    "activeHint": "Affaires non clôturées (ouvertes, en cours ou suspendues)",
+    "noMatch": "Aucun élément ne correspond.",
+    "shown": "{shown} sur {total} affichés",
+    "endedOn": "lien terminé le {date}",
+    "sections": {
+      "SUBJECT_KIND_CASE": "Dans les affaires",
+      "SUBJECT_KIND_DOCUMENT": "Dans les documents",
+      "SUBJECT_KIND_THING": "Sur les objets",
+      "SUBJECT_KIND_ACTOR": "Avec d’autres acteurs",
+      "SUBJECT_KIND_ORG_UNIT": "Avec des unités",
+      "SUBJECT_KIND_USER": "Avec des collaborateurs",
+      "SUBJECT_KIND_GROUP": "Avec des groupes",
+      "other": "Autres relations"
+    },
+    "jump": {
+      "SUBJECT_KIND_CASE": "Affaires",
+      "SUBJECT_KIND_DOCUMENT": "Documents",
+      "SUBJECT_KIND_THING": "Objets",
+      "SUBJECT_KIND_ACTOR": "Acteurs liés",
+      "SUBJECT_KIND_ORG_UNIT": "Unités",
+      "SUBJECT_KIND_USER": "Collaborateurs",
+      "SUBJECT_KIND_GROUP": "Groupes",
+      "other": "Autres"
+    },
+    "columns": {
+      "reference": "Référence",
+      "date": "Date",
+      "type": "Type",
+      "state": "État",
+      "subject": {
+        "SUBJECT_KIND_CASE": "Affaire",
+        "SUBJECT_KIND_DOCUMENT": "Document",
+        "SUBJECT_KIND_THING": "Objet",
+        "SUBJECT_KIND_ACTOR": "Acteur",
+        "other": "Sujet"
+      }
+    },
+    "filters": {
+      "all": "Toutes",
+      "active": "Actives ({n})",
+      "closed": "Clôturées",
+      "text": "Rechercher dans la liste",
+      "type": {
+        "SUBJECT_KIND_CASE": "Type d’affaire",
+        "SUBJECT_KIND_DOCUMENT": "Famille de document",
+        "SUBJECT_KIND_THING": "Type d’objet",
+        "other": "Type"
+      },
+      "period": "Période",
+      "anyType": "Tous les types",
+      "anyPeriod": "Toutes les périodes",
+      "before": "Avant {year}"
+    }
+  },
+  "actorPage": {
+    "header": {
+      "ide": "IDE {value}",
+      "ideHint": "Fiche au registre IDE de la Confédération (nouvel onglet)",
+      "abacus": "Débiteur ABACUS {value}",
+      "abacusHint": "Fiche débiteur ABACUS (nouvel onglet)",
+      "newTab": "nouvel onglet",
+      "phoneDirectory": "Chercher ce numéro dans l’annuaire suisse (nouvel onglet)",
+      "link": "Lier à…",
+      "more": "Autres actions",
+      "address": "Adresse principale",
+      "phone": "Téléphone",
+      "email": "E-mail",
+      "website": "Site internet",
+      "jump": "Aller à la section"
+    },
+    "tabs": {
+      "roles": "Rôles de l’acteur",
+      "governance": "Gouvernance et historique"
+    },
+    "brief": {
+      "title": "En bref",
+      "confidentiality": "Confidentialité",
+      "myAccess": "Mon accès",
+      "updated": "Modifié le"
+    },
+    "allRelationships": "Toutes les relations (vue technique)",
+    "allRelationshipsHint": "La liste brute des liens de l’acteur, dans les deux sens, avec les actions pour terminer ou délier un lien."
+  },
   "enums": {
-    "CaseExportStatus": {
+    "RoleEnd": {
+      "ROLE_END_UNSPECIFIED": "—",
+      "ROLE_END_TARGET": "la cible",
+      "ROLE_END_SOURCE": "la source"
+    },
+        "CaseExportStatus": {
       "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
       "CASE_EXPORT_STATUS_QUEUED": "En attente",
       "CASE_EXPORT_STATUS_RUNNING": "En préparation",

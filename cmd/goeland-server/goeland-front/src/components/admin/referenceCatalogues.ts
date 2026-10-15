@@ -13,7 +13,7 @@ import { listTaskTypes } from '@/api/taskClient'
 import { listThingTypes } from '@/api/thingClient'
 
 /** confidentiality is a level 0-5 (from 2 a grant is needed to read). */
-export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean' | 'confidentiality'
+export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean' | 'confidentiality' | 'choice'
 
 export interface CatalogueField {
   /** Proto3-JSON field name, also the i18n key under fields.reference. */
@@ -25,6 +25,12 @@ export interface CatalogueField {
   max?: number
   /** Shown as a table column. */
   column?: boolean
+  /** The values of a 'choice' field. */
+  choices?: string[]
+  /** The enum whose labels name the choices (useI18nEnum); the values themselves otherwise. */
+  choiceEnum?: string
+  /** The value of a new entry. */
+  initial?: unknown
 }
 
 /** Any catalogue entry, as proto3 JSON. */
@@ -62,6 +68,11 @@ export const CATALOGUES: CatalogueConfig[] = [
       { key: 'targetKind', kind: 'subjectKind', required: true, createOnly: true, column: true },
       { key: 'isDirected', kind: 'boolean', createOnly: true },
       { key: 'inverseLabel', kind: 'text', max: 200 },
+      // The role read from the subject on screen (GLD-063, utils/roleHeadings.ts).
+      { key: 'roleLabel', kind: 'text', max: 100, column: true },
+      { key: 'roleLabelPlural', kind: 'text', max: 100 },
+      { key: 'roleEnd', kind: 'choice', choices: ['ROLE_END_TARGET', 'ROLE_END_SOURCE'], choiceEnum: 'RoleEnd', initial: 'ROLE_END_TARGET' },
+      { key: 'rolePreposition', kind: 'choice', choices: ['de', 'à', 'par', 'sur', 'dans', 'avec', 'pour'], initial: 'de' },
       DESCRIPTION,
     ],
     list: async () => (await listRelationshipTypes({ onlyActive: false })) as unknown as CatalogueEntry[],

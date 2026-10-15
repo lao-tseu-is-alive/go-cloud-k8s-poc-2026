@@ -1,9 +1,10 @@
 <script lang="ts" setup>
   import { storeToRefs } from 'pinia'
-  import { onMounted } from 'vue'
+  import { computed, onMounted } from 'vue'
   import { useI18n } from 'vue-i18n'
   import AppAuthControls from '@/components/AppAuthControls.vue'
   import SignInPanel from '@/components/SignInPanel.vue'
+  import { buildHint, useAppInfo } from '@/composables/useAppInfo'
   import { SUPPORTED_LOCALES } from '@/plugins/i18n'
   import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
@@ -13,6 +14,8 @@
   const ui = useUiStore()
   const { isAuthenticated, isAdmin, ready } = storeToRefs(auth)
   const { snackbar } = storeToRefs(ui)
+  const appInfo = useAppInfo()
+  const versionHint = computed(() => buildHint(appInfo.value, t))
 
   onMounted(() => auth.bootstrap())
 </script>
@@ -22,7 +25,19 @@
     <v-app-bar color="primary" density="comfortable" flat>
       <v-app-bar-title>
         <span class="font-weight-bold">{{ t('app.title') }}</span>
-        <span class="text-caption ml-2 d-none d-sm-inline">{{ t('app.subtitle') }}</span>
+        <span class="ml-1">{{ t('app.edition') }}</span>
+
+        <v-chip
+          v-if="appInfo.version"
+          class="ml-2 app-version"
+          label
+          size="x-small"
+          :title="versionHint"
+          variant="tonal"
+        >v{{ appInfo.version }}</v-chip>
+
+        <span class="text-caption ml-2 d-none d-md-inline">— {{ t('app.subtitle') }}</span>
+
       </v-app-bar-title>
 
       <v-btn
@@ -144,3 +159,9 @@
     </v-snackbar>
   </v-app>
 </template>
+
+<style scoped>
+  .app-version {
+    font-family: ui-monospace, monospace;
+  }
+</style>

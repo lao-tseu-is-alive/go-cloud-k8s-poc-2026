@@ -160,16 +160,36 @@ func DomainRelationshipTypeToProto(rt *RelationshipType) *goelandv1.Relationship
 		return nil
 	}
 	return &goelandv1.RelationshipType{
-		Id:           rt.ID.String(),
-		Code:         rt.Code,
-		Label:        rt.Label,
-		SourceKind:   SubjectKindToProto(rt.SourceKind),
-		TargetKind:   SubjectKindToProto(rt.TargetKind),
-		IsDirected:   rt.IsDirected,
-		InverseLabel: rt.InverseLabel,
-		Description:  rt.Description,
-		IsActive:     rt.IsActive,
+		Id:              rt.ID.String(),
+		Code:            rt.Code,
+		Label:           rt.Label,
+		SourceKind:      SubjectKindToProto(rt.SourceKind),
+		TargetKind:      SubjectKindToProto(rt.TargetKind),
+		IsDirected:      rt.IsDirected,
+		InverseLabel:    rt.InverseLabel,
+		Description:     rt.Description,
+		IsActive:        rt.IsActive,
+		RoleLabel:       rt.RoleLabel,
+		RoleLabelPlural: rt.RoleLabelPlural,
+		RoleEnd:         RoleEndToProto(rt.RoleEnd),
+		RolePreposition: rt.RolePreposition,
 	}
+}
+
+// RoleEndToProto maps a role end; an empty one reads as TARGET.
+func RoleEndToProto(e RoleEnd) goelandv1.RoleEnd {
+	if e == RoleEndSource {
+		return goelandv1.RoleEnd_ROLE_END_SOURCE
+	}
+	return goelandv1.RoleEnd_ROLE_END_TARGET
+}
+
+// RoleEndFromProto maps a proto role end; UNSPECIFIED is TARGET.
+func RoleEndFromProto(e goelandv1.RoleEnd) RoleEnd {
+	if e == goelandv1.RoleEnd_ROLE_END_SOURCE {
+		return RoleEndSource
+	}
+	return RoleEndTarget
 }
 
 // DomainRelationshipToProto converts a relationship (with hydrated associations) to its proto representation.
@@ -188,7 +208,32 @@ func DomainRelationshipToProto(rel *SubjectRelationship) *goelandv1.SubjectRelat
 		CreatedAt:        TimestampOrNil(rel.CreatedAt),
 		CreatedBy:        rel.CreatedBy,
 		DeletedAt:        TimestampPtrOrNil(rel.DeletedAt),
+		OtherDetail:      RelatedDetailToProto(rel.OtherDetail),
 	}
+}
+
+// RelatedDetailToProto maps the detail of a relationship's other end.
+func RelatedDetailToProto(d *RelatedDetail) *goelandv1.RelatedSubjectDetail {
+	if d == nil {
+		return nil
+	}
+	return &goelandv1.RelatedSubjectDetail{TypeCode: d.TypeCode, TypeLabel: d.TypeLabel, CaseStatus: d.CaseStatus, Date: d.Date}
+}
+
+// RelationshipGroupsToProto maps relationship groups.
+func RelationshipGroupsToProto(groups []*RelationshipGroup) []*goelandv1.RelationshipGroup {
+	out := make([]*goelandv1.RelationshipGroup, 0, len(groups))
+	for _, g := range groups {
+		pg := &goelandv1.RelationshipGroup{
+			RelationshipType: DomainRelationshipTypeToProto(g.RelationshipType), Outgoing: g.Outgoing,
+			OtherKind: SubjectKindToProto(g.OtherKind), Count: g.Count, OpenCount: g.OpenCount,
+		}
+		for _, f := range g.Families {
+			pg.Families = append(pg.Families, &goelandv1.RelationshipFamily{Code: f.Code, Label: f.Label, Count: f.Count, OpenCount: f.OpenCount})
+		}
+		out = append(out, pg)
+	}
+	return out
 }
 
 // DomainRelationshipsToProto maps a slice of relationships.

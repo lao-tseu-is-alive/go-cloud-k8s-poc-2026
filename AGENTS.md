@@ -181,7 +181,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0030 (dbmate format)
+  │   └── db/migrations/     0001..0031 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -319,6 +319,16 @@ secondary reads are not logged. `ListAccessAuditEvents`
 (`GET /api/access-audit-events`) needs `goeland:admin`, or FULL_CONTROL on its `subject_id`, and
 shows a label only for a readable subject. A new primary read of a subject uses `AuditedRead`.
 
+**Relationship groups (GLD-063):** a detail page reads its links through
+`CoreService.SummarizeRelationships` (groups per type and direction, counted as the viewer may read
+them, open cases, split by case or document type) and opens a group with `ListRelationships`
+(`relationship_type_code`, direction, `include_details`, `other_*` filters: case state, case /
+document / thing type, years, `other_query` text); the SPA titles a group
+with `utils/roleHeadings.ts` from the type's role (`role_label`, `role_label_plural`, `role_end`,
+`role_preposition`, migration `0031`) and renders it with `SubjectRolesPanel` / `RoleGroup`. A new
+relationship type names its role (the legacy import sets it from the legacy role name). Piloted on the
+actor page.
+
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
@@ -336,7 +346,8 @@ copied once by `core.ApplyDefaultGrantsTx` in the case creation transaction (hig
 per grantee; archived groups and dissolved units skipped); `SetCaseTypeDefaultGrants` replaces a
 template and logs it in `reference_change`. Existing cases never follow a template change.
 
-**Strict JSON (GLD-050):** request bodies with an unknown field answer 400 on both surfaces: every
+**Strict JSON (GLD-050, GLD-065):** request bodies with an unknown field answer 400 on both surfaces
+(REST routes with path parameters too: the strict REST codec reports its errors as INVALID_ARGUMENT): every
 module adds `core.StrictJSONOption()` to its Connect handler options and every transcoder is built
 with `vanguard.WithCodec(core.NewStrictJSONCodec)` (the bundle in `server.go` too). Keep both when
 adding a module; the SPA must send only fields of the request message.
@@ -416,7 +427,7 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
 `/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`,
-`/api/access-audit-events`; ActorService:
+`/api/access-audit-events`, `/api/subjects/{subject_id}/relationship-summary`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`; ThingService: `/api/things`, `/api/things/{id}`,

@@ -16,9 +16,11 @@ import (
 const (
 	keyDocumentVersion = "DOCUMENT_VERSION"
 	keyBlob            = "BLOB"
-	// legacyDocumentTypeCode is the single document type of the imported
-	// documents: the legacy type is a file format (pdf, tif, ...), not a
-	// business type, and it gives the content's media type instead.
+	// legacyDocumentTypeCode is the document type of an imported document
+	// without a known family. The business type of a legacy document is its
+	// family (doc_family, GLD-067), imported as a document type coded
+	// LEG_DOC_<IdDocFamily>; the legacy "type" is a file format (pdf, tif,
+	// ...) and gives the content's media type instead.
 	legacyDocumentTypeCode = "LEG_DOCUMENT"
 	// maxDocumentTitle is the POC limit on a document title (document.MaxTitleLength).
 	maxDocumentTitle = 500
@@ -80,13 +82,15 @@ type sourceDocument struct {
 	FileName string
 	// Version is the legacy version number (docnumver).
 	Version int32
+	// FamilyID is the legacy document family (iddocfamily), 0 when none.
+	FamilyID int64
 }
 
 // scanDocument reads one row of documentsSQL.
 func scanDocument(rows pgx.Rows) (*sourceDocument, error) {
 	d := &sourceDocument{}
 	err := rows.Scan(&d.ID, &d.Title, &d.Description, &d.Subject, &d.Comment, &d.OfficialDate, &d.CreatedAt, &d.UpdatedAt,
-		&d.PosterID, &d.Definitive, &d.Confidential, &d.Level, &d.SHA256, &d.Size, &d.Pages, &d.MimeType, &d.FileName, &d.Version)
+		&d.PosterID, &d.Definitive, &d.Confidential, &d.Level, &d.SHA256, &d.Size, &d.Pages, &d.MimeType, &d.FileName, &d.Version, &d.FamilyID)
 	return d, err
 }
 
@@ -112,7 +116,7 @@ func (imp *Importer) importDocuments(ctx context.Context, c *StageCounts) error 
 		{"subject_ref", subjectRefColumns, func(d *sourceDocument) []any { s := imp.documentSubject(d); return imp.subjectRefRow(s) }},
 		{"record_metadata", recordMetadataColumns, func(d *sourceDocument) []any { return imp.metadataRow(imp.documentSubject(d)) }},
 		{"subject_provenance", provenanceColumns, func(d *sourceDocument) []any { return imp.provenanceRow(imp.documentSubject(d)) }},
-		{"document", documentColumns, func(d *sourceDocument) []any { return imp.documentRow(d, typeID) }},
+		{"document", documentColumns, func(d *sourceDocument) []any { return imp.documentRow(d, imp.documentType(d, typeID)) }},
 		{"content_blob", blobColumns, func(d *sourceDocument) []any { return imp.blobRow(d, blobs) }},
 		{"document_version", versionColumns, func(d *sourceDocument) []any { return imp.versionRow(d) }},
 	}
@@ -142,6 +146,53 @@ func (imp *Importer) importDocuments(ctx context.Context, c *StageCounts) error 
 	return nil
 }
 
+// sourceDocumentFamily is a legacy document family.
+type sourceDocumentFamily struct {
+	// ID is the source column id (iddocfamily).
+	ID int64 `db:"id"`
+	// Name is the source column name.
+	Name string `db:"name"`
+	// Description is the source column description.
+	Description string `db:"description"`
+}
+
+var documentTypeColumns = []string{"id", "code", "label", "description", "category"}
+
+// importDocumentTypes writes the legacy document families as document types
+// coded LEG_DOC_<IdDocFamily> (GLD-067): the documents of an actor or a case
+// can then be classified as in the legacy UI ("Photo (objet)", "Plan d'objet").
+func (imp *Importer) importDocumentTypes(ctx context.Context, c *StageCounts) error {
+	families, err := querySource[sourceDocumentFamily](ctx, imp, documentFamiliesSQL)
+	if err != nil {
+		return err
+	}
+	c.Read = len(families)
+	rows := make([][]any, 0, len(families))
+	for _, f := range families {
+		id := ID(keyDocumentType, f.ID)
+		label := f.Name
+		if label == "" {
+			label = fmt.Sprintf("Famille %d", f.ID)
+			c.adjust("family without a name, placeholder used")
+		}
+		rows = append(rows, []any{id, "LEG_DOC_" + strconv.FormatInt(f.ID, 10), label, f.Description, "Goéland"})
+		imp.documentTypes[f.ID] = id
+	}
+	if err := imp.copyRows(ctx, "document_type", documentTypeColumns, rows); err != nil {
+		return err
+	}
+	c.Written = len(rows)
+	return nil
+}
+
+// documentType is the document type of a legacy document: its family, else fallback.
+func (imp *Importer) documentType(d *sourceDocument, fallback uuid.UUID) uuid.UUID {
+	if id, ok := imp.documentTypes[d.FamilyID]; ok {
+		return id
+	}
+	return fallback
+}
+
 // countDocumentAdjustments counts, once per document, what the mapping changes.
 func (imp *Importer) countDocumentAdjustments(d *sourceDocument, c *StageCounts) {
 	if utf8.RuneCountInString(d.Title) > maxDocumentTitle {
@@ -152,6 +203,9 @@ func (imp *Importer) countDocumentAdjustments(d *sourceDocument, c *StageCounts)
 	}
 	if d.Version > 1 {
 		c.adjust("earlier versions not imported (current one only)")
+	}
+	if _, ok := imp.documentTypes[d.FamilyID]; !ok {
+		c.adjust("no known family, generic document type")
 	}
 }
 
