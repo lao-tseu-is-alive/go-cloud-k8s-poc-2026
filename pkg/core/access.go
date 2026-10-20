@@ -325,3 +325,24 @@ func ReadableSQL(idExpr, rmAlias string) string {
                   WHERE ag.subject_id = ` + idExpr + ` AND ag.revoked_at IS NULL
                     AND (ag.grantee_user_id = @viewer_id OR ag.grantee_subject_id = ANY(@viewer_principals::uuid[]))))`
 }
+
+// UnreadableTx returns, among ids, the subjects viewer may not read, so an
+// answer that mentions them can leave their labels out (GLD-070).
+func UnreadableTx(ctx context.Context, q Querier, viewer Viewer, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	rows, err := q.Query(ctx, unreadableSQL, viewer.AddTo(pgx.NamedArgs{"ids": ids}))
+	if err != nil {
+		return nil, fmt.Errorf("unreadable subjects: %w", err)
+	}
+	hidden, err := pgx.CollectRows(rows, pgx.RowTo[uuid.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("read unreadable subjects: %w", err)
+	}
+	set := make(map[uuid.UUID]bool, len(hidden))
+	for _, id := range hidden {
+		set[id] = true
+	}
+	return set, nil
+}

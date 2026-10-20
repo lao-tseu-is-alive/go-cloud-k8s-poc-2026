@@ -137,7 +137,8 @@ type OrgUnitNode struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// abbreviation is the unit sigle (not unique); empty when none.
 	Abbreviation string `protobuf:"bytes,2,opt,name=abbreviation,proto3" json:"abbreviation,omitempty"`
-	// label is the unit name.
+	// label is the unit name; empty for an ancestor the caller may not read
+	// (GLD-070), whose abbreviation is empty too.
 	Label string `protobuf:"bytes,3,opt,name=label,proto3" json:"label,omitempty"`
 	// org_unit_type_code is the code of the unit type.
 	OrgUnitTypeCode string `protobuf:"bytes,4,opt,name=org_unit_type_code,json=orgUnitTypeCode,proto3" json:"org_unit_type_code,omitempty"`

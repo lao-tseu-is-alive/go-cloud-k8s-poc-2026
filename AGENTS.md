@@ -336,7 +336,9 @@ tiles; their origin is in the CSP (`headers.go`), keep both in sync.
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
 and the query adds `core.ReadableSQL(idExpr, rmAlias)` with `viewer.AddTo(args)` (a zero Viewer
-sees public subjects only). Relationship lists drop edges whose other end is unreadable. A
+sees public subjects only). Relationship lists drop edges whose other end is unreadable; the label
+of another subject shown inside an answer (a cited document, an org unit's ancestors and children)
+is blanked or left out through `core.Authorizer.Unreadable` (GLD-070). A
 timeline entry's visibility needs READ (participants), CONTRIBUTE (internal) or MANAGE
 (restricted) on the case, except for its author, to read or to write. Document bytes are
 downloaded through `GET /api/documents/{id}/content[?versionId=]` (READ on the document), and the

@@ -227,6 +227,7 @@
     "dissolved": "Dissoute",
     "root": "Racine de l'organisation",
     "children": "Sous-unités ({n})",
+    "restricted": "Unité restreinte",
     "noChildren": "Aucune sous-unité.",
     "relationshipsHint": "Affaires pilotées, gérées ou suivies par cette unité (liens créés depuis l'affaire).",
     "fields": {
@@ -270,6 +271,7 @@
     "empty": "Aucun suivi pour l’instant.",
     "showWithdrawn": "Afficher les retirés",
     "pinnedVersion": "version {n}",
+    "restrictedDocument": "Document restreint",
     "validatedBy": "Validé le {date} par",
     "lockedBy": "Verrouillé le {date} par",
     "updatedAt": "Brouillon modifié le {date}",

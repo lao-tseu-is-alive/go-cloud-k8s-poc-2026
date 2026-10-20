@@ -6890,7 +6890,9 @@ definitions:
         description: abbreviation is the unit sigle (not unique); empty when none.
       label:
         type: string
-        description: label is the unit name.
+        description: |-
+          label is the unit name; empty for an ancestor the caller may not read
+          (GLD-070), whose abbreviation is empty too.
       orgUnitTypeCode:
         type: string
         description: org_unit_type_code is the code of the unit type.
@@ -7964,7 +7966,9 @@ definitions:
         description: document_id is the linked document (a DOCUMENT subject).
       documentLabel:
         type: string
-        description: document_label is the document's display label.
+        description: |-
+          document_label is the document's display label; empty when the caller may
+          not read the document (GLD-070).
         readOnly: true
       documentVersionId:
         type: string

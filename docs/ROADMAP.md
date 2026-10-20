@@ -141,6 +141,16 @@ the City's map (GLD-069) followed the same model in v0.16.0; next the global sea
   Move the handlers, interceptors and codecs to Connect v2 together once v2 has settled (released
   2026-10-07), with the §50 scenario and API surface tests as the safety net. Dependabot ignores
   those two modules' minors until then.
+- [~] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
+  typed routes (review `reports/report_20261014_gpt-5.md`). Done 2026-10-20: the SPA declares its
+  routes by hand, so the vue-router Volar plugins for file-based routing were removed instead.
+- [ ] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
+  type-checking proves the SPA consistent with itself, not with the contract. Generate TypeScript
+  types from the protos for a CI comparison only (no connect-es at runtime), so a field renamed or
+  added in a proto fails `make check` until the SPA follows (review `reports/report_20261014_gpt-5.md`).
+- [ ] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
+  ~690 KB stylesheet for the few dozen icons it uses; switch to `@mdi/js` SVG icons (Vuetify's
+  `mdi-svg` set) so only the icons used are bundled (review `reports/report_20261014_gpt-5.md`).
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
@@ -314,7 +324,8 @@ covered by an integration test.
   `core.ReadableSQL` + `core.Viewer` on the case, document, actor, thing, org unit (search and
   tree), group, business-reference and relationship lists; `GET /api/documents/{id}/content`
   (`?versionId=`) replaces `/api/documents/download?ref=`. Left as they are: the labels of the
-  ancestors and children on an org unit page and of the documents cited by a timeline entry.
+  ancestors and children on an org unit page and of the documents cited by a timeline entry
+  (closed by GLD-070).
 - [x] **GLD-050 — Authorization follow-ups**: default grants per case type (placeholders
   creator and creator's unit); the two go-cloud-k8s-auth findings fixed or explicitly
   accepted in that repository (accounts linked by e-mail without the identity provider's
@@ -336,6 +347,14 @@ covered by an integration test.
   closed; `CoreService.ListAccessAuditEvents` for administrators (SPA Administration → Accès
   sensibles) and FULL_CONTROL holders (Accès panel → Journal des accès sensibles), labels only
   when readable. Retention stays an open production item.
+- [~] **GLD-070 — Labels of unreadable subjects** (review `reports/report_20261014_gpt-5.md`,
+  decided 2026-10-20): the labels left out of GLD-049 — the documents cited by a timeline entry and
+  the ancestors and children on an org unit page — were shown without a read check, so a reader of
+  a case saw the title of a confidential document it cites. A cited document the caller may not
+  read keeps its link but loses its label (the SPA shows « Document restreint »), an unreadable
+  ancestor keeps its place in the path without its name, and unreadable children are left out like
+  in the tree (`core.Authorizer.Unreadable`, the predicate of `core.ReadableSQL`). Done 2026-10-20,
+  checked over HTTP by the API surface test.
 
 ## Phase 7 — Provenance, outbox, export (v2 §36-38, §51)
 

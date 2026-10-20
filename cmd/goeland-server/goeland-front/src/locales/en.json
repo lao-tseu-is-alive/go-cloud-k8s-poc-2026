@@ -227,6 +227,7 @@
     "dissolved": "Dissolved",
     "root": "Root of the organization",
     "children": "Sub-units ({n})",
+    "restricted": "Restricted unit",
     "noChildren": "No sub-unit.",
     "relationshipsHint": "Cases led, managed or followed by this unit (links are created from the case).",
     "fields": {
@@ -270,6 +271,7 @@
     "empty": "No follow-up yet.",
     "showWithdrawn": "Show withdrawn",
     "pinnedVersion": "version {n}",
+    "restrictedDocument": "Restricted document",
     "validatedBy": "Validated on {date} by",
     "lockedBy": "Locked on {date} by",
     "updatedAt": "Draft changed on {date}",

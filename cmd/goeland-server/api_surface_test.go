@@ -423,6 +423,34 @@ func (s *surface) readFilters(asWriter func(method, path string, body any) reply
 	if r := asWriter("GET", "/api/documents/"+doc+"/content", nil); r.status != 403 {
 		s.t.Fatalf("the content of a confidential document needs READ: HTTP %d", r.status)
 	}
+	s.citedLabels(asWriter, doc)
+}
+
+// citedLabels covers GLD-070 over HTTP: a public case's timeline cites a
+// confidential document; its creator sees the title, another reader of the
+// case sees the citation without it.
+func (s *surface) citedLabels(asWriter func(method, path string, body any) reply, doc string) {
+	open := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Citation " + s.token}), "case", "subjectRef", "id")
+	entry := str(s.ok("POST", "/api/cases/"+open+"/timeline", map[string]any{
+		"entryType": "TIMELINE_ENTRY_TYPE_COMMENT", "body": "Voir le plan", "documentIds": []string{doc},
+	}), "entry", "id")
+	s.ok("POST", "/api/timeline-entries/"+entry+"/validate", map[string]any{})
+	cited := func(r reply) map[string]any {
+		entries := list(r.body, "entries")
+		if r.status != 200 || len(entries) != 1 || len(list(entries[0], "documents")) != 1 {
+			s.t.Fatalf("the entry and its cited document are listed: %v", r.body)
+		}
+		return list(entries[0], "documents")[0].(map[string]any)
+	}
+	if d := cited(s.call(s.admin, adminToken, "GET", "/api/cases/"+open+"/timeline", nil)); str(d, "documentLabel") == "" {
+		s.t.Fatalf("the creator sees the cited document's title: %v", d)
+	}
+	if d := cited(asWriter("GET", "/api/cases/"+open+"/timeline", nil)); str(d, "documentLabel") != "" || str(d, "documentId") != doc {
+		s.t.Fatalf("another reader sees the citation without the title: %v", d)
+	}
+	if d := asWriter("GET", "/api/timeline-entries/"+entry, nil); str(list(d.body, "entry", "documents")[0], "documentLabel") != "" {
+		s.t.Fatalf("the entry read hides the title too: %v", d.body)
+	}
 }
 
 // accessAudit covers the sensitive read audit (GLD-033) over HTTP: reads of a

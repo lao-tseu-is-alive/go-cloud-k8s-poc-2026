@@ -106,7 +106,12 @@ JOIN relationship_type rt ON rt.id = r.relationship_type_id AND rt.code = 'USER_
 JOIN security_group sg ON sg.id = r.target_subject_id AND sg.archived_at IS NULL
 WHERE r.source_subject_id = (SELECT subject_id FROM me) AND r.deleted_at IS NULL AND r.valid_to IS NULL;`
 
-// --- default grants (GLD-050) ---------------------------------------------------------
+// unreadableSQL keeps, among @ids, the subjects the viewer may not read (GLD-070).
+var unreadableSQL = `
+SELECT x.id FROM unnest(@ids::uuid[]) AS x(id)
+WHERE NOT ` + ReadableSQL("x.id", "")
+
+// --- default grants (GLD-050)---------------------------------------------------------
 
 // upsertDefaultUserGrantSQL gives a template level to a user, raising an
 // existing current grant (the creator's) only when the template is higher.

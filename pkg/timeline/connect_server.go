@@ -65,6 +65,9 @@ func (s *ConnectServer) ListTimelineEntries(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	if err := s.hideUnreadable(ctx, result.Entries...); err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&goelandv1.ListTimelineEntriesResponse{
 		Entries:       DomainsToProto(result.Entries),
 		NextPageToken: core.NextPageToken(offset, len(result.Entries), result.TotalSize),
@@ -110,6 +113,9 @@ func (s *ConnectServer) CreateTimelineEntry(ctx context.Context, req *connect.Re
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&goelandv1.CreateTimelineEntryResponse{Entry: DomainToProto(e), CreatedEvent: core.DomainAuditEventToProto(ev)}), nil
 }
 
@@ -132,6 +138,9 @@ func (s *ConnectServer) GetTimelineEntry(ctx context.Context, req *connect.Reque
 		need = core.LevelRead
 	}
 	if err := s.authz.Require(ctx, user, e.CaseID, need); err != nil {
+		return nil, err
+	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
 		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.GetTimelineEntryResponse{Entry: DomainToProto(e)}), nil
@@ -159,6 +168,9 @@ func (s *ConnectServer) UpdateTimelineEntry(ctx context.Context, req *connect.Re
 	})
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.UpdateTimelineEntryResponse{Entry: DomainToProto(e), UpdateEvent: core.DomainAuditEventToProto(ev)}), nil
 }
@@ -207,7 +219,33 @@ func (s *ConnectServer) changeStatus(ctx context.Context, rawID, reason string, 
 	if err != nil {
 		return nil, nil, s.mapError(err)
 	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
+		return nil, nil, err
+	}
 	return e, ev, nil
+}
+
+// hideUnreadable blanks the labels of the cited documents the caller may not
+// read (GLD-070); the links stay, since they belong to the entry.
+func (s *ConnectServer) hideUnreadable(ctx context.Context, entries ...*Entry) error {
+	var ids []uuid.UUID
+	for _, e := range entries {
+		for _, d := range e.Documents {
+			ids = append(ids, d.DocumentID)
+		}
+	}
+	hidden, err := s.authz.Unreadable(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, e := range entries {
+		for _, d := range e.Documents {
+			if hidden[d.DocumentID] {
+				d.DocumentLabel = ""
+			}
+		}
+	}
+	return nil
 }
 
 // LinkTimelineDocument cites a document in a draft.
@@ -219,6 +257,9 @@ func (s *ConnectServer) LinkTimelineDocument(ctx context.Context, req *connect.R
 	e, ev, err := s.service.LinkDocument(ctx, entryID, documentID, operatorID)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.LinkTimelineDocumentResponse{Entry: DomainToProto(e), LinkEvent: core.DomainAuditEventToProto(ev)}), nil
 }
@@ -232,6 +273,9 @@ func (s *ConnectServer) UnlinkTimelineDocument(ctx context.Context, req *connect
 	e, ev, err := s.service.UnlinkDocument(ctx, entryID, documentID, operatorID, req.Msg.Reason)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.hideUnreadable(ctx, e); err != nil {
+		return nil, err
 	}
 	return connect.NewResponse(&goelandv1.UnlinkTimelineDocumentResponse{Entry: DomainToProto(e), UnlinkEvent: core.DomainAuditEventToProto(ev)}), nil
 }

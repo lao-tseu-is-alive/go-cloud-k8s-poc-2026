@@ -86,7 +86,8 @@ message TimelineDocumentLink {
   string id = 1;
   // document_id is the linked document (a DOCUMENT subject).
   string document_id = 2;
-  // document_label is the document's display label.
+  // document_label is the document's display label; empty when the caller may
+  // not read the document (GLD-070).
   string document_label = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
   // document_version_id is the version pinned when the entry was validated or
   // locked; empty while the entry is a draft or when the document had no version.

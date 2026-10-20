@@ -157,8 +157,9 @@ Not betterments, just a different-but-equivalent option chosen for consistency:
 
 - **Authorization follow-ups** — per-subject grants, confidentiality and filtered lists are
   enforced (GLD-048, GLD-049), case types carry default access (GLD-050) and reads of
-  confidential subjects are audited (GLD-033; its legal retention period is still to set). The labels of an org unit's ancestors and children and of
-  the documents cited by a timeline entry are shown without a read check.
+  confidential subjects are audited (GLD-033; its legal retention period is still to set). Since
+  GLD-070 the labels of the documents cited by a timeline entry and of an org unit's ancestors are
+  blanked for a caller who may not read them, and unreadable children are left out.
 
 ### 3d. Review quick-wins applied (2026-07-07, from `reports/report_20260707_codex.md`)
 

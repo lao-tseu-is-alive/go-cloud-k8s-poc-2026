@@ -118,9 +118,9 @@
           :key="doc.id"
           prepend-icon="mdi-file-document-outline"
           size="small"
-          :to="`/documents/${encodeURIComponent(doc.documentId)}`"
+          :to="doc.documentLabel ? `/documents/${encodeURIComponent(doc.documentId)}` : undefined"
         >
-          {{ doc.documentLabel ?? doc.documentId }}
+          {{ doc.documentLabel || t('timeline.restrictedDocument') }}
           <span v-if="doc.documentVersionNo" class="ml-1 text-medium-emphasis">
             · {{ t('timeline.pinnedVersion', { n: doc.documentVersionNo }) }}
           </span>

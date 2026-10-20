@@ -8,6 +8,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- **GLD-070** — Labels of unreadable subjects: a document cited by a timeline entry keeps its
+  citation but not its title for a caller who may not read it (the SPA shows « Document
+  restreint »); on an org unit page an unreadable ancestor keeps its place in the path without its
+  name and unreadable sub-units are left out, as in the tree (`core.Authorizer.Unreadable`). No
+  migration; the API now leaves `document_label` and an ancestor's `label` empty in that case.
+
+### Fixed
+
+- **GLD-071** — The SPA type-check no longer warns about typed routes: the unused vue-router Volar
+  plugins (file-based routing, which the SPA does not use) were removed.
+
 ## [0.16.0] - 2026-10-15
 
 The case and object pages follow the actor page's information hierarchy (GLD-068, GLD-069); the object

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 
+	"connectrpc.com/connect"
 	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 )
@@ -75,6 +76,28 @@ func (a *Authorizer) Reader(ctx context.Context) (Viewer, error) {
 		return Viewer{}, err
 	}
 	return a.ViewerOf(ctx, user)
+}
+
+// Unreadable returns, among ids, the subjects the authenticated caller may not
+// read, so an answer can leave out their labels (GLD-070); failures are Connect
+// errors. It runs no query when ids is empty.
+func (a *Authorizer) Unreadable(ctx context.Context, ids []uuid.UUID) (map[uuid.UUID]bool, error) {
+	if len(ids) == 0 {
+		return nil, nil
+	}
+	user, err := authadapter.RequireUser(ctx)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeUnauthenticated, err)
+	}
+	viewer, err := a.ViewerOf(ctx, user)
+	if err != nil {
+		return nil, err
+	}
+	hidden, err := UnreadableTx(ctx, a.q, viewer, ids)
+	if err != nil {
+		return nil, ToConnectError(a.log, "access", err)
+	}
+	return hidden, nil
 }
 
 // ViewerOf resolves an authenticated caller as a Viewer; failures are Connect errors.

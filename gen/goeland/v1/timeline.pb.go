@@ -244,7 +244,8 @@ type TimelineDocumentLink struct {
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
 	// document_id is the linked document (a DOCUMENT subject).
 	DocumentId string `protobuf:"bytes,2,opt,name=document_id,json=documentId,proto3" json:"document_id,omitempty"`
-	// document_label is the document's display label.
+	// document_label is the document's display label; empty when the caller may
+	// not read the document (GLD-070).
 	DocumentLabel string `protobuf:"bytes,3,opt,name=document_label,json=documentLabel,proto3" json:"document_label,omitempty"`
 	// document_version_id is the version pinned when the entry was validated or
 	// locked; empty while the entry is a draft or when the document had no version.

@@ -51,7 +51,8 @@ message OrgUnitNode {
   string id = 1;
   // abbreviation is the unit sigle (not unique); empty when none.
   string abbreviation = 2;
-  // label is the unit name.
+  // label is the unit name; empty for an ancestor the caller may not read
+  // (GLD-070), whose abbreviation is empty too.
   string label = 3;
   // org_unit_type_code is the code of the unit type.
   string org_unit_type_code = 4;

@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -86,6 +87,9 @@ func (s *ConnectServer) GetOrgUnit(ctx context.Context, req *connect.Request[goe
 	detail, err := s.service.Get(ctx, id)
 	if err != nil {
 		return nil, s.mapError(err)
+	}
+	if err := s.hideUnreadable(ctx, detail); err != nil {
+		return nil, err
 	}
 	resp := &goelandv1.GetOrgUnitResponse{
 		OrgUnit:   DomainToProto(detail.Unit),
@@ -221,6 +225,33 @@ func (s *ConnectServer) UpdateOrgUnitType(ctx context.Context, req *connect.Requ
 		return nil, s.mapError(err)
 	}
 	return connect.NewResponse(&goelandv1.UpdateOrgUnitTypeResponse{OrgUnitType: TypeToProto(entry), Change: core.DomainReferenceChangeToProto(change)}), nil
+}
+
+// hideUnreadable applies the caller's read rights to a unit's place in the tree
+// (GLD-070): an unreadable ancestor keeps its place in the path without its
+// name, and unreadable children are left out, as in the tree.
+func (s *ConnectServer) hideUnreadable(ctx context.Context, detail *Detail) error {
+	ids := make([]uuid.UUID, 0, len(detail.Ancestors)+len(detail.Children))
+	for _, n := range append(append([]*Node{}, detail.Ancestors...), detail.Children...) {
+		ids = append(ids, n.ID)
+	}
+	hidden, err := s.authz.Unreadable(ctx, ids)
+	if err != nil {
+		return err
+	}
+	for _, n := range detail.Ancestors {
+		if hidden[n.ID] {
+			n.Label, n.Abbreviation = "", ""
+		}
+	}
+	children := detail.Children[:0]
+	for _, n := range detail.Children {
+		if !hidden[n.ID] {
+			children = append(children, n)
+		}
+	}
+	detail.Children = children
+	return nil
 }
 
 // mapError converts domain errors to Connect status codes, logging unexpected ones.

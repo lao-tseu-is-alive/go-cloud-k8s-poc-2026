@@ -91,7 +91,10 @@
   const parentNode = computed(() => ancestors.value.at(-1))
   const breadcrumbs = computed(() => [
     { title: t('orgUnits.title'), to: '/org-units' },
-    ...ancestors.value.map(a => ({ title: nodeLabel(a), to: `/org-units/${encodeURIComponent(a.id)}` })),
+    // an ancestor the caller may not read comes without its name (GLD-070)
+    ...ancestors.value.map(a => a.label
+      ? { title: nodeLabel(a), to: `/org-units/${encodeURIComponent(a.id)}` }
+      : { title: t('orgUnits.restricted'), disabled: true }),
     { title: unit.value ? nodeLabel(unit.value) : '…', disabled: true },
   ])
 

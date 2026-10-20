@@ -46,7 +46,7 @@
     occurredAt.value = toLocalInput(props.mode === 'edit' ? source?.occurredAt : undefined)
     visibility.value = source?.visibility ?? 'TIMELINE_VISIBILITY_CASE_PARTICIPANTS'
     reason.value = ''
-    documents.value = (source?.documents ?? []).map(d => ({ id: d.documentId, label: d.documentLabel ?? d.documentId }))
+    documents.value = (source?.documents ?? []).map(d => ({ id: d.documentId, label: d.documentLabel || t('timeline.restrictedDocument') }))
     pickerId.value = undefined
   }
 
