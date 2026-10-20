@@ -16,6 +16,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   name and unreadable sub-units are left out, as in the tree (`core.Authorizer.Unreadable`). No
   migration; the API now leaves `document_label` and an ancestor's `label` empty in that case.
 
+### Changed
+
+- Dependency updates of 2026-10-20: Go 1.27.3 (`go.mod` and the digest-pinned `golang` builder
+  image), Connect 1.21.1, googleapis (`buf.lock`; the regenerated descriptors encode
+  `field_behavior` packed, the OpenAPI is unchanged), the modules linked into the binary (Echo
+  4.16, puddle 2.2.3, `x/time`, `x/exp`, isatty, colorable) and the `gocognit` 1.3 / `govulncheck`
+  1.9 tools; Vue 3.5.44, Vuetify 4.3, vue-i18n 11.4.16, OpenLayers 10.11 and proj4 2.22 (still
+  pinned exactly; two stricter typings adapted, the City's map checked in a browser), ESLint 10.13,
+  Vitest 5.0.5, npm-run-all2 9 and unplugin-fonts 2 (same build output). Still left out:
+  Vanguard 0.5 / validate 0.9 (Connect v2, GLD-062), TypeScript 7 and @types/node 26; the
+  `bun` and `postgis` images were already current.
+
 ### Fixed
 
 - **GLD-071** — The SPA type-check no longer warns about typed routes: the unused vue-router Volar

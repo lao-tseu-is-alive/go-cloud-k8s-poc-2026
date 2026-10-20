@@ -1724,18 +1724,18 @@ var File_goeland_v1_timeline_proto protoreflect.FileDescriptor
 const file_goeland_v1_timeline_proto_rawDesc = "" +
 	"\n" +
 	"\x19goeland/v1/timeline.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xbc\x02\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xc0\x02\n" +
 	"\x14TimelineDocumentLink\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1f\n" +
 	"\vdocument_id\x18\x02 \x01(\tR\n" +
-	"documentId\x12*\n" +
-	"\x0edocument_label\x18\x03 \x01(\tB\x03\xe0A\x03R\rdocumentLabel\x123\n" +
-	"\x13document_version_id\x18\x04 \x01(\tB\x03\xe0A\x03R\x11documentVersionId\x123\n" +
-	"\x13document_version_no\x18\x05 \x01(\x05B\x03\xe0A\x03R\x11documentVersionNo\x12>\n" +
+	"documentId\x12+\n" +
+	"\x0edocument_label\x18\x03 \x01(\tB\x04\xe2A\x01\x03R\rdocumentLabel\x124\n" +
+	"\x13document_version_id\x18\x04 \x01(\tB\x04\xe2A\x01\x03R\x11documentVersionId\x124\n" +
+	"\x13document_version_no\x18\x05 \x01(\x05B\x04\xe2A\x01\x03R\x11documentVersionNo\x12?\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\a \x01(\tR\tcreatedBy\"\xc8\b\n" +
+	"created_by\x18\a \x01(\tR\tcreatedBy\"\xcf\b\n" +
 	"\rTimelineEntry\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\acase_id\x18\x02 \x01(\tR\x06caseId\x12<\n" +
@@ -1749,26 +1749,26 @@ const file_goeland_v1_timeline_proto_rawDesc = "" +
 	"visibility\x12;\n" +
 	"\voccurred_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"occurredAt\x12*\n" +
-	"\x11corrects_entry_id\x18\t \x01(\tR\x0fcorrectsEntryId\x126\n" +
+	"\x11corrects_entry_id\x18\t \x01(\tR\x0fcorrectsEntryId\x127\n" +
 	"\x15corrected_by_entry_id\x18\n" +
-	" \x01(\tB\x03\xe0A\x03R\x12correctedByEntryId\x12>\n" +
-	"\tdocuments\x18\v \x03(\v2 .goeland.v1.TimelineDocumentLinkR\tdocuments\x12>\n" +
+	" \x01(\tB\x04\xe2A\x01\x03R\x12correctedByEntryId\x12>\n" +
+	"\tdocuments\x18\v \x03(\v2 .goeland.v1.TimelineDocumentLinkR\tdocuments\x12?\n" +
 	"\n" +
-	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\f \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\r \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\r \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12\x1d\n" +
+	"updated_at\x18\x0e \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x0f \x01(\tR\tupdatedBy\x12B\n" +
-	"\fvalidated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vvalidatedAt\x12!\n" +
-	"\fvalidated_by\x18\x11 \x01(\tR\vvalidatedBy\x12<\n" +
-	"\tlocked_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\blockedAt\x12\x1b\n" +
-	"\tlocked_by\x18\x13 \x01(\tR\blockedBy\x12B\n" +
-	"\fwithdrawn_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vwithdrawnAt\x12!\n" +
+	"updated_by\x18\x0f \x01(\tR\tupdatedBy\x12C\n" +
+	"\fvalidated_at\x18\x10 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vvalidatedAt\x12!\n" +
+	"\fvalidated_by\x18\x11 \x01(\tR\vvalidatedBy\x12=\n" +
+	"\tlocked_at\x18\x12 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\blockedAt\x12\x1b\n" +
+	"\tlocked_by\x18\x13 \x01(\tR\blockedBy\x12C\n" +
+	"\fwithdrawn_at\x18\x14 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vwithdrawnAt\x12!\n" +
 	"\fwithdrawn_by\x18\x15 \x01(\tR\vwithdrawnBy\x12+\n" +
-	"\x11withdrawal_reason\x18\x16 \x01(\tR\x10withdrawalReason\x128\n" +
-	"\bmetadata\x18\x17 \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\bmetadata\"\x91\x02\n" +
+	"\x11withdrawal_reason\x18\x16 \x01(\tR\x10withdrawalReason\x129\n" +
+	"\bmetadata\x18\x17 \x01(\v2\x17.google.protobuf.StructB\x04\xe2A\x01\x03R\bmetadata\"\x91\x02\n" +
 	"\x1aListTimelineEntriesRequest\x12!\n" +
 	"\acase_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06caseId\x12Q\n" +
 	"\ventry_types\x18\x02 \x03(\x0e2\x1d.goeland.v1.TimelineEntryTypeB\x11\xbaH\x0e\x92\x01\v\x10\b\"\a\x82\x01\x04\x10\x01 \x00R\n" +
@@ -1784,14 +1784,14 @@ const file_goeland_v1_timeline_proto_rawDesc = "" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12\x1f\n" +
 	"\vdraft_count\x18\x04 \x01(\x05R\n" +
-	"draftCount\"\xc3\x03\n" +
+	"draftCount\"\xc4\x03\n" +
 	"\x1aCreateTimelineEntryRequest\x12!\n" +
 	"\acase_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x06caseId\x12H\n" +
 	"\n" +
 	"entry_type\x18\x02 \x01(\x0e2\x1d.goeland.v1.TimelineEntryTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tentryType\x12\x1e\n" +
-	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05title\x12\"\n" +
-	"\x04body\x18\x04 \x01(\tB\x0e\xe0A\x02\xbaH\br\x06\x10\x01\x18\xa0\x9c\x01R\x04body\x12H\n" +
+	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05title\x12#\n" +
+	"\x04body\x18\x04 \x01(\tB\x0f\xe2A\x01\x02\xbaH\br\x06\x10\x01\x18\xa0\x9c\x01R\x04body\x12H\n" +
 	"\n" +
 	"visibility\x18\x05 \x01(\x0e2\x1e.goeland.v1.TimelineVisibilityB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
 	"visibility\x12;\n" +
@@ -1805,14 +1805,14 @@ const file_goeland_v1_timeline_proto_rawDesc = "" +
 	"\x17GetTimelineEntryRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"K\n" +
 	"\x18GetTimelineEntryResponse\x12/\n" +
-	"\x05entry\x18\x01 \x01(\v2\x19.goeland.v1.TimelineEntryR\x05entry\"\xed\x02\n" +
+	"\x05entry\x18\x01 \x01(\v2\x19.goeland.v1.TimelineEntryR\x05entry\"\xee\x02\n" +
 	"\x1aUpdateTimelineEntryRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12H\n" +
 	"\n" +
 	"entry_type\x18\x02 \x01(\x0e2\x1d.goeland.v1.TimelineEntryTypeB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\tentryType\x12\x1e\n" +
-	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05title\x12\"\n" +
-	"\x04body\x18\x04 \x01(\tB\x0e\xe0A\x02\xbaH\br\x06\x10\x01\x18\xa0\x9c\x01R\x04body\x12H\n" +
+	"\x05title\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05title\x12#\n" +
+	"\x04body\x18\x04 \x01(\tB\x0f\xe2A\x01\x02\xbaH\br\x06\x10\x01\x18\xa0\x9c\x01R\x04body\x12H\n" +
 	"\n" +
 	"visibility\x18\x05 \x01(\x0e2\x1e.goeland.v1.TimelineVisibilityB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
 	"visibility\x12;\n" +
@@ -1834,10 +1834,10 @@ const file_goeland_v1_timeline_proto_rawDesc = "" +
 	"\x19LockTimelineEntryResponse\x12/\n" +
 	"\x05entry\x18\x01 \x01(\v2\x19.goeland.v1.TimelineEntryR\x05entry\x125\n" +
 	"\n" +
-	"lock_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\tlockEvent\"_\n" +
+	"lock_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\tlockEvent\"`\n" +
 	"\x1cWithdrawTimelineEntryRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12%\n" +
-	"\x06reason\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\x8f\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12&\n" +
+	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\x8f\x01\n" +
 	"\x1dWithdrawTimelineEntryResponse\x12/\n" +
 	"\x05entry\x18\x01 \x01(\v2\x19.goeland.v1.TimelineEntryR\x05entry\x12=\n" +
 	"\x0ewithdraw_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\rwithdrawEvent\"m\n" +

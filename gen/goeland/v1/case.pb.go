@@ -1806,47 +1806,47 @@ var File_goeland_v1_case_proto protoreflect.FileDescriptor
 const file_goeland_v1_case_proto_rawDesc = "" +
 	"\n" +
 	"\x15goeland/v1/case.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17goeland/v1/access.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf2\x02\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17goeland/v1/access.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf3\x02\n" +
 	"\bCaseType\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
-	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x04code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x124\n" +
 	"\x16business_ref_namespace\x18\x05 \x01(\tR\x14businessRefNamespace\x12\x1b\n" +
 	"\tis_active\x18\x06 \x01(\bR\bisActive\x12B\n" +
 	"\x1ddefault_confidentiality_level\x18\a \x01(\x05R\x1bdefaultConfidentialityLevel\x12G\n" +
-	"\x0edefault_grants\x18\b \x03(\v2 .goeland.v1.CaseTypeDefaultGrantR\rdefaultGrants\"\xf1\x01\n" +
+	"\x0edefault_grants\x18\b \x03(\v2 .goeland.v1.CaseTypeDefaultGrantR\rdefaultGrants\"\xf2\x01\n" +
 	"\x14CaseTypeDefaultGrant\x12F\n" +
 	"\fgrantee_kind\x18\x01 \x01(\x0e2\x17.goeland.v1.GranteeKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vgranteeKind\x12'\n" +
 	"\n" +
-	"grantee_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tgranteeId\x12(\n" +
-	"\rgrantee_label\x18\x03 \x01(\tB\x03\xe0A\x03R\fgranteeLabel\x12>\n" +
+	"grantee_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tgranteeId\x12)\n" +
+	"\rgrantee_label\x18\x03 \x01(\tB\x04\xe2A\x01\x03R\fgranteeLabel\x12>\n" +
 	"\x05level\x18\x04 \x01(\x0e2\x16.goeland.v1.PermissionB\x10\xbaH\r\x82\x01\n" +
-	"\x10\x01\x18\x02\x18\x03\x18\x04\x18\x05R\x05level\"\xcc\x05\n" +
+	"\x10\x01\x18\x02\x18\x03\x18\x04\x18\x05R\x05level\"\xd1\x05\n" +
 	"\x04Case\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x121\n" +
-	"\tcase_type\x18\x02 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x12#\n" +
-	"\x05title\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
+	"\tcase_type\x18\x02 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x12$\n" +
+	"\x05title\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x12.\n" +
-	"\x06status\x18\x05 \x01(\x0e2\x16.goeland.v1.CaseStatusR\x06status\x12<\n" +
-	"\topened_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\bopenedAt\x12<\n" +
-	"\tclosed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\bclosedAt\x12\x1b\n" +
+	"\x06status\x18\x05 \x01(\x0e2\x16.goeland.v1.CaseStatusR\x06status\x12=\n" +
+	"\topened_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\bopenedAt\x12=\n" +
+	"\tclosed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\bclosedAt\x12\x1b\n" +
 	"\tclosed_by\x18\b \x01(\tR\bclosedBy\x12%\n" +
 	"\x0eclosure_reason\x18\t \x01(\tR\rclosureReason\x123\n" +
 	"\bmetadata\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12>\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12?\n" +
 	"\n" +
-	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\f \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\f \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
-	"\x0frecord_metadata\x18\x0e \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\"\xdb\x02\n" +
-	"\x11CreateCaseRequest\x122\n" +
-	"\x0ecase_type_code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\fcaseTypeCode\x12#\n" +
-	"\x05title\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12C\n" +
+	"\x0frecord_metadata\x18\x0e \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\"\xdd\x02\n" +
+	"\x11CreateCaseRequest\x123\n" +
+	"\x0ecase_type_code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\fcaseTypeCode\x12$\n" +
+	"\x05title\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x123\n" +
 	"\bmetadata\x18\x04 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12A\n" +
 	"\fbusiness_ref\x18\x05 \x01(\v2\x1e.goeland.v1.BusinessRefRequestR\vbusinessRef\x12I\n" +
@@ -1907,19 +1907,19 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"onlyActive\"L\n" +
 	"\x15ListCaseTypesResponse\x123\n" +
 	"\n" +
-	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\xe7\x02\n" +
-	"\x15CreateCaseTypeRequest\x124\n" +
-	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
-	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\xe9\x02\n" +
+	"\x15CreateCaseTypeRequest\x125\n" +
+	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
+	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12V\n" +
 	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\x14businessRefNamespace\x12 \n" +
 	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12M\n" +
 	"\x1ddefault_confidentiality_level\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x1bdefaultConfidentialityLevel\"\x80\x01\n" +
 	"\x16CreateCaseTypeResponse\x121\n" +
 	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xeb\x03\n" +
-	"\x15UpdateCaseTypeRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xec\x03\n" +
+	"\x15UpdateCaseTypeRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12/\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12[\n" +
@@ -1932,9 +1932,9 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x17_business_ref_namespaceB\f\n" +
 	"\n" +
 	"_is_activeB \n" +
-	"\x1e_default_confidentiality_level\"\xa9\x01\n" +
-	"\x1fSetCaseTypeDefaultGrantsRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12B\n" +
+	"\x1e_default_confidentiality_level\"\xaa\x01\n" +
+	"\x1fSetCaseTypeDefaultGrantsRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12B\n" +
 	"\x06grants\x18\x02 \x03(\v2 .goeland.v1.CaseTypeDefaultGrantB\b\xbaH\x05\x92\x01\x02\x102R\x06grants\x12 \n" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x8a\x01\n" +
 	" SetCaseTypeDefaultGrantsResponse\x121\n" +

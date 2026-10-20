@@ -2540,27 +2540,27 @@ var File_goeland_v1_document_proto protoreflect.FileDescriptor
 const file_goeland_v1_document_proto_rawDesc = "" +
 	"\n" +
 	"\x19goeland/v1/document.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd8\x01\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xd9\x01\n" +
 	"\fDocumentType\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
-	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x04code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12#\n" +
 	"\bcategory\x18\x05 \x01(\tB\a\xbaH\x04r\x02\x18dR\bcategory\x12\x1b\n" +
-	"\tis_active\x18\x06 \x01(\bR\bisActive\"\xc6\x02\n" +
+	"\tis_active\x18\x06 \x01(\bR\bisActive\"\xc8\x02\n" +
 	"\vContentBlob\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x16\n" +
 	"\x06sha256\x18\x02 \x01(\tR\x06sha256\x12\x1f\n" +
 	"\vstorage_ref\x18\x03 \x01(\tR\n" +
 	"storageRef\x12\x1b\n" +
 	"\tmime_type\x18\x04 \x01(\tR\bmimeType\x12&\n" +
-	"\x0ffile_size_bytes\x18\x05 \x01(\x03R\rfileSizeBytes\x12>\n" +
+	"\x0ffile_size_bytes\x18\x05 \x01(\x03R\rfileSizeBytes\x12?\n" +
 	"\n" +
-	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\a \x01(\tR\tcreatedBy\x12@\n" +
-	"\vverified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"verifiedAt\"\xfa\x03\n" +
+	"created_by\x18\a \x01(\tR\tcreatedBy\x12A\n" +
+	"\vverified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"verifiedAt\"\xfc\x03\n" +
 	"\x0fDocumentVersion\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12)\n" +
 	"\vdocument_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
@@ -2571,20 +2571,20 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\n" +
 	"page_count\x18\x05 \x01(\x05R\tpageCount\x12\x19\n" +
 	"\bis_final\x18\x06 \x01(\bR\aisFinal\x12\x1b\n" +
-	"\tis_record\x18\a \x01(\bR\bisRecord\x12B\n" +
-	"\fvalidated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vvalidatedAt\x12!\n" +
+	"\tis_record\x18\a \x01(\bR\bisRecord\x12C\n" +
+	"\fvalidated_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vvalidatedAt\x12!\n" +
 	"\fvalidated_by\x18\t \x01(\tR\vvalidatedBy\x123\n" +
 	"\bmetadata\x18\n" +
-	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12>\n" +
+	" \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12?\n" +
 	"\n" +
-	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\f \x01(\tR\tcreatedBy\"\xff\a\n" +
+	"created_by\x18\f \x01(\tR\tcreatedBy\"\x83\b\n" +
 	"\bDocument\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x12=\n" +
-	"\rdocument_type\x18\x02 \x01(\v2\x18.goeland.v1.DocumentTypeR\fdocumentType\x12#\n" +
-	"\x05title\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
+	"\rdocument_type\x18\x02 \x01(\v2\x18.goeland.v1.DocumentTypeR\fdocumentType\x12$\n" +
+	"\x05title\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x12#\n" +
 	"\rofficial_date\x18\x05 \x01(\tR\fofficialDate\x120\n" +
 	"\x0fexternal_system\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x0eexternalSystem\x12)\n" +
@@ -2594,20 +2594,20 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\blanguage\x18\x12 \x01(\tB\a\xbaH\x04r\x02\x18\n" +
 	"R\blanguage\x122\n" +
 	"\x06status\x18\x14 \x01(\x0e2\x1a.goeland.v1.DocumentStatusR\x06status\x123\n" +
-	"\bmetadata\x18\x15 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12>\n" +
+	"\bmetadata\x18\x15 \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12?\n" +
 	"\n" +
-	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\x16 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\x17 \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\x17 \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
-	"\x0frecord_metadata\x18\x19 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\x12I\n" +
-	"\x0fcurrent_version\x18\x1a \x01(\v2\x1b.goeland.v1.DocumentVersionB\x03\xe0A\x03R\x0ecurrentVersionJ\x04\b\x06\x10\aJ\x04\b\n" +
+	"updated_at\x18\x18 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12C\n" +
+	"\x0frecord_metadata\x18\x19 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\x12J\n" +
+	"\x0fcurrent_version\x18\x1a \x01(\v2\x1b.goeland.v1.DocumentVersionB\x04\xe2A\x01\x03R\x0ecurrentVersionJ\x04\b\x06\x10\aJ\x04\b\n" +
 	"\x10\vJ\x04\b\v\x10\fJ\x04\b\f\x10\rJ\x04\b\r\x10\x0eJ\x04\b\x0e\x10\x0fJ\x04\b\x0f\x10\x10J\x04\b\x10\x10\x11J\x04\b\x11\x10\x12J\x04\b\x13\x10\x14R\vstorage_refR\tmime_typeR\x0ffile_size_bytesR\x06sha256R\x12sha256_verified_atR\aversionR\x13previous_version_idR\bis_finalR\tis_recordR\n" +
-	"page_count\"\xa7\x06\n" +
-	"\x15CreateDocumentRequest\x12:\n" +
-	"\x12document_type_code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x10documentTypeCode\x12#\n" +
-	"\x05title\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
+	"page_count\"\xa9\x06\n" +
+	"\x15CreateDocumentRequest\x12;\n" +
+	"\x12document_type_code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x10documentTypeCode\x12$\n" +
+	"\x05title\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\x05title\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x12#\n" +
 	"\rofficial_date\x18\x04 \x01(\tR\fofficialDate\x120\n" +
 	"\x0fexternal_system\x18\x06 \x01(\tB\a\xbaH\x04r\x02\x18dR\x0eexternalSystem\x12)\n" +
@@ -2710,12 +2710,12 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
-	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"\xe5\x01\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"\xe6\x01\n" +
 	"\x13LinkDocumentRequest\x12)\n" +
 	"\vdocument_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"documentId\x124\n" +
-	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12B\n" +
-	"\x16relationship_type_code\x18\x03 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
+	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12C\n" +
+	"\x16relationship_type_code\x18\x03 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
 	"\vrole_detail\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\n" +
 	"roleDetail\"\x94\x01\n" +
 	"\x14LinkDocumentResponse\x12C\n" +
@@ -2732,18 +2732,18 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\vonly_active\x18\x01 \x01(\bR\n" +
 	"onlyActive\"\\\n" +
 	"\x19ListDocumentTypesResponse\x12?\n" +
-	"\x0edocument_types\x18\x01 \x03(\v2\x18.goeland.v1.DocumentTypeR\rdocumentTypes\"\xe9\x01\n" +
-	"\x19CreateDocumentTypeRequest\x124\n" +
-	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
-	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"\x0edocument_types\x18\x01 \x03(\v2\x18.goeland.v1.DocumentTypeR\rdocumentTypes\"\xeb\x01\n" +
+	"\x19CreateDocumentTypeRequest\x125\n" +
+	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
+	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12#\n" +
 	"\bcategory\x18\x04 \x01(\tB\a\xbaH\x04r\x02\x18dR\bcategory\x12 \n" +
 	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x90\x01\n" +
 	"\x1aCreateDocumentTypeResponse\x12=\n" +
 	"\rdocument_type\x18\x01 \x01(\v2\x18.goeland.v1.DocumentTypeR\fdocumentType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xb8\x02\n" +
-	"\x19UpdateDocumentTypeRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xb9\x02\n" +
+	"\x19UpdateDocumentTypeRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12/\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12(\n" +

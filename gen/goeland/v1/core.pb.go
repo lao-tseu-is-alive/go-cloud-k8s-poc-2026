@@ -4989,46 +4989,46 @@ var File_goeland_v1_core_proto protoreflect.FileDescriptor
 const file_goeland_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"\x15goeland/v1/core.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe3\x02\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xe7\x02\n" +
 	"\n" +
 	"SubjectRef\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x125\n" +
-	"\x04kind\x18\x02 \x01(\x0e2\x17.goeland.v1.SubjectKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x122\n" +
-	"\rdisplay_label\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fdisplayLabel\x12-\n" +
-	"\rcanonical_url\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\fcanonicalUrl\x12>\n" +
+	"\x04kind\x18\x02 \x01(\x0e2\x17.goeland.v1.SubjectKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\x123\n" +
+	"\rdisplay_label\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fdisplayLabel\x12-\n" +
+	"\rcanonical_url\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\fcanonicalUrl\x12?\n" +
 	"\n" +
-	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12&\n" +
-	"\fbusiness_ref\x18\x06 \x01(\tB\x03\xe0A\x03R\vbusinessRef\x129\n" +
-	"\x16business_ref_namespace\x18\a \x01(\tB\x03\xe0A\x03R\x14businessRefNamespace\"\xb6\x02\n" +
+	"created_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12'\n" +
+	"\fbusiness_ref\x18\x06 \x01(\tB\x04\xe2A\x01\x03R\vbusinessRef\x12:\n" +
+	"\x16business_ref_namespace\x18\a \x01(\tB\x04\xe2A\x01\x03R\x14businessRefNamespace\"\xb6\x02\n" +
 	"\x12BusinessRefRequest\x12>\n" +
 	"\tnamespace\x18\x01 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\tnamespace\x12.\n" +
 	"\x05value\x18\x02 \x01(\tB\x16\xbaH\x13r\x11\x10\x01\x18d2\v^\\S(.*\\S)?$H\x00R\x05value\x12%\n" +
 	"\ballocate\x18\x03 \x01(\bB\a\xbaH\x04j\x02\b\x01H\x00R\ballocate:x\xbaHu\x1as\n" +
 	"%business_ref.allocate_needs_namespace\x12\x1dallocate requires a namespace\x1a+!has(this.allocate) || this.namespace != ''B\x0f\n" +
-	"\x06source\x12\x05\xbaH\x02\b\x01\"\xce\x06\n" +
+	"\x06source\x12\x05\xbaH\x02\b\x01\"\xd3\x06\n" +
 	"\x0eRecordMetadata\x12*\n" +
 	"\n" +
-	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12>\n" +
+	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12?\n" +
 	"\n" +
-	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\x03 \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\x03 \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12\x1d\n" +
+	"updated_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12\x1d\n" +
 	"\n" +
-	"updated_by\x18\x05 \x01(\tR\tupdatedBy\x12>\n" +
+	"updated_by\x18\x05 \x01(\tR\tupdatedBy\x12?\n" +
 	"\n" +
-	"deleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tdeletedAt\x12\x1d\n" +
+	"deleted_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tdeletedAt\x12\x1d\n" +
 	"\n" +
 	"deleted_by\x18\a \x01(\tR\tdeletedBy\x12\"\n" +
 	"\rowner_user_id\x18\b \x01(\tR\vownerUserId\x12-\n" +
 	"\fowner_org_id\x18\t \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\n" +
 	"ownerOrgId\x12>\n" +
 	"\x15confidentiality_level\x18\n" +
-	" \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x14confidentialityLevel\x12\x1d\n" +
-	"\aversion\x18\v \x01(\x05B\x03\xe0A\x03R\aversion\x12\x1b\n" +
-	"\tis_locked\x18\f \x01(\bR\bisLocked\x12<\n" +
-	"\tlocked_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\blockedAt\x12\x1b\n" +
+	" \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x14confidentialityLevel\x12\x1e\n" +
+	"\aversion\x18\v \x01(\x05B\x04\xe2A\x01\x03R\aversion\x12\x1b\n" +
+	"\tis_locked\x18\f \x01(\bR\bisLocked\x12=\n" +
+	"\tlocked_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\blockedAt\x12\x1b\n" +
 	"\tlocked_by\x18\x0e \x01(\tR\blockedBy\x12'\n" +
 	"\x0fretention_until\x18\x0f \x01(\tR\x0eretentionUntil\x12\x1d\n" +
 	"\n" +
@@ -5036,16 +5036,16 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\bmetadata\x18\x11 \x03(\v2(.goeland.v1.RecordMetadata.MetadataEntryR\bmetadata\x1a;\n" +
 	"\rMetadataEntry\x12\x10\n" +
 	"\x03key\x18\x01 \x01(\tR\x03key\x12\x14\n" +
-	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf5\x03\n" +
+	"\x05value\x18\x02 \x01(\tR\x05value:\x028\x01\"\xf7\x03\n" +
 	"\n" +
 	"AuditEvent\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12'\n" +
 	"\n" +
-	"subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12+\n" +
+	"subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\tsubjectId\x12,\n" +
 	"\n" +
-	"event_type\x18\x03 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\teventType\x12\"\n" +
-	"\ractor_user_id\x18\x04 \x01(\tR\vactorUserId\x12@\n" +
-	"\voccurred_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
+	"event_type\x18\x03 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\teventType\x12\"\n" +
+	"\ractor_user_id\x18\x04 \x01(\tR\vactorUserId\x12A\n" +
+	"\voccurred_at\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
 	"occurredAt\x12:\n" +
 	"\fbefore_state\x18\x06 \x01(\v2\x17.google.protobuf.StructR\vbeforeState\x128\n" +
 	"\vafter_state\x18\a \x01(\v2\x17.google.protobuf.StructR\n" +
@@ -5055,10 +5055,10 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\n" +
 	" \x01(\tR\trequestId\x123\n" +
-	"\bmetadata\x18\v \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\xc7\x04\n" +
+	"\bmetadata\x18\v \x01(\v2\x17.google.protobuf.StructR\bmetadata\"\xc8\x04\n" +
 	"\x10RelationshipType\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
-	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x04code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12B\n" +
 	"\vsource_kind\x18\x04 \x01(\x0e2\x17.goeland.v1.SubjectKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\n" +
 	"sourceKind\x12B\n" +
@@ -5074,7 +5074,7 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	" \x01(\tB\a\xbaH\x04r\x02\x18dR\troleLabel\x123\n" +
 	"\x11role_label_plural\x18\v \x01(\tB\a\xbaH\x04r\x02\x18dR\x0froleLabelPlural\x12.\n" +
 	"\brole_end\x18\f \x01(\x0e2\x13.goeland.v1.RoleEndR\aroleEnd\x12)\n" +
-	"\x10role_preposition\x18\r \x01(\tR\x0frolePreposition\"\xe0\x04\n" +
+	"\x10role_preposition\x18\r \x01(\tR\x0frolePreposition\"\xe3\x04\n" +
 	"\x13SubjectRelationship\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12.\n" +
 	"\x06source\x18\x02 \x01(\v2\x16.goeland.v1.SubjectRefR\x06source\x12.\n" +
@@ -5084,15 +5084,15 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"roleDetail\x129\n" +
 	"\n" +
 	"valid_from\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\tvalidFrom\x125\n" +
-	"\bvalid_to\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\avalidTo\x12>\n" +
+	"\bvalid_to\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\avalidTo\x12?\n" +
 	"\n" +
-	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\t \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\t \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
 	"deleted_at\x18\n" +
-	" \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tdeletedAt\x12H\n" +
-	"\fother_detail\x18\v \x01(\v2 .goeland.v1.RelatedSubjectDetailB\x03\xe0A\x03R\votherDetail\"\x87\x01\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tdeletedAt\x12I\n" +
+	"\fother_detail\x18\v \x01(\v2 .goeland.v1.RelatedSubjectDetailB\x04\xe2A\x01\x03R\votherDetail\"\x87\x01\n" +
 	"\x14RelatedSubjectDetail\x12\x1b\n" +
 	"\ttype_code\x18\x01 \x01(\tR\btypeCode\x12\x1d\n" +
 	"\n" +
@@ -5114,11 +5114,11 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x05label\x18\x02 \x01(\tR\x05label\x12\x14\n" +
 	"\x05count\x18\x03 \x01(\x05R\x05count\x12\x1d\n" +
 	"\n" +
-	"open_count\x18\x04 \x01(\x05R\topenCount\"\xbf\x02\n" +
+	"open_count\x18\x04 \x01(\x05R\topenCount\"\xc0\x02\n" +
 	"\x17CreateSubjectRefRequest\x127\n" +
 	"\x04kind\x18\x01 \x01(\x0e2\x17.goeland.v1.SubjectKindB\n" +
-	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x122\n" +
-	"\rdisplay_label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fdisplayLabel\x12-\n" +
+	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\x04kind\x123\n" +
+	"\rdisplay_label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xf4\x03R\fdisplayLabel\x12-\n" +
 	"\rcanonical_url\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\x10R\fcanonicalUrl\x12E\n" +
 	"\x10initial_metadata\x18\x04 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0finitialMetadata\x12A\n" +
 	"\fbusiness_ref\x18\x05 \x01(\v2\x1e.goeland.v1.BusinessRefRequestR\vbusinessRef\"\xc8\x01\n" +
@@ -5151,18 +5151,18 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\tnamespace\x18\x02 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\tnamespace\x125\n" +
 	"\x04kind\x18\x03 \x01(\x0e2\x17.goeland.v1.SubjectKindB\b\xbaH\x05\x82\x01\x02\x10\x01R\x04kind\"S\n" +
 	"\x16LookupSubjectsResponse\x129\n" +
-	"\fsubject_refs\x18\x01 \x03(\v2\x16.goeland.v1.SubjectRefR\vsubjectRefs\"\xc5\x02\n" +
-	"\x04User\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12\"\n" +
+	"\fsubject_refs\x18\x01 \x03(\v2\x16.goeland.v1.SubjectRefR\vsubjectRefs\"\xcd\x02\n" +
+	"\x04User\x12\x14\n" +
+	"\x02id\x18\x01 \x01(\tB\x04\xe2A\x01\x03R\x02id\x12#\n" +
 	"\n" +
-	"subject_id\x18\x02 \x01(\tB\x03\xe0A\x03R\tsubjectId\x12&\n" +
-	"\fdisplay_name\x18\x03 \x01(\tB\x03\xe0A\x03R\vdisplayName\x12\x19\n" +
-	"\x05email\x18\x04 \x01(\tB\x03\xe0A\x03R\x05email\x12\x1e\n" +
-	"\bis_admin\x18\x05 \x01(\bB\x03\xe0A\x03R\aisAdmin\x12C\n" +
-	"\rfirst_seen_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vfirstSeenAt\x12A\n" +
-	"\flast_seen_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"lastSeenAt\x12\x19\n" +
-	"\x05roles\x18\b \x03(\tB\x03\xe0A\x03R\x05roles\"\x17\n" +
+	"subject_id\x18\x02 \x01(\tB\x04\xe2A\x01\x03R\tsubjectId\x12'\n" +
+	"\fdisplay_name\x18\x03 \x01(\tB\x04\xe2A\x01\x03R\vdisplayName\x12\x1a\n" +
+	"\x05email\x18\x04 \x01(\tB\x04\xe2A\x01\x03R\x05email\x12\x1f\n" +
+	"\bis_admin\x18\x05 \x01(\bB\x04\xe2A\x01\x03R\aisAdmin\x12D\n" +
+	"\rfirst_seen_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vfirstSeenAt\x12B\n" +
+	"\flast_seen_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"lastSeenAt\x12\x1a\n" +
+	"\x05roles\x18\b \x03(\tB\x04\xe2A\x01\x03R\x05roles\"\x17\n" +
 	"\x15GetCurrentUserRequest\"V\n" +
 	"\x16GetCurrentUserResponse\x12$\n" +
 	"\x04user\x18\x01 \x01(\v2\x10.goeland.v1.UserR\x04user\x12\x16\n" +
@@ -5228,11 +5228,11 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x16RevokeUserRoleResponse\x12(\n" +
 	"\x04role\x18\x01 \x01(\v2\x14.goeland.v1.UserRoleR\x04role\x127\n" +
 	"\vaudit_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent\"\xab\x02\n" +
+	"auditEvent\"\xac\x02\n" +
 	"\x13LinkSubjectsRequest\x124\n" +
 	"\x11source_subject_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0fsourceSubjectId\x124\n" +
-	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12B\n" +
-	"\x16relationship_type_code\x18\x03 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
+	"\x11target_subject_id\x18\x02 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x0ftargetSubjectId\x12C\n" +
+	"\x16relationship_type_code\x18\x03 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x14relationshipTypeCode\x12)\n" +
 	"\vrole_detail\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\n" +
 	"roleDetail\x129\n" +
 	"\n" +
@@ -5296,20 +5296,20 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\vtarget_kind\x18\x03 \x01(\x0e2\x17.goeland.v1.SubjectKindR\n" +
 	"targetKind\"l\n" +
 	"\x1dListRelationshipTypesResponse\x12K\n" +
-	"\x12relationship_types\x18\x01 \x03(\v2\x1c.goeland.v1.RelationshipTypeR\x11relationshipTypes\"\x8e\x03\n" +
-	"\x0fReferenceChange\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12!\n" +
-	"\tcatalogue\x18\x02 \x01(\tB\x03\xe0A\x03R\tcatalogue\x12\x17\n" +
-	"\x04code\x18\x03 \x01(\tB\x03\xe0A\x03R\x04code\x12\"\n" +
+	"\x12relationship_types\x18\x01 \x03(\v2\x1c.goeland.v1.RelationshipTypeR\x11relationshipTypes\"\x97\x03\n" +
+	"\x0fReferenceChange\x12\x14\n" +
+	"\x02id\x18\x01 \x01(\tB\x04\xe2A\x01\x03R\x02id\x12\"\n" +
+	"\tcatalogue\x18\x02 \x01(\tB\x04\xe2A\x01\x03R\tcatalogue\x12\x18\n" +
+	"\x04code\x18\x03 \x01(\tB\x04\xe2A\x01\x03R\x04code\x12#\n" +
 	"\n" +
-	"event_type\x18\x04 \x01(\tB\x03\xe0A\x03R\teventType\x12'\n" +
-	"\ractor_user_id\x18\x05 \x01(\tB\x03\xe0A\x03R\vactorUserId\x12@\n" +
-	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"occurredAt\x12?\n" +
-	"\fbefore_state\x18\a \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\vbeforeState\x12=\n" +
-	"\vafter_state\x18\b \x01(\v2\x17.google.protobuf.StructB\x03\xe0A\x03R\n" +
-	"afterState\x12\x1b\n" +
-	"\x06reason\x18\t \x01(\tB\x03\xe0A\x03R\x06reason\"\xb7\x02\n" +
+	"event_type\x18\x04 \x01(\tB\x04\xe2A\x01\x03R\teventType\x12(\n" +
+	"\ractor_user_id\x18\x05 \x01(\tB\x04\xe2A\x01\x03R\vactorUserId\x12A\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"occurredAt\x12@\n" +
+	"\fbefore_state\x18\a \x01(\v2\x17.google.protobuf.StructB\x04\xe2A\x01\x03R\vbeforeState\x12>\n" +
+	"\vafter_state\x18\b \x01(\v2\x17.google.protobuf.StructB\x04\xe2A\x01\x03R\n" +
+	"afterState\x12\x1c\n" +
+	"\x06reason\x18\t \x01(\tB\x04\xe2A\x01\x03R\x06reason\"\xb7\x02\n" +
 	"\x1bListReferenceChangesRequest\x12\x8f\x01\n" +
 	"\tcatalogue\x18\x01 \x01(\tBq\xbaHnrlR\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
 	"thing_typeR\rorg_unit_typeR\ttask_typeR\tcatalogue\x12'\n" +
@@ -5322,10 +5322,10 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\achanges\x18\x01 \x03(\v2\x1b.goeland.v1.ReferenceChangeR\achanges\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x93\x05\n" +
-	"\x1dCreateRelationshipTypeRequest\x124\n" +
-	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
-	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12D\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x95\x05\n" +
+	"\x1dCreateRelationshipTypeRequest\x125\n" +
+	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
+	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12D\n" +
 	"\vsource_kind\x18\x03 \x01(\x0e2\x17.goeland.v1.SubjectKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\n" +
 	"sourceKind\x12D\n" +
@@ -5345,9 +5345,9 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x10role_preposition\x18\f \x01(\tB+\xbaH(r&R\x00R\x02deR\x02àR\x03parR\x03surR\x04dansR\x04avecR\x04pourR\x0frolePreposition\"\xa0\x01\n" +
 	"\x1eCreateRelationshipTypeResponse\x12I\n" +
 	"\x11relationship_type\x18\x01 \x01(\v2\x1c.goeland.v1.RelationshipTypeR\x10relationshipType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x95\x05\n" +
-	"\x1dUpdateRelationshipTypeRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x96\x05\n" +
+	"\x1dUpdateRelationshipTypeRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x122\n" +
 	"\rinverse_label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01H\x01R\finverseLabel\x88\x01\x01\x12/\n" +
@@ -5388,26 +5388,26 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x06events\x18\x01 \x03(\v2\x16.goeland.v1.AuditEventR\x06events\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x91\x05\n" +
-	"\x10AccessAuditEvent\x12\x13\n" +
-	"\x02id\x18\x01 \x01(\tB\x03\xe0A\x03R\x02id\x12@\n" +
-	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"occurredAt\x12\x1c\n" +
-	"\auser_id\x18\x03 \x01(\tB\x03\xe0A\x03R\x06userId\x12\"\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x9f\x05\n" +
+	"\x10AccessAuditEvent\x12\x14\n" +
+	"\x02id\x18\x01 \x01(\tB\x04\xe2A\x01\x03R\x02id\x12A\n" +
+	"\voccurred_at\x18\x02 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"occurredAt\x12\x1d\n" +
+	"\auser_id\x18\x03 \x01(\tB\x04\xe2A\x01\x03R\x06userId\x12#\n" +
 	"\n" +
-	"subject_id\x18\x04 \x01(\tB\x03\xe0A\x03R\tsubjectId\x12?\n" +
-	"\fsubject_kind\x18\x05 \x01(\x0e2\x17.goeland.v1.SubjectKindB\x03\xe0A\x03R\vsubjectKind\x12\x1b\n" +
-	"\x06action\x18\x06 \x01(\tB\x03\xe0A\x03R\x06action\x12\x1d\n" +
-	"\aoutcome\x18\a \x01(\tB\x03\xe0A\x03R\aoutcome\x12>\n" +
-	"\faccess_level\x18\b \x01(\x0e2\x16.goeland.v1.PermissionB\x03\xe0A\x03R\vaccessLevel\x12B\n" +
-	"\raccess_source\x18\t \x01(\x0e2\x18.goeland.v1.AccessSourceB\x03\xe0A\x03R\faccessSource\x128\n" +
+	"subject_id\x18\x04 \x01(\tB\x04\xe2A\x01\x03R\tsubjectId\x12@\n" +
+	"\fsubject_kind\x18\x05 \x01(\x0e2\x17.goeland.v1.SubjectKindB\x04\xe2A\x01\x03R\vsubjectKind\x12\x1c\n" +
+	"\x06action\x18\x06 \x01(\tB\x04\xe2A\x01\x03R\x06action\x12\x1e\n" +
+	"\aoutcome\x18\a \x01(\tB\x04\xe2A\x01\x03R\aoutcome\x12?\n" +
+	"\faccess_level\x18\b \x01(\x0e2\x16.goeland.v1.PermissionB\x04\xe2A\x01\x03R\vaccessLevel\x12C\n" +
+	"\raccess_source\x18\t \x01(\x0e2\x18.goeland.v1.AccessSourceB\x04\xe2A\x01\x03R\faccessSource\x129\n" +
 	"\x15confidentiality_level\x18\n" +
-	" \x01(\x05B\x03\xe0A\x03R\x14confidentialityLevel\x123\n" +
-	"\x13document_version_id\x18\v \x01(\tB\x03\xe0A\x03R\x11documentVersionId\x12\"\n" +
+	" \x01(\x05B\x04\xe2A\x01\x03R\x14confidentialityLevel\x124\n" +
+	"\x13document_version_id\x18\v \x01(\tB\x04\xe2A\x01\x03R\x11documentVersionId\x12#\n" +
 	"\n" +
-	"request_id\x18\f \x01(\tB\x03\xe0A\x03R\trequestId\x12&\n" +
-	"\fbusiness_ref\x18\r \x01(\tB\x03\xe0A\x03R\vbusinessRef\x12(\n" +
-	"\rsubject_label\x18\x0e \x01(\tB\x03\xe0A\x03R\fsubjectLabel\"\xd1\x03\n" +
+	"request_id\x18\f \x01(\tB\x04\xe2A\x01\x03R\trequestId\x12'\n" +
+	"\fbusiness_ref\x18\r \x01(\tB\x04\xe2A\x01\x03R\vbusinessRef\x12)\n" +
+	"\rsubject_label\x18\x0e \x01(\tB\x04\xe2A\x01\x03R\fsubjectLabel\"\xd1\x03\n" +
 	"\x1cListAccessAuditEventsRequest\x12*\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12 \n" +

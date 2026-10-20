@@ -18,7 +18,7 @@ RUN bun run build-only
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
 # The builder's Go version must be at least go.mod's (GOTOOLCHAIN=local in the
 # image refuses an older one); `make build-inputs-check` verifies it.
-FROM golang:1.27.2-alpine@sha256:f92b6ef800e499660581efdabdf25d9d817a9d124eaf900924f0504e7e27e12d AS builder
+FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
 LABEL maintainer="cgil"
 # git: for module VCS metadata; ca-certificates: copied into the scratch runtime.
 RUN apk add --no-cache git ca-certificates

@@ -1594,7 +1594,7 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\x05label\x18\x03 \x01(\tR\x05label\x12+\n" +
 	"\x12org_unit_type_code\x18\x04 \x01(\tR\x0forgUnitTypeCode\x12\x1b\n" +
 	"\tparent_id\x18\x05 \x01(\tR\bparentId\x12\x1c\n" +
-	"\tdissolved\x18\x06 \x01(\bR\tdissolved\"\xab\x05\n" +
+	"\tdissolved\x18\x06 \x01(\bR\tdissolved\"\xae\x05\n" +
 	"\aOrgUnit\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x12;\n" +
@@ -1603,17 +1603,17 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\x05label\x18\x04 \x01(\tR\x05label\x12 \n" +
 	"\vdescription\x18\x05 \x01(\tR\vdescription\x12\x14\n" +
 	"\x05email\x18\x06 \x01(\tR\x05email\x12\x1b\n" +
-	"\tparent_id\x18\a \x01(\tR\bparentId\x12B\n" +
-	"\fdissolved_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vdissolvedAt\x12!\n" +
+	"\tparent_id\x18\a \x01(\tR\bparentId\x12C\n" +
+	"\fdissolved_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vdissolvedAt\x12!\n" +
 	"\fdissolved_by\x18\t \x01(\tR\vdissolvedBy\x12-\n" +
 	"\x12dissolution_reason\x18\n" +
-	" \x01(\tR\x11dissolutionReason\x12>\n" +
+	" \x01(\tR\x11dissolutionReason\x12?\n" +
 	"\n" +
-	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\f \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\f \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
+	"updated_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12C\n" +
 	"\x0frecord_metadata\x18\x0e \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadata\x12!\n" +
 	"\fexternal_ref\x18\x0f \x01(\tR\vexternalRef\"B\n" +
 	"\x13ListOrgUnitsRequest\x12+\n" +
@@ -1641,11 +1641,11 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\tancestors\x18\x02 \x03(\v2\x17.goeland.v1.OrgUnitNodeR\tancestors\x123\n" +
 	"\bchildren\x18\x03 \x03(\v2\x17.goeland.v1.OrgUnitNodeR\bchildren\x12E\n" +
 	"\rrelationships\x18\x04 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x129\n" +
-	"\frecent_audit\x18\x05 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xe7\x02\n" +
-	"\x14CreateOrgUnitRequest\x129\n" +
-	"\x12org_unit_type_code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x0forgUnitTypeCode\x12+\n" +
-	"\fabbreviation\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\fabbreviation\x12#\n" +
-	"\x05label\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"\frecent_audit\x18\x05 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xe9\x02\n" +
+	"\x14CreateOrgUnitRequest\x12:\n" +
+	"\x12org_unit_type_code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x0forgUnitTypeCode\x12+\n" +
+	"\fabbreviation\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x182R\fabbreviation\x12$\n" +
+	"\x05label\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12\x1e\n" +
 	"\x05email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\x05email\x12(\n" +
 	"\tparent_id\x18\x06 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\bparentId\x12 \n" +
@@ -1653,11 +1653,11 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\fexternal_ref\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dR\vexternalRef\"\x84\x01\n" +
 	"\x15CreateOrgUnitResponse\x12.\n" +
 	"\borg_unit\x18\x01 \x01(\v2\x13.goeland.v1.OrgUnitR\aorgUnit\x12;\n" +
-	"\rcreated_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\fcreatedEvent\"\xd5\x02\n" +
+	"\rcreated_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\fcreatedEvent\"\xd7\x02\n" +
 	"\x14UpdateOrgUnitRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x129\n" +
-	"\x12org_unit_type_code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x0forgUnitTypeCode\x12#\n" +
-	"\x05label\x18\x03 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12:\n" +
+	"\x12org_unit_type_code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x0forgUnitTypeCode\x12$\n" +
+	"\x05label\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12\x1e\n" +
 	"\x05email\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xfe\x01R\x05email\x12(\n" +
 	"\tparent_id\x18\x06 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\bparentId\x12 \n" +
@@ -1665,10 +1665,10 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\fabbreviation\x18\b \x01(\tB\a\xbaH\x04r\x02\x182R\fabbreviation\"\x82\x01\n" +
 	"\x15UpdateOrgUnitResponse\x12.\n" +
 	"\borg_unit\x18\x01 \x01(\v2\x13.goeland.v1.OrgUnitR\aorgUnit\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"Y\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"Z\n" +
 	"\x16DissolveOrgUnitRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12%\n" +
-	"\x06reason\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\x88\x01\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12&\n" +
+	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"\x88\x01\n" +
 	"\x17DissolveOrgUnitResponse\x12.\n" +
 	"\borg_unit\x18\x01 \x01(\v2\x13.goeland.v1.OrgUnitR\aorgUnit\x12=\n" +
 	"\x0edissolve_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\rdissolveEvent\":\n" +
@@ -1676,17 +1676,17 @@ const file_goeland_v1_orgunit_proto_rawDesc = "" +
 	"\vonly_active\x18\x01 \x01(\bR\n" +
 	"onlyActive\"Y\n" +
 	"\x18ListOrgUnitTypesResponse\x12=\n" +
-	"\x0eorg_unit_types\x18\x01 \x03(\v2\x17.goeland.v1.OrgUnitTypeR\forgUnitTypes\"\xc3\x01\n" +
-	"\x18CreateOrgUnitTypeRequest\x124\n" +
-	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
-	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"\x0eorg_unit_types\x18\x01 \x03(\v2\x17.goeland.v1.OrgUnitTypeR\forgUnitTypes\"\xc5\x01\n" +
+	"\x18CreateOrgUnitTypeRequest\x125\n" +
+	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
+	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12 \n" +
 	"\x06reason\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x8d\x01\n" +
 	"\x19CreateOrgUnitTypeResponse\x12;\n" +
 	"\rorg_unit_type\x18\x01 \x01(\v2\x17.goeland.v1.OrgUnitTypeR\vorgUnitType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x80\x02\n" +
-	"\x18UpdateOrgUnitTypeRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x81\x02\n" +
+	"\x18UpdateOrgUnitTypeRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12/\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12 \n" +

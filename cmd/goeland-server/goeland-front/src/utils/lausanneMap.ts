@@ -43,10 +43,13 @@ register(proj4)
 /** The LV95 projection of the City's maps. */
 export const swissProjection = new OlProjection({ code: 'EPSG:2056', extent: LAUSANNE_EXTENT, units: 'm' })
 
-let capabilities: Promise<unknown> | undefined
+/** Parsed WMTS capabilities, as optionsFromCapabilities takes them. */
+type Capabilities = Parameters<typeof optionsFromCapabilities>[0]
+
+let capabilities: Promise<Capabilities> | undefined
 
 /** The parsed capabilities of the City's WMTS, fetched once (a failure is retried next time). */
-function lausanneCapabilities (): Promise<unknown> {
+function lausanneCapabilities (): Promise<Capabilities> {
   capabilities ??= fetch(LAUSANNE_WMTS_CAPABILITIES)
     .then(async res => {
       if (!res.ok) {

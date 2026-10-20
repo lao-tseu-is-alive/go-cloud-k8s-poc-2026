@@ -1818,10 +1818,10 @@ var File_goeland_v1_thing_proto protoreflect.FileDescriptor
 const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\n" +
 	"\x16goeland/v1/thing.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x01\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfa\x01\n" +
 	"\tThingType\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
-	"\x04code\x18\x02 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
+	"\x04code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
 	"\x05label\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12G\n" +
 	"\x0especialization\x18\x05 \x01(\x0e2\x1f.goeland.v1.ThingSpecializationR\x0especialization\x12\x1b\n" +
@@ -1840,7 +1840,7 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"eca_number\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18\x14R\tecaNumber\x127\n" +
 	"\x11construction_year\x18\x03 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xb4\x10(\x00R\x10constructionYear\x12M\n" +
-	"\x0fbuilding_status\x18\x04 \x01(\x0e2\x1a.goeland.v1.BuildingStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0ebuildingStatus\"\xf3\x05\n" +
+	"\x0fbuilding_status\x18\x04 \x01(\x0e2\x1a.goeland.v1.BuildingStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x0ebuildingStatus\"\xf8\x05\n" +
 	"\x05Thing\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x124\n" +
@@ -1849,24 +1849,24 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\x04name\x18\x03 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x04 \x01(\tR\vdescription\x12!\n" +
 	"\fexternal_ref\x18\x05 \x01(\tR\vexternalRef\x12)\n" +
-	"\x10geometry_geojson\x18\x06 \x01(\tR\x0fgeometryGeojson\x12\x1c\n" +
-	"\aarea_m2\x18\a \x01(\x01B\x03\xe0A\x03R\x06areaM2\x12\x1e\n" +
-	"\banchor_e\x18\b \x01(\x01B\x03\xe0A\x03R\aanchorE\x12\x1e\n" +
-	"\banchor_n\x18\t \x01(\x01B\x03\xe0A\x03R\aanchorN\x123\n" +
+	"\x10geometry_geojson\x18\x06 \x01(\tR\x0fgeometryGeojson\x12\x1d\n" +
+	"\aarea_m2\x18\a \x01(\x01B\x04\xe2A\x01\x03R\x06areaM2\x12\x1f\n" +
+	"\banchor_e\x18\b \x01(\x01B\x04\xe2A\x01\x03R\aanchorE\x12\x1f\n" +
+	"\banchor_n\x18\t \x01(\x01B\x04\xe2A\x01\x03R\aanchorN\x123\n" +
 	"\x06parcel\x18\n" +
 	" \x01(\v2\x19.goeland.v1.ParcelDetailsH\x00R\x06parcel\x129\n" +
 	"\bbuilding\x18\v \x01(\v2\x1b.goeland.v1.BuildingDetailsH\x00R\bbuilding\x123\n" +
-	"\bmetadata\x18\f \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12>\n" +
+	"\bmetadata\x18\f \x01(\v2\x17.google.protobuf.StructR\bmetadata\x12?\n" +
 	"\n" +
-	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tcreatedAt\x12\x1d\n" +
+	"created_at\x18\r \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tcreatedAt\x12\x1d\n" +
 	"\n" +
-	"created_by\x18\x0e \x01(\tR\tcreatedBy\x12>\n" +
+	"created_by\x18\x0e \x01(\tR\tcreatedBy\x12?\n" +
 	"\n" +
-	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tupdatedAt\x12C\n" +
+	"updated_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tupdatedAt\x12C\n" +
 	"\x0frecord_metadata\x18\x10 \x01(\v2\x1a.goeland.v1.RecordMetadataR\x0erecordMetadataB\x10\n" +
-	"\x0especialization\"\xf9\x03\n" +
-	"\x12CreateThingRequest\x124\n" +
-	"\x0fthing_type_code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\rthingTypeCode\x12\x1c\n" +
+	"\x0especialization\"\xfa\x03\n" +
+	"\x12CreateThingRequest\x125\n" +
+	"\x0fthing_type_code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\rthingTypeCode\x12\x1c\n" +
 	"\x04name\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xac\x02R\x04name\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x12+\n" +
 	"\fexternal_ref\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vexternalRef\x124\n" +
@@ -1886,10 +1886,10 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\x10GetThingResponse\x12'\n" +
 	"\x05thing\x18\x01 \x01(\v2\x11.goeland.v1.ThingR\x05thing\x12E\n" +
 	"\rrelationships\x18\x02 \x03(\v2\x1f.goeland.v1.SubjectRelationshipR\rrelationships\x129\n" +
-	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xb9\x03\n" +
+	"\frecent_audit\x18\x03 \x03(\v2\x16.goeland.v1.AuditEventR\vrecentAudit\"\xba\x03\n" +
 	"\x12UpdateThingRequest\x12\x18\n" +
-	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
-	"\x04name\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xac\x02R\x04name\x12*\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\"\n" +
+	"\x04name\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xac\x02R\x04name\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xa0\x1fR\vdescription\x12+\n" +
 	"\fexternal_ref\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\vexternalRef\x124\n" +
 	"\x10geometry_geojson\x18\x05 \x01(\tB\t\xbaH\x06r\x04\x18\xc0\x84=R\x0fgeometryGeojson\x123\n" +
@@ -1928,18 +1928,18 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"onlyActive\"P\n" +
 	"\x16ListThingTypesResponse\x126\n" +
 	"\vthing_types\x18\x01 \x03(\v2\x15.goeland.v1.ThingTypeR\n" +
-	"thingTypes\"\xc1\x01\n" +
-	"\x16CreateThingTypeRequest\x124\n" +
-	"\x04code\x18\x01 \x01(\tB \xe0A\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12#\n" +
-	"\x05label\x18\x02 \x01(\tB\r\xe0A\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
+	"thingTypes\"\xc3\x01\n" +
+	"\x16CreateThingTypeRequest\x125\n" +
+	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
+	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12 \n" +
 	"\x06reason\x18\x04 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x84\x01\n" +
 	"\x17CreateThingTypeResponse\x124\n" +
 	"\n" +
 	"thing_type\x18\x01 \x01(\v2\x15.goeland.v1.ThingTypeR\tthingType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xfe\x01\n" +
-	"\x16UpdateThingTypeRequest\x12 \n" +
-	"\x04code\x18\x01 \x01(\tB\f\xe0A\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xff\x01\n" +
+	"\x16UpdateThingTypeRequest\x12!\n" +
+	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
 	"\xbaH\ar\x05\x10\x01\x18\xc8\x01H\x00R\x05label\x88\x01\x01\x12/\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fH\x01R\vdescription\x88\x01\x01\x12 \n" +

@@ -54,7 +54,7 @@
   async function build () {
     const objects = objectLayer()
     const box = objects?.getSource()?.getExtent()
-    extent.value = box
+    extent.value = box ?? undefined
     if (!objects || !box) return
     if (!insideLausanne(box)) {
       outside.value = true

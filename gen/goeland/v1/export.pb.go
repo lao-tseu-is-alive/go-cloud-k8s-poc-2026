@@ -972,21 +972,21 @@ var File_goeland_v1_export_proto protoreflect.FileDescriptor
 const file_goeland_v1_export_proto_rawDesc = "" +
 	"\n" +
 	"\x17goeland/v1/export.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/case.proto\x1a\x1cgoeland/v1/circulation.proto\x1a\x15goeland/v1/core.proto\x1a\x19goeland/v1/document.proto\x1a\x15goeland/v1/task.proto\x1a\x19goeland/v1/timeline.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf9\x03\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/case.proto\x1a\x1cgoeland/v1/circulation.proto\x1a\x15goeland/v1/core.proto\x1a\x19goeland/v1/document.proto\x1a\x15goeland/v1/task.proto\x1a\x19goeland/v1/timeline.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xfd\x03\n" +
 	"\n" +
 	"CaseExport\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x17\n" +
 	"\acase_id\x18\x02 \x01(\tR\x06caseId\x124\n" +
 	"\x06status\x18\x03 \x01(\x0e2\x1c.goeland.v1.CaseExportStatusR\x06status\x12!\n" +
 	"\frequested_by\x18\x04 \x01(\tR\vrequestedBy\x12\x16\n" +
-	"\x06reason\x18\x05 \x01(\tR\x06reason\x12B\n" +
-	"\frequested_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\vrequestedAt\x12>\n" +
+	"\x06reason\x18\x05 \x01(\tR\x06reason\x12C\n" +
+	"\frequested_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\vrequestedAt\x12?\n" +
 	"\n" +
-	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\tstartedAt\x12@\n" +
-	"\vfinished_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\n" +
-	"finishedAt\x12>\n" +
+	"started_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\tstartedAt\x12A\n" +
+	"\vfinished_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\n" +
+	"finishedAt\x12?\n" +
 	"\n" +
-	"expires_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x03\xe0A\x03R\texpiresAt\x12\x1d\n" +
+	"expires_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampB\x04\xe2A\x01\x03R\texpiresAt\x12\x1d\n" +
 	"\n" +
 	"size_bytes\x18\n" +
 	" \x01(\x03R\tsizeBytes\x12\x16\n" +

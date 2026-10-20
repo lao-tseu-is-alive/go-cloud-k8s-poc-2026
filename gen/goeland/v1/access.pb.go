@@ -1702,15 +1702,15 @@ var File_goeland_v1_access_proto protoreflect.FileDescriptor
 const file_goeland_v1_access_proto_rawDesc = "" +
 	"\n" +
 	"\x17goeland/v1/access.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xeb\x03\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xec\x03\n" +
 	"\vAccessGrant\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
 	"subject_id\x18\x02 \x01(\tR\tsubjectId\x12:\n" +
 	"\fgrantee_kind\x18\x03 \x01(\x0e2\x17.goeland.v1.GranteeKindR\vgranteeKind\x12\x1d\n" +
 	"\n" +
-	"grantee_id\x18\x04 \x01(\tR\tgranteeId\x12(\n" +
-	"\rgrantee_label\x18\x05 \x01(\tB\x03\xe0A\x03R\fgranteeLabel\x12,\n" +
+	"grantee_id\x18\x04 \x01(\tR\tgranteeId\x12)\n" +
+	"\rgrantee_label\x18\x05 \x01(\tB\x04\xe2A\x01\x03R\fgranteeLabel\x12,\n" +
 	"\x05level\x18\x06 \x01(\x0e2\x16.goeland.v1.PermissionR\x05level\x129\n" +
 	"\n" +
 	"granted_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\tgrantedAt\x12\x1d\n" +
@@ -1729,15 +1729,15 @@ const file_goeland_v1_access_proto_rawDesc = "" +
 	"\x04kind\x18\x02 \x01(\x0e2\x17.goeland.v1.SubjectKindR\x04kind\x12\"\n" +
 	"\fconfidential\x18\x03 \x01(\bR\fconfidential\x12,\n" +
 	"\x05level\x18\x04 \x01(\x0e2\x16.goeland.v1.PermissionR\x05level\x120\n" +
-	"\x06source\x18\x05 \x01(\x0e2\x18.goeland.v1.AccessSourceR\x06source\"\xe3\x01\n" +
+	"\x06source\x18\x05 \x01(\x0e2\x18.goeland.v1.AccessSourceR\x06source\"\xe4\x01\n" +
 	"\rSecurityGroup\x127\n" +
 	"\vsubject_ref\x18\x01 \x01(\v2\x16.goeland.v1.SubjectRefR\n" +
 	"subjectRef\x12\x12\n" +
 	"\x04name\x18\x02 \x01(\tR\x04name\x12 \n" +
 	"\vdescription\x18\x03 \x01(\tR\vdescription\x12;\n" +
 	"\varchived_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
-	"archivedAt\x12&\n" +
-	"\fmember_count\x18\x05 \x01(\x05B\x03\xe0A\x03R\vmemberCount\"\xa9\x01\n" +
+	"archivedAt\x12'\n" +
+	"\fmember_count\x18\x05 \x01(\x05B\x04\xe2A\x01\x03R\vmemberCount\"\xa9\x01\n" +
 	"\vGroupMember\x12$\n" +
 	"\x04user\x18\x01 \x01(\v2\x10.goeland.v1.UserR\x04user\x12'\n" +
 	"\x0frelationship_id\x18\x02 \x01(\tR\x0erelationshipId\x120\n" +
