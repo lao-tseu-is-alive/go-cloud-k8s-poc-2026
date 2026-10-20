@@ -8,6 +8,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.16.1] - 2026-10-20
+
+Security patch: labels of subjects the caller may not read are no longer shown (GLD-070); Go 1.27.3
+and the dependency updates of 2026-10-20. No migration, no API shape change.
+
 ### Security
 
 - **GLD-070** — Labels of unreadable subjects: a document cited by a timeline entry keeps its
@@ -25,8 +30,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   1.9 tools; Vue 3.5.44, Vuetify 4.3, vue-i18n 11.4.16, OpenLayers 10.11 and proj4 2.22 (still
   pinned exactly; two stricter typings adapted, the City's map checked in a browser), ESLint 10.13,
   Vitest 5.0.5, npm-run-all2 9 and unplugin-fonts 2 (same build output). Still left out:
-  Vanguard 0.5 / validate 0.9 (Connect v2, GLD-062), TypeScript 7 and @types/node 26; the
-  `bun` and `postgis` images were already current.
+  Vanguard 0.5 / validate 0.9 (they need Connect v2, planned in the roadmap), TypeScript 7 and
+  @types/node 26; the `bun` and `postgis` images were already current.
 
 ### Fixed
 

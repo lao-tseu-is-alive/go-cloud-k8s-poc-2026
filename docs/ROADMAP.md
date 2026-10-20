@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.16.0**.
+Tracked version: **v0.16.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -40,7 +40,9 @@ the case export (GLD-029) shipped in v0.14.0, the reproducible generated code (G
 triaged dependency updates in v0.14.1. The information hierarchy pilot on the actor page (GLD-063),
 the strict JSON fix (GLD-065) and the import fixes for phone numbers with a note (GLD-066) and
 document families (GLD-067) shipped in v0.15.0; the case page (GLD-068) and the object page with
-the City's map (GLD-069) followed the same model in v0.16.0; next the global search (GLD-064).
+the City's map (GLD-069) followed the same model in v0.16.0; the labels of unreadable subjects
+(GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
+v0.16.1; next the global search (GLD-064).
 
 ## Cross-cutting quality
 
@@ -141,7 +143,7 @@ the City's map (GLD-069) followed the same model in v0.16.0; next the global sea
   Move the handlers, interceptors and codecs to Connect v2 together once v2 has settled (released
   2026-10-07), with the §50 scenario and API surface tests as the safety net. Dependabot ignores
   those two modules' minors until then.
-- [~] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
+- [x] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
   typed routes (review `reports/report_20261014_gpt-5.md`). Done 2026-10-20: the SPA declares its
   routes by hand, so the vue-router Volar plugins for file-based routing were removed instead.
 - [ ] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
@@ -347,7 +349,7 @@ covered by an integration test.
   closed; `CoreService.ListAccessAuditEvents` for administrators (SPA Administration → Accès
   sensibles) and FULL_CONTROL holders (Accès panel → Journal des accès sensibles), labels only
   when readable. Retention stays an open production item.
-- [~] **GLD-070 — Labels of unreadable subjects** (review `reports/report_20261014_gpt-5.md`,
+- [x] **GLD-070 — Labels of unreadable subjects** (review `reports/report_20261014_gpt-5.md`,
   decided 2026-10-20): the labels left out of GLD-049 — the documents cited by a timeline entry and
   the ancestors and children on an org unit page — were shown without a read check, so a reader of
   a case saw the title of a confidential document it cites. A cited document the caller may not
