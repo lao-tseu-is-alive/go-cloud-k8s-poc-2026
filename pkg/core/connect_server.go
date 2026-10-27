@@ -157,6 +157,28 @@ func (s *ConnectServer) LookupSubjects(ctx context.Context, req *connect.Request
 	return connect.NewResponse(&goelandv1.LookupSubjectsResponse{SubjectRefs: out}), nil
 }
 
+// SearchSubjects runs the global search over several kinds of subjects.
+func (s *ConnectServer) SearchSubjects(ctx context.Context, req *connect.Request[goelandv1.SearchSubjectsRequest]) (*connect.Response[goelandv1.SearchSubjectsResponse], error) {
+	viewer, err := s.authz.Reader(ctx)
+	if err != nil {
+		return nil, err
+	}
+	kinds := make([]SubjectKind, len(req.Msg.Kinds))
+	for i, k := range req.Msg.Kinds {
+		kinds[i] = SubjectKindFromProto(k)
+	}
+	groups, err := s.service.SearchSubjects(ctx, SubjectSearchFilter{
+		Viewer:       viewer,
+		Query:        req.Msg.Query,
+		Kinds:        kinds,
+		LimitPerKind: int(req.Msg.LimitPerKind),
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.SearchSubjectsResponse{Groups: SubjectSearchGroupsToProto(groups)}), nil
+}
+
 // UnlinkSubjects soft-deletes an existing relationship.
 func (s *ConnectServer) UnlinkSubjects(ctx context.Context, req *connect.Request[goelandv1.UnlinkSubjectsRequest]) (*connect.Response[goelandv1.UnlinkSubjectsResponse], error) {
 	user, err := RequireCaller(ctx, ScopeWrite)

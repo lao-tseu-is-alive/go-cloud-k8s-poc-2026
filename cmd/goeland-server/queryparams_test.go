@@ -28,6 +28,7 @@ func TestRestRoutesPickTheMostSpecificBinding(t *testing.T) {
 		{http.MethodGet, "/api/cases/search", "goeland.v1.SearchCasesRequest"},
 		{http.MethodGet, "/api/cases/0b7a4f7e-0000-0000-0000-000000000000", "goeland.v1.GetCaseRequest"},
 		{http.MethodGet, "/api/subjects:lookup", "goeland.v1.LookupSubjectsRequest"},
+		{http.MethodGet, "/api/subjects:search", "goeland.v1.SearchSubjectsRequest"},
 		{http.MethodGet, "/api/subjects/x/relationships", "goeland.v1.ListRelationshipsRequest"},
 		{http.MethodDelete, "/api/relationships/x", "goeland.v1.UnlinkSubjectsRequest"},
 	}

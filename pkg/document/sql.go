@@ -188,7 +188,7 @@ FROM ` + from + ` d
 ` + core.MetadataLateralSQL("d.id") + `
 LEFT JOIN document_version cv ON cv.id = d.current_version_id
 ` + f.Join + `
-WHERE (@query = '' OR d.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
+WHERE (@query = '' OR ` + core.TextMatchSQL("d.search_vector") + `)
   AND (@document_type_code = '' OR d.document_type_id = (SELECT id FROM document_type WHERE code = @document_type_code))
   AND rm.confidentiality_level <= @confidentiality_max
   AND (NOT @only_records OR cv.is_record)

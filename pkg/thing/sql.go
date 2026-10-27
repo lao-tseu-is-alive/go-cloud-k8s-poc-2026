@@ -138,7 +138,7 @@ FROM thing t
 LEFT JOIN thing_parcel p ON p.thing_id = t.id
 LEFT JOIN thing_building b ON b.thing_id = t.id
 WHERE (@query = ''
-       OR t.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query))
+       OR `+core.TextMatchSQL("t.search_vector")+`
        OR p.parcel_number = @query OR p.egrid = upper(@query) OR b.egid::text = @query)
   AND (@thing_type_code = '' OR t.thing_type_id = (SELECT id FROM thing_type WHERE code = @thing_type_code))
   AND (NOT @has_bbox OR (t.geom && ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056)

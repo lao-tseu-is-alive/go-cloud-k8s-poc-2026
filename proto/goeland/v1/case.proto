@@ -252,9 +252,9 @@ message TransitionCaseResponse {
 
 // SearchCasesRequest performs accent-insensitive search + filters. Results are newest first.
 message SearchCasesRequest {
-  // query is plain text matched accent-insensitively against title and
-  // description, or exactly against the business reference (at most 200
-  // characters); empty matches every case.
+  // query is plain text matched accent-insensitively, from the start of every
+  // word, against title and description, or exactly against the business
+  // reference (at most 200 characters); empty matches every case.
   string query = 1 [(buf.validate.field).string.max_len = 200];
   // case_type_code restricts results to one type; empty means any.
   string case_type_code = 2 [(buf.validate.field).string.max_len = 100];

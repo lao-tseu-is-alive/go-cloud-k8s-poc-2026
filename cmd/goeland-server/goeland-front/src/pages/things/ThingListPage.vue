@@ -8,6 +8,7 @@
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import ThingTypeSelect from '@/components/thing/ThingTypeSelect.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useRouteQueryText } from '@/composables/useRouteQueryText'
   import { formatDateTime, formatTotal } from '@/utils/formatters'
   import { toOrderBy } from '@/utils/listSort'
 
@@ -60,6 +61,7 @@
     return th.externalRef || '—'
   }
 
+  useRouteQueryText(filters, () => load(true))
   onMounted(() => load(true))
 </script>
 

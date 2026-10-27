@@ -64,6 +64,53 @@ WHERE business_ref = @business_ref
 ORDER BY created_at
 LIMIT @limit;`
 
+// searchMetadataSQL joins the governance of subject s as rm, if any (a user
+// has none).
+const searchMetadataSQL = `LEFT JOIN LATERAL (SELECT r.deleted_at, r.confidentiality_level FROM record_metadata r WHERE r.subject_id = s.id LIMIT 1) rm ON true`
+
+// searchVisibleSQL is "subject s is not deleted and the viewer may read it".
+var searchVisibleSQL = `rm.deleted_at IS NULL AND ` + ReadableSQL("s.id", "rm")
+
+// searchSubjectsSQL is the global search (GLD-064): per requested kind (in
+// order, k.ord), the subjects whose reference equals @business_ref and the
+// first @count_limit whose label or reference matches @text_query from the
+// start of every word, read from idx_subject_ref_search through the kind
+// token; deduplicated, counted, and the best @limit kept: exact reference,
+// label starting with the first word, shortest label (ts_rank recomputed the
+// vector of every candidate: +60 ms on a broad word), most recent.
+var searchSubjectsSQL = `
+SELECT k.ord, x.total_count,
+       s.id, s.kind, s.display_label, s.canonical_url, s.business_ref, s.business_ref_namespace, s.created_at
+FROM unnest(@kinds::text[]) WITH ORDINALITY AS k(kind, ord)
+CROSS JOIN LATERAL (
+  SELECT m.id, count(*) OVER () AS total_count,
+         row_number() OVER (ORDER BY min(m.exact),
+                                     (lower(immutable_unaccent(s.display_label)) LIKE @label_prefix) DESC,
+                                     length(s.display_label),
+                                     s.created_at DESC, m.id) AS rn
+  FROM (
+    (SELECT s.id, 0 AS exact
+     FROM subject_ref s
+     ` + searchMetadataSQL + `
+     WHERE s.business_ref = @business_ref AND s.kind = k.kind AND ` + searchVisibleSQL + `
+     LIMIT @limit)
+    UNION ALL
+    (SELECT s.id, 1 AS exact
+     FROM subject_ref s
+     ` + searchMetadataSQL + `
+     WHERE ` + subjectSearchVectorSQL("s") + `
+           @@ (to_tsquery('simple', immutable_unaccent(@text_query)) && ('''§' || lower(k.kind) || '''')::tsquery)
+       AND ` + searchVisibleSQL + `
+     LIMIT @count_limit)
+  ) m
+  JOIN subject_ref s ON s.id = m.id
+  GROUP BY m.id, s.display_label, s.business_ref, s.kind, s.created_at
+  ORDER BY rn
+  LIMIT @limit
+) x
+JOIN subject_ref s ON s.id = x.id
+ORDER BY k.ord, x.rn;`
+
 // --- record_metadata ---------------------------------------------------------
 
 const recordMetadataColumns = `

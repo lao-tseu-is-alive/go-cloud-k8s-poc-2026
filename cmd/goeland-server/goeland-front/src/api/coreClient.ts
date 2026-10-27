@@ -1,4 +1,4 @@
-import type { AuditEvent, BatchGetUsersResponse, GetCurrentUserResponse, ListRelationshipsResponse, RelationshipGroup, RelationshipType, SearchUsersResponse, SubjectKind, SubjectRelationship, SummarizeRelationshipsResponse, User } from './types'
+import type { AuditEvent, BatchGetUsersResponse, GetCurrentUserResponse, ListRelationshipsResponse, RelationshipGroup, RelationshipType, SearchSubjectsParams, SearchSubjectsResponse, SearchUsersResponse, SubjectKind, SubjectRelationship, SubjectSearchGroup, SummarizeRelationshipsResponse, User } from './types'
 /**
  * CoreService REST calls: relationship types, relationships, audit, subjects.
  */
@@ -135,6 +135,12 @@ export function getCurrentUser (): Promise<GetCurrentUserResponse> {
 export async function searchUsers (query: string, pageSize = 20, signal?: AbortSignal): Promise<User[]> {
   const res = await apiFetch<SearchUsersResponse>('/api/users/search', { query: { query, pageSize }, signal })
   return res.users ?? []
+}
+
+/** The global search: per kind, the best subjects matching params.query and their count. */
+export async function searchSubjects (params: SearchSubjectsParams, signal?: AbortSignal): Promise<SubjectSearchGroup[]> {
+  const res = await apiFetch<SearchSubjectsResponse>('/api/subjects:search', { query: { ...params }, signal })
+  return res.groups ?? []
 }
 
 /** Resolves operator ids (createdBy, actorUserId, ...) to users; unknown ids are absent. */

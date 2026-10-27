@@ -1,6 +1,6 @@
 <script setup lang="ts">
   import type { SubjectKind, SubjectRef } from '@/api/types'
-  import { computed, onBeforeUnmount, ref, watch } from 'vue'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { searchActors } from '@/api/actorClient'
   import { searchCases } from '@/api/caseClient'
@@ -8,7 +8,7 @@
   import { searchDocuments } from '@/api/documentClient'
   import { searchOrgUnits } from '@/api/orgUnitClient'
   import { searchThings } from '@/api/thingClient'
-  import { useApiErrors } from '@/composables/useApiErrors'
+  import { useDebouncedSearch } from '@/composables/useDebouncedSearch'
   import { kindIcon } from '@/utils/subjects'
 
   // Searches the subjects of one kind (server-side, accent-insensitive) and binds
@@ -19,9 +19,7 @@
   const emit = defineEmits<{ picked: [subject: SubjectRef] }>()
 
   const { t } = useI18n()
-  const { report } = useApiErrors()
   const PAGE_SIZE = 20
-  const DEBOUNCE_MS = 250
 
   type Searcher = (query: string, signal: AbortSignal) => Promise<(SubjectRef | undefined)[]>
   const SEARCHERS: Partial<Record<SubjectKind, Searcher>> = {
@@ -43,37 +41,22 @@
       ((await searchOrgUnits({ query, pageSize: PAGE_SIZE }, signal)).units ?? []).map(u => u.subjectRef),
   }
 
-  const items = ref<SubjectRef[]>([])
-  const loading = ref(false)
   const search = ref('')
-  let controller: AbortController | undefined
-  let timer: ReturnType<typeof setTimeout> | undefined
-
   const searchable = computed(() => SEARCHERS[props.kind] !== undefined)
 
-  async function run (query: string) {
+  const { results: items, loading, run, schedule } = useDebouncedSearch<SubjectRef[]>(async (query, signal) => {
     const searcher = SEARCHERS[props.kind]
-    if (!searcher) return
-    controller?.abort()
-    controller = new AbortController()
-    loading.value = true
-    try {
-      const found = await searcher(query.trim(), controller.signal)
-      items.value = found.filter((s): s is SubjectRef => !!s && s.id !== props.excludeId)
-    } catch (error) {
-      if (!(error instanceof DOMException && error.name === 'AbortError')) report(error)
-    } finally {
-      loading.value = false
-    }
-  }
+    if (!searcher) return []
+    const found = await searcher(query, signal)
+    return found.filter((s): s is SubjectRef => !!s && s.id !== props.excludeId)
+  }, [])
 
   // Typing a new term searches again; picking an item also updates the search
   // text to its label, which must not trigger a search.
   watch(search, term => {
     const picked = items.value.find(s => s.id === model.value)
     if (picked && term === picked.displayLabel) return
-    clearTimeout(timer)
-    timer = setTimeout(() => void run(term ?? ''), DEBOUNCE_MS)
+    schedule(term ?? '')
   })
   watch(model, id => {
     const picked = items.value.find(s => s.id === id)
@@ -84,11 +67,6 @@
     items.value = []
     void run('')
   }, { immediate: true })
-
-  onBeforeUnmount(() => {
-    clearTimeout(timer)
-    controller?.abort()
-  })
 
   function subtitle (s: SubjectRef): string {
     return [s.businessRefNamespace, s.businessRef].filter(Boolean).join(' ')

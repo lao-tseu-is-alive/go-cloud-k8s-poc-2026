@@ -117,7 +117,7 @@ SELECT a.id AS id, `+f.Expr+` AS sort_key
 FROM actor a
 `+f.Join+`
 `+core.MetadataLateralSQL("a.id")+`
-WHERE (@query = '' OR a.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query)))
+WHERE (@query = '' OR `+core.TextMatchSQL("a.search_vector")+`)
   AND (@actor_kind = 0 OR a.actor_kind = @actor_kind)
   AND (@category_code = '' OR a.organization_category_id = (SELECT id FROM organization_category WHERE code = @category_code))
   AND (NOT @only_active OR a.is_active = true)

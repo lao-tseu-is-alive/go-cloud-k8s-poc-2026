@@ -187,7 +187,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	}
 	rows, err := r.pool.Query(ctx, core.SortedQuery(searchThingsSQL, filter.Sort, defaultThingSort), filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit": core.CountLimit,
-		"query":       filter.Query, "thing_type_code": filter.TypeCode, "has_bbox": filter.BBox != nil,
+		"query":       filter.Query, "text_query": core.PrefixTSQuery(filter.Query), "thing_type_code": filter.TypeCode, "has_bbox": filter.BBox != nil,
 		"e_min": box.EMin, "n_min": box.NMin, "e_max": box.EMax, "n_max": box.NMax,
 		"include_deleted": filter.IncludeDeleted, "limit": filter.Limit, "offset": filter.Offset,
 	}))

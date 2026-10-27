@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0031 (dbmate format)
+      └── db/migrations/  0001..0032 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -318,7 +318,8 @@ ActorService: `GET /api/organization-categories` · `POST /api/actors` ·
 CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/relationships` ·
 `DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
 `GET /api/relationship-types` · `GET /api/subjects/{subjectId}/audit` ·
-`POST /api/subjects/{subjectId}/business-ref` · `GET /api/subjects:lookup?businessRef=…&namespace=…`.
+`POST /api/subjects/{subjectId}/business-ref` · `GET /api/subjects:lookup?businessRef=…&namespace=…` ·
+`GET /api/subjects:search?query=…` (global search, GLD-064).
 
 ```bash
 BASE=http://127.0.0.1:8088
@@ -391,6 +392,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0029_contact_history_relationship_kinds.sql  replaced contacts ended, not deleted; relationship kinds checked by a trigger
 0030_case_export.sql         case_export: background case export jobs (queue, archive reference, expiry)
 0031_relationship_roles.sql  relationship_type roles (label, plural, end, preposition) read from the subject on screen
+0032_subject_search.sql      per-kind search index of subject_ref for the global search
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

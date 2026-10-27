@@ -408,8 +408,9 @@ message UpdateActorResponse {
 // SearchActorsRequest performs accent-insensitive name search + filters.
 // Results are ordered by display name.
 message SearchActorsRequest {
-  // query is plain text matched accent-insensitively against the display and
-  // legal names (at most 200 characters); empty matches every actor.
+  // query is plain text matched accent-insensitively, from the start of every
+  // word, against the display and legal names (at most 200 characters); empty
+  // matches every actor.
   string query = 1 [(buf.validate.field).string.max_len = 200];
   // actor_kind restricts results to one kind; UNSPECIFIED means any.
   ActorKind actor_kind = 2;

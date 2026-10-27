@@ -1706,8 +1706,9 @@ func (x *VerifyDocumentIntegrityResponse) GetStorageRefChecked() string {
 // Results are newest first.
 type SearchDocumentsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// query is plain text matched accent-insensitively against title and
-	// description (at most 500 characters); empty matches every document.
+	// query is plain text matched accent-insensitively, from the start of every
+	// word, against title and description (at most 500 characters); empty
+	// matches every document.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// document_type_code restricts results to one type; empty means any.
 	DocumentTypeCode string `protobuf:"bytes,2,opt,name=document_type_code,json=documentTypeCode,proto3" json:"document_type_code,omitempty"`

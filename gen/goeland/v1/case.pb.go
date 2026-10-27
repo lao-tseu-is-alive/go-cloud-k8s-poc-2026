@@ -999,9 +999,9 @@ func (x *TransitionCaseResponse) GetTransitionEvent() *AuditEvent {
 // SearchCasesRequest performs accent-insensitive search + filters. Results are newest first.
 type SearchCasesRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// query is plain text matched accent-insensitively against title and
-	// description, or exactly against the business reference (at most 200
-	// characters); empty matches every case.
+	// query is plain text matched accent-insensitively, from the start of every
+	// word, against title and description, or exactly against the business
+	// reference (at most 200 characters); empty matches every case.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// case_type_code restricts results to one type; empty means any.
 	CaseTypeCode string `protobuf:"bytes,2,opt,name=case_type_code,json=caseTypeCode,proto3" json:"case_type_code,omitempty"`

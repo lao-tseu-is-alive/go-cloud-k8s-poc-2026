@@ -8,6 +8,21 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- **GLD-064** — Global search: a field in the app bar (« / » focuses it) searches cases, actors,
+  documents and things at once by title, name and business reference, accent-insensitive, from the
+  start of every word; suggestions are grouped by kind with their count (capped at 500), Enter opens
+  every result (`/search`) and each group links to its list filtered by the query (the list pages
+  read `?q=`). Only what the caller may read is found or counted. New RPC
+  `CoreService.SearchSubjects` (`GET /api/subjects:search`) over `subject_ref`, indexed per kind by
+  migration `0032` (about a minute on 3.1M subjects; it replaces an unused label index).
+
+### Changed
+
+- **GLD-064** — The case, document, actor, thing and org unit searches match the start of every word
+  (« rhod » finds « Rhodanie »), through the shared `core.PrefixTSQuery`.
+
 ## [0.16.2] - 2026-10-27
 
 Security patch for the Trivy findings on the v0.16.1 image. No migration, no API change.

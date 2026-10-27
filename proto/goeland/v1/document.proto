@@ -392,8 +392,9 @@ message VerifyDocumentIntegrityResponse {
 // SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
 // Results are newest first.
 message SearchDocumentsRequest {
-  // query is plain text matched accent-insensitively against title and
-  // description (at most 500 characters); empty matches every document.
+  // query is plain text matched accent-insensitively, from the start of every
+  // word, against title and description (at most 500 characters); empty
+  // matches every document.
   string query = 1 [(buf.validate.field).string.max_len = 500];
   // document_type_code restricts results to one type; empty means any.
   string document_type_code = 2 [(buf.validate.field).string.max_len = 100];

@@ -93,7 +93,7 @@ FROM case_file c
 `+f.Join+`
 `+core.MetadataLateralSQL("c.id")+`
 WHERE (@query = ''
-       OR c.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query))
+       OR `+core.TextMatchSQL("c.search_vector")+`
        OR EXISTS (SELECT 1 FROM subject_ref sb WHERE sb.id = c.id AND sb.business_ref = @query))
   AND (@case_type_code = '' OR c.case_type_id = (SELECT id FROM case_type WHERE code = @case_type_code))
   AND (@status::smallint = 0 OR c.status = @status::smallint)

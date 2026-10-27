@@ -220,6 +220,22 @@ func RelatedDetailToProto(d *RelatedDetail) *goelandv1.RelatedSubjectDetail {
 	return &goelandv1.RelatedSubjectDetail{TypeCode: d.TypeCode, TypeLabel: d.TypeLabel, CaseStatus: d.CaseStatus, Date: d.Date}
 }
 
+// SubjectSearchGroupsToProto maps the groups of a global search.
+func SubjectSearchGroupsToProto(groups []*SubjectSearchGroup) []*goelandv1.SubjectSearchGroup {
+	out := make([]*goelandv1.SubjectSearchGroup, len(groups))
+	for i, g := range groups {
+		subjects := make([]*goelandv1.SubjectRef, len(g.Subjects))
+		for j, ref := range g.Subjects {
+			subjects[j] = DomainSubjectRefToProto(ref)
+		}
+		out[i] = &goelandv1.SubjectSearchGroup{
+			Kind: SubjectKindToProto(g.Kind), Subjects: subjects,
+			TotalSize: g.Total, TotalSizeCapped: g.TotalCapped,
+		}
+	}
+	return out
+}
+
 // RelationshipGroupsToProto maps relationship groups.
 func RelationshipGroupsToProto(groups []*RelationshipGroup) []*goelandv1.RelationshipGroup {
 	out := make([]*goelandv1.RelationshipGroup, 0, len(groups))

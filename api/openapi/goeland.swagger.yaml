@@ -185,8 +185,9 @@ paths:
       parameters:
         - name: query
           description: |-
-            query is plain text matched accent-insensitively against the display and
-            legal names (at most 200 characters); empty matches every actor.
+            query is plain text matched accent-insensitively, from the start of every
+            word, against the display and legal names (at most 200 characters); empty
+            matches every actor.
           in: query
           required: false
           type: string
@@ -539,9 +540,9 @@ paths:
       parameters:
         - name: query
           description: |-
-            query is plain text matched accent-insensitively against title and
-            description, or exactly against the business reference (at most 200
-            characters); empty matches every case.
+            query is plain text matched accent-insensitively, from the start of every
+            word, against title and description, or exactly against the business
+            reference (at most 200 characters); empty matches every case.
           in: query
           required: false
           type: string
@@ -1191,8 +1192,9 @@ paths:
       parameters:
         - name: query
           description: |-
-            query is plain text matched accent-insensitively against title and
-            description (at most 500 characters); empty matches every document.
+            query is plain text matched accent-insensitively, from the start of every
+            word, against title and description (at most 500 characters); empty
+            matches every document.
           in: query
           required: false
           type: string
@@ -1827,8 +1829,9 @@ paths:
       parameters:
         - name: query
           description: |-
-            query is matched against abbreviation, label and description, or exactly
-            against the abbreviation or the external reference; empty matches every unit.
+            query is matched from the start of every word against abbreviation, label
+            and description, or exactly against the abbreviation or the external
+            reference; empty matches every unit.
           in: query
           required: false
           type: string
@@ -2657,6 +2660,71 @@ paths:
           default: SUBJECT_KIND_UNSPECIFIED
       tags:
         - CoreService
+  /api/subjects:search:
+    get:
+      summary: |-
+        Search subjects of several kinds at once by label and business reference
+        (the global search), returning per kind the best matches and a capped
+        count, only what the caller may read. Requires goeland:read.
+      operationId: SearchSubjects
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SearchSubjectsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: query
+          description: |-
+            query is matched from the start of every word, accent-insensitive, against
+            the label and the business reference, and exactly against the business
+            reference; a query without a letter or digit finds nothing.
+          in: query
+          required: false
+          type: string
+        - name: kinds
+          description: |-
+            kinds are the kinds searched, one result group each in this order; empty
+            means case, actor, document and thing.
+
+             - SUBJECT_KIND_UNSPECIFIED: SUBJECT_KIND_UNSPECIFIED is the zero value; rejected where a kind is required
+            and means "any kind" in filters.
+             - SUBJECT_KIND_CASE: SUBJECT_KIND_CASE is an administrative case file (affaire / dossier métier).
+             - SUBJECT_KIND_DOCUMENT: SUBJECT_KIND_DOCUMENT is a GED document (DocumentService).
+             - SUBJECT_KIND_THING: SUBJECT_KIND_THING is a business or territorial object (parcelle, bâtiment...).
+             - SUBJECT_KIND_ACTOR: SUBJECT_KIND_ACTOR is an external person or organization (ActorService);
+            never an authenticated operator.
+             - SUBJECT_KIND_USER: SUBJECT_KIND_USER is an internal user (app_user), recorded from its token.
+             - SUBJECT_KIND_ORG_UNIT: SUBJECT_KIND_ORG_UNIT is an internal organizational unit (OrgUnitService).
+             - SUBJECT_KIND_GROUP: SUBJECT_KIND_GROUP is a security group of internal users (AccessService).
+          in: query
+          required: false
+          type: array
+          items:
+            type: string
+            enum:
+              - SUBJECT_KIND_UNSPECIFIED
+              - SUBJECT_KIND_CASE
+              - SUBJECT_KIND_DOCUMENT
+              - SUBJECT_KIND_THING
+              - SUBJECT_KIND_ACTOR
+              - SUBJECT_KIND_USER
+              - SUBJECT_KIND_ORG_UNIT
+              - SUBJECT_KIND_GROUP
+          collectionFormat: multi
+        - name: limitPerKind
+          description: |-
+            limit_per_kind is the number of subjects returned per kind; 0 means the
+            default (5), at most 25.
+          in: query
+          required: false
+          type: integer
+          format: int32
+      tags:
+        - CoreService
   /api/task-types:
     get:
       summary: List the task type catalogue. Requires goeland:read.
@@ -3087,9 +3155,10 @@ paths:
       parameters:
         - name: query
           description: |-
-            query is plain text matched accent-insensitively against name, description
-            and external reference, or exactly against a parcel number, EGRID or EGID
-            (at most 200 characters); empty matches every thing.
+            query is plain text matched accent-insensitively, from the start of every
+            word, against name, description and external reference, or exactly
+            against a parcel number, EGRID or EGID (at most 200 characters); empty
+            matches every thing.
           in: query
           required: false
           type: string
@@ -7450,6 +7519,16 @@ definitions:
         format: int32
         description: total_size is the number of matching units across all pages.
     description: SearchOrgUnitsResponse is one page of matching units.
+  v1SearchSubjectsResponse:
+    type: object
+    properties:
+      groups:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectSearchGroup'
+        description: groups are the result groups, in the order of the requested kinds.
+    description: SearchSubjectsResponse returns one group per searched kind.
   v1SearchThingsResponse:
     type: object
     properties:
@@ -7655,6 +7734,32 @@ definitions:
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
       an ended edge stays as history.
+  v1SubjectSearchGroup:
+    type: object
+    properties:
+      kind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: kind is the kind of the subjects of this group.
+      subjects:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRef'
+        description: |-
+          subjects are the best matches the caller may read: an exact business
+          reference first, then a label starting with the query, then the shortest
+          label, then the most recent.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size counts the matches the caller may read, at most 500.
+      totalSizeCapped:
+        type: boolean
+        description: |-
+          total_size_capped is true when there are more than 500 matches
+          (total_size is then a lower bound and the subjects are the best of the
+          first matches found): the query should be refined.
+    description: SubjectSearchGroup is the result of a global search for one kind.
   v1SummarizeRelationshipsResponse:
     type: object
     properties:

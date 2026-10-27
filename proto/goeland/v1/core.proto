@@ -472,6 +472,58 @@ message LookupSubjectsResponse {
   repeated SubjectRef subject_refs = 1;
 }
 
+// SearchSubjectsRequest searches subjects of several kinds by label and
+// business reference (the global search, GLD-064).
+message SearchSubjectsRequest {
+  // query is matched from the start of every word, accent-insensitive, against
+  // the label and the business reference, and exactly against the business
+  // reference; a query without a letter or digit finds nothing.
+  string query = 1 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // kinds are the kinds searched, one result group each in this order; empty
+  // means case, actor, document and thing.
+  repeated SubjectKind kinds = 2 [(buf.validate.field).repeated = {
+    max_items: 7
+    unique: true
+    items: {
+      enum: {
+        defined_only: true
+        not_in: [0]
+      }
+    }
+  }];
+  // limit_per_kind is the number of subjects returned per kind; 0 means the
+  // default (5), at most 25.
+  int32 limit_per_kind = 3 [
+    (buf.validate.field).int32.gte = 0,
+    (buf.validate.field).int32.lte = 25
+  ];
+}
+
+// SubjectSearchGroup is the result of a global search for one kind.
+message SubjectSearchGroup {
+  // kind is the kind of the subjects of this group.
+  SubjectKind kind = 1;
+  // subjects are the best matches the caller may read: an exact business
+  // reference first, then a label starting with the query, then the shortest
+  // label, then the most recent.
+  repeated SubjectRef subjects = 2;
+  // total_size counts the matches the caller may read, at most 500.
+  int32 total_size = 3;
+  // total_size_capped is true when there are more than 500 matches
+  // (total_size is then a lower bound and the subjects are the best of the
+  // first matches found): the query should be refined.
+  bool total_size_capped = 4;
+}
+
+// SearchSubjectsResponse returns one group per searched kind.
+message SearchSubjectsResponse {
+  // groups are the result groups, in the order of the requested kinds.
+  repeated SubjectSearchGroup groups = 1;
+}
+
 // User is an internal, authenticated user (an employee), recorded from its
 // verified token; never an external ACTOR. Governance and audit fields that
 // hold an operator id (created_by, actor_user_id, ...) refer to User.id.
@@ -1183,6 +1235,13 @@ service CoreService {
   // Requires goeland:read.
   rpc LookupSubjects(LookupSubjectsRequest) returns (LookupSubjectsResponse) {
     option (google.api.http) = {get: "/api/subjects:lookup"};
+  }
+
+  // Search subjects of several kinds at once by label and business reference
+  // (the global search), returning per kind the best matches and a capped
+  // count, only what the caller may read. Requires goeland:read.
+  rpc SearchSubjects(SearchSubjectsRequest) returns (SearchSubjectsResponse) {
+    option (google.api.http) = {get: "/api/subjects:search"};
   }
 
   // Describe the authenticated caller: recorded profile, admin flag and scopes.

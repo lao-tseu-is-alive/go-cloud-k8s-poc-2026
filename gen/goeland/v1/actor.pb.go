@@ -1544,8 +1544,9 @@ func (x *UpdateActorResponse) GetUpdateEvent() *AuditEvent {
 // Results are ordered by display name.
 type SearchActorsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// query is plain text matched accent-insensitively against the display and
-	// legal names (at most 200 characters); empty matches every actor.
+	// query is plain text matched accent-insensitively, from the start of every
+	// word, against the display and legal names (at most 200 characters); empty
+	// matches every actor.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// actor_kind restricts results to one kind; UNSPECIFIED means any.
 	ActorKind ActorKind `protobuf:"varint,2,opt,name=actor_kind,json=actorKind,proto3,enum=goeland.v1.ActorKind" json:"actor_kind,omitempty"`

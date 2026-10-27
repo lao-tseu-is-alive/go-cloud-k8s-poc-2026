@@ -1168,9 +1168,10 @@ func (x *UpdateThingResponse) GetUpdateEvent() *AuditEvent {
 // SearchThingsRequest filters things by text, type and map extent.
 type SearchThingsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// query is plain text matched accent-insensitively against name, description
-	// and external reference, or exactly against a parcel number, EGRID or EGID
-	// (at most 200 characters); empty matches every thing.
+	// query is plain text matched accent-insensitively, from the start of every
+	// word, against name, description and external reference, or exactly
+	// against a parcel number, EGRID or EGID (at most 200 characters); empty
+	// matches every thing.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// thing_type_code restricts results to one type; empty means any.
 	ThingTypeCode string `protobuf:"bytes,2,opt,name=thing_type_code,json=thingTypeCode,proto3" json:"thing_type_code,omitempty"`

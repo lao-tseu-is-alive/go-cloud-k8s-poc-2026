@@ -149,6 +149,11 @@ func (s *surface) core() {
 	if len(list(found, "subjectRefs")) != 1 {
 		s.t.Fatalf("lookup by business reference: %v", found)
 	}
+	searched := s.ok("GET", "/api/subjects:search?query="+ref+"&kinds=SUBJECT_KIND_CASE&kinds=SUBJECT_KIND_ACTOR&limitPerKind=3", nil)
+	if groups := list(searched, "groups"); len(groups) != 2 || len(list(groups[0].(map[string]any), "subjects")) != 1 {
+		s.t.Fatalf("global search by business reference, one group per kind: %v", searched)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/subjects:search?query=x&kinds=SUBJECT_KIND_UNSPECIFIED", nil)
 
 	s.caseID = str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Surface " + s.token}), "case", "subjectRef", "id")
 	other := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Liée " + s.token}), "case", "subjectRef", "id")

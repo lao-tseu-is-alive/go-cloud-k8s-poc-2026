@@ -338,6 +338,26 @@
     "subtitle": "Document management",
     "language": "Language"
   },
+  "globalSearch": {
+    "label": "Global search",
+    "placeholder": "Search a case, an actor…",
+    "shortcut": "Shortcut: /",
+    "minChars": "Type at least 2 characters",
+    "searching": "Searching…",
+    "noResult": "No result for “{query}”",
+    "all": "All results for “{query}”",
+    "seeAll": "See the {count} in {list}",
+    "resultsTitle": "Results for “{query}”",
+    "kinds": {
+      "SUBJECT_KIND_CASE": "Cases",
+      "SUBJECT_KIND_ACTOR": "Actors",
+      "SUBJECT_KIND_DOCUMENT": "Documents",
+      "SUBJECT_KIND_THING": "Things",
+      "SUBJECT_KIND_ORG_UNIT": "Units",
+      "SUBJECT_KIND_USER": "Users",
+      "SUBJECT_KIND_GROUP": "Groups"
+    }
+  },
   "nav": {
     "groups": "Groups",
     "myTasks": "My tasks",

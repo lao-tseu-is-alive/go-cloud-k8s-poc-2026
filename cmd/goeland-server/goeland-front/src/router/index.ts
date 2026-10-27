@@ -8,6 +8,11 @@ const router = createRouter({
   routes: [
     { path: '/', redirect: '/cases' },
     {
+      path: '/search',
+      name: 'search',
+      component: () => import('@/pages/SearchResultsPage.vue'),
+    },
+    {
       path: '/things',
       name: 'things',
       component: () => import('@/pages/things/ThingListPage.vue'),

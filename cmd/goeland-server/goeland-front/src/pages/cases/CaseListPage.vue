@@ -11,6 +11,7 @@
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
+  import { useRouteQueryText } from '@/composables/useRouteQueryText'
   import { formatDateTime, formatTotal } from '@/utils/formatters'
   import { toOrderBy } from '@/utils/listSort'
 
@@ -70,6 +71,7 @@
     if (id) router.push(`/cases/${id}`)
   }
 
+  useRouteQueryText(filters, onSearch)
   onMounted(() => load(true))
 </script>
 

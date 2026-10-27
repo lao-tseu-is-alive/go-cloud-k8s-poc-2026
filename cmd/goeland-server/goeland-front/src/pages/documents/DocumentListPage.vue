@@ -9,6 +9,7 @@
   import DocumentSearchFilters from '@/components/document/DocumentSearchFilters.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useRouteQueryText } from '@/composables/useRouteQueryText'
   import { formatDate, formatDateTime, formatTotal } from '@/utils/formatters'
   import { toOrderBy } from '@/utils/listSort'
 
@@ -63,6 +64,7 @@
     if (id) router.push(`/documents/${id}`)
   }
 
+  useRouteQueryText(filters, onSearch)
   onMounted(() => load(true))
 </script>
 

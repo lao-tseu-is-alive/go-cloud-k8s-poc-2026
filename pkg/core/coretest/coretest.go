@@ -51,6 +51,11 @@ func (StubRepository) LookupSubjects(context.Context, core.LookupFilter, int) ([
 	return nil, nil
 }
 
+// SearchSubjects returns zero values.
+func (StubRepository) SearchSubjects(context.Context, core.SubjectSearchFilter) ([]core.SubjectSearchHit, error) {
+	return nil, nil
+}
+
 // GetRecordMetadata returns zero values.
 func (StubRepository) GetRecordMetadata(context.Context, uuid.UUID) (*core.RecordMetadata, error) {
 	return nil, nil

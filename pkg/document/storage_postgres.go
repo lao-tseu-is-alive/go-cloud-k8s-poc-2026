@@ -638,6 +638,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	rows, err := r.pool.Query(ctx, documentSearchSQL(filter), filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":         core.CountLimit,
 		"query":               filter.Query,
+		"text_query":          core.PrefixTSQuery(filter.Query),
 		"document_type_code":  filter.DocumentTypeCode,
 		"confidentiality_max": filter.ConfidentialityMax,
 		"only_records":        filter.OnlyRecords,

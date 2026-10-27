@@ -1033,6 +1033,30 @@ export interface SearchUsersResponse {
   users?: User[]
 }
 
+// --- Global search (CoreService.SearchSubjects, GLD-064) ---------------------
+
+export interface SearchSubjectsParams {
+  /** Matched from the start of every word of the label and reference, and exactly against the reference. */
+  query: string
+  /** One result group per kind, in this order; empty means case, actor, document, thing. */
+  kinds?: SubjectKind[]
+  /** Subjects per kind; 0 or absent means 5, at most 25. */
+  limitPerKind?: number
+}
+
+export interface SubjectSearchGroup {
+  kind: SubjectKind
+  subjects?: SubjectRef[]
+  /** Readable matches, at most 500. */
+  totalSize?: number
+  /** True beyond 500 matches: totalSize is a lower bound. */
+  totalSizeCapped?: boolean
+}
+
+export interface SearchSubjectsResponse {
+  groups?: SubjectSearchGroup[]
+}
+
 // ---------------------------------------------------------------------------
 // Case circulations (CirculationService, circulation.proto)
 // ---------------------------------------------------------------------------

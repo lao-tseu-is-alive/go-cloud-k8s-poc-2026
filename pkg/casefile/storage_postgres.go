@@ -290,6 +290,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 	rows, err := r.pool.Query(ctx, core.SortedQuery(searchCasesSQL, filter.Sort, defaultCaseSort), filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":     core.CountLimit,
 		"query":           filter.Query,
+		"text_query":      core.PrefixTSQuery(filter.Query),
 		"case_type_code":  filter.CaseTypeCode,
 		"status":          int16(filter.Status),
 		"include_deleted": filter.IncludeDeleted,

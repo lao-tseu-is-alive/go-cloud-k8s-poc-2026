@@ -75,6 +75,9 @@ const (
 	// CoreServiceLookupSubjectsProcedure is the fully-qualified name of the CoreService's
 	// LookupSubjects RPC.
 	CoreServiceLookupSubjectsProcedure = "/goeland.v1.CoreService/LookupSubjects"
+	// CoreServiceSearchSubjectsProcedure is the fully-qualified name of the CoreService's
+	// SearchSubjects RPC.
+	CoreServiceSearchSubjectsProcedure = "/goeland.v1.CoreService/SearchSubjects"
 	// CoreServiceGetCurrentUserProcedure is the fully-qualified name of the CoreService's
 	// GetCurrentUser RPC.
 	CoreServiceGetCurrentUserProcedure = "/goeland.v1.CoreService/GetCurrentUser"
@@ -150,6 +153,10 @@ type CoreServiceClient interface {
 	// Find subjects by exact business reference, optionally by namespace and kind.
 	// Requires goeland:read.
 	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
+	// Search subjects of several kinds at once by label and business reference
+	// (the global search), returning per kind the best matches and a capped
+	// count, only what the caller may read. Requires goeland:read.
+	SearchSubjects(context.Context, *connect.Request[v1.SearchSubjectsRequest]) (*connect.Response[v1.SearchSubjectsResponse], error)
 	// Describe the authenticated caller: recorded profile, admin flag and scopes.
 	// Requires goeland:read.
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -246,6 +253,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			httpClient,
 			baseURL+CoreServiceLookupSubjectsProcedure,
 			connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
+			connect.WithClientOptions(opts...),
+		),
+		searchSubjects: connect.NewClient[v1.SearchSubjectsRequest, v1.SearchSubjectsResponse](
+			httpClient,
+			baseURL+CoreServiceSearchSubjectsProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("SearchSubjects")),
 			connect.WithClientOptions(opts...),
 		),
 		getCurrentUser: connect.NewClient[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse](
@@ -371,6 +384,7 @@ type coreServiceClient struct {
 	getSubjectRef          *connect.Client[v1.GetSubjectRefRequest, v1.GetSubjectRefResponse]
 	assignBusinessRef      *connect.Client[v1.AssignBusinessRefRequest, v1.AssignBusinessRefResponse]
 	lookupSubjects         *connect.Client[v1.LookupSubjectsRequest, v1.LookupSubjectsResponse]
+	searchSubjects         *connect.Client[v1.SearchSubjectsRequest, v1.SearchSubjectsResponse]
 	getCurrentUser         *connect.Client[v1.GetCurrentUserRequest, v1.GetCurrentUserResponse]
 	batchGetUsers          *connect.Client[v1.BatchGetUsersRequest, v1.BatchGetUsersResponse]
 	searchUsers            *connect.Client[v1.SearchUsersRequest, v1.SearchUsersResponse]
@@ -410,6 +424,11 @@ func (c *coreServiceClient) AssignBusinessRef(ctx context.Context, req *connect.
 // LookupSubjects calls goeland.v1.CoreService.LookupSubjects.
 func (c *coreServiceClient) LookupSubjects(ctx context.Context, req *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
 	return c.lookupSubjects.CallUnary(ctx, req)
+}
+
+// SearchSubjects calls goeland.v1.CoreService.SearchSubjects.
+func (c *coreServiceClient) SearchSubjects(ctx context.Context, req *connect.Request[v1.SearchSubjectsRequest]) (*connect.Response[v1.SearchSubjectsResponse], error) {
+	return c.searchSubjects.CallUnary(ctx, req)
 }
 
 // GetCurrentUser calls goeland.v1.CoreService.GetCurrentUser.
@@ -524,6 +543,10 @@ type CoreServiceHandler interface {
 	// Find subjects by exact business reference, optionally by namespace and kind.
 	// Requires goeland:read.
 	LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error)
+	// Search subjects of several kinds at once by label and business reference
+	// (the global search), returning per kind the best matches and a capped
+	// count, only what the caller may read. Requires goeland:read.
+	SearchSubjects(context.Context, *connect.Request[v1.SearchSubjectsRequest]) (*connect.Response[v1.SearchSubjectsResponse], error)
 	// Describe the authenticated caller: recorded profile, admin flag and scopes.
 	// Requires goeland:read.
 	GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error)
@@ -616,6 +639,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		CoreServiceLookupSubjectsProcedure,
 		svc.LookupSubjects,
 		connect.WithSchema(coreServiceMethods.ByName("LookupSubjects")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceSearchSubjectsHandler := connect.NewUnaryHandler(
+		CoreServiceSearchSubjectsProcedure,
+		svc.SearchSubjects,
+		connect.WithSchema(coreServiceMethods.ByName("SearchSubjects")),
 		connect.WithHandlerOptions(opts...),
 	)
 	coreServiceGetCurrentUserHandler := connect.NewUnaryHandler(
@@ -742,6 +771,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceAssignBusinessRefHandler.ServeHTTP(w, r)
 		case CoreServiceLookupSubjectsProcedure:
 			coreServiceLookupSubjectsHandler.ServeHTTP(w, r)
+		case CoreServiceSearchSubjectsProcedure:
+			coreServiceSearchSubjectsHandler.ServeHTTP(w, r)
 		case CoreServiceGetCurrentUserProcedure:
 			coreServiceGetCurrentUserHandler.ServeHTTP(w, r)
 		case CoreServiceBatchGetUsersProcedure:
@@ -803,6 +834,10 @@ func (UnimplementedCoreServiceHandler) AssignBusinessRef(context.Context, *conne
 
 func (UnimplementedCoreServiceHandler) LookupSubjects(context.Context, *connect.Request[v1.LookupSubjectsRequest]) (*connect.Response[v1.LookupSubjectsResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.LookupSubjects is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) SearchSubjects(context.Context, *connect.Request[v1.SearchSubjectsRequest]) (*connect.Response[v1.SearchSubjectsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.SearchSubjects is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) GetCurrentUser(context.Context, *connect.Request[v1.GetCurrentUserRequest]) (*connect.Response[v1.GetCurrentUserResponse], error) {

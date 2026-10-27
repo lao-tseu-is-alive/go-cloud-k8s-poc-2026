@@ -510,9 +510,12 @@ categories with their counts. Mockup with the decisions:
   LV95, a link to open the City's map there). Outside the City's tiles or when they fail, the SVG
   outline stays. The CSP allows `https://tilesmn95.lausanne.ch` (images, capabilities). Done
   2026-10-15.
-- [ ] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
+- [~] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
   documents, actors and things, results grouped by kind with counts, only what the caller may read
-  (the existing searches first; Meilisearch later), "/" to focus it.
+  (the existing searches first; Meilisearch later), "/" to focus it. Built 2026-10-27:
+  `CoreService.SearchSubjects` over `subject_ref` (label and business reference, one per-kind index,
+  migration `0032`, 20-200 ms on the 3.1M imported subjects), counts capped at 500, the app bar field
+  with grouped suggestions and a results page; every search now matches the start of each word.
 - [x] **GLD-067 — Document families lost by the import**: found on the pilot (2,481 documents of an
   organization all typed "Document Goéland"): the import gave the 2.3M documents one generic type
   and ignored the legacy family (`doc_family`, 114 entries, every document has one), the business

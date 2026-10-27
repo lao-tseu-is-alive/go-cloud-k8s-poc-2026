@@ -3,6 +3,7 @@
   import { computed, onMounted } from 'vue'
   import { useI18n } from 'vue-i18n'
   import AppAuthControls from '@/components/AppAuthControls.vue'
+  import GlobalSearch from '@/components/GlobalSearch.vue'
   import SignInPanel from '@/components/SignInPanel.vue'
   import { buildHint, useAppInfo } from '@/composables/useAppInfo'
   import { SUPPORTED_LOCALES } from '@/plugins/i18n'
@@ -119,6 +120,11 @@
       >
         {{ t('nav.admin') }}
       </v-btn>
+
+      <!-- d-flex on the field itself would break the v-input grid layout. -->
+      <div v-if="isAuthenticated" class="mx-2 d-none d-md-block">
+        <GlobalSearch />
+      </div>
 
       <v-menu location="bottom end">
         <template #activator="{ props }">

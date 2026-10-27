@@ -94,7 +94,7 @@ SELECT ` + unitColumns + `,
 COUNT(*) OVER() AS total_count
 FROM org_unit u
 WHERE (@query = ''
-       OR u.search_vector @@ plainto_tsquery('simple', immutable_unaccent(@query))
+       OR ` + core.TextMatchSQL("u.search_vector") + `
        OR lower(u.abbreviation) = lower(@query)
        OR (u.external_ref <> '' AND u.external_ref = @query))
   AND (@include_dissolved OR u.dissolved_at IS NULL)

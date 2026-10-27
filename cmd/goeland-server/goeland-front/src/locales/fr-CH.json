@@ -338,6 +338,26 @@
     "subtitle": "Gestion documentaire",
     "language": "Langue"
   },
+  "globalSearch": {
+    "label": "Recherche globale",
+    "placeholder": "Rechercher une affaire, un acteur…",
+    "shortcut": "Raccourci : /",
+    "minChars": "Saisir au moins 2 caractères",
+    "searching": "Recherche…",
+    "noResult": "Aucun résultat pour « {query} »",
+    "all": "Tous les résultats pour « {query} »",
+    "seeAll": "Voir les {count} dans {list}",
+    "resultsTitle": "Résultats pour « {query} »",
+    "kinds": {
+      "SUBJECT_KIND_CASE": "Affaires",
+      "SUBJECT_KIND_ACTOR": "Acteurs",
+      "SUBJECT_KIND_DOCUMENT": "Documents",
+      "SUBJECT_KIND_THING": "Objets",
+      "SUBJECT_KIND_ORG_UNIT": "Unités",
+      "SUBJECT_KIND_USER": "Collaborateurs",
+      "SUBJECT_KIND_GROUP": "Groupes"
+    }
+  },
   "nav": {
     "groups": "Groupes",
     "myTasks": "Mes tâches",

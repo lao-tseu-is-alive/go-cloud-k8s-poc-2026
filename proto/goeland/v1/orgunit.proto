@@ -116,8 +116,9 @@ message ListOrgUnitsResponse {
 
 // SearchOrgUnitsRequest searches units by abbreviation or name (accent-insensitive).
 message SearchOrgUnitsRequest {
-  // query is matched against abbreviation, label and description, or exactly
-  // against the abbreviation or the external reference; empty matches every unit.
+  // query is matched from the start of every word against abbreviation, label
+  // and description, or exactly against the abbreviation or the external
+  // reference; empty matches every unit.
   string query = 1 [(buf.validate.field).string.max_len = 200];
   // include_dissolved also returns dissolved units.
   bool include_dissolved = 2;

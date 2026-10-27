@@ -289,6 +289,7 @@ type unitListRow struct {
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
 	rows, err := r.pool.Query(ctx, searchUnitsSQL, filter.Viewer.AddTo(pgx.NamedArgs{
 		"query":             filter.Query,
+		"text_query":        core.PrefixTSQuery(filter.Query),
 		"include_dissolved": filter.IncludeDissolved,
 		"limit":             filter.Limit,
 		"offset":            filter.Offset,

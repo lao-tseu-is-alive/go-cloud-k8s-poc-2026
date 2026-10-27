@@ -491,8 +491,9 @@ func (x *ListOrgUnitsResponse) GetUnits() []*OrgUnitNode {
 // SearchOrgUnitsRequest searches units by abbreviation or name (accent-insensitive).
 type SearchOrgUnitsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
-	// query is matched against abbreviation, label and description, or exactly
-	// against the abbreviation or the external reference; empty matches every unit.
+	// query is matched from the start of every word against abbreviation, label
+	// and description, or exactly against the abbreviation or the external
+	// reference; empty matches every unit.
 	Query string `protobuf:"bytes,1,opt,name=query,proto3" json:"query,omitempty"`
 	// include_dissolved also returns dissolved units.
 	IncludeDissolved bool `protobuf:"varint,2,opt,name=include_dissolved,json=includeDissolved,proto3" json:"include_dissolved,omitempty"`

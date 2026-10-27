@@ -181,7 +181,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0031 (dbmate format)
+  │   └── db/migrations/     0001..0032 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -332,6 +332,14 @@ actor, case (GLD-068) and thing (GLD-069) pages, which share `styles/detail-page
 map (`components/thing/LausanneMap.vue`, `utils/lausanneMap.ts`) loads the City of Lausanne's WMTS
 tiles; their origin is in the CSP (`headers.go`), keep both in sync.
 
+**Global search (GLD-064):** `CoreService.SearchSubjects` (`GET /api/subjects:search`) searches
+`subject_ref` itself (label + business reference, kept current by `core.UpdateSubjectLabelTx`), so a
+new kind is searchable without code; `idx_subject_ref_search` (migration `0032`) indexes it per kind
+and `core.subjectSearchVectorSQL` must stay identical to its expression. Every text search matches the
+start of each word through `core.PrefixTSQuery` / `core.TextMatchSQL` (`@text_query`): use them in a
+new search instead of `plainto_tsquery`. The SPA field is `components/GlobalSearch.vue`; list pages
+read `?q=` with `useRouteQueryText`.
+
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
@@ -431,7 +439,7 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 `CoreService`, `DocumentService`, `ActorService` and `CaseService` are all annotated, so each has REST
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
-`/api/subjects:lookup`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`,
+`/api/subjects:lookup`, `/api/subjects:search`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`,
 `/api/access-audit-events`, `/api/subjects/{subject_id}/relationship-summary`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,

@@ -24,8 +24,13 @@ export function kindIcon (kind?: SubjectKind): string {
   return (kind && KIND_ICONS[kind]) ?? 'mdi-shape-outline'
 }
 
+/** The SPA route of a kind's list page, or undefined when it has none. */
+export function kindListRoute (kind?: SubjectKind): string | undefined {
+  return kind ? KIND_ROUTES[kind] : undefined
+}
+
 /** The SPA route of a subject's detail page, or undefined when its kind has none. */
 export function subjectRoute (ref?: SubjectRef): string | undefined {
-  const base = ref?.kind ? KIND_ROUTES[ref.kind] : undefined
+  const base = kindListRoute(ref?.kind)
   return base && ref?.id ? `${base}/${encodeURIComponent(ref.id)}` : undefined
 }
