@@ -51,7 +51,8 @@ export function subjectReference (s: SubjectRef): string {
 
 /** A group's title: the kind in the plural and its count ("Affaires (500+)"). */
 export function groupTitle (t: Translate, group: SubjectSearchGroup): string {
-  return `${t(`globalSearch.kinds.${group.kind}`)} (${formatTotal(group.totalSize, group.totalSizeCapped)})`
+  const kind = t(`globalSearch.kinds.${group.kind}`)
+  return `${kind} (${formatTotal(group.totalSize, group.totalSizeCapped)})`
 }
 
 function subjectSuggestion (s: SubjectRef): SearchSuggestion | undefined {

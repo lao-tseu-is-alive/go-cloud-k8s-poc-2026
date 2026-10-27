@@ -5,6 +5,8 @@
   import { useAuthStore } from '@/stores/auth'
   import DevTokenForm from './DevTokenForm.vue'
 
+  // compact shows the user's icon only, for a narrow app bar.
+  defineProps<{ compact?: boolean }>()
   const { t } = useI18n()
   const auth = useAuthStore()
   const { isAuthenticated, mode, displayName, me, isAdmin, scopes } = storeToRefs(auth)
@@ -16,7 +18,16 @@
     <!-- Connected: show identity + sign out -->
     <v-menu v-if="isAuthenticated" location="bottom end">
       <template #activator="{ props }">
-        <v-btn v-bind="props" :prepend-icon="isAdmin ? 'mdi-shield-account' : 'mdi-account-circle'" variant="text">
+        <v-btn
+          v-if="compact"
+          v-bind="props"
+          :aria-label="displayName || t('auth.connected')"
+          :icon="isAdmin ? 'mdi-shield-account' : 'mdi-account-circle'"
+          :title="displayName || t('auth.connected')"
+          variant="text"
+        />
+
+        <v-btn v-else v-bind="props" :prepend-icon="isAdmin ? 'mdi-shield-account' : 'mdi-account-circle'" variant="text">
           {{ displayName || t('auth.connected') }}
         </v-btn>
       </template>

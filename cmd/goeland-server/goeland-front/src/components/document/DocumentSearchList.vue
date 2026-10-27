@@ -89,7 +89,6 @@
           v-for="doc in documents"
           :key="doc.subjectRef?.id"
           :class="{ 'text-disabled': doc.recordMetadata?.deletedAt }"
-          role="link"
           style="cursor: pointer"
           tabindex="0"
           @click="openDocument(doc)"
@@ -97,7 +96,7 @@
           @keydown.space.prevent="openDocument(doc)"
         >
           <td>
-            {{ doc.title }}
+            <router-link class="list-link" :to="`/documents/${doc.subjectRef?.id}`" @click.stop>{{ doc.title }}</router-link>
             <v-icon v-if="doc.recordMetadata?.isLocked" icon="mdi-lock" size="x-small" />
           </td>
 

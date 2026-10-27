@@ -99,7 +99,6 @@
           v-for="actor in actors"
           :key="actor.subjectRef?.id"
           :class="{ 'text-disabled': actor.recordMetadata?.deletedAt }"
-          role="link"
           style="cursor: pointer"
           tabindex="0"
           @click="openActor(actor)"
@@ -107,7 +106,7 @@
           @keydown.space.prevent="openActor(actor)"
         >
           <td>
-            {{ actor.displayName }}
+            <router-link class="list-link" :to="`/actors/${actor.subjectRef?.id}`" @click.stop>{{ actor.displayName }}</router-link>
             <v-icon v-if="actor.recordMetadata?.isLocked" icon="mdi-lock" size="x-small" />
           </td>
 

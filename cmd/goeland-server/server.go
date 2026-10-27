@@ -398,12 +398,14 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(listener) }()
-	// The case export and outbox workers stop with serve; serve waits for them to return.
-	workerCtx, stopWorkers := context.WithCancel(ctx)
+	// The case export and outbox workers stop with serve; serve waits for them to
+	// return (deferred calls run last first: stop, then wait).
 	var workers sync.WaitGroup
+	defer workers.Wait()
+	workerCtx, stopWorkers := context.WithCancel(ctx)
+	defer stopWorkers()
 	workers.Go(func() { a.exports.Run(workerCtx) })
 	workers.Go(func() { a.outbox.Run(workerCtx) })
-	defer func() { stopWorkers(); workers.Wait() }()
 
 	select {
 	case err := <-errCh:

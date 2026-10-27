@@ -143,7 +143,7 @@
         label
         size="x-small"
         :title="t('relGroups.activeHint')"
-      >{{ t('relGroups.active', { n: openCount }) }}</v-chip>
+      >{{ t('relGroups.active', openCount) }}</v-chip>
 
       <span class="role-group__count">{{ count }}</span>
     </button>

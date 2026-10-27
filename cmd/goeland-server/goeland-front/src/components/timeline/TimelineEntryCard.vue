@@ -44,7 +44,10 @@
     const counts = meta?.counts
     if (!counts || typeof counts !== 'object') return ''
     return Object.entries(counts as Record<string, unknown>)
-      .map(([k, n]) => `${enumLabel('CirculationResponse', `CIRCULATION_RESPONSE_${k}`)} : ${typeof n === 'number' ? n : ''}`)
+      .map(([k, n]) => {
+        const label = enumLabel('CirculationResponse', `CIRCULATION_RESPONSE_${k}`)
+        return `${label} : ${typeof n === 'number' ? n : ''}`
+      })
       .join(', ')
   }
 

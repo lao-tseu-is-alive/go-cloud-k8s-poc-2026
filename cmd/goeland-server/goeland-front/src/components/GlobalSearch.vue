@@ -10,7 +10,10 @@
 
   // The global search (GLD-064): one field in the app bar over cases, actors,
   // documents and things, suggestions grouped by kind with their counts; "/"
-  // focuses it from anywhere, Enter opens every result.
+  // focuses it from anywhere, Enter opens every result. On a small screen it
+  // takes the whole width of the bar's second row (block).
+  const props = defineProps<{ block?: boolean }>()
+  const emit = defineEmits<{ navigated: [] }>()
   const { t } = useI18n()
   const router = useRouter()
 
@@ -44,6 +47,7 @@
     groups.value = []
     await nextTick()
     field.value?.blur()
+    emit('navigated')
   }
 
   // Enter before the suggestions arrive still opens every result.
@@ -73,6 +77,7 @@
     auto-select-first
     bg-color="surface"
     class="global-search"
+    :class="{ 'global-search--block': props.block }"
     density="compact"
     flat
     hide-details
@@ -80,7 +85,7 @@
     :items="items"
     :loading="loading"
     menu-icon=""
-    :menu-props="{ maxHeight: 'min(75vh, 640px)', minWidth: 420 }"
+    :menu-props="{ maxHeight: 'min(75vh, 640px)', minWidth: props.block ? undefined : 420 }"
     :model-value="null"
     :no-data-text="noDataText"
     no-filter
@@ -115,6 +120,10 @@
   /* The app bar is crowded: a fixed width keeps the query readable. */
   .global-search {
     width: 280px;
+  }
+
+  .global-search--block {
+    width: 100%;
   }
 
   .global-search__key {

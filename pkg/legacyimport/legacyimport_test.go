@@ -122,7 +122,7 @@ func TestGrantRow(t *testing.T) {
 		id    int64
 		right int16
 	}{{"E", 7, 5}, {"E", 8, 1}, {"O", 11, 1}, {"G", 1, 1}, {"X", 1, 1}} {
-		if row := imp.grantRow(caseID, core.SubjectKindCase, left.kind, left.id, left.right, c); row != nil {
+		if imp.grantRow(caseID, core.SubjectKindCase, left.kind, left.id, left.right, c) != nil {
 			t.Errorf("%+v must be left out", left)
 		}
 	}
@@ -139,7 +139,7 @@ func TestContactAndAddressRows(t *testing.T) {
 	if row := imp.contactRow(actorID, 5, "Adresse E-mail", " Someone@Example.org ", c); row == nil || row[1] != int16(actor.ContactTypeEmail) {
 		t.Fatalf("a valid e-mail is imported normalized: %v", row)
 	}
-	if row := imp.contactRow(actorID, 5, "Adresse E-mail", "not an e-mail", c); row != nil {
+	if imp.contactRow(actorID, 5, "Adresse E-mail", "not an e-mail", c) != nil {
 		t.Fatal("an invalid e-mail is left out")
 	}
 	if row := imp.contactRow(actorID, 1, "Téléphone", "021 315 22 22 (secrétariat)", c); row == nil || row[2] != "+41213152222" || row[3] != "secrétariat" {
@@ -148,13 +148,13 @@ func TestContactAndAddressRows(t *testing.T) {
 	if row := imp.contactRow(actorID, 4, "Fax", "021 315 22 23 accueil", c); row == nil || row[2] != "+41213152223" || row[3] != "accueil" {
 		t.Fatalf("a fax followed by free text keeps the number: %v", row)
 	}
-	if row := imp.contactRow(actorID, 1, "Téléphone", "12 (bureau)", c); row != nil {
+	if imp.contactRow(actorID, 1, "Téléphone", "12 (bureau)", c) != nil {
 		t.Fatal("a note does not rescue an invalid number")
 	}
 	if c.Adjusted["phone note moved to the label"] != 2 {
 		t.Fatalf("the moved notes are counted: %v", c.Adjusted)
 	}
-	if row := imp.contactRow(actorID, 19, "IBAN", "CH00", c); row != nil {
+	if imp.contactRow(actorID, 19, "IBAN", "CH00", c) != nil {
 		t.Fatal("bank references are not imported")
 	}
 	if row := imp.contactRow(actorID, 16, "Groupe Conseil Communal", "Groupe A", c); row == nil || row[1] != int16(actor.ContactTypeOther) || row[3] != "Groupe Conseil Communal" {
@@ -171,7 +171,7 @@ func TestContactAndAddressRows(t *testing.T) {
 		{ActorID: 1, Street: "Rue A", PostalCode: "1", Locality: "Ailleurs", Country: "Atlantide"}, // unknown country
 		{ActorID: 2, Street: "Rue A", PostalCode: "1003", Locality: "Lausanne"},                    // actor not imported
 	} {
-		if row := imp.addressRow(bad, countries, c); row != nil {
+		if imp.addressRow(bad, countries, c) != nil {
 			t.Errorf("%+v must be left out", bad)
 		}
 	}

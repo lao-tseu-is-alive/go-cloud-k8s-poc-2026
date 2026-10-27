@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.18.0**.
+Tracked version: **v0.18.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -44,7 +44,7 @@ the City's map (GLD-069) followed the same model in v0.16.0; the labels of unrea
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
 v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) and the list filters by
 period and creator (GLD-074) in v0.17.0; the document page on the same model (GLD-075) in
-v0.17.1; the transactional outbox (GLD-028) in v0.18.0.
+v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and quick fixes in v0.18.1.
 
 ## Cross-cutting quality
 

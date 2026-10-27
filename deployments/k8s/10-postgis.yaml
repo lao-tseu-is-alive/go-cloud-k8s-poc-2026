@@ -20,6 +20,8 @@ spec:
         app.kubernetes.io/name: postgis
         app.kubernetes.io/part-of: goeland-poc
     spec:
+      # PostgreSQL never calls the Kubernetes API: no service account token in the pod.
+      automountServiceAccountToken: false
       containers:
         - name: postgis
           image: postgis/postgis:17-3.5@sha256:01a6a70e41e6c4467c8f55f6063555ed72db2d6662cd0d571040d42eadaeb6f6
@@ -43,8 +45,9 @@ spec:
               command: ["pg_isready", "-U", "goeland", "-d", "goeland"]
             periodSeconds: 5
           resources:
-            requests: { cpu: 100m, memory: 128Mi }
-            limits: { cpu: "1", memory: 512Mi }
+            # ephemeral-storage covers the emptyDir data volume of this smoke-test database.
+            requests: { cpu: 100m, memory: 128Mi, ephemeral-storage: 256Mi }
+            limits: { cpu: "1", memory: 512Mi, ephemeral-storage: 2Gi }
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data

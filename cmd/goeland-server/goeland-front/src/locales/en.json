@@ -339,6 +339,7 @@
     "language": "Language"
   },
   "globalSearch": {
+    "close": "Close the search",
     "label": "Global search",
     "placeholder": "Search a case, an actor…",
     "shortcut": "Shortcut: /",
@@ -389,6 +390,8 @@
     "createdBy": "Created by"
   },
   "nav": {
+    "menu": "Menu",
+    "language": "Language",
     "groups": "Groups",
     "myTasks": "My tasks",
     "orgUnits": "Units",
@@ -843,7 +846,7 @@
     "empty": "No readable relationship.",
     "links": "no link | {n} link | {n} links",
     "roles": "no role | {n} role | {n} roles",
-    "active": "{n} active",
+    "active": "none active | {n} active | {n} active",
     "activeHint": "Cases not closed (open, in progress or suspended)",
     "noMatch": "Nothing matches.",
     "shown": "{shown} of {total} shown",

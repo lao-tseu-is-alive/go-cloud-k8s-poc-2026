@@ -52,10 +52,11 @@
         v-model="filters.query"
         clearable
         density="compact"
-        hide-details
+        hide-details="auto"
+        :hint="t('pages.cases.list.queryHint')"
         :label="t('fields.search.query')"
+        persistent-hint
         prepend-inner-icon="mdi-magnify"
-        :title="t('pages.cases.list.queryHint')"
         @keydown.enter="search"
       />
     </v-col>
@@ -102,7 +103,6 @@
           v-for="c in cases"
           :key="c.subjectRef?.id"
           :class="{ 'text-disabled': c.recordMetadata?.deletedAt }"
-          role="link"
           style="cursor: pointer"
           tabindex="0"
           @click="openCase(c)"
@@ -112,7 +112,7 @@
           <td class="text-no-wrap">{{ c.subjectRef?.businessRef || '—' }}</td>
 
           <td>
-            {{ c.title }}
+            <router-link class="list-link" :to="`/cases/${c.subjectRef?.id}`" @click.stop>{{ c.title }}</router-link>
             <v-icon v-if="c.recordMetadata?.isLocked" icon="mdi-lock" size="x-small" />
           </td>
 

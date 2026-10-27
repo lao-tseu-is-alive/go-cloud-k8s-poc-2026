@@ -12,7 +12,7 @@ func TestCapTotal(t *testing.T) {
 	if total, capped := CapTotal(CountLimit); total != MaxCountedTotal || !capped {
 		t.Fatalf("one more match is reported as a lower bound: %d %v", total, capped)
 	}
-	if next := NextPageToken(MaxCountedTotal-20, 20, MaxCountedTotal); next != "" {
+	if NextPageToken(MaxCountedTotal-20, 20, MaxCountedTotal) != "" {
 		t.Fatal("paging stops at the cap")
 	}
 }

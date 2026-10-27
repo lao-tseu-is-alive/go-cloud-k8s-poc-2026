@@ -53,10 +53,11 @@
         v-model="filters.query"
         clearable
         density="compact"
-        hide-details
+        hide-details="auto"
+        :hint="t('pages.things.list.queryHint')"
         :label="t('fields.search.query')"
+        persistent-hint
         prepend-inner-icon="mdi-magnify"
-        :title="t('pages.things.list.queryHint')"
         @keydown.enter="search"
       />
     </v-col>
@@ -91,14 +92,13 @@
           v-for="th in things"
           :key="th.subjectRef?.id"
           :class="{ 'text-disabled': th.recordMetadata?.deletedAt }"
-          role="link"
           style="cursor: pointer"
           tabindex="0"
           @click="openThing(th)"
           @keydown.enter="openThing(th)"
           @keydown.space.prevent="openThing(th)"
         >
-          <td>{{ th.name }}</td>
+          <td><router-link class="list-link" :to="`/things/${th.subjectRef?.id}`" @click.stop>{{ th.name }}</router-link></td>
           <td>{{ th.thingType?.label ?? th.thingType?.code }}</td>
           <td>{{ identifier(th) }}</td>
           <td>{{ th.areaM2 ? `${Math.round(th.areaM2)} m²` : '—' }}</td>

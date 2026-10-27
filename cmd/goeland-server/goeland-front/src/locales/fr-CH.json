@@ -339,6 +339,7 @@
     "language": "Langue"
   },
   "globalSearch": {
+    "close": "Fermer la recherche",
     "label": "Recherche globale",
     "placeholder": "Rechercher une affaire, un acteur…",
     "shortcut": "Raccourci : /",
@@ -389,6 +390,8 @@
     "createdBy": "Créé par"
   },
   "nav": {
+    "menu": "Menu",
+    "language": "Langue",
     "groups": "Groupes",
     "myTasks": "Mes tâches",
     "orgUnits": "Unités",
@@ -843,7 +846,7 @@
     "empty": "Aucune relation lisible.",
     "links": "aucun lien | {n} lien | {n} liens",
     "roles": "aucun rôle | {n} rôle | {n} rôles",
-    "active": "{n} actives",
+    "active": "aucune active | {n} active | {n} actives",
     "activeHint": "Affaires non clôturées (ouvertes, en cours ou suspendues)",
     "noMatch": "Aucun élément ne correspond.",
     "shown": "{shown} sur {total} affichés",

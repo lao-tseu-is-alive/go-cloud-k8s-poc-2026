@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.18.0**.
+Tracked version: **v0.18.1**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -459,7 +459,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point; declares the Vuetify cascade layer order before any stylesheet.
 - `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint, test).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
-- `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: navigation, locale switch, auth controls, snackbar.
+- `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: responsive app bar (labels, icons, or a drawer and a search row on small screens), locale switch, auth controls, snackbar; dates follow the interface language.
 - `cmd/goeland-server/goeland-front/src/api/accessClient.ts` — REST client for `AccessService` (my access, grants, groups and members) and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
@@ -603,6 +603,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/navigation.test.ts` — Vitest unit test of the navigation entries shown to administrators only.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/routeFilters.test.ts` — Vitest unit tests of the list filters in the URL.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/documents.test.ts` — Vitest unit tests of the document icon and download helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/globalSearch.test.ts` — Vitest unit tests of the global search suggestions and routes.
@@ -618,6 +619,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/lausanneMap.ts` — City of Lausanne maps: LV95 projection, WMTS base layers from the capabilities, extent, map application link (GLD-069).
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
+- `cmd/goeland-server/goeland-front/src/utils/navigation.ts` — The main navigation, one list for the app bar and the mobile drawer (main modules flagged to keep their label).
 - `cmd/goeland-server/goeland-front/src/utils/routeFilters.ts` — A list's filters in the URL: read, write, compare, count the active ones; the shared record filter keys (GLD-074).
 - `cmd/goeland-server/goeland-front/src/utils/globalSearch.ts` — Global search suggestions grouped by kind, the results and filtered-list routes (GLD-064).
 - `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).

@@ -8,6 +8,31 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.18.1] - 2026-10-27
+
+The app bar works on phones and tablets, plus quick fixes (dates in the interface language, list
+hints and links) and quality clean-ups. No migration, no API change.
+
+### Fixed
+
+- The app bar works on a phone or a tablet: below the large breakpoint the modules move to a
+  drawer behind a menu button and the global search opens on a second row of the bar (it was
+  hidden, and the module buttons too). On a large screen the secondary modules show their icon
+  only, so the title no longer ends in an ellipsis.
+- Dates follow the interface language (FR/EN switch) instead of the browser's, day first in English
+  too.
+- « 1 actives » on the relationship groups: the count takes the singular.
+- The search hints of the case and object lists (reference, parcel number, EGRID, EGID) show again
+  under the field; GLD-074 had reduced them to a tooltip.
+
+### Changed
+
+- The name in a list row is a real link (keyboard, middle click, new tab) rather than a row with a
+  link role.
+- Quality: SonarCloud no longer applies the cognitive complexity rule to Go tests (the local gate
+  never did), plus small clean-ups; the k8s smoke manifests set ephemeral storage requests and
+  limits, and the PostGIS pod no longer mounts a service account token.
+
 ## [0.18.0] - 2026-10-27
 
 Transactional outbox (GLD-028): every audit event is announced to the outbox consumers, with an

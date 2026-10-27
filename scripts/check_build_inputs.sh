@@ -55,6 +55,7 @@ while IFS=: read -r file _ action; do
     action="$(printf '%s' "${action}" | sed -E 's/^[[:space:]]*(-[[:space:]]*)?uses:[[:space:]]*//; s/[[:space:]]*(#.*)?$//')"
     case "${action}" in
         actions/* | github/* | ./*) continue ;;
+        *) ;; # a third-party action: checked below
     esac
     if ! [[ "${action}" =~ @[0-9a-f]{40}$ ]]; then
         fail "${file}: action ${action} is not pinned by commit SHA"

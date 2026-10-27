@@ -3,7 +3,7 @@ import { nextSort, sortRows, toOrderBy } from '../listSort'
 
 describe('listSort', () => {
   it('turns a sort into order_by', () => {
-    expect(toOrderBy(undefined)).toBeUndefined()
+    expect(toOrderBy()).toBeUndefined()
     expect(toOrderBy({ field: 'title', desc: false })).toBe('title')
     expect(toOrderBy({ field: 'title', desc: true })).toBe('title desc')
   })
