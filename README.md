@@ -43,6 +43,9 @@ release gate.
   `VanguardServices()` so it can run standalone or be composed into one shared
   `http.Server` / DB pool / transcoder / auth verifier.
 - **Embedded, dbmate-compatible migrations** (numbered, commented).
+- **Transactional outbox**: every change is announced to background consumers (search index,
+  notifications, ...) reliably, through a table written in the same transaction; see
+  "Change events" below.
 - **PostGIS** from the first migration: things carry a `geometry(Geometry, 2056)` (LV95)
   column with a GIST index (migration `0016`).
 - **Auth** reuses the ecosystem's `authadapter` (JWT from `go-cloud-k8s-auth` +
@@ -62,6 +65,7 @@ Transversal core (`pkg/core`):
 | `subject_ref`          | Canonical identity of every subject (one row per Case/Document/Thing/Actor) |
 | `record_metadata`      | 1:1 governance: ownership, confidentiality, soft-delete, locking, versioning |
 | `audit_event`          | Append-only probative history (written on every mutation) |
+| `outbox_event`         | One announcement per audit event, delivered to the consumers then purged (GLD-028) |
 | `relationship_type`    | Catalogue of allowed typed edges (with source/target kind constraints) |
 | `subject_relationship` | Actual typed, validated, soft-deletable graph edges |
 
@@ -101,6 +105,52 @@ production role vocabulary grows with the Case/Thing slices.
 
 Every mutation is **non-destructive** (logical delete via `record_metadata.deleted_at`)
 and writes an `audit_event`. Finalizing/locking a document makes it immutable.
+
+## Change events (transactional outbox)
+
+Other parts of the system need to know when something changes: a search index must follow a
+renamed case, a notification must leave when a task is assigned, an AI assistant may propose the
+next step. Saving to the database and then calling such a system cannot be made atomic: if the
+call fails after the commit, the change is never announced; if the transaction fails after the
+call, a change that never happened is. This is the *dual write* problem.
+
+The outbox solves it inside PostgreSQL (GLD-028, spec v2 §38):
+
+```text
+request ──► one PostgreSQL transaction ─────────────┐
+            ├─ UPDATE case_file ...                 │  all or nothing
+            ├─ INSERT audit_event (who, what, why)  │
+            └─ INSERT outbox_event (CASE_UPDATED)  ─┘
+                          │  pg_notify on commit
+            outbox worker (every replica, SKIP LOCKED)
+                          │
+      ┌───────────────────┼────────────────────┬──────────────────┐
+  search indexer     notifications       AI proposals      NATS / Kafka bridge
+  (planned)          (planned)           (GLD-030)         (if other apps subscribe)
+```
+
+- **Every change, by construction.** `core.InsertAuditEventTx`, the one place that writes the
+  audit, also writes the outbox event: a committed change is always announced, a rolled-back
+  one never is, and a new mutation needs no extra code.
+- **A reference, not a copy.** An event names the subject, the event type (the audit type, e.g.
+  `CASE_UPDATED`) and the audit event; a consumer reads the current state itself, so nothing
+  confidential is copied and late or duplicate deliveries do no harm.
+- **Delivered at least once.** A worker on every replica claims the due events (`FOR UPDATE SKIP
+  LOCKED`, so replicas share the queue), is woken by `pg_notify` within milliseconds and polls as
+  a fallback. A refused event is retried after 10 s, 1 min, 6 min, 36 min then hourly, and given
+  up after 10 attempts. Consumers (`core.OutboxConsumer`) must therefore be idempotent.
+- **Visible and recoverable.** Administration › Outbox shows the pending, given-up and kept
+  events, each consumer's failures and the last errors, and replays given-up events
+  (`GET /api/outbox`, `POST /api/outbox:replay`, administrators only).
+- **Short-lived.** Delivered events are purged after `GOELAND_OUTBOX_RETENTION_DAYS` (default 7);
+  the audit, not the outbox, is the permanent history. This is not event sourcing: the tables
+  remain the truth.
+
+Settings: `GOELAND_OUTBOX_RETENTION_DAYS` (1-365, default 7), `GOELAND_OUTBOX_POLL_SECONDS` (default
+5), `GOELAND_OUTBOX_LOG=true` to log every event. No business consumer is registered yet: the search
+indexer (a Meilisearch trial, for typo-tolerant search over descriptions and document content) and
+the notifications are the next ones. A message broker such as NATS or Kafka would be one more
+consumer, not a replacement: the outbox is what makes publishing to it reliable.
 
 ## Project structure
 
