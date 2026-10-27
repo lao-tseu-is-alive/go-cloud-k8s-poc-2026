@@ -148,6 +148,14 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	opened, err := core.ParseDateRange(req.Msg.OpenedFrom, req.Msg.OpenedTo)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	record, err := core.ParseRecordFilter(req.Msg.CreatedFrom, req.Msg.CreatedTo, req.Msg.CreatedBy)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
 	result, err := s.service.Search(ctx, SearchFilter{
 		OrderBy:        req.Msg.OrderBy,
 		Viewer:         viewer,
@@ -155,6 +163,8 @@ func (s *ConnectServer) SearchCases(ctx context.Context, req *connect.Request[go
 		CaseTypeCode:   req.Msg.CaseTypeCode,
 		Status:         Status(req.Msg.Status),
 		IncludeDeleted: req.Msg.IncludeDeleted,
+		Opened:         opened,
+		Record:         record,
 		Limit:          int(req.Msg.PageSize),
 		Offset:         offset,
 	})

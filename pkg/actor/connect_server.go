@@ -165,6 +165,10 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, connect.NewError(connect.CodeInvalidArgument, err)
 	}
+	record, err := core.ParseRecordFilter(req.Msg.CreatedFrom, req.Msg.CreatedTo, req.Msg.CreatedBy)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
 	result, err := s.service.Search(ctx, SearchFilter{
 		OrderBy:             req.Msg.OrderBy,
 		Viewer:              viewer,
@@ -173,6 +177,7 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 		OrganizationCatCode: req.Msg.OrganizationCategoryCode,
 		OnlyActive:          req.Msg.OnlyActive,
 		IncludeDeleted:      req.Msg.IncludeDeleted,
+		Record:              record,
 		Limit:               int(req.Msg.PageSize),
 		Offset:              offset,
 	})

@@ -190,6 +190,8 @@ type SearchFilter struct {
 	BBox *BBox
 	// IncludeDeleted also returns soft-deleted things.
 	IncludeDeleted bool
+	// Record filters on the creation day and creator (GLD-074).
+	Record core.RecordFilter
 	// Limit is the page size, normalized by the service.
 	Limit int
 	// Offset is the zero-based number of rows to skip.

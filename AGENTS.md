@@ -181,7 +181,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0032 (dbmate format)
+  │   └── db/migrations/     0001..0033 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -337,8 +337,16 @@ tiles; their origin is in the CSP (`headers.go`), keep both in sync.
 new kind is searchable without code; `idx_subject_ref_search` (migration `0032`) indexes it per kind
 and `core.subjectSearchVectorSQL` must stay identical to its expression. Every text search matches the
 start of each word through `core.PrefixTSQuery` / `core.TextMatchSQL` (`@text_query`): use them in a
-new search instead of `plainto_tsquery`. The SPA field is `components/GlobalSearch.vue`; list pages
-read `?q=` with `useRouteQueryText`.
+new search instead of `plainto_tsquery`. The SPA field is `components/GlobalSearch.vue`; the results
+page shows one tab per kind holding that kind's list.
+
+**List filters (GLD-074):** the case, document, actor and thing lists are components
+(`components/<kind>/<Kind>SearchList.vue`) shared by the module page and the `/search` tabs. They run
+on `usePagedSearch`, which keeps the filters in the URL (`utils/routeFilters.ts`, text as `q`, each
+search a history entry), and lay out their filters in `SearchFilterCard` (secondary ones behind
+« Plus de filtres »). Every list filters on the creation day and creator (`core.RecordFilter`,
+`RecordFilterFields.vue`; `created_by` is indexed, migration `0033`), cases also on their opening day
+and documents on their official date (`core.DateRange`, days in Europe/Zurich). A new list reuses them.
 
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its

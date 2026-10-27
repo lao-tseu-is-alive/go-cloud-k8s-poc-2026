@@ -358,6 +358,15 @@
       "SUBJECT_KIND_GROUP": "Groupes"
     }
   },
+  "filters": {
+    "more": "Plus de filtres",
+    "from": "{label} du",
+    "to": "au",
+    "opened": "Ouverture",
+    "official": "Date officielle",
+    "created": "Création",
+    "createdBy": "Créé par"
+  },
   "nav": {
     "groups": "Groupes",
     "myTasks": "Mes tâches",

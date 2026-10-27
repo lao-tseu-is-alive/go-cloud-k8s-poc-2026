@@ -270,6 +270,14 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, err
 	}
+	official, err := core.ParseDateRange(req.Msg.OfficialFrom, req.Msg.OfficialTo)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	record, err := core.ParseRecordFilter(req.Msg.CreatedFrom, req.Msg.CreatedTo, req.Msg.CreatedBy)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
 	result, err := s.service.Search(ctx, SearchFilter{
 		OrderBy:            req.Msg.OrderBy,
 		Viewer:             viewer,
@@ -281,6 +289,8 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 		OnlyRecords:        req.Msg.OnlyRecords,
 		OnlyFinal:          req.Msg.OnlyFinal,
 		IncludeDeleted:     req.Msg.IncludeDeleted,
+		Official:           official,
+		Record:             record,
 		Limit:              int(req.Msg.PageSize),
 		Offset:             offset,
 	})

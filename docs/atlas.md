@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.16.2**.
+Tracked version: **v0.17.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -220,6 +220,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and sensitive read audit rows, shared by the access and case domains.
 - `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
 - `pkg/core/subject_search.go` — Global search (GLD-064): `SearchSubjects` over `subject_ref` per kind (label and business reference, start of every word, readable only), best subjects and a capped count per kind.
+- `pkg/core/recordfilter.go` — List filters shared by the domain searches: `DateRange` (days in Europe/Zurich, `DayRangeSQL` / `TimeRangeSQL`) and `RecordFilter` (creation day and creator, `RecordFilterSQL`) (GLD-074).
+- `pkg/core/recordfilter_test.go` — Unit tests of the date range parsing and the record filter arguments.
 - `pkg/core/textsearch.go` — Text query helpers: `QueryWords`, `PrefixTSQuery` (start-of-word tsquery, quoted words) and `TextMatchSQL`, shared by every search (GLD-064).
 - `pkg/core/textsearch_test.go` — Tests the word split and the start-of-word tsquery (punctuation, accents, injection, bound).
 - `pkg/core/strictjson.go` — Strict JSON codecs (Connect and Vanguard REST) refusing request bodies with unknown fields.
@@ -282,6 +284,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
 - `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
 - `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
+- `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
 - `pkg/core/module/db/migrations/0017_timeline.sql` — Schema migration: `case_timeline_entry` (lifecycle stamps, same-case corrections) and `timeline_document_link` (pinned version), with immutability triggers.
@@ -487,11 +490,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorContactsPanel.vue` — Read-only display of an actor's complements, formatted, with tel:/mailto:/web links.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorKindSelect.vue` — Person/organization kind selector.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorMainForm.vue` — Actor create/edit form with kind-specific sections and hints (usual name, legal name, name complement).
-- `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchFilters.vue` — Actor search filter bar.
+- `cmd/goeland-server/goeland-front/src/components/actor/ActorSearchList.vue` — The actor list with its filters (kind, category, creation, creator), shared by the actor page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseExportPanel.vue` — Case export panel: request with a reason, the caller's exports refreshed while building, download of a ready archive.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
+- `cmd/goeland-server/goeland-front/src/components/case/CaseSearchList.vue` — The case list with its filters (type, status, opening, creation, creator), shared by the case page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
 - `cmd/goeland-server/goeland-front/src/components/case/caseForm.ts` — Case form model, status list and the client mirror of the transition table.
 - `cmd/goeland-server/goeland-front/src/components/circulation/CaseCirculationsPanel.vue` — Case circulations panel: recipients by step with their answer, answer and cancel actions, open count for the closure rule.
@@ -523,18 +527,23 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
 - `cmd/goeland-server/goeland-front/src/components/thing/LausanneMap.vue` — An object on the City of Lausanne's maps (WMTS base layers, view fitted), outline fallback (GLD-069).
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingMainForm.vue` — Thing fields: detail block per specialization, texts and geometry with live preview.
+- `cmd/goeland-server/goeland-front/src/components/thing/ThingSearchList.vue` — The thing list with its filters (type, creation, creator), shared by the thing page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/thing/ThingTypeSelect.vue` — Thing type selector bound to the code, emitting the selected type.
 - `cmd/goeland-server/goeland-front/src/components/thing/thingForm.ts` — Thing form model and its mapping to create / update requests.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectIdentityCard.vue` — Subject identity summary card, including the business reference.
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectRolesPanel.vue` — A subject's relationships by kind then role, titled from the subject on screen and counted (GLD-063).
+- `cmd/goeland-server/goeland-front/src/components/core/DateRangeFields.vue` — A period filter « du / au » as two YYYY-MM-DD day fields (GLD-074).
+- `cmd/goeland-server/goeland-front/src/components/core/PagedListFooter.vue` — Foot of a paged list: rows shown out of the capped total, next page, progress.
+- `cmd/goeland-server/goeland-front/src/components/core/RecordFilterFields.vue` — The creation period and creator filters every list shares (GLD-074).
+- `cmd/goeland-server/goeland-front/src/components/core/SearchFilterCard.vue` — Filter panel of a list: main filters, the others behind « Plus de filtres », Search and Reset (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and download panel for the current version's content.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentMetadataForm.vue` — Mutable document metadata form shared by create and edit.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentRelationshipsPanel.vue` — Presentational document relationships panel.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchFilters.vue` — Document search filter bar.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchList.vue` — The document list with its filters (type, official date, creation, creator, options), shared by the document page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentTypeSelect.vue` — Document type selector bound to the type code.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the registered content (blob id, digest, reuse flag).
@@ -546,22 +555,22 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/composables/useAppInfo.ts` — The running server version from `/goAppInfo`, shown in the app bar and the user menu (GLD-063).
 - `cmd/goeland-server/goeland-front/src/composables/usePagedRelationships.ts` — The relationships of a subject in both directions, loaded page by page with totals and "load more" (GLD-053) and sorted on the server (GLD-056).
 - `cmd/goeland-server/goeland-front/src/composables/useDebouncedSearch.ts` — A search run while typing: debounced, the request in flight cancelled, errors reported.
-- `cmd/goeland-server/goeland-front/src/composables/useRouteQueryText.ts` — Seeds a list page's text filter from `?q=` and searches again on a new one (GLD-064).
+- `cmd/goeland-server/goeland-front/src/composables/usePagedSearch.ts` — State of a paged list: filters kept in the URL, server sort, pages, capped total; a URL change searches again (GLD-074).
 - `cmd/goeland-server/goeland-front/src/composables/useI18nEnum.ts` — Display-only translation of enum codes.
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
-- `cmd/goeland-server/goeland-front/src/pages/SearchResultsPage.vue` — Every result of the global search: per kind the best subjects and a link to the filtered list (GLD-064).
+- `cmd/goeland-server/goeland-front/src/pages/SearchResultsPage.vue` — Every result of the global search: one tab per kind with its count, holding the kind's list and filters (GLD-064, GLD-074).
 - `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log, the application roles and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
-- `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor list page: title, creation button and `ActorSearchList`.
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseCreatePage.vue` — Case creation page (type, title, optional explicit reference).
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseDetailPage.vue` — Case detail, edit, status transitions with reason, relationships, soft delete, governance and audit page.
-- `cmd/goeland-server/goeland-front/src/pages/cases/CaseListPage.vue` — Case search and list page with status and type filters.
+- `cmd/goeland-server/goeland-front/src/pages/cases/CaseListPage.vue` — Case list page: title, creation button and `CaseSearchList`.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
-- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document search and list page.
+- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document list page: title, creation button and `DocumentSearchList`.
 - `cmd/goeland-server/goeland-front/src/pages/groups/GroupDetailPage.vue` — Security group page: members (add, remove), edit, archive, its grants and audit.
 - `cmd/goeland-server/goeland-front/src/pages/groups/GroupListPage.vue` — Security groups list with search, archived filter and creation.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingCreatePage.vue` — Thing creation page (type, details, geometry).
@@ -569,7 +578,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
 - `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
-- `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing search and list page (text, type).
+- `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing list page: title, creation button and `ThingSearchList`.
 - `cmd/goeland-server/goeland-front/src/plugins/README.md` — Scaffold note on the plugins folder.
 - `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
 - `cmd/goeland-server/goeland-front/src/plugins/index.ts` — Registers Vuetify, Pinia, router and i18n on the app.
@@ -587,6 +596,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/routeFilters.test.ts` — Vitest unit tests of the list filters in the URL.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/globalSearch.test.ts` — Vitest unit tests of the global search suggestions and routes.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/listSort.test.ts` — Vitest unit tests of the list sort helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/roleHeadings.test.ts` — Vitest unit tests of the relationship headings: viewpoints, French contractions, plurals, fallbacks.
@@ -599,6 +609,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/lausanneMap.ts` — City of Lausanne maps: LV95 projection, WMTS base layers from the capabilities, extent, map application link (GLD-069).
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
+- `cmd/goeland-server/goeland-front/src/utils/routeFilters.ts` — A list's filters in the URL: read, write, compare, count the active ones; the shared record filter keys (GLD-074).
 - `cmd/goeland-server/goeland-front/src/utils/globalSearch.ts` — Global search suggestions grouped by kind, the results and filtered-list routes (GLD-064).
 - `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.

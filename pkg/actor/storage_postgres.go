@@ -233,7 +233,7 @@ type actorListRow struct {
 
 // Search runs accent-insensitive + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, core.SortedQuery(searchActorsSQL, filter.Sort, defaultActorSort), filter.Viewer.AddTo(pgx.NamedArgs{
+	rows, err := r.pool.Query(ctx, core.SortedQuery(searchActorsSQL, filter.Sort, defaultActorSort), filter.Record.AddTo(filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":     core.CountLimit,
 		"query":           filter.Query,
 		"text_query":      core.PrefixTSQuery(filter.Query),
@@ -243,7 +243,7 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		"include_deleted": filter.IncludeDeleted,
 		"limit":           filter.Limit,
 		"offset":          filter.Offset,
-	}))
+	})))
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search actors: %w", err)
 	}

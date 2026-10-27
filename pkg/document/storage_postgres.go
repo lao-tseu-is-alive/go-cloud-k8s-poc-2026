@@ -635,7 +635,7 @@ type documentListRow struct {
 
 // Search runs full-text + filtered search and hydrates the results.
 func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (SearchResult, error) {
-	rows, err := r.pool.Query(ctx, documentSearchSQL(filter), filter.Viewer.AddTo(pgx.NamedArgs{
+	args := filter.Record.AddTo(filter.Official.AddTo(filter.Viewer.AddTo(pgx.NamedArgs{
 		"count_limit":         core.CountLimit,
 		"query":               filter.Query,
 		"text_query":          core.PrefixTSQuery(filter.Query),
@@ -649,7 +649,8 @@ func (r *PostgresRepository) Search(ctx context.Context, filter SearchFilter) (S
 		"limit":               filter.Limit,
 		"offset":              filter.Offset,
 		"scan_window":         core.ScanWindow,
-	}))
+	}), "official"))
+	rows, err := r.pool.Query(ctx, documentSearchSQL(filter), args)
 	if err != nil {
 		return SearchResult{}, fmt.Errorf("search documents: %w", err)
 	}

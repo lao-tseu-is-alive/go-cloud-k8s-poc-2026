@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.16.2**.
+Tracked version: **v0.17.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -42,7 +42,8 @@ the strict JSON fix (GLD-065) and the import fixes for phone numbers with a note
 document families (GLD-067) shipped in v0.15.0; the case page (GLD-068) and the object page with
 the City's map (GLD-069) followed the same model in v0.16.0; the labels of unreadable subjects
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
-v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; next the global search (GLD-064).
+v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) and the list filters by
+period and creator (GLD-074) in v0.17.0.
 
 ## Cross-cutting quality
 
@@ -510,12 +511,18 @@ categories with their counts. Mockup with the decisions:
   LV95, a link to open the City's map there). Outside the City's tiles or when they fail, the SVG
   outline stays. The CSP allows `https://tilesmn95.lausanne.ch` (images, capabilities). Done
   2026-10-15.
-- [~] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
+- [x] **GLD-064 — Global search**: one search field in the app bar over cases (reference, title),
   documents, actors and things, results grouped by kind with counts, only what the caller may read
   (the existing searches first; Meilisearch later), "/" to focus it. Built 2026-10-27:
   `CoreService.SearchSubjects` over `subject_ref` (label and business reference, one per-kind index,
   migration `0032`, 20-200 ms on the 3.1M imported subjects), counts capped at 500, the app bar field
   with grouped suggestions and a results page; every search now matches the start of each word.
+  Released in v0.17.0.
+- [x] **GLD-074 — List filters by period and creator**: asked on the GLD-064 results page: each kind's
+  list with all its filters in a tab, plus periods « du / au » (case opening, document official date,
+  record creation for every list) and the creator. Built 2026-10-27: `core.DateRange` /
+  `core.RecordFilter` in the four searches, migration `0033` (`created_by` indexes, measured 1-6 ms
+  for a creator against up to 100 ms without), shared list components with the filters in the URL. Released in v0.17.0.
 - [x] **GLD-067 — Document families lost by the import**: found on the pilot (2,481 documents of an
   organization all typed "Document Goéland"): the import gave the 2.3M documents one generic type
   and ignored the legacy family (`doc_family`, 114 entries, every document has one), the business

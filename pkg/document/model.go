@@ -294,6 +294,10 @@ type SearchFilter struct {
 	OnlyFinal bool
 	// IncludeDeleted also returns soft-deleted documents.
 	IncludeDeleted bool
+	// Official keeps the documents whose official date falls on these days (GLD-074).
+	Official core.DateRange
+	// Record filters on the creation day and creator (GLD-074).
+	Record core.RecordFilter
 	// Limit is the page size, normalized to [1, core.MaxPageSize].
 	Limit int
 	// Offset is the zero-based number of rows to skip; negative becomes 0.

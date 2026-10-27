@@ -1186,7 +1186,16 @@ type SearchThingsRequest struct {
 	PageToken string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
 	// name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
-	OrderBy       string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// created_from keeps the things created on or after this day (YYYY-MM-DD,
+	// Europe/Zurich); empty means unbounded.
+	CreatedFrom string `protobuf:"bytes,8,opt,name=created_from,json=createdFrom,proto3" json:"created_from,omitempty"`
+	// created_to keeps the things created on or before this day (YYYY-MM-DD,
+	// Europe/Zurich); empty means unbounded.
+	CreatedTo string `protobuf:"bytes,9,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
+	// created_by keeps the things created by this internal user (User.id);
+	// empty means anyone.
+	CreatedBy     string `protobuf:"bytes,10,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1266,6 +1275,27 @@ func (x *SearchThingsRequest) GetPageToken() string {
 func (x *SearchThingsRequest) GetOrderBy() string {
 	if x != nil {
 		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *SearchThingsRequest) GetCreatedFrom() string {
+	if x != nil {
+		return x.CreatedFrom
+	}
+	return ""
+}
+
+func (x *SearchThingsRequest) GetCreatedTo() string {
+	if x != nil {
+		return x.CreatedTo
+	}
+	return ""
+}
+
+func (x *SearchThingsRequest) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
 	}
 	return ""
 }
@@ -1901,7 +1931,7 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\x0especialization\"y\n" +
 	"\x13UpdateThingResponse\x12'\n" +
 	"\x05thing\x18\x01 \x01(\v2\x11.goeland.v1.ThingR\x05thing\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xbe\x02\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xf9\x03\n" +
 	"\x13SearchThingsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12/\n" +
 	"\x0fthing_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\rthingTypeCode\x12\x1b\n" +
@@ -1911,7 +1941,13 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
 	"\n" +
 	"page_token\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
-	"\border_by\x18\a \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xb4\x01\n" +
+	"\border_by\x18\a \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\x12I\n" +
+	"\fcreated_from\x18\b \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\vcreatedFrom\x12E\n" +
+	"\n" +
+	"created_to\x18\t \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
+	"\n" +
+	"created_by\x18\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xb4\x01\n" +
 	"\x14SearchThingsResponse\x12)\n" +
 	"\x06things\x18\x01 \x03(\v2\x11.goeland.v1.ThingR\x06things\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

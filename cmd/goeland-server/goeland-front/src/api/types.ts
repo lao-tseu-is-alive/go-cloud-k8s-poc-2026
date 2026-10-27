@@ -231,6 +231,10 @@ export interface SearchActorsParams {
   organizationCategoryCode?: string
   onlyActive?: boolean
   includeDeleted?: boolean
+  /** Creation day bounds, YYYY-MM-DD in Europe/Zurich, and creator (GLD-074). */
+  createdFrom?: string
+  createdTo?: string
+  createdBy?: string
   pageSize?: number
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
@@ -370,6 +374,13 @@ export interface SearchDocumentsParams {
   onlyRecords?: boolean
   onlyFinal?: boolean
   includeDeleted?: boolean
+  /** Official date bounds, YYYY-MM-DD (GLD-074). */
+  officialFrom?: string
+  officialTo?: string
+  /** Creation day bounds, YYYY-MM-DD in Europe/Zurich, and creator (GLD-074). */
+  createdFrom?: string
+  createdTo?: string
+  createdBy?: string
   pageSize?: number
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
@@ -539,6 +550,13 @@ export interface SearchCasesParams {
   caseTypeCode?: string
   status?: CaseStatus
   includeDeleted?: boolean
+  /** Opening day bounds, YYYY-MM-DD in Europe/Zurich (GLD-074). */
+  openedFrom?: string
+  openedTo?: string
+  /** Creation day bounds, YYYY-MM-DD in Europe/Zurich, and creator (GLD-074). */
+  createdFrom?: string
+  createdTo?: string
+  createdBy?: string
   pageSize?: number
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
@@ -740,6 +758,10 @@ export interface SearchThingsParams {
   thingTypeCode?: string
   bbox?: string
   includeDeleted?: boolean
+  /** Creation day bounds, YYYY-MM-DD in Europe/Zurich, and creator (GLD-074). */
+  createdFrom?: string
+  createdTo?: string
+  createdBy?: string
   pageSize?: number
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */

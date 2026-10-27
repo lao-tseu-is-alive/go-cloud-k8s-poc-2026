@@ -3,10 +3,12 @@ package integration
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 )
 
 // searchSubjects runs a global search and returns the groups by kind.
@@ -95,6 +97,92 @@ func TestGlobalSearch(t *testing.T) {
 	for _, g := range searchSubjects(t, env, core.SubjectSearchFilter{Viewer: operator, Query: " -- "}) {
 		if g.Total != 0 || len(g.Subjects) != 0 {
 			t.Fatalf("a query without a word finds nothing: %+v", g)
+		}
+	}
+}
+
+// TestListFilters covers GLD-074: the case, document and actor searches
+// filter on the creator and the creation day (Europe/Zurich), cases on their
+// opening day and documents on their official date.
+func TestListFilters(t *testing.T) {
+	env := newTestEnv(t)
+	token := uniqueToken()
+	operator := viewerOf(t, env, testOperator)
+	other := newUser(t, env, "Rita Filtre")
+	zurich, err := time.LoadLocation(core.BusinessRefPeriodTimeZone)
+	if err != nil {
+		t.Fatal(err)
+	}
+	today := time.Now().In(zurich).Format(time.DateOnly)
+	yesterday := time.Now().In(zurich).AddDate(0, 0, -1).Format(time.DateOnly)
+
+	mine, _, err := env.caseSvc.Create(env.ctx, caseInput("Filtre "+token+" mien", 0))
+	if err != nil {
+		t.Fatalf("create case: %v", err)
+	}
+	theirs := caseInput("Filtre "+token+" sien", 0)
+	theirs.OperatorID = other.UserID
+	if _, _, err := env.caseSvc.Create(env.ctx, theirs); err != nil {
+		t.Fatalf("create case of another user: %v", err)
+	}
+
+	cases := func(f casefile.SearchFilter) casefile.SearchResult {
+		t.Helper()
+		f.Query, f.Viewer = token, operator
+		res, err := env.caseSvc.Search(env.ctx, f)
+		if err != nil {
+			t.Fatalf("search cases: %v", err)
+		}
+		return res
+	}
+	if res := cases(casefile.SearchFilter{Record: core.RecordFilter{CreatedBy: testOperator}}); res.TotalSize != 1 || res.Cases[0].ID != mine.ID {
+		t.Fatalf("the creator filter keeps the operator's case only: %d", res.TotalSize)
+	}
+	created, _ := core.ParseDateRange(today, today)
+	if res := cases(casefile.SearchFilter{Record: core.RecordFilter{Created: created}}); res.TotalSize != 2 {
+		t.Fatalf("both cases were created today: %d", res.TotalSize)
+	}
+	before, _ := core.ParseDateRange("", yesterday)
+	if res := cases(casefile.SearchFilter{Record: core.RecordFilter{Created: before}}); res.TotalSize != 0 {
+		t.Fatalf("no case was created before today: %d", res.TotalSize)
+	}
+	if res := cases(casefile.SearchFilter{Opened: created}); res.TotalSize != 2 {
+		t.Fatalf("both cases were opened today: %d", res.TotalSize)
+	}
+	if res := cases(casefile.SearchFilter{Opened: before}); res.TotalSize != 0 {
+		t.Fatalf("no case was opened before today: %d", res.TotalSize)
+	}
+
+	official := time.Date(2001, 5, 4, 0, 0, 0, 0, time.UTC)
+	blob := ingest(t, env, "filtre "+token).Blob
+	if _, err := env.docSvc.Create(env.ctx, document.CreateInput{
+		DocumentTypeCode: "PLAN", Title: "Plan " + token, OfficialDate: &official, ContentBlobID: &blob.ID, OperatorID: testOperator,
+	}); err != nil {
+		t.Fatalf("create document: %v", err)
+	}
+	documents := func(r core.DateRange) int32 {
+		t.Helper()
+		res, err := env.docSvc.Search(env.ctx, document.SearchFilter{Query: token, Viewer: operator, Official: r})
+		if err != nil {
+			t.Fatalf("search documents: %v", err)
+		}
+		return res.TotalSize
+	}
+	in2001, _ := core.ParseDateRange("2001-01-01", "2001-05-04")
+	after, _ := core.ParseDateRange("2001-05-05", "")
+	if documents(in2001) != 1 || documents(after) != 0 {
+		t.Fatalf("the official date filter keeps its bounds: %d %d", documents(in2001), documents(after))
+	}
+
+	if _, _, err := env.actorSvc.Create(env.ctx, actor.CreateInput{
+		ActorKind: actor.KindOrganization, DisplayName: "Atelier " + token, LegalName: "Atelier SA", OperatorID: other.UserID,
+	}); err != nil {
+		t.Fatalf("create actor: %v", err)
+	}
+	for creator, want := range map[string]int32{other.UserID: 1, testOperator: 0} {
+		res, err := env.actorSvc.Search(env.ctx, actor.SearchFilter{Query: token, Viewer: operator, Record: core.RecordFilter{CreatedBy: creator}})
+		if err != nil || res.TotalSize != want {
+			t.Fatalf("actors created by %s: %d, want %d (%v)", creator, res.TotalSize, want, err)
 		}
 	}
 }

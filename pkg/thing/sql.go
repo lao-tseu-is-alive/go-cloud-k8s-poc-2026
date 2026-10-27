@@ -144,5 +144,6 @@ WHERE (@query = ''
   AND (NOT @has_bbox OR (t.geom && ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056)
        AND ST_Intersects(t.geom, ST_MakeEnvelope(@e_min::float8, @n_min::float8, @e_max::float8, @n_max::float8, 2056))))
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND `+core.RecordFilterSQL("t")+`
   AND `+core.ReadableSQL("t.id", "rm"), thingColumns, "thing", "t", f.Order(desc))
 })

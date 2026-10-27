@@ -1731,7 +1731,22 @@ type SearchDocumentsRequest struct {
 	PageToken string `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
 	// title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
-	OrderBy       string `protobuf:"bytes,11,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	OrderBy string `protobuf:"bytes,11,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
+	// official_from keeps the documents whose official date is on or after this day
+	// (YYYY-MM-DD); empty means unbounded.
+	OfficialFrom string `protobuf:"bytes,12,opt,name=official_from,json=officialFrom,proto3" json:"official_from,omitempty"`
+	// official_to keeps the documents whose official date is on or before this day
+	// (YYYY-MM-DD); empty means unbounded.
+	OfficialTo string `protobuf:"bytes,13,opt,name=official_to,json=officialTo,proto3" json:"official_to,omitempty"`
+	// created_from keeps the documents created on or after this day (YYYY-MM-DD,
+	// Europe/Zurich); empty means unbounded.
+	CreatedFrom string `protobuf:"bytes,14,opt,name=created_from,json=createdFrom,proto3" json:"created_from,omitempty"`
+	// created_to keeps the documents created on or before this day (YYYY-MM-DD,
+	// Europe/Zurich); empty means unbounded.
+	CreatedTo string `protobuf:"bytes,15,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
+	// created_by keeps the documents created by this internal user (User.id);
+	// empty means anyone.
+	CreatedBy     string `protobuf:"bytes,16,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1839,6 +1854,41 @@ func (x *SearchDocumentsRequest) GetPageToken() string {
 func (x *SearchDocumentsRequest) GetOrderBy() string {
 	if x != nil {
 		return x.OrderBy
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetOfficialFrom() string {
+	if x != nil {
+		return x.OfficialFrom
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetOfficialTo() string {
+	if x != nil {
+		return x.OfficialTo
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetCreatedFrom() string {
+	if x != nil {
+		return x.CreatedFrom
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetCreatedTo() string {
+	if x != nil {
+		return x.CreatedTo
+	}
+	return ""
+}
+
+func (x *SearchDocumentsRequest) GetCreatedBy() string {
+	if x != nil {
+		return x.CreatedBy
 	}
 	return ""
 }
@@ -2689,7 +2739,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\ractual_sha256\x18\x02 \x01(\tR\factualSha256\x12;\n" +
 	"\vverified_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"verifiedAt\x12.\n" +
-	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"\xdc\x03\n" +
+	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"\xad\x06\n" +
 	"\x16SearchDocumentsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05query\x125\n" +
 	"\x12document_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x10documentTypeCode\x12\x17\n" +
@@ -2705,7 +2755,15 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\n" +
 	"page_token\x18\n" +
 	" \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\x12>\n" +
-	"\border_by\x18\v \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\"\xc0\x01\n" +
+	"\border_by\x18\v \x01(\tB#\xbaH r\x1e\x18@2\x1a^$|^[a-z_]+( (asc|desc))?$R\aorderBy\x12K\n" +
+	"\rofficial_from\x18\f \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\fofficialFrom\x12G\n" +
+	"\vofficial_to\x18\r \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\n" +
+	"officialTo\x12I\n" +
+	"\fcreated_from\x18\x0e \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\vcreatedFrom\x12E\n" +
+	"\n" +
+	"created_to\x18\x0f \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
+	"\n" +
+	"created_by\x18\x10 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xc0\x01\n" +
 	"\x17SearchDocumentsResponse\x122\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x14.goeland.v1.DocumentR\tdocuments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +

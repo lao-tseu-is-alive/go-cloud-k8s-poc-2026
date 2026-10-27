@@ -242,6 +242,27 @@ paths:
           in: query
           required: false
           type: string
+        - name: createdFrom
+          description: |-
+            created_from keeps the actors created on or after this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdTo
+          description: |-
+            created_to keeps the actors created on or before this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdBy
+          description: |-
+            created_by keeps the actors created by this internal user (User.id);
+            empty means anyone.
+          in: query
+          required: false
+          type: string
       tags:
         - ActorService
   /api/actors/{id}:
@@ -591,6 +612,41 @@ paths:
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
             business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
+        - name: openedFrom
+          description: |-
+            opened_from keeps the cases whose opening date (Europe/Zurich) is on or after this day
+            (YYYY-MM-DD); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: openedTo
+          description: |-
+            opened_to keeps the cases whose opening date (Europe/Zurich) is on or before this day
+            (YYYY-MM-DD); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdFrom
+          description: |-
+            created_from keeps the cases created on or after this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdTo
+          description: |-
+            created_to keeps the cases created on or before this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdBy
+          description: |-
+            created_by keeps the cases created by this internal user (User.id);
+            empty means anyone.
           in: query
           required: false
           type: string
@@ -1251,6 +1307,41 @@ paths:
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
             title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
+        - name: officialFrom
+          description: |-
+            official_from keeps the documents whose official date is on or after this day
+            (YYYY-MM-DD); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: officialTo
+          description: |-
+            official_to keeps the documents whose official date is on or before this day
+            (YYYY-MM-DD); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdFrom
+          description: |-
+            created_from keeps the documents created on or after this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdTo
+          description: |-
+            created_to keeps the documents created on or before this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdBy
+          description: |-
+            created_by keeps the documents created by this internal user (User.id);
+            empty means anyone.
           in: query
           required: false
           type: string
@@ -3194,6 +3285,27 @@ paths:
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
             name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+          in: query
+          required: false
+          type: string
+        - name: createdFrom
+          description: |-
+            created_from keeps the things created on or after this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdTo
+          description: |-
+            created_to keeps the things created on or before this day (YYYY-MM-DD,
+            Europe/Zurich); empty means unbounded.
+          in: query
+          required: false
+          type: string
+        - name: createdBy
+          description: |-
+            created_by keeps the things created by this internal user (User.id);
+            empty means anyone.
           in: query
           required: false
           type: string

@@ -127,11 +127,15 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	record, err := core.ParseRecordFilter(req.Msg.CreatedFrom, req.Msg.CreatedTo, req.Msg.CreatedBy)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
 	result, err := s.service.Search(ctx, SearchFilter{
 		OrderBy: req.Msg.OrderBy,
 		Viewer:  viewer,
 		Query:   req.Msg.Query, TypeCode: req.Msg.ThingTypeCode, BBox: bbox, IncludeDeleted: req.Msg.IncludeDeleted,
-		Limit: int(req.Msg.PageSize), Offset: offset,
+		Record: record, Limit: int(req.Msg.PageSize), Offset: offset,
 	})
 	if err != nil {
 		return nil, s.mapError(err)

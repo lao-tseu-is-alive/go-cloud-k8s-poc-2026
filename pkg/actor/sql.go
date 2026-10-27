@@ -96,9 +96,6 @@ ORDER BY label, code;`
 
 // --- search ------------------------------------------------------------------
 
-// searchActorsSQL performs accent-insensitive name search over the generated
-// search_vector plus kind / category / status filters. The query term is folded
-// through immutable_unaccent (migration 0005) to match the accent-folded vector.
 // actorSortFields are the sortable columns of the actor list (GLD-055).
 var actorSortFields = map[string]core.SortField{
 	"display_name": {Expr: "a.display_name"},
@@ -111,6 +108,10 @@ var actorSortFields = map[string]core.SortField{
 // defaultActorSort is the order of the actor list without order_by: by name.
 var defaultActorSort = core.Sort{Field: "display_name"}
 
+// searchActorsSQL performs accent-insensitive name search over the generated
+// search_vector plus kind / category / status / creation filters. The query term
+// is folded through immutable_unaccent (migration 0005) to match the
+// accent-folded vector.
 var searchActorsSQL = core.SortedQueries(actorSortFields, func(f core.SortField, desc bool) string {
 	return core.CappedPageSQL(`
 SELECT a.id AS id, `+f.Expr+` AS sort_key
@@ -122,6 +123,7 @@ WHERE (@query = '' OR `+core.TextMatchSQL("a.search_vector")+`)
   AND (@category_code = '' OR a.organization_category_id = (SELECT id FROM organization_category WHERE code = @category_code))
   AND (NOT @only_active OR a.is_active = true)
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND `+core.RecordFilterSQL("a")+`
   AND `+core.ReadableSQL("a.id", "rm"), actorColumns, "actor", "a", f.Order(desc))
 })
 

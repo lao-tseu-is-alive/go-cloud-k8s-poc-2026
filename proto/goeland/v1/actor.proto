@@ -434,6 +434,15 @@ message SearchActorsRequest {
     max_len: 64
     pattern: "^$|^[a-z_]+( (asc|desc))?$"
   }];
+  // created_from keeps the actors created on or after this day (YYYY-MM-DD,
+  // Europe/Zurich); empty means unbounded.
+  string created_from = 9 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // created_to keeps the actors created on or before this day (YYYY-MM-DD,
+  // Europe/Zurich); empty means unbounded.
+  string created_to = 10 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // created_by keeps the actors created by this internal user (User.id);
+  // empty means anyone.
+  string created_by = 11 [(buf.validate.field).string.max_len = 200];
 }
 
 // SearchActorsResponse is one page of matching actors.

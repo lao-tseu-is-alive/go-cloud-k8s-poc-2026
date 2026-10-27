@@ -358,6 +358,15 @@
       "SUBJECT_KIND_GROUP": "Groups"
     }
   },
+  "filters": {
+    "more": "More filters",
+    "from": "{label} from",
+    "to": "to",
+    "opened": "Opened",
+    "official": "Official date",
+    "created": "Created",
+    "createdBy": "Created by"
+  },
   "nav": {
     "groups": "Groups",
     "myTasks": "My tasks",

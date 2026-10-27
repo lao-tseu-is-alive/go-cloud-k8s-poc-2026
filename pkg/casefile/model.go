@@ -183,6 +183,10 @@ type SearchFilter struct {
 	Status Status
 	// IncludeDeleted also returns soft-deleted cases.
 	IncludeDeleted bool
+	// Opened keeps the cases opened on these days (GLD-074).
+	Opened core.DateRange
+	// Record filters on the creation day and creator (GLD-074).
+	Record core.RecordFilter
 	// Limit is the page size, normalized to [1, core.MaxPageSize].
 	Limit int
 	// Offset is the zero-based number of rows to skip; negative becomes 0.

@@ -275,6 +275,21 @@ message SearchCasesRequest {
     max_len: 64
     pattern: "^$|^[a-z_]+( (asc|desc))?$"
   }];
+  // opened_from keeps the cases whose opening date (Europe/Zurich) is on or after this day
+  // (YYYY-MM-DD); empty means unbounded.
+  string opened_from = 8 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // opened_to keeps the cases whose opening date (Europe/Zurich) is on or before this day
+  // (YYYY-MM-DD); empty means unbounded.
+  string opened_to = 9 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // created_from keeps the cases created on or after this day (YYYY-MM-DD,
+  // Europe/Zurich); empty means unbounded.
+  string created_from = 10 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // created_to keeps the cases created on or before this day (YYYY-MM-DD,
+  // Europe/Zurich); empty means unbounded.
+  string created_to = 11 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // created_by keeps the cases created by this internal user (User.id);
+  // empty means anyone.
+  string created_by = 12 [(buf.validate.field).string.max_len = 200];
 }
 
 // SearchCasesResponse is one page of matching cases.

@@ -84,7 +84,7 @@ var defaultCaseSort = core.Sort{Field: "created_at", Desc: true}
 
 // searchCasesSQL holds, per sort, the search matching the accent-folded
 // search_vector (immutable_unaccent, migration 0005) or the exact business
-// reference, plus type/status/deletion filters, with a capped total
+// reference, plus type/status/deletion, opening and creation filters, with a capped total
 // (core.CappedPageSQL).
 var searchCasesSQL = core.SortedQueries(caseSortFields, func(f core.SortField, desc bool) string {
 	return core.CappedPageSQL(`
@@ -98,6 +98,8 @@ WHERE (@query = ''
   AND (@case_type_code = '' OR c.case_type_id = (SELECT id FROM case_type WHERE code = @case_type_code))
   AND (@status::smallint = 0 OR c.status = @status::smallint)
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND `+core.TimeRangeSQL("c.opened_at", "opened")+`
+  AND `+core.RecordFilterSQL("c")+`
   AND `+core.ReadableSQL("c.id", "rm"), caseColumns, "case_file", "c", f.Order(desc))
 })
 

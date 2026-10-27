@@ -157,6 +157,16 @@ func (s *surface) core() {
 
 	s.caseID = str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Surface " + s.token}), "case", "subjectRef", "id")
 	other := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": "GENERIC_REQUEST", "title": "Liée " + s.token}), "case", "subjectRef", "id")
+	all := len(list(s.ok("GET", "/api/cases/search?query="+s.token, nil), "cases"))
+	caller := str(s.ok("GET", "/api/me", nil), "user", "id")
+	if found := s.ok("GET", "/api/cases/search?query="+s.token+"&openedFrom=2000-01-01&createdTo=2999-12-31&createdBy="+caller, nil); len(list(found, "cases")) != all {
+		s.t.Fatalf("the period and creator filters keep the %d cases of the caller: %v", all, found)
+	}
+	if found := s.ok("GET", "/api/cases/search?query="+s.token+"&createdBy=nobody", nil); len(list(found, "cases")) != 0 {
+		s.t.Fatalf("the creator filter keeps no case of another creator: %v", found)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/cases/search?createdFrom=2026-02-30", nil)
+	s.fails(codeInvalidArgument, "GET", "/api/documents/search?officialFrom=2026-04-01&officialTo=2026-03-31", nil)
 	link := func() string {
 		return str(s.ok("POST", "/api/relationships", map[string]any{"sourceSubjectId": s.caseID, "targetSubjectId": other, "relationshipTypeCode": "CASE_RELATED_TO_CASE"}), "relationship", "id")
 	}

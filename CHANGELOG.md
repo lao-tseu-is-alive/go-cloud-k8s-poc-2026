@@ -8,6 +8,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.17.0] - 2026-10-27
+
+Global search over every kind of subject (GLD-064) and list filters by period and creator, shown in
+the search results by kind (GLD-074). Migrations `0032` (subject search index, about a minute on the
+imported data) and `0033` (creator indexes); new RPC `CoreService.SearchSubjects`; new optional
+filter fields on the case, document, actor and thing searches.
+
 ### Added
 
 - **GLD-064** — Global search: a field in the app bar (« / » focuses it) searches cases, actors,
@@ -17,6 +24,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   read `?q=`). Only what the caller may read is found or counted. New RPC
   `CoreService.SearchSubjects` (`GET /api/subjects:search`) over `subject_ref`, indexed per kind by
   migration `0032` (about a minute on 3.1M subjects; it replaces an unused label index).
+- **GLD-074** — List filters by period and creator: the search results page shows one tab per kind
+  (cases, actors, documents, things) with its count and the kind's full list, filters included. The
+  case, document, actor and thing searches take `created_from`, `created_to` (days in
+  Europe/Zurich) and `created_by`; cases also `opened_from` / `opened_to`, documents
+  `official_from` / `official_to`. The lists show them behind « Plus de filtres » and keep every
+  filter in the URL (shareable, back button). Migration `0033` indexes `created_by` (a creator's
+  list in a few milliseconds on the imported data).
 
 ### Changed
 

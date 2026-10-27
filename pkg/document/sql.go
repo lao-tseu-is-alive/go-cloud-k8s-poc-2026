@@ -179,7 +179,8 @@ var defaultDocumentSort = core.Sort{Field: "created_at", Desc: true}
 
 // documentMatchSQL is the match of a document search: full-text over the
 // generated tsvector (folded through immutable_unaccent, migration 0005, so
-// "chateau" finds "château") plus governance filters, within scope, over from
+// "chateau" finds "château") plus governance, official date and creation
+// filters, within scope, over from
 // (the table, or a window of its newest rows), keyed by the sort field f.
 func documentMatchSQL(scope, from string, f core.SortField) string {
 	return `
@@ -194,6 +195,8 @@ WHERE (@query = '' OR ` + core.TextMatchSQL("d.search_vector") + `)
   AND (NOT @only_records OR cv.is_record)
   AND (NOT @only_final OR cv.is_final)
   AND (@include_deleted OR rm.deleted_at IS NULL)
+  AND ` + core.DayRangeSQL("d.official_date", "official") + `
+  AND ` + core.RecordFilterSQL("d") + `
 ` + scope + `
   AND ` + core.ReadableSQL("d.id", "rm")
 }
