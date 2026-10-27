@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.16.1**.
+Tracked version: **v0.16.2**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -42,7 +42,7 @@ the strict JSON fix (GLD-065) and the import fixes for phone numbers with a note
 document families (GLD-067) shipped in v0.15.0; the case page (GLD-068) and the object page with
 the City's map (GLD-069) followed the same model in v0.16.0; the labels of unreadable subjects
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
-v0.16.1; next the global search (GLD-064).
+v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; next the global search (GLD-064).
 
 ## Cross-cutting quality
 

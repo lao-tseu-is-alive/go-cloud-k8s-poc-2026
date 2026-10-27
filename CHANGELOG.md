@@ -8,6 +8,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.16.2] - 2026-10-27
+
+Security patch for the Trivy findings on the v0.16.1 image. No migration, no API change.
+
+### Security
+
+- Echo 4.16.2 (indirect, via `go-cloud-k8s-common-libs`), fixing GHSA-cxf3-9h37-7rr8 (rejected
+  WebSocket upgrades bypassing route-level access controls), GHSA-9969-6676-49h5 (WebSocket proxy
+  retaining connections), GHSA-f48p-c9v4-h7xv (unbounded BodyDump) and GHSA-h7wr-284f-5qvc
+  (unbounded gzip expansion in Decompress). `make vuln-check` reports no reachable vulnerability.
+
 ## [0.16.1] - 2026-10-20
 
 Security patch: labels of subjects the caller may not read are no longer shown (GLD-070); Go 1.27.3
