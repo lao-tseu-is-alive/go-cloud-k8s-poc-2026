@@ -794,6 +794,20 @@
           "SUBJECT_KIND_ACTOR": "Intervenants"
         }
       },
+      "SUBJECT_KIND_DOCUMENT": {
+        "sections": {
+          "SUBJECT_KIND_CASE": "Dans les affaires",
+          "SUBJECT_KIND_ACTOR": "Acteurs",
+          "SUBJECT_KIND_THING": "Objets concernés",
+          "SUBJECT_KIND_DOCUMENT": "Documents liés"
+        },
+        "jump": {
+          "SUBJECT_KIND_CASE": "Affaires",
+          "SUBJECT_KIND_ACTOR": "Acteurs",
+          "SUBJECT_KIND_THING": "Objets",
+          "SUBJECT_KIND_DOCUMENT": "Documents liés"
+        }
+      },
       "SUBJECT_KIND_THING": {
         "sections": {
           "SUBJECT_KIND_THING": "Avec d’autres objets",
@@ -895,6 +909,13 @@
     },
     "allRelationships": "Toutes les relations (vue technique)",
     "allRelationshipsHint": "La liste brute des liens, dans les deux sens, avec les actions pour terminer ou délier un lien."
+  },
+  "documentPage": {
+    "tabs": {
+      "document": "Document"
+    },
+    "openExternal": "Ouvrir dans {system}",
+    "externalSystem": "le système externe"
   },
   "thingPage": {
     "tabs": {

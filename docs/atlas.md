@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.17.0**.
+Tracked version: **v0.17.1**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -538,11 +538,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/RecordFilterFields.vue` — The creation period and creator filters every list shares (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/core/SearchFilterCard.vue` — Filter panel of a list: main filters, the others behind « Plus de filtres », Search and Reset (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentAuditPanel.vue` — Document detail wrapper around the audit timeline.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and download panel for the current version's content.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentMetadataForm.vue` — Mutable document metadata form shared by create and edit.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentRelationshipsPanel.vue` — Presentational document relationships panel.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchList.vue` — The document list with its filters (type, official date, creation, creator, options), shared by the document page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentTypeSelect.vue` — Document type selector bound to the type code.
@@ -569,7 +567,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseDetailPage.vue` — Case detail, edit, status transitions with reason, relationships, soft delete, governance and audit page.
 - `cmd/goeland-server/goeland-front/src/pages/cases/CaseListPage.vue` — Case list page: title, creation button and `CaseSearchList`.
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentCreatePage.vue` — Metadata-first document creation page with upload.
-- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document detail, edit, finalize, verify, link and delete page.
+- `cmd/goeland-server/goeland-front/src/pages/documents/DocumentDetailPage.vue` — Document page on the GLD-063 model: header (state, key facts, download, jump links), its cases, actors and objects by role beside the versions, and a governance tab (GLD-075).
 - `cmd/goeland-server/goeland-front/src/pages/documents/DocumentListPage.vue` — Document list page: title, creation button and `DocumentSearchList`.
 - `cmd/goeland-server/goeland-front/src/pages/groups/GroupDetailPage.vue` — Security group page: members (add, remove), edit, archive, its grants and audit.
 - `cmd/goeland-server/goeland-front/src/pages/groups/GroupListPage.vue` — Security groups list with search, archived filter and creation.
@@ -597,6 +595,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/routeFilters.test.ts` — Vitest unit tests of the list filters in the URL.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/documents.test.ts` — Vitest unit tests of the document icon and download helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/globalSearch.test.ts` — Vitest unit tests of the global search suggestions and routes.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/listSort.test.ts` — Vitest unit tests of the list sort helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/roleHeadings.test.ts` — Vitest unit tests of the relationship headings: viewpoints, French contractions, plurals, fallbacks.
@@ -606,6 +605,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/validation.test.ts` — The required, length and SHA-256 form rules.
 - `cmd/goeland-server/goeland-front/src/utils/contactRules.ts` — SPA mirror of the complement rules: per-type check, placeholder, display format and link.
 - `cmd/goeland-server/goeland-front/src/utils/dateInput.ts` — Conversions between RFC3339 values and datetime-local input values (timeline, tasks).
+- `cmd/goeland-server/goeland-front/src/utils/documents.ts` — Document page helpers: the icon of a file family by MIME type, whether Goéland stores the content (GLD-075).
 - `cmd/goeland-server/goeland-front/src/utils/formatters.ts` — Display formatters for proto-JSON dates, sizes and hashes.
 - `cmd/goeland-server/goeland-front/src/utils/lausanneMap.ts` — City of Lausanne maps: LV95 projection, WMTS base layers from the capabilities, extent, map application link (GLD-069).
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.

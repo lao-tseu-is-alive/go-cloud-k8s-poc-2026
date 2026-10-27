@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.17.0**.
+Tracked version: **v0.17.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -43,7 +43,8 @@ document families (GLD-067) shipped in v0.15.0; the case page (GLD-068) and the 
 the City's map (GLD-069) followed the same model in v0.16.0; the labels of unreadable subjects
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
 v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) and the list filters by
-period and creator (GLD-074) in v0.17.0.
+period and creator (GLD-074) in v0.17.0; the document page on the same model (GLD-075) in
+v0.17.1.
 
 ## Cross-cutting quality
 
@@ -504,6 +505,13 @@ categories with their counts. Mockup with the decisions:
   et pièces » (the roles panel) and « Gouvernance et historique » (access, export, governance,
   audit, raw relationship table). Section titles follow the subject on screen ("Intervenants",
   "Pièces du dossier", "Objets concernés" on a case). Done 2026-10-15.
+- [x] **GLD-075 — Document page on the GLD-063 model**: the last detail page in the old layout. A
+  header (type, status, finalized / record, confidential; description; official date, current
+  version, file format and size, language, external system, creation and creator; download as the
+  main action, or the external link), jump links with counts, then its cases, actors and objects by
+  role (`SubjectRolesPanel`, « Dans les affaires », « Acteurs », « Objets concernés ») beside the
+  versions, and a « Gouvernance et historique » tab (identity, access, integrity, governance, audit,
+  raw relationships). Released in v0.17.1.
 - [x] **GLD-069 — Object page and Lausanne map**: the object page takes the same header (parcel
   number and commune, EGRID, surfaces / EGID, ECA, RegBL status, LV95 anchor) and tabs, and shows the
   object on the City of Lausanne's maps (`LausanneMap.vue`, OpenLayers and proj4 adapted from the

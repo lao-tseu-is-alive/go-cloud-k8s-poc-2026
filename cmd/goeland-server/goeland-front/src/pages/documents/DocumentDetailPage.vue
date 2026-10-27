@@ -1,25 +1,29 @@
 <script setup lang="ts">
   import type { AuditEvent, GoDocument } from '@/api/types'
   import type { DocumentFormModel } from '@/components/document/documentForm'
-  import { computed, ref, watch } from 'vue'
+  import type { RoleSection } from '@/utils/roleHeadings'
+  import { computed, nextTick, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import {
     deleteDocument,
+    downloadDocumentBlob,
     finalizeDocument,
     getDocument,
     linkDocument,
     updateDocumentMetadata,
   } from '@/api/documentClient'
   import AccessPanel from '@/components/access/AccessPanel.vue'
+  import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
+  import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
-  import DocumentAuditPanel from '@/components/document/DocumentAuditPanel.vue'
+  import SubjectRolesPanel from '@/components/core/SubjectRolesPanel.vue'
+  import UserLabel from '@/components/core/UserLabel.vue'
   import DocumentFinalizeDialog from '@/components/document/DocumentFinalizeDialog.vue'
   import DocumentIntegrityPanel from '@/components/document/DocumentIntegrityPanel.vue'
   import DocumentMetadataForm from '@/components/document/DocumentMetadataForm.vue'
-  import DocumentRelationshipsPanel from '@/components/document/DocumentRelationshipsPanel.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -27,8 +31,14 @@
   import { usePagedRelationships } from '@/composables/usePagedRelationships'
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
-  import { formatBytes } from '@/utils/formatters'
+  import { documentIcon, downloadable } from '@/utils/documents'
+  import { formatBytes, formatDate, formatDateTime } from '@/utils/formatters'
+  import { kindIcon } from '@/utils/subjects'
 
+  // The document page (GLD-075, the GLD-063 model): a header with the title,
+  // the state, the key facts and the download, jump links with counts, then
+  // the cases, actors and objects the document belongs to, grouped by role and
+  // counted, beside its versions; the technical side sits in its own tab.
   const { t } = useI18n()
   const route = useRoute()
   const router = useRouter()
@@ -45,6 +55,9 @@
   } = usePagedRelationships(id)
   const audit = ref<AuditEvent[]>([])
   const loading = ref(true)
+  const tab = ref<'document' | 'governance'>('document')
+  const sections = ref<RoleSection[]>([])
+  const rolesKey = ref(0)
 
   const editing = ref(false)
   const editModel = ref<DocumentFormModel>({ title: '', description: '', officialDate: '', language: '', isRecord: false })
@@ -53,32 +66,58 @@
 
   const finalizeOpen = ref(false)
   const finalizeBusy = ref(false)
+  const downloading = ref(false)
   const { linkOpen, linkBusy, doLink, doUnlink } = useSubjectLinks(id, reload, linkDocument)
   const deleteOpen = ref(false)
   const deleteReason = ref('')
   const deleteBusy = ref(false)
 
-  // ---- derived state rules -------------------------------------------------
   const isLocked = computed(() => !!doc.value?.recordMetadata?.isLocked)
   const isDeleted = computed(() => !!doc.value?.recordMetadata?.deletedAt)
   const isFinal = computed(() => !!doc.value?.currentVersion?.isFinal)
   const isRecord = computed(() => !!doc.value?.currentVersion?.isRecord)
+  const isConfidential = computed(() => (doc.value?.recordMetadata?.confidentialityLevel ?? 0) > 0)
   const editable = computed(() => !isLocked.value && !isDeleted.value && canManage.value)
   const canFinalize = computed(() => !isFinal.value && editable.value)
   const canDelete = computed(() => !isDeleted.value && !isLocked.value && hasFullControl.value)
-  const isConfidential = computed(() => (doc.value?.recordMetadata?.confidentialityLevel ?? 0) > 0)
+  const content = computed(() => doc.value?.currentVersion?.content)
+  const canDownload = computed(() => downloadable(content.value?.storageRef))
+  const icon = computed(() => documentIcon(content.value?.mimeType))
+  const fileFacts = computed(() => [content.value?.mimeType, content.value?.fileSizeBytes ? formatBytes(content.value.fileSizeBytes) : '']
+    .filter(Boolean)
+    .join(' · '))
 
   async function reload () {
     loading.value = true
     try {
       const res = await getDocument(id.value, { includeAudit: true })
       doc.value = res.document ?? null
-      await reloadRelationships()
       audit.value = res.recentAudit ?? []
+      rolesKey.value++
+      await reloadRelationships()
     } catch (error) {
       report(error)
     } finally {
       loading.value = false
+    }
+  }
+
+  /** Shows the document tab and scrolls to a section of it. */
+  async function goTo (anchor: string) {
+    tab.value = 'document'
+    await nextTick()
+    document.querySelector(`#${anchor}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+  }
+
+  async function download () {
+    if (!doc.value) return
+    downloading.value = true
+    try {
+      await downloadDocumentBlob(id.value, doc.value.title || 'document', doc.value.currentVersion?.id)
+    } catch (error) {
+      report(error)
+    } finally {
+      downloading.value = false
     }
   }
 
@@ -144,28 +183,162 @@
   }
 
   // Reload on id change too: following a link to another subject reuses this page.
-  watch(id, reload, { immediate: true })
+  watch(id, () => {
+    tab.value = 'document'
+    editing.value = false
+    void reload()
+  }, { immediate: true })
 </script>
 
 <template>
-  <v-container fluid>
-    <div class="d-flex align-center ga-2 mb-2">
-      <v-btn icon="mdi-arrow-left" variant="text" @click="router.push('/documents')" />
-      <h1 class="text-h5 text-truncate">{{ doc?.title ?? t('pages.documents.detail.title') }}</h1>
+  <v-container class="detail-page" fluid>
+    <div class="d-flex align-center ga-1 mb-2 text-body-2 text-medium-emphasis">
+      <v-btn
+        :aria-label="t('nav.documents')"
+        icon="mdi-arrow-left"
+        size="small"
+        variant="text"
+        @click="router.push('/documents')"
+      />
+
+      <router-link class="text-medium-emphasis" to="/documents">{{ t('nav.documents') }}</router-link>
+      <span aria-hidden="true">›</span>
+      <span class="text-truncate">{{ doc?.title }}</span>
     </div>
 
-    <v-progress-linear v-if="loading" color="primary" indeterminate />
+    <v-progress-linear v-if="loading && !doc" color="primary" indeterminate />
 
     <template v-if="doc">
-      <!-- state banners + chips -->
-      <div class="d-flex flex-wrap ga-2 mb-3 align-center">
-        <DocumentStatusChip :status="doc.status" />
-        <v-chip v-if="isFinal" color="success" prepend-icon="mdi-check-decagram" size="small">{{ t('states.final') }}</v-chip>
-        <v-chip v-if="isRecord" color="primary" size="small">{{ t('states.record') }}</v-chip>
-        <v-chip v-if="isConfidential" color="orange" prepend-icon="mdi-eye-off" size="small">{{ t('states.confidential') }}</v-chip>
-        <v-chip v-if="isLocked" color="grey" prepend-icon="mdi-lock" size="small">{{ t('states.locked') }}</v-chip>
-        <v-chip v-if="isDeleted" color="error" prepend-icon="mdi-delete" size="small">{{ t('states.deleted') }}</v-chip>
-      </div>
+      <v-card aria-labelledby="document-title" class="mb-4 pa-5" tag="section">
+        <div class="d-flex flex-wrap align-start ga-4">
+          <v-avatar color="primary" rounded="lg" size="52" variant="tonal"><v-icon :icon="icon" size="28" /></v-avatar>
+
+          <div class="detail-page__title">
+            <h1 id="document-title" class="text-h5 font-weight-medium">{{ doc.title }}</h1>
+
+            <div class="d-flex flex-wrap align-center ga-2 mt-1">
+              <v-chip label size="small">{{ doc.documentType?.label ?? doc.documentType?.code }}</v-chip>
+              <DocumentStatusChip :status="doc.status" />
+
+              <v-chip
+                v-if="isFinal"
+                color="success"
+                label
+                prepend-icon="mdi-check-decagram"
+                size="small"
+              >{{ t('states.final') }}</v-chip>
+
+              <v-chip v-if="isRecord" color="primary" label size="small">{{ t('states.record') }}</v-chip>
+
+              <v-chip
+                v-if="isConfidential"
+                color="orange"
+                label
+                prepend-icon="mdi-eye-off"
+                size="small"
+              >{{ t('states.confidential') }}</v-chip>
+
+              <v-chip v-if="isLocked" label prepend-icon="mdi-lock" size="small">{{ t('states.locked') }}</v-chip>
+
+              <v-chip
+                v-if="isDeleted"
+                color="error"
+                label
+                prepend-icon="mdi-delete"
+                size="small"
+              >{{ t('states.deleted') }}</v-chip>
+            </div>
+
+            <p v-if="doc.description" class="text-body-2 text-medium-emphasis mt-3 document-page__description">{{ doc.description }}</p>
+          </div>
+
+          <div class="d-flex flex-wrap ga-2">
+            <v-btn
+              v-if="canDownload"
+              color="primary"
+              :loading="downloading"
+              prepend-icon="mdi-download"
+              variant="flat"
+              @click="download"
+            >{{ t('actions.document.download') }}</v-btn>
+
+            <v-btn
+              v-else-if="doc.externalUrl"
+              append-icon="mdi-open-in-new"
+              color="primary"
+              :href="doc.externalUrl"
+              rel="noopener noreferrer"
+              target="_blank"
+              variant="flat"
+            >{{ t('documentPage.openExternal', { system: doc.externalSystem || t('documentPage.externalSystem') }) }}</v-btn>
+
+            <v-btn v-if="editable && !editing" prepend-icon="mdi-pencil" variant="outlined" @click="startEdit">{{ t('actions.document.updateMetadata') }}</v-btn>
+            <v-btn v-if="editable" prepend-icon="mdi-link-plus" variant="outlined" @click="linkOpen = true">{{ t('detailPage.link') }}</v-btn>
+
+            <v-menu v-if="canFinalize || canDelete" location="bottom end">
+              <template #activator="{ props: menu }">
+                <v-btn v-bind="menu" :aria-label="t('detailPage.more')" icon="mdi-dots-vertical" variant="text" />
+              </template>
+
+              <v-list density="compact">
+                <v-list-item v-if="canFinalize" prepend-icon="mdi-check-decagram" :title="t('actions.document.finalize')" @click="finalizeOpen = true" />
+
+                <v-list-item
+                  v-if="canDelete"
+                  base-color="error"
+                  prepend-icon="mdi-delete"
+                  :title="t('actions.document.delete')"
+                  @click="deleteOpen = true"
+                />
+              </v-list>
+            </v-menu>
+          </div>
+        </div>
+
+        <div class="detail-page__facts">
+          <div><div class="detail-page__label">{{ t('fields.document.official_date') }}</div>{{ formatDate(doc.officialDate) }}</div>
+
+          <div>
+            <div class="detail-page__label">{{ t('fields.document.version') }}</div>
+            {{ doc.currentVersion?.versionNo ?? '—' }}
+            <span v-if="doc.currentVersion?.createdAt" class="text-medium-emphasis">({{ formatDate(doc.currentVersion.createdAt) }})</span>
+          </div>
+
+          <div><div class="detail-page__label">{{ t('fields.document.file') }}</div>{{ fileFacts || '—' }}</div>
+          <div v-if="doc.language"><div class="detail-page__label">{{ t('fields.document.language') }}</div>{{ doc.language }}</div>
+
+          <div v-if="doc.externalSystem">
+            <div class="detail-page__label">{{ t('fields.document.external_system') }}</div>
+            <a v-if="doc.externalUrl" :href="doc.externalUrl" rel="noopener noreferrer" target="_blank">{{ doc.externalSystem }}<v-icon class="ml-1" icon="mdi-open-in-new" size="x-small" /><span class="sr-only">({{ t('detailPage.newTab') }})</span></a>
+            <template v-else>{{ doc.externalSystem }}</template>
+          </div>
+
+          <div>
+            <div class="detail-page__label">{{ t('fields.common.created_at') }}</div>
+            {{ formatDateTime(doc.createdAt) }}
+            <span v-if="doc.createdBy" class="text-medium-emphasis">· <UserLabel :id="doc.createdBy" /></span>
+          </div>
+        </div>
+
+        <nav v-if="sections.length > 0" aria-labelledby="document-jump" class="mt-4">
+          <div id="document-jump" class="detail-page__label mb-1">{{ t('detailPage.jump') }}</div>
+
+          <div class="d-flex flex-wrap ga-2">
+            <a
+              v-for="s in sections"
+              :key="s.anchor"
+              class="detail-page__jump"
+              :href="`#${s.anchor}`"
+              @click.prevent="goTo(s.anchor)"
+            >
+              <v-icon :icon="kindIcon(s.kind)" size="small" />
+              <span>{{ s.label }}</span>
+              <strong>{{ s.total }}</strong>
+              <v-icon icon="mdi-arrow-down" size="x-small" />
+            </a>
+          </div>
+        </nav>
+      </v-card>
 
       <v-alert
         v-if="isLocked"
@@ -173,9 +346,7 @@
         density="compact"
         type="info"
         variant="tonal"
-      >
-        {{ t('messages.document.lockedCannotEdit') }}
-      </v-alert>
+      >{{ t('messages.document.lockedCannotEdit') }}</v-alert>
 
       <v-alert
         v-if="isDeleted"
@@ -183,157 +354,105 @@
         density="compact"
         type="warning"
         variant="tonal"
-      >
-        {{ t('messages.document.deletedReadOnly') }}
-      </v-alert>
+      >{{ t('messages.document.deletedReadOnly') }}</v-alert>
 
-      <!-- action bar -->
-      <div class="d-flex flex-wrap ga-2 mb-4">
-        <v-btn
-          v-if="editable && !editing"
-          color="primary"
-          prepend-icon="mdi-pencil"
-          variant="tonal"
-          @click="startEdit"
-        >
-          {{ t('actions.document.updateMetadata') }}
-        </v-btn>
+      <v-card v-if="editing" class="mb-4">
+        <v-card-title class="text-subtitle-1">{{ t('actions.document.updateMetadata') }}</v-card-title>
 
-        <v-btn
-          v-if="canFinalize"
-          color="warning"
-          prepend-icon="mdi-check-decagram"
-          variant="tonal"
-          @click="finalizeOpen = true"
-        >
-          {{ t('actions.document.finalize') }}
-        </v-btn>
+        <v-card-text>
+          <DocumentMetadataForm v-model="editModel" />
+          <v-text-field v-model="editReason" class="mt-2" :label="t('finalize.reason')" />
 
-        <v-btn
-          v-if="canDelete"
-          color="error"
-          prepend-icon="mdi-delete"
-          variant="text"
-          @click="deleteOpen = true"
-        >
-          {{ t('actions.document.delete') }}
-        </v-btn>
-      </div>
+          <div class="d-flex justify-end ga-2">
+            <v-btn variant="text" @click="editing = false">{{ t('actions.common.cancel') }}</v-btn>
+            <v-btn color="primary" :loading="saving" variant="flat" @click="saveEdit">{{ t('actions.common.save') }}</v-btn>
+          </div>
+        </v-card-text>
+      </v-card>
 
-      <v-row>
-        <!-- main column -->
-        <v-col cols="12" md="8">
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.summary') }}</v-card-title>
+      <v-tabs v-model="tab" class="mb-4" color="primary">
+        <v-tab value="document">{{ t('documentPage.tabs.document') }}</v-tab>
+        <v-tab value="governance">{{ t('detailPage.tabs.governance') }}</v-tab>
+      </v-tabs>
 
-            <v-card-text>
-              <template v-if="editing">
-                <DocumentMetadataForm v-model="editModel" />
-                <v-text-field v-model="editReason" class="mt-2" :label="t('finalize.reason')" />
+      <v-window v-model="tab">
+        <v-window-item value="document">
+          <v-row>
+            <v-col cols="12" md="7">
+              <SubjectRolesPanel :reload-key="rolesKey" :subject-id="id" subject-kind="SUBJECT_KIND_DOCUMENT" @sections="sections = $event" />
+            </v-col>
 
-                <div class="d-flex justify-end ga-2">
-                  <v-btn variant="text" @click="editing = false">{{ t('actions.common.cancel') }}</v-btn>
-                  <v-btn color="primary" :loading="saving" variant="flat" @click="saveEdit">{{ t('actions.common.save') }}</v-btn>
-                </div>
-              </template>
+            <v-col cols="12" md="5">
+              <v-card>
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.versions') }}</v-card-title>
 
-              <v-table v-else density="compact">
-                <tbody>
-                  <tr><td class="text-medium-emphasis" style="width:40%">{{ t('fields.document.description') }}</td><td>{{ doc.description || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.document_type') }}</td><td>{{ doc.documentType?.label ?? doc.documentType?.code }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.official_date') }}</td><td>{{ doc.officialDate || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.language') }}</td><td>{{ doc.language || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.version') }}</td><td>{{ doc.currentVersion?.versionNo ?? '—' }}</td></tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
+                <v-card-text>
+                  <DocumentVersionsPanel
+                    :can-add="editable"
+                    :current-version-id="doc.currentVersion?.id"
+                    :document-id="id"
+                    @changed="reload"
+                  />
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-window-item>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.storage') }}</v-card-title>
+        <v-window-item value="governance">
+          <v-row>
+            <v-col cols="12" md="6">
+              <SubjectIdentityCard class="mb-4" :subject="doc.subjectRef" />
 
-            <v-card-text>
-              <v-table density="compact">
-                <tbody>
-                  <tr><td class="text-medium-emphasis" style="width:40%">{{ t('fields.document.mime_type') }}</td><td>{{ doc.currentVersion?.content?.mimeType || '—' }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.file_size_bytes') }}</td><td>{{ formatBytes(doc.currentVersion?.content?.fileSizeBytes) }}</td></tr>
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.external_system') }}</td><td>{{ doc.externalSystem || '—' }}</td></tr>
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
+                <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
+              </v-card>
 
-                  <tr><td class="text-medium-emphasis">{{ t('fields.document.external_url') }}</td>
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.integrity') }}</v-card-title>
+                <v-card-text><DocumentIntegrityPanel :document="doc" @verified="reload" /></v-card-text>
+              </v-card>
+            </v-col>
 
-                    <td>
-                      <a v-if="doc.externalUrl" :href="doc.externalUrl" rel="noopener" target="_blank">{{ doc.externalUrl }}</a>
-                      <span v-else>—</span>
-                    </td></tr>
-                </tbody>
-              </v-table>
-            </v-card-text>
-          </v-card>
+            <v-col cols="12" md="6">
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>
+                <v-card-text><RecordMetadataPanel :metadata="doc.recordMetadata" /></v-card-text>
+              </v-card>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.versions') }}</v-card-title>
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('sections.document.audit') }}</v-card-title>
+                <v-card-text><AuditTimeline :events="audit" /></v-card-text>
+              </v-card>
+            </v-col>
 
-            <v-card-text>
-              <DocumentVersionsPanel
-                :can-add="editable"
-                :current-version-id="doc.currentVersion?.id"
-                :document-id="id"
-                @changed="reload"
-              />
-            </v-card-text>
-          </v-card>
+            <v-col cols="12">
+              <v-card>
+                <v-card-title class="text-subtitle-1">{{ t('detailPage.allRelationships') }}</v-card-title>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.integrity') }}</v-card-title>
+                <v-card-text>
+                  <p class="text-caption text-medium-emphasis mb-2">{{ t('detailPage.allRelationshipsHint') }}</p>
 
-            <v-card-text>
-              <DocumentIntegrityPanel :document="doc" @verified="reload" />
-            </v-card-text>
-          </v-card>
+                  <RelationshipTable
+                    v-model:sort="relSort"
+                    :can-unlink="editable"
+                    :capped="relCapped"
+                    :has-more="relHasMore"
+                    :loading="relLoading"
+                    :relationships="relationships"
+                    :total="relTotal"
+                    @ended="reload"
+                    @load-more="loadMoreRelationships"
+                    @unlink="doUnlink"
+                  />
+                </v-card-text>
+              </v-card>
+            </v-col>
+          </v-row>
+        </v-window-item>
+      </v-window>
 
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.relationships') }}</v-card-title>
-
-            <v-card-text>
-              <DocumentRelationshipsPanel
-                v-model:sort="relSort"
-                :can-manage="editable"
-                :capped="relCapped"
-                :has-more="relHasMore"
-                :loading="relLoading"
-                :relationships="relationships"
-                :total="relTotal"
-                @add-link="linkOpen = true"
-                @ended="reload"
-                @load-more="loadMoreRelationships"
-                @unlink="doUnlink"
-              />
-            </v-card-text>
-          </v-card>
-        </v-col>
-
-        <!-- side column: governance + audit -->
-        <v-col cols="12" md="4">
-          <SubjectIdentityCard class="mb-4" :subject="doc.subjectRef" />
-
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
-            <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
-          </v-card>
-
-          <v-card class="mb-4">
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>
-            <v-card-text><RecordMetadataPanel :metadata="doc.recordMetadata" /></v-card-text>
-          </v-card>
-
-          <v-card>
-            <v-card-title class="text-subtitle-1">{{ t('sections.document.audit') }}</v-card-title>
-            <v-card-text><DocumentAuditPanel :events="audit" /></v-card-text>
-          </v-card>
-        </v-col>
-      </v-row>
-
-      <!-- dialogs -->
       <DocumentFinalizeDialog v-model="finalizeOpen" :busy="finalizeBusy" @submit="doFinalize" />
 
       <LinkSubjectDialog
@@ -349,10 +468,7 @@
           <v-card-title>{{ t('delete.title') }}</v-card-title>
 
           <v-card-text>
-            <v-alert class="mb-3" density="compact" type="warning" variant="tonal">
-              {{ t('messages.document.deleteConfirm') }}
-            </v-alert>
-
+            <v-alert class="mb-3" density="compact" type="warning" variant="tonal">{{ t('messages.document.deleteConfirm') }}</v-alert>
             <v-text-field v-model="deleteReason" :label="t('delete.reason')" />
           </v-card-text>
 
@@ -366,3 +482,16 @@
     </template>
   </v-container>
 </template>
+
+<style scoped>
+  /* A long description stays readable without pushing the facts off screen. */
+  .document-page__description {
+    max-width: 80ch;
+    white-space: pre-line;
+    display: -webkit-box;
+    -webkit-line-clamp: 4;
+    line-clamp: 4;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+</style>

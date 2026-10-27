@@ -8,6 +8,20 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.17.1] - 2026-10-27
+
+The document page follows the information hierarchy of the other detail pages (GLD-075). No
+migration, no API change.
+
+### Changed
+
+- **GLD-075** — The document page follows the information hierarchy of the actor, case and object
+  pages: a header with the state, the key facts (official date, version, file, language, external
+  system, creation and creator) and the download as the main action, jump links with counts, then
+  the cases, actors and objects the document belongs to, grouped by role, beside its versions; the
+  technical panels (identity, access, integrity, governance, audit, raw relationships) move to a
+  « Gouvernance et historique » tab.
+
 ## [0.17.0] - 2026-10-27
 
 Global search over every kind of subject (GLD-064) and list filters by period and creator, shown in

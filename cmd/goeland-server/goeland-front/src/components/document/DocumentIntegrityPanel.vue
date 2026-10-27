@@ -5,6 +5,7 @@
   import { downloadDocumentBlob, verifyDocumentIntegrity } from '@/api/documentClient'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
+  import { downloadable } from '@/utils/documents'
   import { formatDateTime } from '@/utils/formatters'
 
   const props = defineProps<{ document: GoDocument }>()
@@ -23,7 +24,7 @@
   const downloading = ref(false)
 
   async function download () {
-    if (!content.value?.storageRef) return
+    if (!downloadable(content.value?.storageRef)) return
     downloading.value = true
     try {
       await downloadDocumentBlob(documentId(), props.document.title || 'document', props.document.currentVersion?.id)
@@ -97,7 +98,7 @@
       </v-btn>
 
       <v-btn
-        v-if="content?.storageRef?.startsWith('internal://')"
+        v-if="downloadable(content?.storageRef)"
         :loading="downloading"
         prepend-icon="mdi-download"
         variant="text"

@@ -794,6 +794,20 @@
           "SUBJECT_KIND_ACTOR": "Parties"
         }
       },
+      "SUBJECT_KIND_DOCUMENT": {
+        "sections": {
+          "SUBJECT_KIND_CASE": "In cases",
+          "SUBJECT_KIND_ACTOR": "Actors",
+          "SUBJECT_KIND_THING": "Objects concerned",
+          "SUBJECT_KIND_DOCUMENT": "Related documents"
+        },
+        "jump": {
+          "SUBJECT_KIND_CASE": "Cases",
+          "SUBJECT_KIND_ACTOR": "Actors",
+          "SUBJECT_KIND_THING": "Objects",
+          "SUBJECT_KIND_DOCUMENT": "Related documents"
+        }
+      },
       "SUBJECT_KIND_THING": {
         "sections": {
           "SUBJECT_KIND_THING": "With other objects",
@@ -895,6 +909,13 @@
     },
     "allRelationships": "All relationships (technical view)",
     "allRelationshipsHint": "The raw list of links, both ways, with the actions to end or unlink a link."
+  },
+  "documentPage": {
+    "tabs": {
+      "document": "Document"
+    },
+    "openExternal": "Open in {system}",
+    "externalSystem": "the external system"
   },
   "thingPage": {
     "tabs": {
