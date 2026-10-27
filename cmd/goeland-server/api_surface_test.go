@@ -227,6 +227,12 @@ func (s *surface) roles(adminID string) {
 	s.fails(codeAlreadyExists, "POST", "/api/users/"+writer+"/roles", map[string]any{"roleCode": "ADMIN", "reason": "encore"})
 	s.ok("POST", "/api/users/"+writer+"/roles/ADMIN/revoke", map[string]any{"reason": "fin de suppléance"})
 	s.fails(codeNotFound, "POST", "/api/users/"+writer+"/roles/ADMIN/revoke", map[string]any{"reason": "encore"})
+	if status := s.ok("GET", "/api/outbox", nil); status["maxAttempts"] != float64(10) || status["retentionDays"] != float64(7) {
+		s.t.Fatalf("outbox status with its settings: %v", status)
+	}
+	s.expect(s.call(s.writer, writerToken, "GET", "/api/outbox", nil), codePermissionDenied, "the outbox is for administrators")
+	s.ok("POST", "/api/outbox:replay", map[string]any{"allFailed": true})
+	s.fails(codeInvalidArgument, "POST", "/api/outbox:replay", map[string]any{})
 	history := s.ok("GET", "/api/users/"+writer+"/roles?includeRevoked=true", nil)
 	if len(list(history, "roles")) != 1 || str(list(history, "roles")[0], "revokedBy") == "" {
 		s.t.Fatalf("the revoked assignment is kept as history: %v", history)

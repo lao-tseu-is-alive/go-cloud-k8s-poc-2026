@@ -2105,6 +2105,47 @@ paths:
             $ref: '#/definitions/ActorServiceUpdateOrganizationCategoryBody'
       tags:
         - ActorService
+  /api/outbox:
+    get:
+      summary: |-
+        Describe the transactional outbox (GLD-028): events waiting, failed and
+        kept, the consumers and the latest failures. Requires goeland:admin.
+      operationId: GetOutboxStatus
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetOutboxStatusResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      tags:
+        - CoreService
+  /api/outbox:replay:
+    post:
+      summary: |-
+        Deliver failed outbox events again: the ones listed, or every failed one.
+        Requires goeland:admin.
+      operationId: ReplayOutboxEvents
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ReplayOutboxEventsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: ReplayOutboxEventsRequest names the failed events to deliver again.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1ReplayOutboxEventsRequest'
+      tags:
+        - CoreService
   /api/reference-changes:
     get:
       summary: Page the reference data change log, newest first. Requires goeland:admin.
@@ -6529,6 +6570,46 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit is present when requested, newest first.
     description: GetOrgUnitResponse returns the unit with its place in the tree.
+  v1GetOutboxStatusResponse:
+    type: object
+    properties:
+      pending:
+        type: integer
+        format: int32
+        description: pending counts the events waiting for delivery (or being retried).
+      failed:
+        type: integer
+        format: int32
+        description: failed counts the events whose delivery was given up.
+      published:
+        type: integer
+        format: int32
+        description: published counts the delivered events still kept.
+      oldestPendingAt:
+        type: string
+        format: date-time
+        description: oldest_pending_at is when the oldest pending event occurred; unset when none.
+      retentionDays:
+        type: integer
+        format: int32
+        description: retention_days is how long delivered events are kept.
+      maxAttempts:
+        type: integer
+        format: int32
+        description: max_attempts is how many deliveries are tried before giving up.
+      consumers:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OutboxConsumerStatus'
+        description: consumers are the consumers registered on this server.
+      recentFailed:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1OutboxEvent'
+        description: recent_failed are the latest given-up events (at most 50), newest first.
+    description: GetOutboxStatusResponse is the state of the outbox.
   v1GetSubjectRefResponse:
     type: object
     properties:
@@ -7148,6 +7229,67 @@ definitions:
     description: OrganizationDetails carries the ORGANIZATION-only fields (production ActMoral).
     required:
       - legalName
+  v1OutboxConsumerStatus:
+    type: object
+    properties:
+      name:
+        type: string
+        description: name identifies the consumer.
+      failed:
+        type: integer
+        format: int32
+        description: failed counts the given-up events this consumer refused.
+    description: OutboxConsumerStatus is the state of one consumer of the outbox.
+  v1OutboxEvent:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the event UUID.
+      subjectKind:
+        $ref: '#/definitions/v1SubjectKind'
+        description: subject_kind is the kind of the audited subject.
+      subjectId:
+        type: string
+        description: subject_id is the audited subject.
+      eventType:
+        type: string
+        description: event_type is the audit event type (CASE_UPDATED, RELATIONSHIP_LINKED...).
+      auditEventId:
+        type: string
+        description: audit_event_id is the audit event behind it (who, why, before and after).
+      occurredAt:
+        type: string
+        format: date-time
+        description: occurred_at is when the change was made.
+      attempts:
+        type: integer
+        format: int32
+        description: attempts counts the deliveries tried so far.
+      nextAttemptAt:
+        type: string
+        format: date-time
+        description: next_attempt_at is when a pending event is tried again.
+      publishedAt:
+        type: string
+        format: date-time
+        description: published_at is when every consumer accepted it; unset while pending.
+      failedAt:
+        type: string
+        format: date-time
+        description: failed_at is when the delivery was given up; unset otherwise.
+      lastError:
+        type: string
+        description: last_error is the error of the last failed attempt, per consumer.
+      failedConsumers:
+        type: array
+        items:
+          type: string
+        description: failed_consumers are the consumers whose last attempt failed.
+    description: |-
+      OutboxEvent is a change announced to the consumers of the transactional
+      outbox (GLD-028): one per audit event, written in the same transaction. It
+      carries a reference only; a consumer reads the current state itself.
   v1ParcelDetails:
     type: object
     properties:
@@ -7483,6 +7625,26 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: status_event is the TASK_REOPENED audit event.
     description: ReopenTaskResponse returns the reopened task.
+  v1ReplayOutboxEventsRequest:
+    type: object
+    properties:
+      eventIds:
+        type: array
+        items:
+          type: string
+        description: event_ids are the failed events to replay (at most 500).
+      allFailed:
+        type: boolean
+        description: all_failed replays every failed event.
+    description: ReplayOutboxEventsRequest names the failed events to deliver again.
+  v1ReplayOutboxEventsResponse:
+    type: object
+    properties:
+      replayed:
+        type: integer
+        format: int32
+        description: replayed counts the events put back in the queue.
+    description: ReplayOutboxEventsResponse reports the replay.
   v1RequestCaseExportResponse:
     type: object
     properties:

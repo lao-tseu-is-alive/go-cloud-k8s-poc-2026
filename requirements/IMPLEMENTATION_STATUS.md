@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-10-27**, app version **0.17.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0033` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-10-27**, app version **0.18.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0034` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -116,6 +116,10 @@ These are deliberate betterments beyond the spec — keep them:
   start of each word ("ave rhod" finds "avenue de Rhodanie"). Built on `subject_ref` (one index,
   migration `0032`) rather than a copied search table: no sync code, new kinds included; labels and
   references only, descriptions stay in the domain lists (Meilisearch later, fed by the outbox).
+- 🚀 **Outbox for every audit event, with an administration view (GLD-028)**: written by the one
+  audit helper, so no mutation can forget it; delivered by a worker per replica woken by
+  `pg_notify`; an administrator sees what waits or failed and replays it. Kafka / NATS stay a
+  later consumer, not a prerequisite.
 - 🚀 **List filters by period and creator (GLD-074)**: the results page shows each kind's full list
   with its filters in tabs; every list filters on creation day and creator, cases on opening day,
   documents on official date, and the filters live in the URL (shareable, back button). Asked by the
@@ -264,7 +268,12 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   `record_metadata.deleted_at`, ARCHIVED / DISPOSED in the future retention tables. DISPOSED
   needs a governed destruction path with proof, distinct from domain services.
 - **Outbox only from v2 Phase 7** — the v2 §54 criterion "mutation + audit + outbox" applies
-  once the outbox exists; until then "mutation + audit".
+  once the outbox exists; until then "mutation + audit". Since GLD-028 (2026-10-27) it applies:
+  every audit event writes its outbox event. Reconciled with v2 §38: the event types are the audit
+  types (`CASE_CREATED`, `RELATIONSHIP_ENDED`, `DOCUMENT_VERSION_ADDED`...) rather than new names
+  (`CaseCreated`...), which already cover the §38 list and more; the payload is a reference only
+  (consumers read the current state, nothing confidential copied); the table adds delivery columns
+  (attempts, next attempt, lease, published / failed, last error, failed consumers).
 - **Minimal USER / ORG_UNIT reference before Task (v2 §28, §50)** — task assignees need real
   targets; full security stays in Phase 6. USER shipped first (GLD-025, 2026-09-24): the auth
   service owns accounts, `app_user` only mirrors what verified tokens say, and the audit log

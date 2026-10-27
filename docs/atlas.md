@@ -1,6 +1,6 @@
 # Repository atlas — go-cloud-k8s-poc-2026
 
-Tracked version: **v0.17.1**.
+Tracked version: **v0.18.0**.
 
 This index gives every non-ignored repository file one explicit responsibility
 and authority note. Paths are checked in both directions by `make atlas-check`
@@ -131,6 +131,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
 - `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
+- `cmd/goeland-server/outbox.go` — Builds the outbox worker with the consumers the configuration enables, and the `log` consumer (`GOELAND_OUTBOX_LOG`).
 - `cmd/goeland-server/export.go` — Out-of-proto case export download: streams a built archive to its requester (MANAGE on the case), with a longer write deadline.
 - `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and governed content download (READ on the document) endpoints with their own bearer and scope check, and the frontend config handler.
 
@@ -220,8 +221,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and sensitive read audit rows, shared by the access and case domains.
 - `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
 - `pkg/core/subject_search.go` — Global search (GLD-064): `SearchSubjects` over `subject_ref` per kind (label and business reference, start of every word, readable only), best subjects and a capped count per kind.
+- `pkg/core/outbox.go` — Transactional outbox model (GLD-028): `OutboxEvent`, the insert called by `InsertAuditEventTx`, the retry delay and the status / replay service methods.
+- `pkg/core/outbox_test.go` — Unit tests of the outbox retry delay, consumer names and per-consumer delivery errors.
+- `pkg/core/outbox_worker.go` — `OutboxWorker`: claims due events (SKIP LOCKED, lease), delivers them to every `OutboxConsumer`, retries, gives up, purges, and listens on `OutboxChannel`.
 - `pkg/core/recordfilter.go` — List filters shared by the domain searches: `DateRange` (days in Europe/Zurich, `DayRangeSQL` / `TimeRangeSQL`) and `RecordFilter` (creation day and creator, `RecordFilterSQL`) (GLD-074).
 - `pkg/core/recordfilter_test.go` — Unit tests of the date range parsing and the record filter arguments.
+- `pkg/core/storage_outbox.go` — Outbox status counts, failed events per consumer and replay, in PostgreSQL.
 - `pkg/core/textsearch.go` — Text query helpers: `QueryWords`, `PrefixTSQuery` (start-of-word tsquery, quoted words) and `TextMatchSQL`, shared by every search (GLD-064).
 - `pkg/core/textsearch_test.go` — Tests the word split and the start-of-word tsquery (punctuation, accents, injection, bound).
 - `pkg/core/strictjson.go` — Strict JSON codecs (Connect and Vanguard REST) refusing request bodies with unknown fields.
@@ -284,6 +289,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0028_access_audit.sql` — Schema migration: append-only `access_audit_event`, the sensitive read audit of confidential subjects (GLD-033).
 - `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
 - `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
+- `pkg/core/module/db/migrations/0034_outbox.sql` — Schema migration: `outbox_event`, one per audit event, with its delivery state and queue indexes (GLD-028).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -425,6 +431,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/reference_admin_test.go` — DB test: create, update and deactivate an entry of each catalogue, conflicts, unknown codes and the change log.
 - `pkg/integration/relationship_end_test.go` — DB test: ending a relationship (history kept, relink allowed), double end, validity order, scheduled end, unlinked edge.
 - `pkg/integration/relationship_summary_test.go` — DB test of the relationship groups: counts filtered by the viewer, open cases, families, roles from migration 0031, list filters and details.
+- `pkg/integration/outbox_test.go` — DB test: one outbox event per audit event, none on rollback, delivery and publication, retries, give-up, status, replay, two concurrent workers, purge (GLD-028).
 - `pkg/integration/subject_search_test.go` — DB test: global search by start of word, accents, exact reference, readable counts, deleted and renamed subjects, limit (GLD-064).
 - `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
 - `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
@@ -457,6 +464,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/roleClient.ts` — REST calls of the application roles: catalogue, holders, a user's history, grant and revoke.
+- `cmd/goeland-server/goeland-front/src/api/outboxClient.ts` — REST calls of the outbox administration: status and replay (GLD-028).
 - `cmd/goeland-server/goeland-front/src/api/referenceClient.ts` — REST calls of reference data administration (create / update per catalogue) and the change log.
 - `cmd/goeland-server/goeland-front/src/api/timelineClient.ts` — REST client for `TimelineService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/orgUnitClient.ts` — REST client for `OrgUnitService` bindings.
@@ -478,6 +486,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/CaseTypeDefaultGrantsDialog.vue` — Editor of a case type's default grants (users, groups, units, the creator's units) with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
+- `cmd/goeland-server/goeland-front/src/components/admin/OutboxPanel.vue` — Administration › Outbox: pending, given-up and kept events, consumers, latest failures and replay (GLD-028).
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
 - `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders, who also open the subject's sensitive access log.

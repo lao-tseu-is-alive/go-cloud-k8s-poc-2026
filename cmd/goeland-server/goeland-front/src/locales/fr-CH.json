@@ -358,6 +358,27 @@
       "SUBJECT_KIND_GROUP": "Groupes"
     }
   },
+  "outbox": {
+    "tab": "Outbox",
+    "intro": "Chaque modification annonce un événement aux consommateurs (index de recherche, notifications…). Un événement refusé est réessayé avec un délai croissant, puis abandonné après {attempts} essais ; les événements livrés sont gardés {days} jours.",
+    "pending": "En attente",
+    "failed": "Abandonnés",
+    "published": "Livrés (gardés)",
+    "oldestPending": "Le plus ancien en attente : {at}",
+    "consumers": "Consommateurs",
+    "noConsumer": "Aucun consommateur n’est enregistré : les événements sont marqués livrés dès leur écriture.",
+    "consumerFailed": "aucun abandon | {n} abandon | {n} abandons",
+    "recentFailed": "Derniers événements abandonnés",
+    "noFailure": "Aucun événement abandonné.",
+    "replayAll": "Tout rejouer ({count})",
+    "replay": "Rejouer",
+    "replayed": "Aucun événement rejoué | {n} événement remis en file | {n} événements remis en file",
+    "event": "Événement",
+    "subject": "Sujet",
+    "attempts": "Essais",
+    "error": "Dernière erreur",
+    "failedAt": "Abandonné le"
+  },
   "filters": {
     "more": "Plus de filtres",
     "from": "{label} du",

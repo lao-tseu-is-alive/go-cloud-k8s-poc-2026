@@ -1,6 +1,8 @@
 package core
 
 import (
+	"time"
+
 	"context"
 	"fmt"
 	"log/slog"
@@ -20,6 +22,10 @@ type Service struct {
 	log  *slog.Logger
 	// rolesListener is told whose roles changed (set once at wiring, see OnRolesChanged).
 	rolesListener func(userID string)
+	// outboxConsumers and outboxRetention describe this server's outbox worker
+	// (set once at wiring, see UseOutboxWorker).
+	outboxConsumers []string
+	outboxRetention time.Duration
 }
 
 // NewService constructs a Service backed by the given repository. A nil logger falls back to slog.Default.

@@ -145,7 +145,8 @@ whenever a task starts, completes, changes scope or order.
 ### Not yet built (same foundation)
 
 Storage (MinIO),
-search (Meilisearch), provenance and outbox, AI proposals, workflow. The Actor
+search (Meilisearch), AI proposals, workflow; the outbox (GLD-028) exists but has no business
+consumer yet. The Actor
 domain continues too (the full production role vocabulary mapped onto
 `relationship_type` with Case/Thing).
 Design new domains as first-class subjects that reuse the core primitives.
@@ -181,7 +182,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0033 (dbmate format)
+  │   └── db/migrations/     0001..0034 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -348,6 +349,16 @@ search a history entry), and lay out their filters in `SearchFilterCard` (second
 `RecordFilterFields.vue`; `created_by` is indexed, migration `0033`), cases also on their opening day
 and documents on their official date (`core.DateRange`, days in Europe/Zurich). A new list reuses them.
 
+**Transactional outbox (GLD-028):** `core.InsertAuditEventTx` also writes an `outbox_event` (one per
+audit event, same transaction, reference-only payload, `pg_notify` on `core.OutboxChannel`), so a new
+mutation announces itself as long as it writes its audit — never insert into `audit_event` another
+way. `core.OutboxWorker` (started by `serve` on every replica, built in `cmd/goeland-server/outbox.go`)
+delivers to the registered `core.OutboxConsumer`s at least once and in no guaranteed order: a consumer
+reads the current state of `SubjectID` and must be idempotent. Failures retry with a growing delay and
+are given up after `core.OutboxMaxAttempts`; administrators see and replay them (Administration ›
+Outbox, `GetOutboxStatus` / `ReplayOutboxEvents`). New consumers (search indexer, notifiers, a
+NATS/Kafka bridge) register in `buildOutboxWorker`.
+
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,
@@ -448,7 +459,8 @@ curl -s -H 'Authorization: Bearer <dev-token>' -H 'Content-Type: application/jso
 bindings (CoreService: `/api/subjects`, `/api/relationships`, `/api/relationship-types`,
 `/api/subjects/{id}/relationships`, `/api/subjects/{id}/audit`, `/api/subjects/{id}/business-ref`,
 `/api/subjects:lookup`, `/api/subjects:search`, `/api/relationships/{id}/end`, `/api/me`, `/api/users:batchGet`, `/api/reference-changes`,
-`/api/access-audit-events`, `/api/subjects/{subject_id}/relationship-summary`; ActorService:
+`/api/access-audit-events`, `/api/subjects/{subject_id}/relationship-summary`, `/api/outbox`,
+`/api/outbox:replay`; ActorService:
 `/api/actors`, `/api/actors/{id}`, `/api/actors/search`, `/api/organization-categories`;
 CaseService: `/api/cases`, `/api/cases/{id}`, `/api/cases/{id}/transition`,
 `/api/cases/search`, `/api/case-types`; ThingService: `/api/things`, `/api/things/{id}`,

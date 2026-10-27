@@ -134,6 +134,12 @@ const (
 	// CoreServiceListReferenceChangesProcedure is the fully-qualified name of the CoreService's
 	// ListReferenceChanges RPC.
 	CoreServiceListReferenceChangesProcedure = "/goeland.v1.CoreService/ListReferenceChanges"
+	// CoreServiceGetOutboxStatusProcedure is the fully-qualified name of the CoreService's
+	// GetOutboxStatus RPC.
+	CoreServiceGetOutboxStatusProcedure = "/goeland.v1.CoreService/GetOutboxStatus"
+	// CoreServiceReplayOutboxEventsProcedure is the fully-qualified name of the CoreService's
+	// ReplayOutboxEvents RPC.
+	CoreServiceReplayOutboxEventsProcedure = "/goeland.v1.CoreService/ReplayOutboxEvents"
 )
 
 // CoreServiceClient is a client for the goeland.v1.CoreService service.
@@ -218,6 +224,12 @@ type CoreServiceClient interface {
 	UpdateRelationshipType(context.Context, *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error)
 	// Page the reference data change log, newest first. Requires goeland:admin.
 	ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error)
+	// Describe the transactional outbox (GLD-028): events waiting, failed and
+	// kept, the consumers and the latest failures. Requires goeland:admin.
+	GetOutboxStatus(context.Context, *connect.Request[v1.GetOutboxStatusRequest]) (*connect.Response[v1.GetOutboxStatusResponse], error)
+	// Deliver failed outbox events again: the ones listed, or every failed one.
+	// Requires goeland:admin.
+	ReplayOutboxEvents(context.Context, *connect.Request[v1.ReplayOutboxEventsRequest]) (*connect.Response[v1.ReplayOutboxEventsResponse], error)
 }
 
 // NewCoreServiceClient constructs a client for the goeland.v1.CoreService service. By default, it
@@ -375,6 +387,18 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("ListReferenceChanges")),
 			connect.WithClientOptions(opts...),
 		),
+		getOutboxStatus: connect.NewClient[v1.GetOutboxStatusRequest, v1.GetOutboxStatusResponse](
+			httpClient,
+			baseURL+CoreServiceGetOutboxStatusProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("GetOutboxStatus")),
+			connect.WithClientOptions(opts...),
+		),
+		replayOutboxEvents: connect.NewClient[v1.ReplayOutboxEventsRequest, v1.ReplayOutboxEventsResponse](
+			httpClient,
+			baseURL+CoreServiceReplayOutboxEventsProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("ReplayOutboxEvents")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
@@ -404,6 +428,8 @@ type coreServiceClient struct {
 	createRelationshipType *connect.Client[v1.CreateRelationshipTypeRequest, v1.CreateRelationshipTypeResponse]
 	updateRelationshipType *connect.Client[v1.UpdateRelationshipTypeRequest, v1.UpdateRelationshipTypeResponse]
 	listReferenceChanges   *connect.Client[v1.ListReferenceChangesRequest, v1.ListReferenceChangesResponse]
+	getOutboxStatus        *connect.Client[v1.GetOutboxStatusRequest, v1.GetOutboxStatusResponse]
+	replayOutboxEvents     *connect.Client[v1.ReplayOutboxEventsRequest, v1.ReplayOutboxEventsResponse]
 }
 
 // CreateSubjectRef calls goeland.v1.CoreService.CreateSubjectRef.
@@ -526,6 +552,16 @@ func (c *coreServiceClient) ListReferenceChanges(ctx context.Context, req *conne
 	return c.listReferenceChanges.CallUnary(ctx, req)
 }
 
+// GetOutboxStatus calls goeland.v1.CoreService.GetOutboxStatus.
+func (c *coreServiceClient) GetOutboxStatus(ctx context.Context, req *connect.Request[v1.GetOutboxStatusRequest]) (*connect.Response[v1.GetOutboxStatusResponse], error) {
+	return c.getOutboxStatus.CallUnary(ctx, req)
+}
+
+// ReplayOutboxEvents calls goeland.v1.CoreService.ReplayOutboxEvents.
+func (c *coreServiceClient) ReplayOutboxEvents(ctx context.Context, req *connect.Request[v1.ReplayOutboxEventsRequest]) (*connect.Response[v1.ReplayOutboxEventsResponse], error) {
+	return c.replayOutboxEvents.CallUnary(ctx, req)
+}
+
 // CoreServiceHandler is an implementation of the goeland.v1.CoreService service.
 type CoreServiceHandler interface {
 	// Create a canonical subject identity + its record_metadata in one transaction.
@@ -608,6 +644,12 @@ type CoreServiceHandler interface {
 	UpdateRelationshipType(context.Context, *connect.Request[v1.UpdateRelationshipTypeRequest]) (*connect.Response[v1.UpdateRelationshipTypeResponse], error)
 	// Page the reference data change log, newest first. Requires goeland:admin.
 	ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error)
+	// Describe the transactional outbox (GLD-028): events waiting, failed and
+	// kept, the consumers and the latest failures. Requires goeland:admin.
+	GetOutboxStatus(context.Context, *connect.Request[v1.GetOutboxStatusRequest]) (*connect.Response[v1.GetOutboxStatusResponse], error)
+	// Deliver failed outbox events again: the ones listed, or every failed one.
+	// Requires goeland:admin.
+	ReplayOutboxEvents(context.Context, *connect.Request[v1.ReplayOutboxEventsRequest]) (*connect.Response[v1.ReplayOutboxEventsResponse], error)
 }
 
 // NewCoreServiceHandler builds an HTTP handler from the service implementation. It returns the path
@@ -761,6 +803,18 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("ListReferenceChanges")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceGetOutboxStatusHandler := connect.NewUnaryHandler(
+		CoreServiceGetOutboxStatusProcedure,
+		svc.GetOutboxStatus,
+		connect.WithSchema(coreServiceMethods.ByName("GetOutboxStatus")),
+		connect.WithHandlerOptions(opts...),
+	)
+	coreServiceReplayOutboxEventsHandler := connect.NewUnaryHandler(
+		CoreServiceReplayOutboxEventsProcedure,
+		svc.ReplayOutboxEvents,
+		connect.WithSchema(coreServiceMethods.ByName("ReplayOutboxEvents")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.CoreService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case CoreServiceCreateSubjectRefProcedure:
@@ -811,6 +865,10 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceUpdateRelationshipTypeHandler.ServeHTTP(w, r)
 		case CoreServiceListReferenceChangesProcedure:
 			coreServiceListReferenceChangesHandler.ServeHTTP(w, r)
+		case CoreServiceGetOutboxStatusProcedure:
+			coreServiceGetOutboxStatusHandler.ServeHTTP(w, r)
+		case CoreServiceReplayOutboxEventsProcedure:
+			coreServiceReplayOutboxEventsHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -914,4 +972,12 @@ func (UnimplementedCoreServiceHandler) UpdateRelationshipType(context.Context, *
 
 func (UnimplementedCoreServiceHandler) ListReferenceChanges(context.Context, *connect.Request[v1.ListReferenceChangesRequest]) (*connect.Response[v1.ListReferenceChangesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListReferenceChanges is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) GetOutboxStatus(context.Context, *connect.Request[v1.GetOutboxStatusRequest]) (*connect.Response[v1.GetOutboxStatusResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.GetOutboxStatus is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) ReplayOutboxEvents(context.Context, *connect.Request[v1.ReplayOutboxEventsRequest]) (*connect.Response[v1.ReplayOutboxEventsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ReplayOutboxEvents is not implemented"))
 }

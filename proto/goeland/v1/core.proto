@@ -957,6 +957,92 @@ message ListReferenceChangesResponse {
   int32 total_size = 3;
 }
 
+// OutboxEvent is a change announced to the consumers of the transactional
+// outbox (GLD-028): one per audit event, written in the same transaction. It
+// carries a reference only; a consumer reads the current state itself.
+message OutboxEvent {
+  // id is the event UUID.
+  string id = 1;
+  // subject_kind is the kind of the audited subject.
+  SubjectKind subject_kind = 2;
+  // subject_id is the audited subject.
+  string subject_id = 3;
+  // event_type is the audit event type (CASE_UPDATED, RELATIONSHIP_LINKED...).
+  string event_type = 4;
+  // audit_event_id is the audit event behind it (who, why, before and after).
+  string audit_event_id = 5;
+  // occurred_at is when the change was made.
+  google.protobuf.Timestamp occurred_at = 6;
+  // attempts counts the deliveries tried so far.
+  int32 attempts = 7;
+  // next_attempt_at is when a pending event is tried again.
+  google.protobuf.Timestamp next_attempt_at = 8;
+  // published_at is when every consumer accepted it; unset while pending.
+  google.protobuf.Timestamp published_at = 9;
+  // failed_at is when the delivery was given up; unset otherwise.
+  google.protobuf.Timestamp failed_at = 10;
+  // last_error is the error of the last failed attempt, per consumer.
+  string last_error = 11;
+  // failed_consumers are the consumers whose last attempt failed.
+  repeated string failed_consumers = 12;
+}
+
+// OutboxConsumerStatus is the state of one consumer of the outbox.
+message OutboxConsumerStatus {
+  // name identifies the consumer.
+  string name = 1;
+  // failed counts the given-up events this consumer refused.
+  int32 failed = 2;
+}
+
+// GetOutboxStatusRequest asks for the state of the outbox.
+message GetOutboxStatusRequest {}
+
+// GetOutboxStatusResponse is the state of the outbox.
+message GetOutboxStatusResponse {
+  // pending counts the events waiting for delivery (or being retried).
+  int32 pending = 1;
+  // failed counts the events whose delivery was given up.
+  int32 failed = 2;
+  // published counts the delivered events still kept.
+  int32 published = 3;
+  // oldest_pending_at is when the oldest pending event occurred; unset when none.
+  google.protobuf.Timestamp oldest_pending_at = 4;
+  // retention_days is how long delivered events are kept.
+  int32 retention_days = 5;
+  // max_attempts is how many deliveries are tried before giving up.
+  int32 max_attempts = 6;
+  // consumers are the consumers registered on this server.
+  repeated OutboxConsumerStatus consumers = 7;
+  // recent_failed are the latest given-up events (at most 50), newest first.
+  repeated OutboxEvent recent_failed = 8;
+}
+
+// ReplayOutboxEventsRequest names the failed events to deliver again.
+message ReplayOutboxEventsRequest {
+  option (buf.validate.message).cel = {
+    id: "replay_outbox.one_target"
+    message: "give either event_ids or all_failed"
+    expression: "(size(this.event_ids) > 0) != this.all_failed"
+  };
+  // event_ids are the failed events to replay (at most 500).
+  repeated string event_ids = 1 [(buf.validate.field).repeated = {
+    max_items: 500
+    unique: true
+    items: {
+      string: {uuid: true}
+    }
+  }];
+  // all_failed replays every failed event.
+  bool all_failed = 2;
+}
+
+// ReplayOutboxEventsResponse reports the replay.
+message ReplayOutboxEventsResponse {
+  // replayed counts the events put back in the queue.
+  int32 replayed = 1;
+}
+
 // CreateRelationshipTypeRequest adds a relationship type (administrators only).
 message CreateRelationshipTypeRequest {
   // code is the immutable key: upper-case letters, digits and underscores
@@ -1378,5 +1464,20 @@ service CoreService {
   // Page the reference data change log, newest first. Requires goeland:admin.
   rpc ListReferenceChanges(ListReferenceChangesRequest) returns (ListReferenceChangesResponse) {
     option (google.api.http) = {get: "/api/reference-changes"};
+  }
+
+  // Describe the transactional outbox (GLD-028): events waiting, failed and
+  // kept, the consumers and the latest failures. Requires goeland:admin.
+  rpc GetOutboxStatus(GetOutboxStatusRequest) returns (GetOutboxStatusResponse) {
+    option (google.api.http) = {get: "/api/outbox"};
+  }
+
+  // Deliver failed outbox events again: the ones listed, or every failed one.
+  // Requires goeland:admin.
+  rpc ReplayOutboxEvents(ReplayOutboxEventsRequest) returns (ReplayOutboxEventsResponse) {
+    option (google.api.http) = {
+      post: "/api/outbox:replay"
+      body: "*"
+    };
   }
 }

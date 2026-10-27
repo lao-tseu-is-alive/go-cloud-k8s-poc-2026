@@ -181,6 +181,8 @@ func EnsureOpenCaseTx(ctx context.Context, q Querier, caseID uuid.UUID) error {
 
 // InsertAuditEventTx appends an append-only audit event using q. Every domain
 // mutation must call this within the same transaction as the mutation itself.
+// It also writes the event's outbox entry (GLD-028), so every committed change
+// is announced to the outbox consumers and a rolled-back one never is.
 func InsertAuditEventTx(ctx context.Context, q Querier, ev AuditEvent) (*AuditEvent, error) {
 	var correlation *uuid.UUID
 	if ev.CorrelationID != nil && *ev.CorrelationID != uuid.Nil {
@@ -210,7 +212,14 @@ func InsertAuditEventTx(ctx context.Context, q Querier, ev AuditEvent) (*AuditEv
 	if err != nil {
 		return nil, err
 	}
-	return pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[AuditEvent])
+	written, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[AuditEvent])
+	if err != nil {
+		return nil, err
+	}
+	if err := insertOutboxEventTx(ctx, q, written); err != nil {
+		return nil, fmt.Errorf("insert outbox event: %w", err)
+	}
+	return written, nil
 }
 
 // GetRelationshipTypeByCodeTx loads a relationship type by its code using q.

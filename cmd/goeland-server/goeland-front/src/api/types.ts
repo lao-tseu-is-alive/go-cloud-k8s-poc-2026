@@ -1292,3 +1292,41 @@ export interface CaseExportResponse {
 export interface ListCaseExportsResponse {
   exports?: CaseExport[]
 }
+
+// ---------------------------------------------------------------------------
+// Transactional outbox (CoreService, GLD-028)
+// ---------------------------------------------------------------------------
+
+/** A change announced to the outbox consumers: one per audit event. */
+export interface OutboxEvent {
+  id: string
+  subjectKind?: SubjectKind
+  subjectId?: string
+  eventType?: string
+  auditEventId?: string
+  occurredAt?: string
+  attempts?: number
+  nextAttemptAt?: string
+  publishedAt?: string
+  failedAt?: string
+  lastError?: string
+  failedConsumers?: string[]
+}
+
+/** A consumer of the outbox and the given-up events it refused. */
+export interface OutboxConsumerStatus {
+  name: string
+  failed?: number
+}
+
+/** The state of the outbox (GetOutboxStatus). */
+export interface OutboxStatus {
+  pending?: number
+  failed?: number
+  published?: number
+  oldestPendingAt?: string
+  retentionDays?: number
+  maxAttempts?: number
+  consumers?: OutboxConsumerStatus[]
+  recentFailed?: OutboxEvent[]
+}

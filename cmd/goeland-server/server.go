@@ -13,6 +13,7 @@ import (
 	"runtime/debug"
 	"slices"
 	"strings"
+	"sync"
 	"time"
 
 	"connectrpc.com/vanguard"
@@ -54,6 +55,8 @@ type application struct {
 	log     *slog.Logger
 	// exports builds the case export archives; serve runs its worker.
 	exports *caseexport.Service
+	// outbox delivers the outbox events to the consumers (GLD-028); serve runs it.
+	outbox *core.OutboxWorker
 }
 
 // newApplication opens the pool, migrates the schema, wires the core + document
@@ -103,16 +106,10 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	}
 	log.Info("document blob store ready", "path", blobStore.Root(), "max_upload_bytes", config.MaxUploadBytes)
 
-	coreMod, err := coremodule.New(ctx, coremodule.Config{RequestTimeout: config.RequestTimeout}, coremodule.Deps{
-		Pool:     pool,
-		Verifier: verifier,
-		Logger:   log,
-	})
+	coreMod, outbox, err := buildCoreModule(ctx, config, pool, verifier, log)
 	if err != nil {
-		return nil, fmt.Errorf("core module: %w", err)
+		return nil, err
 	}
-	// A role granted or revoked through this process takes effect at once.
-	coreMod.Service().OnRolesChanged(verifier.ForgetRoles)
 	docMod, err := documentmodule.New(ctx, documentmodule.Config{RequestTimeout: config.RequestTimeout}, documentmodule.Deps{
 		Pool:        pool,
 		Verifier:    verifier,
@@ -182,7 +179,28 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, securityHeadersMiddleware(contentSecurityPolicy(config), mux)))),
 		log:     log,
 		exports: exportMod.Service(),
+		outbox:  outbox,
 	}, nil
+}
+
+// buildCoreModule builds the core module and the outbox worker it reports
+// on; a role granted or revoked through this process takes effect at once.
+func buildCoreModule(ctx context.Context, config serverConfig, pool *pgxpool.Pool, verifier *core.RecordingVerifier, log *slog.Logger) (*coremodule.Module, *core.OutboxWorker, error) {
+	coreMod, err := coremodule.New(ctx, coremodule.Config{RequestTimeout: config.RequestTimeout}, coremodule.Deps{
+		Pool:     pool,
+		Verifier: verifier,
+		Logger:   log,
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("core module: %w", err)
+	}
+	coreMod.Service().OnRolesChanged(verifier.ForgetRoles)
+	outbox, err := buildOutboxWorker(config, pool, log)
+	if err != nil {
+		return nil, nil, err
+	}
+	coreMod.Service().UseOutboxWorker(outbox)
+	return coreMod, outbox, nil
 }
 
 // mountTranscoder mounts the shared Vanguard transcoder. It serves BOTH the
@@ -380,14 +398,12 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(listener) }()
-	// The case export worker stops with serve; serve waits for it to return.
-	workerCtx, stopWorker := context.WithCancel(ctx)
-	workerDone := make(chan struct{})
-	go func() {
-		defer close(workerDone)
-		a.exports.Run(workerCtx)
-	}()
-	defer func() { stopWorker(); <-workerDone }()
+	// The case export and outbox workers stop with serve; serve waits for them to return.
+	workerCtx, stopWorkers := context.WithCancel(ctx)
+	var workers sync.WaitGroup
+	workers.Go(func() { a.exports.Run(workerCtx) })
+	workers.Go(func() { a.outbox.Run(workerCtx) })
+	defer func() { stopWorkers(); workers.Wait() }()
 
 	select {
 	case err := <-errCh:

@@ -5,6 +5,7 @@
   import { useI18n } from 'vue-i18n'
   import AccessAuditPanel from '@/components/access/AccessAuditPanel.vue'
   import CaseTypeDefaultGrantsDialog from '@/components/admin/CaseTypeDefaultGrantsDialog.vue'
+  import OutboxPanel from '@/components/admin/OutboxPanel.vue'
   import ReferenceCatalogPanel from '@/components/admin/ReferenceCatalogPanel.vue'
   import { CATALOGUES } from '@/components/admin/referenceCatalogues'
   import ReferenceChangesPanel from '@/components/admin/ReferenceChangesPanel.vue'
@@ -12,11 +13,12 @@
   import { useAuthStore } from '@/stores/auth'
 
   // Administration, for holders of the ADMIN role only: reference data (GLD-040),
-  // the application roles of the users (GLD-047) and the sensitive read audit (GLD-033). The server enforces the
+  // the application roles of the users (GLD-047), the sensitive read audit (GLD-033) and the
+  // outbox (GLD-028). The server enforces the
   // role on every call; this page only hides what cannot work.
   const { t } = useI18n()
   const { isAdmin } = storeToRefs(useAuthStore())
-  const tab = ref<ReferenceCatalogue | 'log' | 'roles' | 'sensitive'>('case_type')
+  const tab = ref<ReferenceCatalogue | 'log' | 'roles' | 'sensitive' | 'outbox'>('case_type')
   const log = ref<InstanceType<typeof ReferenceChangesPanel>>()
   const caseTypes = ref<InstanceType<typeof ReferenceCatalogPanel>[]>([])
   const defaultsOf = ref<CaseType | null>(null) // the case type whose default grants are edited
@@ -40,6 +42,7 @@
         <v-tab prepend-icon="mdi-history" value="log">{{ t('sections.reference.log') }}</v-tab>
         <v-tab prepend-icon="mdi-shield-account-outline" value="roles">{{ t('roles.tab') }}</v-tab>
         <v-tab prepend-icon="mdi-eye-lock-outline" value="sensitive">{{ t('access.audit.tab') }}</v-tab>
+        <v-tab prepend-icon="mdi-tray-arrow-up" value="outbox">{{ t('outbox.tab') }}</v-tab>
       </v-tabs>
 
       <v-card-text>
@@ -71,6 +74,10 @@
 
           <v-window-item value="sensitive">
             <AccessAuditPanel />
+          </v-window-item>
+
+          <v-window-item value="outbox">
+            <OutboxPanel v-if="tab === 'outbox'" />
           </v-window-item>
         </v-window>
       </v-card-text>

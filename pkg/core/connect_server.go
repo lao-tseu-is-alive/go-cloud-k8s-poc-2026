@@ -7,6 +7,7 @@ import (
 	"slices"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 )
@@ -579,4 +580,37 @@ func optionalRoleEnd(e *goelandv1.RoleEnd) *RoleEnd {
 	}
 	end := RoleEndFromProto(*e)
 	return &end
+}
+
+// GetOutboxStatus describes the transactional outbox (administrators only, GLD-028).
+func (s *ConnectServer) GetOutboxStatus(ctx context.Context, _ *connect.Request[goelandv1.GetOutboxStatusRequest]) (*connect.Response[goelandv1.GetOutboxStatusResponse], error) {
+	if _, err := RequireCaller(ctx, ScopeAdmin); err != nil {
+		return nil, err
+	}
+	status, err := s.service.OutboxStatus(ctx)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(OutboxStatusToProto(status, s.service.OutboxRetention())), nil
+}
+
+// ReplayOutboxEvents puts failed outbox events back in the queue (administrators only, GLD-028).
+func (s *ConnectServer) ReplayOutboxEvents(ctx context.Context, req *connect.Request[goelandv1.ReplayOutboxEventsRequest]) (*connect.Response[goelandv1.ReplayOutboxEventsResponse], error) {
+	user, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(req.Msg.EventIds))
+	for _, raw := range req.Msg.EventIds {
+		id, err := ParseUUID(raw)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	n, err := s.service.ReplayOutbox(ctx, OperatorID(user), ids, req.Msg.AllFailed)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.ReplayOutboxEventsResponse{Replayed: n}), nil
 }

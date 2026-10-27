@@ -11,6 +11,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
 const (
@@ -24,6 +26,7 @@ const (
 	defaultMaxUploadBytes = 100 << 20 // 100 MiB
 	defaultExportTTL      = 24 * time.Hour
 	defaultExportPoll     = 5 * time.Second
+	defaultOutboxPoll     = 5 * time.Second
 )
 
 // defaultDBConnectTimeout bounds how long startup waits for the database (a pod
@@ -81,6 +84,14 @@ type serverConfig struct {
 	// ExportPollInterval is how often the export worker looks for work
 	// (GOELAND_EXPORT_POLL_SECONDS, default 5 s).
 	ExportPollInterval time.Duration
+	// OutboxRetention is how long delivered outbox events are kept
+	// (GOELAND_OUTBOX_RETENTION_DAYS, default 7 days, GLD-028).
+	OutboxRetention time.Duration
+	// OutboxPollInterval is how often the outbox worker looks for due events
+	// besides the notifications (GOELAND_OUTBOX_POLL_SECONDS, default 5 s).
+	OutboxPollInterval time.Duration
+	// OutboxLog logs every delivered outbox event (GOELAND_OUTBOX_LOG, default false).
+	OutboxLog bool
 	// BootstrapAdmins are the user ids granted the ADMIN role on their next
 	// request (GOELAND_BOOTSTRAP_ADMINS, comma-separated); the recovery path
 	// when no administrator is left.
@@ -204,7 +215,28 @@ func (c *serverConfig) readLimits() error {
 	c.RequestTimeout = time.Duration(requestTimeoutSeconds) * time.Second
 	c.DBConnectTimeout = time.Duration(dbConnectSeconds) * time.Second
 	c.MaxUploadBytes = maxUploadBytes
-	return c.readExportLimits()
+	if err := c.readExportLimits(); err != nil {
+		return err
+	}
+	return c.readOutboxSettings()
+}
+
+// readOutboxSettings reads the outbox worker settings (GLD-028).
+func (c *serverConfig) readOutboxSettings() error {
+	retentionDays, err := envInt64InRange("GOELAND_OUTBOX_RETENTION_DAYS", int64(core.DefaultOutboxRetention/(24*time.Hour)), 1, 365)
+	if err != nil {
+		return err
+	}
+	pollSeconds, err := envInt64InRange("GOELAND_OUTBOX_POLL_SECONDS", int64(defaultOutboxPoll/time.Second), 1, 3600)
+	if err != nil {
+		return err
+	}
+	if c.OutboxLog, err = envBool("GOELAND_OUTBOX_LOG", false); err != nil {
+		return err
+	}
+	c.OutboxRetention = time.Duration(retentionDays) * 24 * time.Hour
+	c.OutboxPollInterval = time.Duration(pollSeconds) * time.Second
+	return nil
 }
 
 // readExportLimits reads the case export worker settings.

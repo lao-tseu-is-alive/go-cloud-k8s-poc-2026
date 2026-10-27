@@ -7,7 +7,7 @@
 [![cve-trivy-scan](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/cve-trivy-scan.yml)
 [![CI](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml/badge.svg)](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/actions/workflows/ci.yml)
 
-Current version: **v0.17.1** — pre-1.0 POC.
+Current version: **v0.18.0** — pre-1.0 POC.
 
 
 A modern, proto-first POC rebuilding the conceptual core of **Goéland** (territorial
@@ -112,7 +112,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0033 (dbmate format)
+      └── db/migrations/  0001..0034 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -319,7 +319,8 @@ CoreService: `POST /api/subjects` · `GET /api/subjects/{id}` · `POST /api/rela
 `DELETE /api/relationships/{relationshipId}` · `GET /api/subjects/{subjectId}/relationships` ·
 `GET /api/relationship-types` · `GET /api/subjects/{subjectId}/audit` ·
 `POST /api/subjects/{subjectId}/business-ref` · `GET /api/subjects:lookup?businessRef=…&namespace=…` ·
-`GET /api/subjects:search?query=…` (global search, GLD-064).
+`GET /api/subjects:search?query=…` (global search, GLD-064) ·
+`GET /api/outbox` · `POST /api/outbox:replay` (transactional outbox, administrators, GLD-028).
 
 ```bash
 BASE=http://127.0.0.1:8088
@@ -394,6 +395,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0031_relationship_roles.sql  relationship_type roles (label, plural, end, preposition) read from the subject on screen
 0032_subject_search.sql      per-kind search index of subject_ref for the global search
 0033_creator_indexes.sql     created_by indexes for the creator filter of the lists
+0034_outbox.sql              outbox_event: transactional outbox, one event per audit event (GLD-028)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -504,6 +506,6 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Not built yet
 
-MinIO storage, Meilisearch, the outbox, AI
+MinIO storage, Meilisearch, the outbox consumers (search indexer, notifications), AI
 proposals and workflow integration — all designed to sit on top of the same
 subject/relationship/audit foundation. The order lives in [`docs/ROADMAP.md`](docs/ROADMAP.md).

@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.17.1**.
+Tracked version: **v0.18.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -44,7 +44,7 @@ the City's map (GLD-069) followed the same model in v0.16.0; the labels of unrea
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
 v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) and the list filters by
 period and creator (GLD-074) in v0.17.0; the document page on the same model (GLD-075) in
-v0.17.1.
+v0.17.1; the transactional outbox (GLD-028) in v0.18.0.
 
 ## Cross-cutting quality
 
@@ -365,9 +365,17 @@ covered by an integration test.
 - [x] **GLD-027 — Provenance**: `subject_provenance` (source system, source
   id, import batch); legacy IDs are provenance, never the new UUIDs. Shipped with
   the legacy import (GLD-051, migration `0025`) in v0.12.0.
-- [ ] **GLD-028 — Transactional outbox**: `outbox_event` written in the same
+- [x] **GLD-028 — Transactional outbox**: `outbox_event` written in the same
   transaction as the mutation and its audit event (v2 §38 event list); from
-  then on the v2 §54 "mutation + audit + outbox" criterion applies.
+  then on the v2 §54 "mutation + audit + outbox" criterion applies. Built 2026-10-27 with the
+  decisions of the same day: one event per audit event, written by `core.InsertAuditEventTx` (every
+  mutation covered by construction, the audit type as event type), a reference-only payload; one
+  worker per replica (`core.OutboxWorker`, `FOR UPDATE SKIP LOCKED` with a lease, woken by
+  `pg_notify`, 5 s poll) calling every consumer, at least once, retries 10 s ×6 up to an hour, given
+  up after 10 attempts; delivered events kept `GOELAND_OUTBOX_RETENTION_DAYS` (default 7); an
+  « Outbox » administration tab with the state, the consumers and « Rejouer »
+  (`CoreService.GetOutboxStatus`, `ReplayOutboxEvents`). Migration `0034`. No business consumer yet:
+  the search indexer and the notifiers come next. Released in v0.18.0.
 - [x] **GLD-029 — ExportCase**: JSON + blobs in a ZIP (case, timeline, tasks,
   circulations, relationships, documents, versions, blob metadata and hashes,
   audit summary, provenance, retention), each blob stored once. Model decided 2026-10-14

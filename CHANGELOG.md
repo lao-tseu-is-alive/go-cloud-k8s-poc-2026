@@ -8,6 +8,26 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.18.0] - 2026-10-27
+
+Transactional outbox (GLD-028): every audit event is announced to the outbox consumers, with an
+administration view and replay. Migration `0034`; new RPCs `CoreService.GetOutboxStatus` and
+`ReplayOutboxEvents`; new settings `GOELAND_OUTBOX_RETENTION_DAYS`, `GOELAND_OUTBOX_POLL_SECONDS`,
+`GOELAND_OUTBOX_LOG`.
+
+### Added
+
+- **GLD-028** — Transactional outbox: every audit event writes an outbox event in the same
+  transaction (`core.InsertAuditEventTx`), so a committed change is always announced and a
+  rolled-back one never is. A worker on every replica delivers the events to the registered
+  consumers at least once (woken by `pg_notify`, polling every `GOELAND_OUTBOX_POLL_SECONDS`), retries
+  a refusal with a growing delay, gives up after 10 attempts and deletes the delivered events after
+  `GOELAND_OUTBOX_RETENTION_DAYS` (default 7). Administration gets an « Outbox » tab: pending, given-up
+  and kept events, the consumers, the latest failures and « Rejouer » (new RPCs
+  `CoreService.GetOutboxStatus`, `GET /api/outbox`, and `ReplayOutboxEvents`,
+  `POST /api/outbox:replay`). Migration `0034`. `GOELAND_OUTBOX_LOG=true` logs every event; the
+  search indexer and the notifiers will be the first business consumers.
+
 ## [0.17.1] - 2026-10-27
 
 The document page follows the information hierarchy of the other detail pages (GLD-075). No

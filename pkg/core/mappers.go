@@ -328,3 +328,43 @@ func DomainReferenceChangeToProto(c *ReferenceChange) *goelandv1.ReferenceChange
 		Reason:      c.Reason,
 	}
 }
+
+// OutboxEventToProto maps an outbox event (GLD-028).
+func OutboxEventToProto(e *OutboxEvent) *goelandv1.OutboxEvent {
+	if e == nil {
+		return nil
+	}
+	return &goelandv1.OutboxEvent{
+		Id:              e.ID.String(),
+		SubjectKind:     SubjectKindToProto(e.SubjectKind),
+		SubjectId:       e.SubjectID.String(),
+		EventType:       e.EventType,
+		AuditEventId:    e.AuditEventID.String(),
+		OccurredAt:      TimestampOrNil(e.OccurredAt),
+		Attempts:        e.Attempts,
+		NextAttemptAt:   TimestampOrNil(e.NextAttemptAt),
+		PublishedAt:     TimestampPtrOrNil(e.PublishedAt),
+		FailedAt:        TimestampPtrOrNil(e.FailedAt),
+		LastError:       e.LastError,
+		FailedConsumers: e.FailedConsumers,
+	}
+}
+
+// OutboxStatusToProto maps the outbox status with the server's retention.
+func OutboxStatusToProto(s OutboxStatus, retention time.Duration) *goelandv1.GetOutboxStatusResponse {
+	out := &goelandv1.GetOutboxStatusResponse{
+		Pending:         s.Pending,
+		Failed:          s.Failed,
+		Published:       s.Published,
+		OldestPendingAt: TimestampPtrOrNil(s.OldestPendingAt),
+		RetentionDays:   int32(retention / (24 * time.Hour)),
+		MaxAttempts:     OutboxMaxAttempts,
+	}
+	for _, c := range s.Consumers {
+		out.Consumers = append(out.Consumers, &goelandv1.OutboxConsumerStatus{Name: c.Name, Failed: c.Failed})
+	}
+	for _, e := range s.RecentFailed {
+		out.RecentFailed = append(out.RecentFailed, OutboxEventToProto(e))
+	}
+	return out
+}

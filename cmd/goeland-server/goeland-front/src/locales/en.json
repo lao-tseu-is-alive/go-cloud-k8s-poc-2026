@@ -358,6 +358,27 @@
       "SUBJECT_KIND_GROUP": "Groups"
     }
   },
+  "outbox": {
+    "tab": "Outbox",
+    "intro": "Every change announces an event to the consumers (search index, notifications…). A refused event is retried with a growing delay, then given up after {attempts} attempts; delivered events are kept {days} days.",
+    "pending": "Pending",
+    "failed": "Given up",
+    "published": "Delivered (kept)",
+    "oldestPending": "Oldest pending: {at}",
+    "consumers": "Consumers",
+    "noConsumer": "No consumer is registered: events are marked delivered as soon as they are written.",
+    "consumerFailed": "no failure | {n} given up | {n} given up",
+    "recentFailed": "Latest given-up events",
+    "noFailure": "No given-up event.",
+    "replayAll": "Replay all ({count})",
+    "replay": "Replay",
+    "replayed": "No event replayed | {n} event queued again | {n} events queued again",
+    "event": "Event",
+    "subject": "Subject",
+    "attempts": "Attempts",
+    "error": "Last error",
+    "failedAt": "Given up on"
+  },
   "filters": {
     "more": "More filters",
     "from": "{label} from",

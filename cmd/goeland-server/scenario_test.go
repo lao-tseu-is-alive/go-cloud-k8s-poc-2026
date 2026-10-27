@@ -196,6 +196,7 @@ type scenario struct {
 // TestScenarioV2 plays the v2 §50 scenario end to end.
 func TestScenarioV2(t *testing.T) {
 	s := &scenario{e2e: newE2E(t), token: strings.ReplaceAll(uuid.NewString(), "-", "")[:10]}
+	start := time.Now()
 	s.platform()
 	s.steps01to04()
 	s.steps05to12()
@@ -208,6 +209,19 @@ func TestScenarioV2(t *testing.T) {
 	s.step29()
 	s.step30()
 	s.step31()
+	s.outboxCoverage(start)
+}
+
+// outboxCoverage checks the v2 §54 criterion "mutation + audit + outbox"
+// (GLD-028): every audit event the scenario wrote has its outbox event.
+func (s *scenario) outboxCoverage(since time.Time) {
+	var audits, missing int
+	err := s.adminApp.pool.QueryRow(context.Background(), `
+SELECT count(*), count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM outbox_event o WHERE o.audit_event_id = a.id))
+FROM audit_event a WHERE a.occurred_at >= $1`, since).Scan(&audits, &missing)
+	if err != nil || audits == 0 || missing != 0 {
+		s.t.Fatalf("every audit event has its outbox event: %d audits, %d without (%v)", audits, missing, err)
+	}
 }
 
 // platform checks the probes, the SPA fallback and authentication.

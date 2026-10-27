@@ -541,3 +541,103 @@ WHERE id = @id;`
 const caseStatusSQL = `
 SELECT status FROM case_file
 WHERE id = @id;`
+
+// --- outbox_event (GLD-028) ----------------------------------------------------
+
+const outboxEventColumns = `
+o.id, o.subject_kind, o.subject_id, o.event_type, o.audit_event_id, o.payload, o.occurred_at,
+o.correlation_id, o.request_id, o.attempts, o.next_attempt_at, o.published_at, o.failed_at,
+o.last_error, o.failed_consumers`
+
+// insertOutboxEventSQL announces an audit event to the outbox consumers and
+// wakes the workers; the notification is sent when the transaction commits,
+// and PostgreSQL folds the identical ones of a transaction into one.
+const insertOutboxEventSQL = `
+WITH o AS (
+    INSERT INTO outbox_event (subject_kind, subject_id, event_type, audit_event_id, payload, occurred_at, correlation_id, request_id)
+    VALUES (coalesce((SELECT kind FROM subject_ref WHERE id = @subject_id), ''), @subject_id, @event_type, @audit_event_id,
+            @payload, @occurred_at, @correlation_id, @request_id)
+    RETURNING id)
+SELECT pg_notify('` + OutboxChannel + `', '') FROM o;`
+
+// claimOutboxEventsSQL takes a batch of events due for delivery, oldest first,
+// including those whose worker went silent for longer than @lease; SKIP LOCKED
+// lets the workers of several replicas share the queue.
+const claimOutboxEventsSQL = `
+UPDATE outbox_event AS o
+SET claimed_at = now(), attempts = o.attempts + 1
+WHERE o.id IN (
+    SELECT q.id FROM outbox_event q
+    WHERE q.published_at IS NULL AND q.failed_at IS NULL
+      AND q.next_attempt_at <= now()
+      AND (q.claimed_at IS NULL OR q.claimed_at < now() - @lease::interval)
+    ORDER BY q.occurred_at, q.id
+    LIMIT @batch
+    FOR UPDATE SKIP LOCKED)
+RETURNING ` + outboxEventColumns + `;`
+
+// publishOutboxEventsSQL records the events every consumer accepted.
+const publishOutboxEventsSQL = `
+UPDATE outbox_event
+SET published_at = now(), claimed_at = NULL, last_error = '', failed_consumers = '{}'
+WHERE id = ANY(@ids) AND published_at IS NULL AND failed_at IS NULL;`
+
+// retryOutboxEventSQL records a failed delivery: tried again after @delay, or
+// given up once @max_attempts are spent.
+const retryOutboxEventSQL = `
+UPDATE outbox_event
+SET claimed_at = NULL, last_error = @last_error, failed_consumers = @failed_consumers,
+    next_attempt_at = now() + @delay::interval,
+    failed_at = CASE WHEN attempts >= @max_attempts THEN now() END
+WHERE id = @id AND published_at IS NULL AND failed_at IS NULL;`
+
+// failExhaustedOutboxSQL gives up on the events whose deliveries kept dying
+// mid-way (their worker stopped before recording the outcome).
+const failExhaustedOutboxSQL = `
+UPDATE outbox_event
+SET failed_at = now(), claimed_at = NULL, last_error = 'the delivery was interrupted too many times'
+WHERE published_at IS NULL AND failed_at IS NULL AND attempts >= @max_attempts
+  AND claimed_at < now() - @lease::interval;`
+
+// purgeOutboxEventsSQL deletes a batch of events delivered before the retention.
+const purgeOutboxEventsSQL = `
+DELETE FROM outbox_event
+WHERE id IN (
+    SELECT id FROM outbox_event
+    WHERE published_at < now() - @retention::interval
+    LIMIT @batch);`
+
+// outboxCountsSQL counts the events by state.
+const outboxCountsSQL = `
+SELECT
+    count(*) FILTER (WHERE published_at IS NULL AND failed_at IS NULL) AS pending,
+    count(*) FILTER (WHERE failed_at IS NOT NULL) AS failed,
+    count(*) FILTER (WHERE published_at IS NOT NULL) AS published,
+    min(occurred_at) FILTER (WHERE published_at IS NULL AND failed_at IS NULL) AS oldest_pending_at
+FROM outbox_event;`
+
+// outboxFailedByConsumerSQL counts the given-up events per consumer that refused them.
+const outboxFailedByConsumerSQL = `
+SELECT c AS name, count(*) AS failed
+FROM outbox_event, unnest(failed_consumers) AS c
+WHERE failed_at IS NOT NULL
+GROUP BY c;`
+
+// recentFailedOutboxSQL lists the latest given-up events.
+const recentFailedOutboxSQL = `
+SELECT ` + outboxEventColumns + `
+FROM outbox_event o
+WHERE o.failed_at IS NOT NULL
+ORDER BY o.failed_at DESC, o.id DESC
+LIMIT @limit;`
+
+// replayOutboxEventsSQL puts failed events back in the queue: those listed in
+// @ids, or every failed one when @all; it wakes the workers.
+const replayOutboxEventsSQL = `
+WITH r AS (
+    UPDATE outbox_event
+    SET failed_at = NULL, attempts = 0, next_attempt_at = now(), claimed_at = NULL,
+        last_error = '', failed_consumers = '{}'
+    WHERE failed_at IS NOT NULL AND (@all OR id = ANY(@ids))
+    RETURNING id)
+SELECT count(*) AS replayed, pg_notify('` + OutboxChannel + `', '') IS NULL AS notified FROM r;`

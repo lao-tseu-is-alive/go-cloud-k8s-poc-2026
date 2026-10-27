@@ -81,6 +81,16 @@ func (StubRepository) UpdateRelationshipType(context.Context, string, core.Relat
 	return nil, nil, nil
 }
 
+// OutboxStatus returns an empty outbox.
+func (StubRepository) OutboxStatus(context.Context) (core.OutboxStatus, error) {
+	return core.OutboxStatus{}, nil
+}
+
+// ReplayOutbox replays nothing.
+func (StubRepository) ReplayOutbox(context.Context, []uuid.UUID, bool) (int32, error) {
+	return 0, nil
+}
+
 // ListReferenceChanges returns an empty page.
 func (StubRepository) ListReferenceChanges(context.Context, core.ReferenceFilter) (core.ReferenceResult, error) {
 	return core.ReferenceResult{}, nil

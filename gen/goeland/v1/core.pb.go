@@ -4276,6 +4276,455 @@ func (x *ListReferenceChangesResponse) GetTotalSize() int32 {
 	return 0
 }
 
+// OutboxEvent is a change announced to the consumers of the transactional
+// outbox (GLD-028): one per audit event, written in the same transaction. It
+// carries a reference only; a consumer reads the current state itself.
+type OutboxEvent struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the event UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// subject_kind is the kind of the audited subject.
+	SubjectKind SubjectKind `protobuf:"varint,2,opt,name=subject_kind,json=subjectKind,proto3,enum=goeland.v1.SubjectKind" json:"subject_kind,omitempty"`
+	// subject_id is the audited subject.
+	SubjectId string `protobuf:"bytes,3,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
+	// event_type is the audit event type (CASE_UPDATED, RELATIONSHIP_LINKED...).
+	EventType string `protobuf:"bytes,4,opt,name=event_type,json=eventType,proto3" json:"event_type,omitempty"`
+	// audit_event_id is the audit event behind it (who, why, before and after).
+	AuditEventId string `protobuf:"bytes,5,opt,name=audit_event_id,json=auditEventId,proto3" json:"audit_event_id,omitempty"`
+	// occurred_at is when the change was made.
+	OccurredAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=occurred_at,json=occurredAt,proto3" json:"occurred_at,omitempty"`
+	// attempts counts the deliveries tried so far.
+	Attempts int32 `protobuf:"varint,7,opt,name=attempts,proto3" json:"attempts,omitempty"`
+	// next_attempt_at is when a pending event is tried again.
+	NextAttemptAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=next_attempt_at,json=nextAttemptAt,proto3" json:"next_attempt_at,omitempty"`
+	// published_at is when every consumer accepted it; unset while pending.
+	PublishedAt *timestamppb.Timestamp `protobuf:"bytes,9,opt,name=published_at,json=publishedAt,proto3" json:"published_at,omitempty"`
+	// failed_at is when the delivery was given up; unset otherwise.
+	FailedAt *timestamppb.Timestamp `protobuf:"bytes,10,opt,name=failed_at,json=failedAt,proto3" json:"failed_at,omitempty"`
+	// last_error is the error of the last failed attempt, per consumer.
+	LastError string `protobuf:"bytes,11,opt,name=last_error,json=lastError,proto3" json:"last_error,omitempty"`
+	// failed_consumers are the consumers whose last attempt failed.
+	FailedConsumers []string `protobuf:"bytes,12,rep,name=failed_consumers,json=failedConsumers,proto3" json:"failed_consumers,omitempty"`
+	unknownFields   protoimpl.UnknownFields
+	sizeCache       protoimpl.SizeCache
+}
+
+func (x *OutboxEvent) Reset() {
+	*x = OutboxEvent{}
+	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutboxEvent) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutboxEvent) ProtoMessage() {}
+
+func (x *OutboxEvent) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutboxEvent.ProtoReflect.Descriptor instead.
+func (*OutboxEvent) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{54}
+}
+
+func (x *OutboxEvent) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *OutboxEvent) GetSubjectKind() SubjectKind {
+	if x != nil {
+		return x.SubjectKind
+	}
+	return SubjectKind_SUBJECT_KIND_UNSPECIFIED
+}
+
+func (x *OutboxEvent) GetSubjectId() string {
+	if x != nil {
+		return x.SubjectId
+	}
+	return ""
+}
+
+func (x *OutboxEvent) GetEventType() string {
+	if x != nil {
+		return x.EventType
+	}
+	return ""
+}
+
+func (x *OutboxEvent) GetAuditEventId() string {
+	if x != nil {
+		return x.AuditEventId
+	}
+	return ""
+}
+
+func (x *OutboxEvent) GetOccurredAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OccurredAt
+	}
+	return nil
+}
+
+func (x *OutboxEvent) GetAttempts() int32 {
+	if x != nil {
+		return x.Attempts
+	}
+	return 0
+}
+
+func (x *OutboxEvent) GetNextAttemptAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.NextAttemptAt
+	}
+	return nil
+}
+
+func (x *OutboxEvent) GetPublishedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PublishedAt
+	}
+	return nil
+}
+
+func (x *OutboxEvent) GetFailedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.FailedAt
+	}
+	return nil
+}
+
+func (x *OutboxEvent) GetLastError() string {
+	if x != nil {
+		return x.LastError
+	}
+	return ""
+}
+
+func (x *OutboxEvent) GetFailedConsumers() []string {
+	if x != nil {
+		return x.FailedConsumers
+	}
+	return nil
+}
+
+// OutboxConsumerStatus is the state of one consumer of the outbox.
+type OutboxConsumerStatus struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// name identifies the consumer.
+	Name string `protobuf:"bytes,1,opt,name=name,proto3" json:"name,omitempty"`
+	// failed counts the given-up events this consumer refused.
+	Failed        int32 `protobuf:"varint,2,opt,name=failed,proto3" json:"failed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *OutboxConsumerStatus) Reset() {
+	*x = OutboxConsumerStatus{}
+	mi := &file_goeland_v1_core_proto_msgTypes[55]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *OutboxConsumerStatus) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*OutboxConsumerStatus) ProtoMessage() {}
+
+func (x *OutboxConsumerStatus) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[55]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use OutboxConsumerStatus.ProtoReflect.Descriptor instead.
+func (*OutboxConsumerStatus) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{55}
+}
+
+func (x *OutboxConsumerStatus) GetName() string {
+	if x != nil {
+		return x.Name
+	}
+	return ""
+}
+
+func (x *OutboxConsumerStatus) GetFailed() int32 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+// GetOutboxStatusRequest asks for the state of the outbox.
+type GetOutboxStatusRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOutboxStatusRequest) Reset() {
+	*x = GetOutboxStatusRequest{}
+	mi := &file_goeland_v1_core_proto_msgTypes[56]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOutboxStatusRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOutboxStatusRequest) ProtoMessage() {}
+
+func (x *GetOutboxStatusRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[56]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOutboxStatusRequest.ProtoReflect.Descriptor instead.
+func (*GetOutboxStatusRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{56}
+}
+
+// GetOutboxStatusResponse is the state of the outbox.
+type GetOutboxStatusResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// pending counts the events waiting for delivery (or being retried).
+	Pending int32 `protobuf:"varint,1,opt,name=pending,proto3" json:"pending,omitempty"`
+	// failed counts the events whose delivery was given up.
+	Failed int32 `protobuf:"varint,2,opt,name=failed,proto3" json:"failed,omitempty"`
+	// published counts the delivered events still kept.
+	Published int32 `protobuf:"varint,3,opt,name=published,proto3" json:"published,omitempty"`
+	// oldest_pending_at is when the oldest pending event occurred; unset when none.
+	OldestPendingAt *timestamppb.Timestamp `protobuf:"bytes,4,opt,name=oldest_pending_at,json=oldestPendingAt,proto3" json:"oldest_pending_at,omitempty"`
+	// retention_days is how long delivered events are kept.
+	RetentionDays int32 `protobuf:"varint,5,opt,name=retention_days,json=retentionDays,proto3" json:"retention_days,omitempty"`
+	// max_attempts is how many deliveries are tried before giving up.
+	MaxAttempts int32 `protobuf:"varint,6,opt,name=max_attempts,json=maxAttempts,proto3" json:"max_attempts,omitempty"`
+	// consumers are the consumers registered on this server.
+	Consumers []*OutboxConsumerStatus `protobuf:"bytes,7,rep,name=consumers,proto3" json:"consumers,omitempty"`
+	// recent_failed are the latest given-up events (at most 50), newest first.
+	RecentFailed  []*OutboxEvent `protobuf:"bytes,8,rep,name=recent_failed,json=recentFailed,proto3" json:"recent_failed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetOutboxStatusResponse) Reset() {
+	*x = GetOutboxStatusResponse{}
+	mi := &file_goeland_v1_core_proto_msgTypes[57]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetOutboxStatusResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetOutboxStatusResponse) ProtoMessage() {}
+
+func (x *GetOutboxStatusResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[57]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetOutboxStatusResponse.ProtoReflect.Descriptor instead.
+func (*GetOutboxStatusResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{57}
+}
+
+func (x *GetOutboxStatusResponse) GetPending() int32 {
+	if x != nil {
+		return x.Pending
+	}
+	return 0
+}
+
+func (x *GetOutboxStatusResponse) GetFailed() int32 {
+	if x != nil {
+		return x.Failed
+	}
+	return 0
+}
+
+func (x *GetOutboxStatusResponse) GetPublished() int32 {
+	if x != nil {
+		return x.Published
+	}
+	return 0
+}
+
+func (x *GetOutboxStatusResponse) GetOldestPendingAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.OldestPendingAt
+	}
+	return nil
+}
+
+func (x *GetOutboxStatusResponse) GetRetentionDays() int32 {
+	if x != nil {
+		return x.RetentionDays
+	}
+	return 0
+}
+
+func (x *GetOutboxStatusResponse) GetMaxAttempts() int32 {
+	if x != nil {
+		return x.MaxAttempts
+	}
+	return 0
+}
+
+func (x *GetOutboxStatusResponse) GetConsumers() []*OutboxConsumerStatus {
+	if x != nil {
+		return x.Consumers
+	}
+	return nil
+}
+
+func (x *GetOutboxStatusResponse) GetRecentFailed() []*OutboxEvent {
+	if x != nil {
+		return x.RecentFailed
+	}
+	return nil
+}
+
+// ReplayOutboxEventsRequest names the failed events to deliver again.
+type ReplayOutboxEventsRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// event_ids are the failed events to replay (at most 500).
+	EventIds []string `protobuf:"bytes,1,rep,name=event_ids,json=eventIds,proto3" json:"event_ids,omitempty"`
+	// all_failed replays every failed event.
+	AllFailed     bool `protobuf:"varint,2,opt,name=all_failed,json=allFailed,proto3" json:"all_failed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplayOutboxEventsRequest) Reset() {
+	*x = ReplayOutboxEventsRequest{}
+	mi := &file_goeland_v1_core_proto_msgTypes[58]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplayOutboxEventsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplayOutboxEventsRequest) ProtoMessage() {}
+
+func (x *ReplayOutboxEventsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[58]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplayOutboxEventsRequest.ProtoReflect.Descriptor instead.
+func (*ReplayOutboxEventsRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{58}
+}
+
+func (x *ReplayOutboxEventsRequest) GetEventIds() []string {
+	if x != nil {
+		return x.EventIds
+	}
+	return nil
+}
+
+func (x *ReplayOutboxEventsRequest) GetAllFailed() bool {
+	if x != nil {
+		return x.AllFailed
+	}
+	return false
+}
+
+// ReplayOutboxEventsResponse reports the replay.
+type ReplayOutboxEventsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// replayed counts the events put back in the queue.
+	Replayed      int32 `protobuf:"varint,1,opt,name=replayed,proto3" json:"replayed,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ReplayOutboxEventsResponse) Reset() {
+	*x = ReplayOutboxEventsResponse{}
+	mi := &file_goeland_v1_core_proto_msgTypes[59]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ReplayOutboxEventsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ReplayOutboxEventsResponse) ProtoMessage() {}
+
+func (x *ReplayOutboxEventsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_core_proto_msgTypes[59]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ReplayOutboxEventsResponse.ProtoReflect.Descriptor instead.
+func (*ReplayOutboxEventsResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{59}
+}
+
+func (x *ReplayOutboxEventsResponse) GetReplayed() int32 {
+	if x != nil {
+		return x.Replayed
+	}
+	return 0
+}
+
 // CreateRelationshipTypeRequest adds a relationship type (administrators only).
 type CreateRelationshipTypeRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -4310,7 +4759,7 @@ type CreateRelationshipTypeRequest struct {
 
 func (x *CreateRelationshipTypeRequest) Reset() {
 	*x = CreateRelationshipTypeRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	mi := &file_goeland_v1_core_proto_msgTypes[60]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4322,7 +4771,7 @@ func (x *CreateRelationshipTypeRequest) String() string {
 func (*CreateRelationshipTypeRequest) ProtoMessage() {}
 
 func (x *CreateRelationshipTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[54]
+	mi := &file_goeland_v1_core_proto_msgTypes[60]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4335,7 +4784,7 @@ func (x *CreateRelationshipTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRelationshipTypeRequest.ProtoReflect.Descriptor instead.
 func (*CreateRelationshipTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{54}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{60}
 }
 
 func (x *CreateRelationshipTypeRequest) GetCode() string {
@@ -4435,7 +4884,7 @@ type CreateRelationshipTypeResponse struct {
 
 func (x *CreateRelationshipTypeResponse) Reset() {
 	*x = CreateRelationshipTypeResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[55]
+	mi := &file_goeland_v1_core_proto_msgTypes[61]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4447,7 +4896,7 @@ func (x *CreateRelationshipTypeResponse) String() string {
 func (*CreateRelationshipTypeResponse) ProtoMessage() {}
 
 func (x *CreateRelationshipTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[55]
+	mi := &file_goeland_v1_core_proto_msgTypes[61]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4460,7 +4909,7 @@ func (x *CreateRelationshipTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateRelationshipTypeResponse.ProtoReflect.Descriptor instead.
 func (*CreateRelationshipTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{55}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{61}
 }
 
 func (x *CreateRelationshipTypeResponse) GetRelationshipType() *RelationshipType {
@@ -4508,7 +4957,7 @@ type UpdateRelationshipTypeRequest struct {
 
 func (x *UpdateRelationshipTypeRequest) Reset() {
 	*x = UpdateRelationshipTypeRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[56]
+	mi := &file_goeland_v1_core_proto_msgTypes[62]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4520,7 +4969,7 @@ func (x *UpdateRelationshipTypeRequest) String() string {
 func (*UpdateRelationshipTypeRequest) ProtoMessage() {}
 
 func (x *UpdateRelationshipTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[56]
+	mi := &file_goeland_v1_core_proto_msgTypes[62]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4533,7 +4982,7 @@ func (x *UpdateRelationshipTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRelationshipTypeRequest.ProtoReflect.Descriptor instead.
 func (*UpdateRelationshipTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{56}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{62}
 }
 
 func (x *UpdateRelationshipTypeRequest) GetCode() string {
@@ -4619,7 +5068,7 @@ type UpdateRelationshipTypeResponse struct {
 
 func (x *UpdateRelationshipTypeResponse) Reset() {
 	*x = UpdateRelationshipTypeResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[57]
+	mi := &file_goeland_v1_core_proto_msgTypes[63]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4631,7 +5080,7 @@ func (x *UpdateRelationshipTypeResponse) String() string {
 func (*UpdateRelationshipTypeResponse) ProtoMessage() {}
 
 func (x *UpdateRelationshipTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[57]
+	mi := &file_goeland_v1_core_proto_msgTypes[63]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4644,7 +5093,7 @@ func (x *UpdateRelationshipTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateRelationshipTypeResponse.ProtoReflect.Descriptor instead.
 func (*UpdateRelationshipTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{57}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{63}
 }
 
 func (x *UpdateRelationshipTypeResponse) GetRelationshipType() *RelationshipType {
@@ -4682,7 +5131,7 @@ type ListAuditEventsRequest struct {
 
 func (x *ListAuditEventsRequest) Reset() {
 	*x = ListAuditEventsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[58]
+	mi := &file_goeland_v1_core_proto_msgTypes[64]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4694,7 +5143,7 @@ func (x *ListAuditEventsRequest) String() string {
 func (*ListAuditEventsRequest) ProtoMessage() {}
 
 func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[58]
+	mi := &file_goeland_v1_core_proto_msgTypes[64]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4707,7 +5156,7 @@ func (x *ListAuditEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{58}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{64}
 }
 
 func (x *ListAuditEventsRequest) GetSubjectId() string {
@@ -4767,7 +5216,7 @@ type ListAuditEventsResponse struct {
 
 func (x *ListAuditEventsResponse) Reset() {
 	*x = ListAuditEventsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[59]
+	mi := &file_goeland_v1_core_proto_msgTypes[65]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4779,7 +5228,7 @@ func (x *ListAuditEventsResponse) String() string {
 func (*ListAuditEventsResponse) ProtoMessage() {}
 
 func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[59]
+	mi := &file_goeland_v1_core_proto_msgTypes[65]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4792,7 +5241,7 @@ func (x *ListAuditEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAuditEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListAuditEventsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{59}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{65}
 }
 
 func (x *ListAuditEventsResponse) GetEvents() []*AuditEvent {
@@ -4856,7 +5305,7 @@ type AccessAuditEvent struct {
 
 func (x *AccessAuditEvent) Reset() {
 	*x = AccessAuditEvent{}
-	mi := &file_goeland_v1_core_proto_msgTypes[60]
+	mi := &file_goeland_v1_core_proto_msgTypes[66]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -4868,7 +5317,7 @@ func (x *AccessAuditEvent) String() string {
 func (*AccessAuditEvent) ProtoMessage() {}
 
 func (x *AccessAuditEvent) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[60]
+	mi := &file_goeland_v1_core_proto_msgTypes[66]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -4881,7 +5330,7 @@ func (x *AccessAuditEvent) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use AccessAuditEvent.ProtoReflect.Descriptor instead.
 func (*AccessAuditEvent) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{60}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{66}
 }
 
 func (x *AccessAuditEvent) GetId() string {
@@ -5011,7 +5460,7 @@ type ListAccessAuditEventsRequest struct {
 
 func (x *ListAccessAuditEventsRequest) Reset() {
 	*x = ListAccessAuditEventsRequest{}
-	mi := &file_goeland_v1_core_proto_msgTypes[61]
+	mi := &file_goeland_v1_core_proto_msgTypes[67]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5023,7 +5472,7 @@ func (x *ListAccessAuditEventsRequest) String() string {
 func (*ListAccessAuditEventsRequest) ProtoMessage() {}
 
 func (x *ListAccessAuditEventsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[61]
+	mi := &file_goeland_v1_core_proto_msgTypes[67]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5036,7 +5485,7 @@ func (x *ListAccessAuditEventsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccessAuditEventsRequest.ProtoReflect.Descriptor instead.
 func (*ListAccessAuditEventsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{61}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{67}
 }
 
 func (x *ListAccessAuditEventsRequest) GetSubjectId() string {
@@ -5120,7 +5569,7 @@ type ListAccessAuditEventsResponse struct {
 
 func (x *ListAccessAuditEventsResponse) Reset() {
 	*x = ListAccessAuditEventsResponse{}
-	mi := &file_goeland_v1_core_proto_msgTypes[62]
+	mi := &file_goeland_v1_core_proto_msgTypes[68]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -5132,7 +5581,7 @@ func (x *ListAccessAuditEventsResponse) String() string {
 func (*ListAccessAuditEventsResponse) ProtoMessage() {}
 
 func (x *ListAccessAuditEventsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_core_proto_msgTypes[62]
+	mi := &file_goeland_v1_core_proto_msgTypes[68]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -5145,7 +5594,7 @@ func (x *ListAccessAuditEventsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListAccessAuditEventsResponse.ProtoReflect.Descriptor instead.
 func (*ListAccessAuditEventsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_core_proto_rawDescGZIP(), []int{62}
+	return file_goeland_v1_core_proto_rawDescGZIP(), []int{68}
 }
 
 func (x *ListAccessAuditEventsResponse) GetEvents() []*AccessAuditEvent {
@@ -5527,7 +5976,45 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\achanges\x18\x01 \x03(\v2\x1b.goeland.v1.ReferenceChangeR\achanges\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
-	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x95\x05\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"\x9c\x04\n" +
+	"\vOutboxEvent\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12:\n" +
+	"\fsubject_kind\x18\x02 \x01(\x0e2\x17.goeland.v1.SubjectKindR\vsubjectKind\x12\x1d\n" +
+	"\n" +
+	"subject_id\x18\x03 \x01(\tR\tsubjectId\x12\x1d\n" +
+	"\n" +
+	"event_type\x18\x04 \x01(\tR\teventType\x12$\n" +
+	"\x0eaudit_event_id\x18\x05 \x01(\tR\fauditEventId\x12;\n" +
+	"\voccurred_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"occurredAt\x12\x1a\n" +
+	"\battempts\x18\a \x01(\x05R\battempts\x12B\n" +
+	"\x0fnext_attempt_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\rnextAttemptAt\x12=\n" +
+	"\fpublished_at\x18\t \x01(\v2\x1a.google.protobuf.TimestampR\vpublishedAt\x127\n" +
+	"\tfailed_at\x18\n" +
+	" \x01(\v2\x1a.google.protobuf.TimestampR\bfailedAt\x12\x1d\n" +
+	"\n" +
+	"last_error\x18\v \x01(\tR\tlastError\x12)\n" +
+	"\x10failed_consumers\x18\f \x03(\tR\x0ffailedConsumers\"B\n" +
+	"\x14OutboxConsumerStatus\x12\x12\n" +
+	"\x04name\x18\x01 \x01(\tR\x04name\x12\x16\n" +
+	"\x06failed\x18\x02 \x01(\x05R\x06failed\"\x18\n" +
+	"\x16GetOutboxStatusRequest\"\xf9\x02\n" +
+	"\x17GetOutboxStatusResponse\x12\x18\n" +
+	"\apending\x18\x01 \x01(\x05R\apending\x12\x16\n" +
+	"\x06failed\x18\x02 \x01(\x05R\x06failed\x12\x1c\n" +
+	"\tpublished\x18\x03 \x01(\x05R\tpublished\x12F\n" +
+	"\x11oldest_pending_at\x18\x04 \x01(\v2\x1a.google.protobuf.TimestampR\x0foldestPendingAt\x12%\n" +
+	"\x0eretention_days\x18\x05 \x01(\x05R\rretentionDays\x12!\n" +
+	"\fmax_attempts\x18\x06 \x01(\x05R\vmaxAttempts\x12>\n" +
+	"\tconsumers\x18\a \x03(\v2 .goeland.v1.OutboxConsumerStatusR\tconsumers\x12<\n" +
+	"\rrecent_failed\x18\b \x03(\v2\x17.goeland.v1.OutboxEventR\frecentFailed\"\xe0\x01\n" +
+	"\x19ReplayOutboxEventsRequest\x12/\n" +
+	"\tevent_ids\x18\x01 \x03(\tB\x12\xbaH\x0f\x92\x01\f\x10\xf4\x03\x18\x01\"\x05r\x03\xb0\x01\x01R\beventIds\x12\x1d\n" +
+	"\n" +
+	"all_failed\x18\x02 \x01(\bR\tallFailed:s\xbaHp\x1an\n" +
+	"\x18replay_outbox.one_target\x12#give either event_ids or all_failed\x1a-(size(this.event_ids) > 0) != this.all_failed\"8\n" +
+	"\x1aReplayOutboxEventsResponse\x12\x1a\n" +
+	"\breplayed\x18\x01 \x01(\x05R\breplayed\"\x95\x05\n" +
 	"\x1dCreateRelationshipTypeRequest\x125\n" +
 	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
 	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12D\n" +
@@ -5659,7 +6146,7 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\aRoleEnd\x12\x18\n" +
 	"\x14ROLE_END_UNSPECIFIED\x10\x00\x12\x13\n" +
 	"\x0fROLE_END_TARGET\x10\x01\x12\x13\n" +
-	"\x0fROLE_END_SOURCE\x10\x022\xf7\x18\n" +
+	"\x0fROLE_END_SOURCE\x10\x022\xed\x1a\n" +
 	"\vCoreService\x12w\n" +
 	"\x10CreateSubjectRef\x12#.goeland.v1.CreateSubjectRefRequest\x1a$.goeland.v1.CreateSubjectRefResponse\"\x18\x82\xd3\xe4\x93\x02\x12:\x01*\"\r/api/subjects\x12p\n" +
 	"\rGetSubjectRef\x12 .goeland.v1.GetSubjectRefRequest\x1a!.goeland.v1.GetSubjectRefResponse\"\x1a\x82\xd3\xe4\x93\x02\x14\x12\x12/api/subjects/{id}\x12\x94\x01\n" +
@@ -5684,7 +6171,9 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\x15ListAccessAuditEvents\x12(.goeland.v1.ListAccessAuditEventsRequest\x1a).goeland.v1.ListAccessAuditEventsResponse\" \x82\xd3\xe4\x93\x02\x1a\x12\x18/api/access-audit-events\x12\x93\x01\n" +
 	"\x16CreateRelationshipType\x12).goeland.v1.CreateRelationshipTypeRequest\x1a*.goeland.v1.CreateRelationshipTypeResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/relationship-types\x12\x9a\x01\n" +
 	"\x16UpdateRelationshipType\x12).goeland.v1.UpdateRelationshipTypeRequest\x1a*.goeland.v1.UpdateRelationshipTypeResponse\")\x82\xd3\xe4\x93\x02#:\x01*2\x1e/api/relationship-types/{code}\x12\x89\x01\n" +
-	"\x14ListReferenceChanges\x12'.goeland.v1.ListReferenceChangesRequest\x1a(.goeland.v1.ListReferenceChangesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/reference-changesB\xb1\x01\n" +
+	"\x14ListReferenceChanges\x12'.goeland.v1.ListReferenceChangesRequest\x1a(.goeland.v1.ListReferenceChangesResponse\"\x1e\x82\xd3\xe4\x93\x02\x18\x12\x16/api/reference-changes\x12o\n" +
+	"\x0fGetOutboxStatus\x12\".goeland.v1.GetOutboxStatusRequest\x1a#.goeland.v1.GetOutboxStatusResponse\"\x13\x82\xd3\xe4\x93\x02\r\x12\v/api/outbox\x12\x82\x01\n" +
+	"\x12ReplayOutboxEvents\x12%.goeland.v1.ReplayOutboxEventsRequest\x1a&.goeland.v1.ReplayOutboxEventsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17:\x01*\"\x12/api/outbox:replayB\xb1\x01\n" +
 	"\x0ecom.goeland.v1B\tCoreProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"
@@ -5702,7 +6191,7 @@ func file_goeland_v1_core_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_core_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 64)
+var file_goeland_v1_core_proto_msgTypes = make([]protoimpl.MessageInfo, 70)
 var file_goeland_v1_core_proto_goTypes = []any{
 	(SubjectKind)(0),                       // 0: goeland.v1.SubjectKind
 	(Permission)(0),                        // 1: goeland.v1.Permission
@@ -5762,41 +6251,47 @@ var file_goeland_v1_core_proto_goTypes = []any{
 	(*ReferenceChange)(nil),                // 55: goeland.v1.ReferenceChange
 	(*ListReferenceChangesRequest)(nil),    // 56: goeland.v1.ListReferenceChangesRequest
 	(*ListReferenceChangesResponse)(nil),   // 57: goeland.v1.ListReferenceChangesResponse
-	(*CreateRelationshipTypeRequest)(nil),  // 58: goeland.v1.CreateRelationshipTypeRequest
-	(*CreateRelationshipTypeResponse)(nil), // 59: goeland.v1.CreateRelationshipTypeResponse
-	(*UpdateRelationshipTypeRequest)(nil),  // 60: goeland.v1.UpdateRelationshipTypeRequest
-	(*UpdateRelationshipTypeResponse)(nil), // 61: goeland.v1.UpdateRelationshipTypeResponse
-	(*ListAuditEventsRequest)(nil),         // 62: goeland.v1.ListAuditEventsRequest
-	(*ListAuditEventsResponse)(nil),        // 63: goeland.v1.ListAuditEventsResponse
-	(*AccessAuditEvent)(nil),               // 64: goeland.v1.AccessAuditEvent
-	(*ListAccessAuditEventsRequest)(nil),   // 65: goeland.v1.ListAccessAuditEventsRequest
-	(*ListAccessAuditEventsResponse)(nil),  // 66: goeland.v1.ListAccessAuditEventsResponse
-	nil,                                    // 67: goeland.v1.RecordMetadata.MetadataEntry
-	(*timestamppb.Timestamp)(nil),          // 68: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                // 69: google.protobuf.Struct
+	(*OutboxEvent)(nil),                    // 58: goeland.v1.OutboxEvent
+	(*OutboxConsumerStatus)(nil),           // 59: goeland.v1.OutboxConsumerStatus
+	(*GetOutboxStatusRequest)(nil),         // 60: goeland.v1.GetOutboxStatusRequest
+	(*GetOutboxStatusResponse)(nil),        // 61: goeland.v1.GetOutboxStatusResponse
+	(*ReplayOutboxEventsRequest)(nil),      // 62: goeland.v1.ReplayOutboxEventsRequest
+	(*ReplayOutboxEventsResponse)(nil),     // 63: goeland.v1.ReplayOutboxEventsResponse
+	(*CreateRelationshipTypeRequest)(nil),  // 64: goeland.v1.CreateRelationshipTypeRequest
+	(*CreateRelationshipTypeResponse)(nil), // 65: goeland.v1.CreateRelationshipTypeResponse
+	(*UpdateRelationshipTypeRequest)(nil),  // 66: goeland.v1.UpdateRelationshipTypeRequest
+	(*UpdateRelationshipTypeResponse)(nil), // 67: goeland.v1.UpdateRelationshipTypeResponse
+	(*ListAuditEventsRequest)(nil),         // 68: goeland.v1.ListAuditEventsRequest
+	(*ListAuditEventsResponse)(nil),        // 69: goeland.v1.ListAuditEventsResponse
+	(*AccessAuditEvent)(nil),               // 70: goeland.v1.AccessAuditEvent
+	(*ListAccessAuditEventsRequest)(nil),   // 71: goeland.v1.ListAccessAuditEventsRequest
+	(*ListAccessAuditEventsResponse)(nil),  // 72: goeland.v1.ListAccessAuditEventsResponse
+	nil,                                    // 73: goeland.v1.RecordMetadata.MetadataEntry
+	(*timestamppb.Timestamp)(nil),          // 74: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                // 75: google.protobuf.Struct
 }
 var file_goeland_v1_core_proto_depIdxs = []int32{
 	0,   // 0: goeland.v1.SubjectRef.kind:type_name -> goeland.v1.SubjectKind
-	68,  // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
-	68,  // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
-	68,  // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
-	68,  // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
-	68,  // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
-	67,  // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
-	68,  // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	69,  // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
-	69,  // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
-	69,  // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
+	74,  // 1: goeland.v1.SubjectRef.created_at:type_name -> google.protobuf.Timestamp
+	74,  // 2: goeland.v1.RecordMetadata.created_at:type_name -> google.protobuf.Timestamp
+	74,  // 3: goeland.v1.RecordMetadata.updated_at:type_name -> google.protobuf.Timestamp
+	74,  // 4: goeland.v1.RecordMetadata.deleted_at:type_name -> google.protobuf.Timestamp
+	74,  // 5: goeland.v1.RecordMetadata.locked_at:type_name -> google.protobuf.Timestamp
+	73,  // 6: goeland.v1.RecordMetadata.metadata:type_name -> goeland.v1.RecordMetadata.MetadataEntry
+	74,  // 7: goeland.v1.AuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	75,  // 8: goeland.v1.AuditEvent.before_state:type_name -> google.protobuf.Struct
+	75,  // 9: goeland.v1.AuditEvent.after_state:type_name -> google.protobuf.Struct
+	75,  // 10: goeland.v1.AuditEvent.metadata:type_name -> google.protobuf.Struct
 	0,   // 11: goeland.v1.RelationshipType.source_kind:type_name -> goeland.v1.SubjectKind
 	0,   // 12: goeland.v1.RelationshipType.target_kind:type_name -> goeland.v1.SubjectKind
 	3,   // 13: goeland.v1.RelationshipType.role_end:type_name -> goeland.v1.RoleEnd
 	4,   // 14: goeland.v1.SubjectRelationship.source:type_name -> goeland.v1.SubjectRef
 	4,   // 15: goeland.v1.SubjectRelationship.target:type_name -> goeland.v1.SubjectRef
 	8,   // 16: goeland.v1.SubjectRelationship.relationship_type:type_name -> goeland.v1.RelationshipType
-	68,  // 17: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
-	68,  // 18: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
-	68,  // 19: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
-	68,  // 20: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
+	74,  // 17: goeland.v1.SubjectRelationship.valid_from:type_name -> google.protobuf.Timestamp
+	74,  // 18: goeland.v1.SubjectRelationship.valid_to:type_name -> google.protobuf.Timestamp
+	74,  // 19: goeland.v1.SubjectRelationship.created_at:type_name -> google.protobuf.Timestamp
+	74,  // 20: goeland.v1.SubjectRelationship.deleted_at:type_name -> google.protobuf.Timestamp
 	10,  // 21: goeland.v1.SubjectRelationship.other_detail:type_name -> goeland.v1.RelatedSubjectDetail
 	8,   // 22: goeland.v1.RelationshipGroup.relationship_type:type_name -> goeland.v1.RelationshipType
 	0,   // 23: goeland.v1.RelationshipGroup.other_kind:type_name -> goeland.v1.SubjectKind
@@ -5819,13 +6314,13 @@ var file_goeland_v1_core_proto_depIdxs = []int32{
 	0,   // 40: goeland.v1.SubjectSearchGroup.kind:type_name -> goeland.v1.SubjectKind
 	4,   // 41: goeland.v1.SubjectSearchGroup.subjects:type_name -> goeland.v1.SubjectRef
 	22,  // 42: goeland.v1.SearchSubjectsResponse.groups:type_name -> goeland.v1.SubjectSearchGroup
-	68,  // 43: goeland.v1.User.first_seen_at:type_name -> google.protobuf.Timestamp
-	68,  // 44: goeland.v1.User.last_seen_at:type_name -> google.protobuf.Timestamp
+	74,  // 43: goeland.v1.User.first_seen_at:type_name -> google.protobuf.Timestamp
+	74,  // 44: goeland.v1.User.last_seen_at:type_name -> google.protobuf.Timestamp
 	24,  // 45: goeland.v1.GetCurrentUserResponse.user:type_name -> goeland.v1.User
 	24,  // 46: goeland.v1.BatchGetUsersResponse.users:type_name -> goeland.v1.User
 	24,  // 47: goeland.v1.SearchUsersResponse.users:type_name -> goeland.v1.User
-	68,  // 48: goeland.v1.UserRole.granted_at:type_name -> google.protobuf.Timestamp
-	68,  // 49: goeland.v1.UserRole.revoked_at:type_name -> google.protobuf.Timestamp
+	74,  // 48: goeland.v1.UserRole.granted_at:type_name -> google.protobuf.Timestamp
+	74,  // 49: goeland.v1.UserRole.revoked_at:type_name -> google.protobuf.Timestamp
 	31,  // 50: goeland.v1.ListAppRolesResponse.roles:type_name -> goeland.v1.AppRole
 	24,  // 51: goeland.v1.ListRoleHoldersResponse.users:type_name -> goeland.v1.User
 	32,  // 52: goeland.v1.ListUserRolesResponse.roles:type_name -> goeland.v1.UserRole
@@ -5833,11 +6328,11 @@ var file_goeland_v1_core_proto_depIdxs = []int32{
 	7,   // 54: goeland.v1.GrantUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	32,  // 55: goeland.v1.RevokeUserRoleResponse.role:type_name -> goeland.v1.UserRole
 	7,   // 56: goeland.v1.RevokeUserRoleResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	68,  // 57: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
+	74,  // 57: goeland.v1.LinkSubjectsRequest.valid_from:type_name -> google.protobuf.Timestamp
 	9,   // 58: goeland.v1.LinkSubjectsResponse.relationship:type_name -> goeland.v1.SubjectRelationship
 	7,   // 59: goeland.v1.LinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	7,   // 60: goeland.v1.UnlinkSubjectsResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	68,  // 61: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
+	74,  // 61: goeland.v1.EndRelationshipRequest.valid_to:type_name -> google.protobuf.Timestamp
 	9,   // 62: goeland.v1.EndRelationshipResponse.relationship:type_name -> goeland.v1.SubjectRelationship
 	7,   // 63: goeland.v1.EndRelationshipResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	11,  // 64: goeland.v1.SummarizeRelationshipsResponse.groups:type_name -> goeland.v1.RelationshipGroup
@@ -5845,81 +6340,93 @@ var file_goeland_v1_core_proto_depIdxs = []int32{
 	0,   // 66: goeland.v1.ListRelationshipTypesRequest.source_kind:type_name -> goeland.v1.SubjectKind
 	0,   // 67: goeland.v1.ListRelationshipTypesRequest.target_kind:type_name -> goeland.v1.SubjectKind
 	8,   // 68: goeland.v1.ListRelationshipTypesResponse.relationship_types:type_name -> goeland.v1.RelationshipType
-	68,  // 69: goeland.v1.ReferenceChange.occurred_at:type_name -> google.protobuf.Timestamp
-	69,  // 70: goeland.v1.ReferenceChange.before_state:type_name -> google.protobuf.Struct
-	69,  // 71: goeland.v1.ReferenceChange.after_state:type_name -> google.protobuf.Struct
+	74,  // 69: goeland.v1.ReferenceChange.occurred_at:type_name -> google.protobuf.Timestamp
+	75,  // 70: goeland.v1.ReferenceChange.before_state:type_name -> google.protobuf.Struct
+	75,  // 71: goeland.v1.ReferenceChange.after_state:type_name -> google.protobuf.Struct
 	55,  // 72: goeland.v1.ListReferenceChangesResponse.changes:type_name -> goeland.v1.ReferenceChange
-	0,   // 73: goeland.v1.CreateRelationshipTypeRequest.source_kind:type_name -> goeland.v1.SubjectKind
-	0,   // 74: goeland.v1.CreateRelationshipTypeRequest.target_kind:type_name -> goeland.v1.SubjectKind
-	3,   // 75: goeland.v1.CreateRelationshipTypeRequest.role_end:type_name -> goeland.v1.RoleEnd
-	8,   // 76: goeland.v1.CreateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
-	55,  // 77: goeland.v1.CreateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	3,   // 78: goeland.v1.UpdateRelationshipTypeRequest.role_end:type_name -> goeland.v1.RoleEnd
-	8,   // 79: goeland.v1.UpdateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
-	55,  // 80: goeland.v1.UpdateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	68,  // 81: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
-	68,  // 82: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
-	7,   // 83: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
-	68,  // 84: goeland.v1.AccessAuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
-	0,   // 85: goeland.v1.AccessAuditEvent.subject_kind:type_name -> goeland.v1.SubjectKind
-	1,   // 86: goeland.v1.AccessAuditEvent.access_level:type_name -> goeland.v1.Permission
-	2,   // 87: goeland.v1.AccessAuditEvent.access_source:type_name -> goeland.v1.AccessSource
-	68,  // 88: goeland.v1.ListAccessAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
-	68,  // 89: goeland.v1.ListAccessAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
-	64,  // 90: goeland.v1.ListAccessAuditEventsResponse.events:type_name -> goeland.v1.AccessAuditEvent
-	13,  // 91: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
-	15,  // 92: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
-	17,  // 93: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
-	19,  // 94: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
-	21,  // 95: goeland.v1.CoreService.SearchSubjects:input_type -> goeland.v1.SearchSubjectsRequest
-	25,  // 96: goeland.v1.CoreService.GetCurrentUser:input_type -> goeland.v1.GetCurrentUserRequest
-	27,  // 97: goeland.v1.CoreService.BatchGetUsers:input_type -> goeland.v1.BatchGetUsersRequest
-	29,  // 98: goeland.v1.CoreService.SearchUsers:input_type -> goeland.v1.SearchUsersRequest
-	33,  // 99: goeland.v1.CoreService.ListAppRoles:input_type -> goeland.v1.ListAppRolesRequest
-	35,  // 100: goeland.v1.CoreService.ListRoleHolders:input_type -> goeland.v1.ListRoleHoldersRequest
-	37,  // 101: goeland.v1.CoreService.ListUserRoles:input_type -> goeland.v1.ListUserRolesRequest
-	39,  // 102: goeland.v1.CoreService.GrantUserRole:input_type -> goeland.v1.GrantUserRoleRequest
-	41,  // 103: goeland.v1.CoreService.RevokeUserRole:input_type -> goeland.v1.RevokeUserRoleRequest
-	43,  // 104: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
-	45,  // 105: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
-	47,  // 106: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
-	49,  // 107: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
-	50,  // 108: goeland.v1.CoreService.SummarizeRelationships:input_type -> goeland.v1.SummarizeRelationshipsRequest
-	53,  // 109: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
-	62,  // 110: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
-	65,  // 111: goeland.v1.CoreService.ListAccessAuditEvents:input_type -> goeland.v1.ListAccessAuditEventsRequest
-	58,  // 112: goeland.v1.CoreService.CreateRelationshipType:input_type -> goeland.v1.CreateRelationshipTypeRequest
-	60,  // 113: goeland.v1.CoreService.UpdateRelationshipType:input_type -> goeland.v1.UpdateRelationshipTypeRequest
-	56,  // 114: goeland.v1.CoreService.ListReferenceChanges:input_type -> goeland.v1.ListReferenceChangesRequest
-	14,  // 115: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
-	16,  // 116: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
-	18,  // 117: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
-	20,  // 118: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
-	23,  // 119: goeland.v1.CoreService.SearchSubjects:output_type -> goeland.v1.SearchSubjectsResponse
-	26,  // 120: goeland.v1.CoreService.GetCurrentUser:output_type -> goeland.v1.GetCurrentUserResponse
-	28,  // 121: goeland.v1.CoreService.BatchGetUsers:output_type -> goeland.v1.BatchGetUsersResponse
-	30,  // 122: goeland.v1.CoreService.SearchUsers:output_type -> goeland.v1.SearchUsersResponse
-	34,  // 123: goeland.v1.CoreService.ListAppRoles:output_type -> goeland.v1.ListAppRolesResponse
-	36,  // 124: goeland.v1.CoreService.ListRoleHolders:output_type -> goeland.v1.ListRoleHoldersResponse
-	38,  // 125: goeland.v1.CoreService.ListUserRoles:output_type -> goeland.v1.ListUserRolesResponse
-	40,  // 126: goeland.v1.CoreService.GrantUserRole:output_type -> goeland.v1.GrantUserRoleResponse
-	42,  // 127: goeland.v1.CoreService.RevokeUserRole:output_type -> goeland.v1.RevokeUserRoleResponse
-	44,  // 128: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
-	46,  // 129: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
-	48,  // 130: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
-	52,  // 131: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
-	51,  // 132: goeland.v1.CoreService.SummarizeRelationships:output_type -> goeland.v1.SummarizeRelationshipsResponse
-	54,  // 133: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
-	63,  // 134: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
-	66,  // 135: goeland.v1.CoreService.ListAccessAuditEvents:output_type -> goeland.v1.ListAccessAuditEventsResponse
-	59,  // 136: goeland.v1.CoreService.CreateRelationshipType:output_type -> goeland.v1.CreateRelationshipTypeResponse
-	61,  // 137: goeland.v1.CoreService.UpdateRelationshipType:output_type -> goeland.v1.UpdateRelationshipTypeResponse
-	57,  // 138: goeland.v1.CoreService.ListReferenceChanges:output_type -> goeland.v1.ListReferenceChangesResponse
-	115, // [115:139] is the sub-list for method output_type
-	91,  // [91:115] is the sub-list for method input_type
-	91,  // [91:91] is the sub-list for extension type_name
-	91,  // [91:91] is the sub-list for extension extendee
-	0,   // [0:91] is the sub-list for field type_name
+	0,   // 73: goeland.v1.OutboxEvent.subject_kind:type_name -> goeland.v1.SubjectKind
+	74,  // 74: goeland.v1.OutboxEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	74,  // 75: goeland.v1.OutboxEvent.next_attempt_at:type_name -> google.protobuf.Timestamp
+	74,  // 76: goeland.v1.OutboxEvent.published_at:type_name -> google.protobuf.Timestamp
+	74,  // 77: goeland.v1.OutboxEvent.failed_at:type_name -> google.protobuf.Timestamp
+	74,  // 78: goeland.v1.GetOutboxStatusResponse.oldest_pending_at:type_name -> google.protobuf.Timestamp
+	59,  // 79: goeland.v1.GetOutboxStatusResponse.consumers:type_name -> goeland.v1.OutboxConsumerStatus
+	58,  // 80: goeland.v1.GetOutboxStatusResponse.recent_failed:type_name -> goeland.v1.OutboxEvent
+	0,   // 81: goeland.v1.CreateRelationshipTypeRequest.source_kind:type_name -> goeland.v1.SubjectKind
+	0,   // 82: goeland.v1.CreateRelationshipTypeRequest.target_kind:type_name -> goeland.v1.SubjectKind
+	3,   // 83: goeland.v1.CreateRelationshipTypeRequest.role_end:type_name -> goeland.v1.RoleEnd
+	8,   // 84: goeland.v1.CreateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
+	55,  // 85: goeland.v1.CreateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	3,   // 86: goeland.v1.UpdateRelationshipTypeRequest.role_end:type_name -> goeland.v1.RoleEnd
+	8,   // 87: goeland.v1.UpdateRelationshipTypeResponse.relationship_type:type_name -> goeland.v1.RelationshipType
+	55,  // 88: goeland.v1.UpdateRelationshipTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	74,  // 89: goeland.v1.ListAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
+	74,  // 90: goeland.v1.ListAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
+	7,   // 91: goeland.v1.ListAuditEventsResponse.events:type_name -> goeland.v1.AuditEvent
+	74,  // 92: goeland.v1.AccessAuditEvent.occurred_at:type_name -> google.protobuf.Timestamp
+	0,   // 93: goeland.v1.AccessAuditEvent.subject_kind:type_name -> goeland.v1.SubjectKind
+	1,   // 94: goeland.v1.AccessAuditEvent.access_level:type_name -> goeland.v1.Permission
+	2,   // 95: goeland.v1.AccessAuditEvent.access_source:type_name -> goeland.v1.AccessSource
+	74,  // 96: goeland.v1.ListAccessAuditEventsRequest.from:type_name -> google.protobuf.Timestamp
+	74,  // 97: goeland.v1.ListAccessAuditEventsRequest.to:type_name -> google.protobuf.Timestamp
+	70,  // 98: goeland.v1.ListAccessAuditEventsResponse.events:type_name -> goeland.v1.AccessAuditEvent
+	13,  // 99: goeland.v1.CoreService.CreateSubjectRef:input_type -> goeland.v1.CreateSubjectRefRequest
+	15,  // 100: goeland.v1.CoreService.GetSubjectRef:input_type -> goeland.v1.GetSubjectRefRequest
+	17,  // 101: goeland.v1.CoreService.AssignBusinessRef:input_type -> goeland.v1.AssignBusinessRefRequest
+	19,  // 102: goeland.v1.CoreService.LookupSubjects:input_type -> goeland.v1.LookupSubjectsRequest
+	21,  // 103: goeland.v1.CoreService.SearchSubjects:input_type -> goeland.v1.SearchSubjectsRequest
+	25,  // 104: goeland.v1.CoreService.GetCurrentUser:input_type -> goeland.v1.GetCurrentUserRequest
+	27,  // 105: goeland.v1.CoreService.BatchGetUsers:input_type -> goeland.v1.BatchGetUsersRequest
+	29,  // 106: goeland.v1.CoreService.SearchUsers:input_type -> goeland.v1.SearchUsersRequest
+	33,  // 107: goeland.v1.CoreService.ListAppRoles:input_type -> goeland.v1.ListAppRolesRequest
+	35,  // 108: goeland.v1.CoreService.ListRoleHolders:input_type -> goeland.v1.ListRoleHoldersRequest
+	37,  // 109: goeland.v1.CoreService.ListUserRoles:input_type -> goeland.v1.ListUserRolesRequest
+	39,  // 110: goeland.v1.CoreService.GrantUserRole:input_type -> goeland.v1.GrantUserRoleRequest
+	41,  // 111: goeland.v1.CoreService.RevokeUserRole:input_type -> goeland.v1.RevokeUserRoleRequest
+	43,  // 112: goeland.v1.CoreService.LinkSubjects:input_type -> goeland.v1.LinkSubjectsRequest
+	45,  // 113: goeland.v1.CoreService.UnlinkSubjects:input_type -> goeland.v1.UnlinkSubjectsRequest
+	47,  // 114: goeland.v1.CoreService.EndRelationship:input_type -> goeland.v1.EndRelationshipRequest
+	49,  // 115: goeland.v1.CoreService.ListRelationships:input_type -> goeland.v1.ListRelationshipsRequest
+	50,  // 116: goeland.v1.CoreService.SummarizeRelationships:input_type -> goeland.v1.SummarizeRelationshipsRequest
+	53,  // 117: goeland.v1.CoreService.ListRelationshipTypes:input_type -> goeland.v1.ListRelationshipTypesRequest
+	68,  // 118: goeland.v1.CoreService.ListAuditEvents:input_type -> goeland.v1.ListAuditEventsRequest
+	71,  // 119: goeland.v1.CoreService.ListAccessAuditEvents:input_type -> goeland.v1.ListAccessAuditEventsRequest
+	64,  // 120: goeland.v1.CoreService.CreateRelationshipType:input_type -> goeland.v1.CreateRelationshipTypeRequest
+	66,  // 121: goeland.v1.CoreService.UpdateRelationshipType:input_type -> goeland.v1.UpdateRelationshipTypeRequest
+	56,  // 122: goeland.v1.CoreService.ListReferenceChanges:input_type -> goeland.v1.ListReferenceChangesRequest
+	60,  // 123: goeland.v1.CoreService.GetOutboxStatus:input_type -> goeland.v1.GetOutboxStatusRequest
+	62,  // 124: goeland.v1.CoreService.ReplayOutboxEvents:input_type -> goeland.v1.ReplayOutboxEventsRequest
+	14,  // 125: goeland.v1.CoreService.CreateSubjectRef:output_type -> goeland.v1.CreateSubjectRefResponse
+	16,  // 126: goeland.v1.CoreService.GetSubjectRef:output_type -> goeland.v1.GetSubjectRefResponse
+	18,  // 127: goeland.v1.CoreService.AssignBusinessRef:output_type -> goeland.v1.AssignBusinessRefResponse
+	20,  // 128: goeland.v1.CoreService.LookupSubjects:output_type -> goeland.v1.LookupSubjectsResponse
+	23,  // 129: goeland.v1.CoreService.SearchSubjects:output_type -> goeland.v1.SearchSubjectsResponse
+	26,  // 130: goeland.v1.CoreService.GetCurrentUser:output_type -> goeland.v1.GetCurrentUserResponse
+	28,  // 131: goeland.v1.CoreService.BatchGetUsers:output_type -> goeland.v1.BatchGetUsersResponse
+	30,  // 132: goeland.v1.CoreService.SearchUsers:output_type -> goeland.v1.SearchUsersResponse
+	34,  // 133: goeland.v1.CoreService.ListAppRoles:output_type -> goeland.v1.ListAppRolesResponse
+	36,  // 134: goeland.v1.CoreService.ListRoleHolders:output_type -> goeland.v1.ListRoleHoldersResponse
+	38,  // 135: goeland.v1.CoreService.ListUserRoles:output_type -> goeland.v1.ListUserRolesResponse
+	40,  // 136: goeland.v1.CoreService.GrantUserRole:output_type -> goeland.v1.GrantUserRoleResponse
+	42,  // 137: goeland.v1.CoreService.RevokeUserRole:output_type -> goeland.v1.RevokeUserRoleResponse
+	44,  // 138: goeland.v1.CoreService.LinkSubjects:output_type -> goeland.v1.LinkSubjectsResponse
+	46,  // 139: goeland.v1.CoreService.UnlinkSubjects:output_type -> goeland.v1.UnlinkSubjectsResponse
+	48,  // 140: goeland.v1.CoreService.EndRelationship:output_type -> goeland.v1.EndRelationshipResponse
+	52,  // 141: goeland.v1.CoreService.ListRelationships:output_type -> goeland.v1.ListRelationshipsResponse
+	51,  // 142: goeland.v1.CoreService.SummarizeRelationships:output_type -> goeland.v1.SummarizeRelationshipsResponse
+	54,  // 143: goeland.v1.CoreService.ListRelationshipTypes:output_type -> goeland.v1.ListRelationshipTypesResponse
+	69,  // 144: goeland.v1.CoreService.ListAuditEvents:output_type -> goeland.v1.ListAuditEventsResponse
+	72,  // 145: goeland.v1.CoreService.ListAccessAuditEvents:output_type -> goeland.v1.ListAccessAuditEventsResponse
+	65,  // 146: goeland.v1.CoreService.CreateRelationshipType:output_type -> goeland.v1.CreateRelationshipTypeResponse
+	67,  // 147: goeland.v1.CoreService.UpdateRelationshipType:output_type -> goeland.v1.UpdateRelationshipTypeResponse
+	57,  // 148: goeland.v1.CoreService.ListReferenceChanges:output_type -> goeland.v1.ListReferenceChangesResponse
+	61,  // 149: goeland.v1.CoreService.GetOutboxStatus:output_type -> goeland.v1.GetOutboxStatusResponse
+	63,  // 150: goeland.v1.CoreService.ReplayOutboxEvents:output_type -> goeland.v1.ReplayOutboxEventsResponse
+	125, // [125:151] is the sub-list for method output_type
+	99,  // [99:125] is the sub-list for method input_type
+	99,  // [99:99] is the sub-list for extension type_name
+	99,  // [99:99] is the sub-list for extension extendee
+	0,   // [0:99] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_core_proto_init() }
@@ -5931,14 +6438,14 @@ func file_goeland_v1_core_proto_init() {
 		(*BusinessRefRequest_Value)(nil),
 		(*BusinessRefRequest_Allocate)(nil),
 	}
-	file_goeland_v1_core_proto_msgTypes[56].OneofWrappers = []any{}
+	file_goeland_v1_core_proto_msgTypes[62].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_core_proto_rawDesc), len(file_goeland_v1_core_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   64,
+			NumMessages:   70,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

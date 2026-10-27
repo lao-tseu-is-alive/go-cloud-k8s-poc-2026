@@ -84,6 +84,12 @@ replica (`GOELAND_EXPORT_POLL_SECONDS`, default 5, 1–3600), sharing the queue 
 database, so any replica may build an archive that another one serves: one more reason for a
 shared volume.
 
+The transactional outbox (GLD-028) needs no volume: its events live in `outbox_event`, and the
+worker of every replica shares them through the database (`FOR UPDATE SKIP LOCKED` with a 5-minute
+lease, so a replica that dies mid-delivery leaves its events to the others). Each worker keeps one
+extra database connection, outside the pool, to `LISTEN` for new events. Watch the given-up events in
+Administration › Outbox: they stay until replayed.
+
 **This is node-local.** For more than one replica, or on ephemeral containers, this path
 **must** be a shared/persistent volume with a single writer, or the deployment must be
 pinned to one replica. Object storage (MinIO/S3) is the intended replacement and is a
@@ -152,6 +158,9 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_BOOTSTRAP_ADMINS`          | —                | User ids granted the ADMIN role on their next request (§4); at most 20. |
 | `GOELAND_EXPORT_TTL_HOURS`          | `24`             | How long a case export archive stays downloadable (1–720, §3). |
 | `GOELAND_EXPORT_POLL_SECONDS`       | `5`              | How often the export worker looks for queued exports and expired archives (1–3600). |
+| `GOELAND_OUTBOX_RETENTION_DAYS`     | `7`              | How long delivered outbox events are kept before the purge (1–365, GLD-028). |
+| `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
+| `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
 
 ## 7. Secrets
 
