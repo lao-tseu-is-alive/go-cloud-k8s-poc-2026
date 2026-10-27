@@ -103,7 +103,7 @@ jobs:
       # 3. Run Trivy vulnerability scanner on the built image
       - name: Run Trivy vulnerability scanner
         # pinned to commit SHA to prevent supply chain attacks
-        uses: aquasecurity/trivy-action@cf5c088a69634cd13ccddc735d7926162c31f9a6
+        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
         with:
           image-ref: 'goeland-server:test'
           severity: 'MEDIUM,CRITICAL,HIGH'
@@ -124,7 +124,7 @@ jobs:
       # Trivy's DB cached by the scan above (skip-db-update) so it is fast.
       # pinned to commit SHA to prevent supply chain attacks
       - name: Fail on HIGH/CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@cf5c088a69634cd13ccddc735d7926162c31f9a6
+        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
         with:
           image-ref: 'goeland-server:test'
           severity: 'CRITICAL,HIGH'
