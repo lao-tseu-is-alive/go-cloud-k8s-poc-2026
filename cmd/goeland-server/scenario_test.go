@@ -446,11 +446,18 @@ func (s *scenario) step30() {
 // of the case documents; another user neither sees nor downloads it.
 func (s *scenario) step31() {
 	id := str(s.ok("POST", "/api/cases/"+s.caseA+"/exports", map[string]any{"reason": "scénario v2"}), "export", "id")
-	if processed, err := s.adminApp.exports.ProcessNext(context.Background()); err != nil || !processed {
-		s.t.Fatalf("step 31: the worker builds the export: %v (%v)", processed, err)
+	// Other test packages share the queue: drain it until this export is built.
+	built := ""
+	for range 20 {
+		if built = str(s.ok("GET", "/api/case-exports/"+id, nil), "export", "status"); built == "CASE_EXPORT_STATUS_DONE" {
+			break
+		}
+		if processed, err := s.adminApp.exports.ProcessNext(context.Background()); err != nil || !processed {
+			s.t.Fatalf("step 31: the worker builds the export: %v (%v)", processed, err)
+		}
 	}
-	if got := str(s.ok("GET", "/api/case-exports/"+id, nil), "export", "status"); got != "CASE_EXPORT_STATUS_DONE" {
-		s.t.Fatalf("step 31: export status %s", got)
+	if built != "CASE_EXPORT_STATUS_DONE" {
+		s.t.Fatalf("step 31: export status %s", built)
 	}
 	if got := list(s.ok("GET", "/api/cases/"+s.caseA+"/exports", nil), "exports"); len(got) != 1 {
 		s.t.Fatalf("step 31: the case lists its export: %v", got)
