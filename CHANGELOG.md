@@ -8,6 +8,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.20.0] - 2026-10-28
+
+Retention of closed cases and their transfer to the archives (GLD-076): a retention schedule
+with a policy per case type, the retention computed at closing, legal holds, the deadlines, and
+disposition bordereaux approved by the owning units, whose execution builds the complete
+transfer package, freezes the case and keeps a verifiable proof. Nothing is destroyed yet
+(that is the next task); the policies shipped are examples. Migrations `0035` and `0036`; new application role
+Archiviste (`RECORDS_MANAGER`). Read `docs/RETENTION.md` before any use on real cases.
+
 ### Added
 
 - Retention of closed cases (GLD-076, migration `0035`): a `RetentionService` with the
@@ -26,7 +35,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   complete package (the export format of GLD-029, built by the system without read filter,
   downloadable by records managers for 90 days, every download logged), records it as EXPORT,
   freezes the case and keeps the bordereau's manifest and its SHA-256 as proof. Executing an
-  elimination comes with GLD-077. Reference for archivists, data protection and operators:
+  elimination comes next. Reference for archivists, data protection and operators:
   `docs/RETENTION.md`.
 
 ### Changed
