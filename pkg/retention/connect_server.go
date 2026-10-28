@@ -374,7 +374,7 @@ func (s *ConnectServer) bordereauToProto(ctx context.Context, b *Bordereau) (*go
 	out := BordereauToProto(&Bordereau{
 		ID: b.ID, FinalDisposition: b.FinalDisposition, Status: b.Status, Reason: b.Reason, PreparedBy: b.PreparedBy,
 		PreparedAt: b.PreparedAt, ClosedAt: b.ClosedAt, ClosedBy: b.ClosedBy, CloseReason: b.CloseReason,
-		ProofSHA256: b.ProofSHA256, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
+		ProofSHA256: b.ProofSHA256, ProofManifest: b.ProofManifest, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
 	})
 	out.Items = items
 	return out, nil

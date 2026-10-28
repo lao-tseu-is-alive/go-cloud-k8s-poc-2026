@@ -377,7 +377,7 @@ func (r *PostgresRepository) Cancel(ctx context.Context, id uuid.UUID, reason, o
 
 func closeBordereauTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, status BordereauStatus, operatorID, reason, proof string, manifest []byte) error {
 	tag, err := tx.Exec(ctx, closeBordereauSQL, pgx.NamedArgs{
-		"id": id, "status": string(status), "operator_id": operatorID, "reason": reason, "proof_sha256": proof, "proof_manifest": manifest,
+		"id": id, "status": string(status), "operator_id": operatorID, "reason": reason, "proof_sha256": proof, "proof_manifest": nullableText(manifest),
 	})
 	if err != nil {
 		return fmt.Errorf("close bordereau: %w", err)
@@ -431,6 +431,15 @@ func collectItem(rows pgx.Rows, err error) (*Item, error) {
 		return nil, core.ErrNotFound
 	}
 	return item, err
+}
+
+// nullableText is the manifest as text, NULL when absent (a cancellation).
+func nullableText(b []byte) *string {
+	if b == nil {
+		return nil
+	}
+	s := string(b)
+	return &s
 }
 
 func deref(s *string) string {

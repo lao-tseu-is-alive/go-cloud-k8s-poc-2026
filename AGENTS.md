@@ -149,7 +149,9 @@ whenever a task starts, completes, changes scope or order.
   by the preparer ("my tasks" lists them); executing an ARCHIVE bordereau queues a `case_export` of
   purpose TRANSFER (built with `core.SystemViewer`, no read filter, downloaded by records managers,
   kept 90 days), records EXPORT, locks the case and marks its retention ARCHIVED, and keeps the
-  SHA-256 of the proof manifest. DESTROY execution is step B2. `record_metadata.retention_until` /
+  proof manifest (stored as exact text, so its SHA-256 can be recomputed); every download of a
+  transfer package is logged as DOWNLOAD. DESTROY execution is GLD-077. The reference for this
+  domain is `docs/RETENTION.md`: keep it true when the retention rules change. `record_metadata.retention_until` /
   `sort_final` are V1 fields, no longer written.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
@@ -237,7 +239,7 @@ cmd/doccheck/                documentation checker (GoDoc coverage + exact atlas
 cmd/goeland-import-orgunits/ optional import of the legacy org unit tree from a read-only replica (structure only)
 cmd/goeland-import/          one-shot legacy data import (pkg/legacyimport) into a brand-new local database
 .github/workflows/           CI: ci (make release-check), cve-trivy-scan, docker-publish, release
-docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.md (GLD-NNN tasks), atlas.md, PRODUCTION_READINESS.md
+docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.md (GLD-NNN tasks), atlas.md, PRODUCTION_READINESS.md, RETENTION.md
 ```
 
 ## Commands

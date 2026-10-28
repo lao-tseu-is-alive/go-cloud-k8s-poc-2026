@@ -10,7 +10,7 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
-- Retention of closed cases (GLD-032, step A, migration `0035`): a `RetentionService` with the
+- Retention of closed cases (GLD-076, migration `0035`): a `RetentionService` with the
   retention schedule (`retention_policy`, administered like the other catalogues; three example
   policies until the City archives give the real one), a default policy per case type, the
   retention computed when a case is closed (a snapshot: start on the closing day in Europe/Zurich,
@@ -19,13 +19,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   its already closed cases (1000 per call, each audited). A new application role, RECORDS_MANAGER
   (Archiviste), gives the `goeland:records` scope; the SPA shows the retention on the case page
   (Gouvernance) and a Conservation page with the deadlines.
-- Disposition bordereaux (GLD-032, step B1, migration `0036`): a records manager gathers due cases
+- Disposition bordereaux (GLD-076, migration `0036`): a records manager gathers due cases
   (not on hold) of one final disposition in a bordereau; each case is approved or rejected by a
   holder of MANAGE on its owning unit, or on the case without one, never by the preparer (the
   approvals appear on "Mes tâches"); executing a transfer bordereau builds each approved case's
   complete package (the export format of GLD-029, built by the system without read filter,
-  downloadable by records managers for 90 days), records it as EXPORT, freezes the case and keeps
-  the SHA-256 of the bordereau's manifest as proof. Executing an elimination comes next (B2).
+  downloadable by records managers for 90 days, every download logged), records it as EXPORT,
+  freezes the case and keeps the bordereau's manifest and its SHA-256 as proof. Executing an
+  elimination comes with GLD-077. Reference for archivists, data protection and operators:
+  `docs/RETENTION.md`.
 
 ### Changed
 

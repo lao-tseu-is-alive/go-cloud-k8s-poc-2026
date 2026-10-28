@@ -82,6 +82,17 @@
     }
   }
 
+  // Saves the proof manifest byte for byte, so its SHA-256 can be recomputed.
+  function saveManifest () {
+    if (!b.value?.proofManifest) return
+    const url = URL.createObjectURL(new Blob([b.value.proofManifest], { type: 'application/json' }))
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `bordereau-${b.value.id}-manifest.json`
+    a.click()
+    URL.revokeObjectURL(url)
+  }
+
   async function download (item: DispositionItem) {
     if (!item.exportId) return
     downloading.value = item.id
@@ -123,6 +134,15 @@
 
           <p v-if="b.proofSha256" class="text-caption">
             {{ t('retention.bordereau.proof') }} <code class="text-break">{{ b.proofSha256 }}</code>
+
+            <v-btn
+              v-if="b.proofManifest"
+              class="ml-2"
+              prepend-icon="mdi-download"
+              size="x-small"
+              variant="tonal"
+              @click="saveManifest"
+            >{{ t('retention.bordereau.manifest') }}</v-btn>
           </p>
 
           <p v-if="open" class="text-caption text-medium-emphasis mt-2">{{ t('retention.bordereau.approvalHint') }}</p>

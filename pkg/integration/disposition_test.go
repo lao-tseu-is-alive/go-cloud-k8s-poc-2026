@@ -1,7 +1,10 @@
 package integration
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/uuid"
@@ -100,6 +103,9 @@ func TestDispositionBordereauArchive(t *testing.T) {
 	if err != nil || done.Status != retention.BordereauExecuted || len(done.ProofSHA256) != 64 || done.ApprovedCount != 1 {
 		t.Fatalf("execute: %+v (%v)", done, err)
 	}
+	if sum := sha256.Sum256([]byte(done.ProofManifest)); hex.EncodeToString(sum[:]) != done.ProofSHA256 || !strings.Contains(done.ProofManifest, owned.ID.String()) {
+		t.Fatalf("anyone recomputes the proof from the stored manifest: %s", done.ProofManifest)
+	}
 	got, _ := env.retentionSvc.CaseRetention(ctx, owned.ID)
 	if got.Current == nil || got.Current.DispositionStatus == nil || *got.Current.DispositionStatus != retention.OutcomeArchived {
 		t.Fatalf("the approved case is ARCHIVED: %+v", got.Current)
@@ -143,6 +149,10 @@ func assertTransferPackage(t *testing.T, env *testEnv, b *retention.Bordereau, c
 		t.Fatalf("a records manager downloads the package: %+v (%v)", archive, err)
 	}
 	_ = archive.Object.Close()
+	var downloads int
+	if err := env.pool.QueryRow(env.ctx, `SELECT count(*) FROM access_audit_event WHERE subject_id = $1 AND action = 'DOWNLOAD' AND user_id = $2`, caseID, archivist).Scan(&downloads); err != nil || downloads != 1 {
+		t.Fatalf("the download of a transfer package is logged: %d (%v)", downloads, err)
+	}
 	if _, err := env.exportSvc.OpenArchive(env.ctx, exportID, archivist, false); !errors.Is(err, core.ErrNotFound) {
 		t.Fatalf("without the records scope: want ErrNotFound, got %v", err)
 	}

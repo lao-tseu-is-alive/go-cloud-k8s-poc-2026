@@ -6904,6 +6904,11 @@ definitions:
         type: integer
         format: int32
         description: approved_count counts its approved cases.
+      proofManifest:
+        type: string
+        description: |-
+          proof_manifest is the proof manifest (JSON) of an executed bordereau,
+          exactly the bytes whose SHA-256 is proof_sha256: anyone can recompute it.
     description: DispositionBordereau gathers due cases of one final disposition for approval and execution.
   v1DispositionDecision:
     type: string

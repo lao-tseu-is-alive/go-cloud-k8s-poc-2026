@@ -9,8 +9,9 @@
 -- only: ARCHIVE queues a complete transfer package (a case_export of purpose
 -- TRANSFER, built without read filter, downloadable by records managers) and
 -- freezes the case (record_metadata.is_locked, retention ARCHIVED); DESTROY is
--- step B2. The bordereau keeps the proof: the SHA-256 of its manifest (cases,
--- decisions, approvers), computed at execution. Rows are never deleted.
+-- step B2. The bordereau keeps the proof: its manifest (cases, decisions,
+-- approvers) as JSON text and the SHA-256 of exactly those bytes, so anyone can
+-- recompute it. Rows are never deleted.
 
 CREATE TABLE disposition_bordereau (
     id                UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -23,7 +24,8 @@ CREATE TABLE disposition_bordereau (
     closed_by         TEXT,
     close_reason      TEXT NOT NULL DEFAULT '',
     proof_sha256      TEXT NOT NULL DEFAULT '',
-    proof_manifest    JSONB,
+    -- the manifest exactly as hashed (TEXT, not JSONB, which would reorder it)
+    proof_manifest    TEXT,
 
     CONSTRAINT disposition_bordereau_disposition_valid CHECK (final_disposition IN ('ARCHIVE', 'DESTROY')),
     CONSTRAINT disposition_bordereau_status_valid CHECK (status IN ('OPEN', 'EXECUTED', 'CANCELLED')),

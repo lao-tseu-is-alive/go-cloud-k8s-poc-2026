@@ -459,6 +459,9 @@ message DispositionBordereau {
   int32 pending_count = 13;
   // approved_count counts its approved cases.
   int32 approved_count = 14;
+  // proof_manifest is the proof manifest (JSON) of an executed bordereau,
+  // exactly the bytes whose SHA-256 is proof_sha256: anyone can recompute it.
+  string proof_manifest = 15;
 }
 
 // CreateDispositionBordereauRequest prepares a bordereau (records manager).

@@ -227,9 +227,23 @@ variables apply as the SDK reads them: `OTEL_SERVICE_NAME` (default `go-cloud-k8
 - Logs written with a request's context carry its `trace_id` and `span_id`.
 - Spans still buffered are flushed at shutdown (5 s at most).
 
+## 11. Retention and final disposition
+
+Closed cases get the retention policy of their type; records managers (role `RECORDS_MANAGER`)
+place legal holds, follow the deadlines and prepare disposition bordereaux that the owning units
+approve; an executed transfer builds a complete package and freezes the case. Before any use on
+real cases, replace the three **example** policies with the archives' schedule, give each case type
+its policy, apply it to the already closed cases, and grant the role. Transfer packages hold the
+whole case (confidential content included), are downloadable by records managers only, logged at
+every download, and kept 90 days in the blob store. Full reference: [RETENTION.md](RETENTION.md).
+
 ## Known limitations
 
 These are the gaps that make this a POC rather than a production service:
+
+- **No elimination yet, and a failed transfer package cannot be rebuilt** (GLD-077). Elimination
+  bordereaux can be prepared and approved but not executed; an ARCHIVED case whose package failed
+  or expired stays frozen without a package. The retention policies shipped are examples.
 
 - **The sensitive read audit has no retention policy.** Access is enforced on every mutation and
   read (GLD-048), searches and lists return only readable subjects, and document bytes are

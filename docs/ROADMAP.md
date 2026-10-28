@@ -46,7 +46,8 @@ v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) an
 period and creator (GLD-074) in v0.17.0; the document page on the same model (GLD-075) in
 v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and quick fixes in v0.18.1; the SPA icons by import (GLD-073), the SPA types
 checked against the protos (GLD-072) and observability — Prometheus metrics and OpenTelemetry
-traces (GLD-010) — in v0.19.0.
+traces (GLD-010) — in v0.19.0; retention, legal holds and the transfer to the archives (GLD-076)
+in v0.20.0. Next: the elimination of cases (GLD-077).
 
 ## Cross-cutting quality
 
@@ -400,31 +401,28 @@ covered by an integration test.
   audited, all versions, background job. Done 2026-10-14: migration `0030` (`case_export`),
   `CaseExportService` (request, get, list), `pkg/caseexport` worker (`SKIP LOCKED`, retry,
   expiry), `GET /api/case-exports/{id}/content`, SPA panel on the case page, §50 step 31.
-- [~] **GLD-032 — Retention policy**: `retention_policy` + `subject_retention`
-  evolving `record_metadata.retention_until` / `sort_final` without breaking
-  them, and a governed, proven disposition path (§3g). Decided 2026-10-28: the case is the unit
-  (its documents follow it, kept until the latest deadline of their cases; actors and things out
-  of scope); a policy per case type; two steps. Step A: the `retention_policy` catalogue
-  (duration, start event, final disposition ARCHIVE / DESTROY / REVIEW, legal basis; example
-  policies until the City archives give the real schedule), the case type default, the
-  retention computed at closing and cleared at reopening, a legal hold blocking disposal, the
-  retention on the case page and the list of due cases; nothing destructive. Step B: disposition
-  bordereaux prepared by a RECORDS_MANAGER and approved by a holder of MANAGE on each case's
-  owning unit; ARCHIVE produces the transfer package (the GLD-029 export) and freezes the case
-  (ARCHIVED); DESTROY really deletes the document bytes no longer referenced elsewhere and keeps a
-  minimal notice plus a permanent proof (bordereau, approvers, SHA-256 of the manifest).
-  `retention_until` / `sort_final` stay as read-only V1 preparation fields. Step B decided 2026-10-28: an
-  elimination deletes the document bytes no longer referenced elsewhere, blanks the case's texts
-  (title, description, timeline bodies, task texts, document titles and metadata) and replaces the
+- [-] **GLD-032 — Retention policy**: `retention_policy` + `subject_retention` evolving
+  `record_metadata.retention_until` / `sort_final` without breaking them, and a governed, proven
+  disposition path (§3g). Superseded 2026-10-28 by GLD-076 (built) and GLD-077 (elimination), so
+  the delivered part could be released; decisions recorded in both.
+- [x] **GLD-076 — Retention, legal holds and transfer to the archives** (decided 2026-10-28): the
+  case is the unit (its documents follow it; actors and things out of scope); the
+  `retention_policy` catalogue (duration, final disposition ARCHIVE / DESTROY / REVIEW, legal
+  basis; example policies until the City archives give the real schedule) and a default policy
+  per case type; the retention snapshotted at closing (Europe/Zurich days) and ended at reopening;
+  legal holds; the due list; the application to closed cases in audited batches; the
+  RECORDS_MANAGER role (`goeland:records`). Disposition bordereaux: prepared by a records manager,
+  each case approved by a holder of MANAGE on its live owning unit (or on the case without one),
+  never by the preparer; an executed transfer builds the complete package (GLD-029 format, system
+  view without read filter, records managers only, every download logged, 90 days), records
+  EXPORT, freezes the case (ARCHIVED) and keeps the manifest and its SHA-256 as proof.
+  `retention_until` / `sort_final` stay as read-only V1 fields. Reference: `docs/RETENTION.md`.
+- [ ] **GLD-077 — Elimination of cases** (decided 2026-10-28): executing a DESTROY bordereau
+  deletes the document bytes no longer referenced elsewhere, blanks the case's texts (title,
+  description, timeline bodies, task texts, document titles and metadata) and replaces the
   business data of its audit states by a marker, through controlled exceptions to the immutability
-  triggers, keeping a minimal notice (reference, type, dates, policy) and the permanent proof; the
-  transfer package is a complete system export (GLD-029 format, no read filter, downloadable by
-  records managers only, recorded as EXPORT) and the case is then frozen (ARCHIVED); a case without
-  owning unit is approved by a holder of MANAGE on the case; the preparer never approves. Delivered
-  in two parts: B1 bordereaux, approval and transfer; B2 elimination.
-
-## Phase 8 — AI proposal and MCP readiness (v2 §39-41)
-
+  triggers, keeping a minimal notice (reference, type, dates, policy) and the permanent proof
+  (DISPOSED). Also: rebuilding a failed or expired transfer package of an ARCHIVED case.
 - [ ] **GLD-030 — AI proposals with human validation**: `ai_action` trace
   (model, prompt template, inputs, output, PROPOSED / validated / rejected) and
   proposal flows for timeline entries, tasks and relationships; no free SQL,

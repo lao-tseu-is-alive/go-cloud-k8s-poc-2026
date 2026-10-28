@@ -80,8 +80,10 @@ type Bordereau struct {
 	ClosedBy *string `db:"closed_by"`
 	// CloseReason explains a cancellation.
 	CloseReason string `db:"close_reason"`
-	// ProofSHA256 is the SHA-256 of the proof manifest.
+	// ProofSHA256 is the SHA-256 of ProofManifest's bytes.
 	ProofSHA256 string `db:"proof_sha256"`
+	// ProofManifest is the proof manifest (JSON) exactly as hashed; empty until executed.
+	ProofManifest string `db:"proof_manifest"`
 	// ItemCount counts its cases.
 	ItemCount int32 `db:"item_count"`
 	// PendingCount counts its cases waiting for a decision.

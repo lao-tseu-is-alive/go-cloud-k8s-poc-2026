@@ -120,7 +120,7 @@ func BordereauToProto(b *Bordereau) *goelandv1.DispositionBordereau {
 		Id: b.ID.String(), FinalDisposition: DispositionToProto(b.FinalDisposition), Status: bordereauStatusToProto[b.Status],
 		Reason: b.Reason, PreparedBy: b.PreparedBy, PreparedAt: core.TimestampOrNil(b.PreparedAt),
 		ClosedAt: core.TimestampPtrOrNil(b.ClosedAt), ClosedBy: deref(b.ClosedBy), CloseReason: b.CloseReason,
-		ProofSha256: b.ProofSHA256, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
+		ProofSha256: b.ProofSHA256, ProofManifest: b.ProofManifest, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
 	}
 	for _, it := range b.Items {
 		out.Items = append(out.Items, ItemToProto(it))

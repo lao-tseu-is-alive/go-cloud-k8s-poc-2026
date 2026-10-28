@@ -839,6 +839,7 @@
       "approver": "Approbation par",
       "decision": "Décision",
       "package": "Paquet de versement",
+      "manifest": "Manifeste (JSON)",
       "download": "Télécharger"
     },
     "approvals": {

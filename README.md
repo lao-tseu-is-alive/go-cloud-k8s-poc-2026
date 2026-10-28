@@ -197,7 +197,7 @@ cmd/doccheck/            documentation checker (GoDoc coverage + exact atlas inv
 cmd/goeland-import-orgunits/  optional import of the legacy org unit tree (structure only, dry run by default)
 cmd/goeland-import/      one-shot legacy data import into a brand-new local database (pkg/legacyimport, docs/IMPORT_MAPPING.md)
 .github/workflows/       CI gate, Trivy CVE scan, image build/scan/publish, binary release
-docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract)
+docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract), RETENTION.md (retention and disposition)
 ```
 
 ## Prerequisites
@@ -311,7 +311,8 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
   retention, reopening ends it. The records manager (Archiviste role) places or releases legal
   holds and follows the deadlines (Conservation page), then gathers due cases in a bordereau: each
   case is approved by a manager of its owning unit, and executing a transfer bordereau builds the
-  complete package, freezes the case and keeps a SHA-256 proof (GLD-032; elimination comes next).
+  complete package, freezes the case and keeps a SHA-256 proof (GLD-076; elimination comes with
+  GLD-077). What it does, who decides and what is kept: [`docs/RETENTION.md`](docs/RETENTION.md).
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 

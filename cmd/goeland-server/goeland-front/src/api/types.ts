@@ -1493,6 +1493,8 @@ export interface DispositionBordereau {
   closedBy?: string
   closeReason?: string
   proofSha256?: string
+  /** The proof manifest (JSON) exactly as hashed: its SHA-256 is proofSha256. */
+  proofManifest?: string
   items?: DispositionItem[]
   itemCount?: number
   pendingCount?: number

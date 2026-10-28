@@ -1984,6 +1984,9 @@ type DispositionBordereau struct {
 	PendingCount int32 `protobuf:"varint,13,opt,name=pending_count,json=pendingCount,proto3" json:"pending_count,omitempty"`
 	// approved_count counts its approved cases.
 	ApprovedCount int32 `protobuf:"varint,14,opt,name=approved_count,json=approvedCount,proto3" json:"approved_count,omitempty"`
+	// proof_manifest is the proof manifest (JSON) of an executed bordereau,
+	// exactly the bytes whose SHA-256 is proof_sha256: anyone can recompute it.
+	ProofManifest string `protobuf:"bytes,15,opt,name=proof_manifest,json=proofManifest,proto3" json:"proof_manifest,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2114,6 +2117,13 @@ func (x *DispositionBordereau) GetApprovedCount() int32 {
 		return x.ApprovedCount
 	}
 	return 0
+}
+
+func (x *DispositionBordereau) GetProofManifest() string {
+	if x != nil {
+		return x.ProofManifest
+	}
+	return ""
 }
 
 // CreateDispositionBordereauRequest prepares a bordereau (records manager).
@@ -3009,7 +3019,7 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\x0fdecision_reason\x18\r \x01(\tR\x0edecisionReason\x12\x1b\n" +
 	"\texport_id\x18\x0e \x01(\tR\bexportId\x12#\n" +
 	"\rexport_status\x18\x0f \x01(\tR\fexportStatus\x12#\n" +
-	"\rexport_sha256\x18\x10 \x01(\tR\fexportSha256\"\xd6\x04\n" +
+	"\rexport_sha256\x18\x10 \x01(\tR\fexportSha256\"\xfd\x04\n" +
 	"\x14DispositionBordereau\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12I\n" +
 	"\x11final_disposition\x18\x02 \x01(\x0e2\x1c.goeland.v1.FinalDispositionR\x10finalDisposition\x123\n" +
@@ -3028,7 +3038,8 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\n" +
 	"item_count\x18\f \x01(\x05R\titemCount\x12#\n" +
 	"\rpending_count\x18\r \x01(\x05R\fpendingCount\x12%\n" +
-	"\x0eapproved_count\x18\x0e \x01(\x05R\rapprovedCount\"\xd3\x01\n" +
+	"\x0eapproved_count\x18\x0e \x01(\x05R\rapprovedCount\x12%\n" +
+	"\x0eproof_manifest\x18\x0f \x01(\tR\rproofManifest\"\xd3\x01\n" +
 	"!CreateDispositionBordereauRequest\x12U\n" +
 	"\x11final_disposition\x18\x01 \x01(\x0e2\x1c.goeland.v1.FinalDispositionB\n" +
 	"\xbaH\a\x82\x01\x04\x18\x01\x18\x02R\x10finalDisposition\x12&\n" +

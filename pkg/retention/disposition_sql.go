@@ -4,7 +4,7 @@ package retention
 // their items (disposition_item, alias i).
 
 const bordereauColumns = `b.id, b.final_disposition, b.status, b.reason, b.prepared_by, b.prepared_at,
-b.closed_at, b.closed_by, b.close_reason, b.proof_sha256,
+b.closed_at, b.closed_by, b.close_reason, b.proof_sha256, coalesce(b.proof_manifest, '') AS proof_manifest,
 (SELECT count(*) FROM disposition_item c WHERE c.bordereau_id = b.id)::int AS item_count,
 (SELECT count(*) FROM disposition_item c WHERE c.bordereau_id = b.id AND c.decision = 'PENDING')::int AS pending_count,
 (SELECT count(*) FROM disposition_item c WHERE c.bordereau_id = b.id AND c.decision = 'APPROVED')::int AS approved_count`

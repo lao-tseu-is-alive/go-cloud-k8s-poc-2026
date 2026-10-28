@@ -24,6 +24,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `README.md` — Project overview, operator walkthrough and current-version banner.
 - `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
 - `docs/IMPORT_MAPPING.md` — Legacy data import: principles, runbook (rebuild and rerun), wave 1 mapping and decisions; rules and orders of magnitude only, never real values.
+- `docs/RETENTION.md` — Retention and final disposition of cases: vocabulary, lifecycle, rules, proof, transfer package, roles, operations and limits (GLD-076); for archivists, data protection and operators.
 - `docs/ROADMAP.md` — Authoritative implementation order and `GLD-NNN` task state; version-bannered, traced against the changelog.
 - `docs/PRODUCTION_READINESS.md` — Deployment contract: extensions, migrations, storage, auth, probes, secrets, limits.
 - `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.

@@ -839,6 +839,7 @@
       "approver": "Approved by",
       "decision": "Decision",
       "package": "Transfer package",
+      "manifest": "Manifest (JSON)",
       "download": "Download"
     },
     "approvals": {

@@ -153,16 +153,29 @@ func (s *Service) OpenArchive(ctx context.Context, id uuid.UUID, operatorID stri
 	if exp.Status != StatusDone || exp.StorageRef == "" {
 		return nil, fmt.Errorf("%w: the export is %s", core.ErrInvalidState, strings.ToLower(string(exp.Status)))
 	}
-	if !transfer {
-		if err := core.EnsureAccessTx(ctx, s.pool, operatorID, exp.CaseID, core.LevelManage); err != nil {
+	if transfer {
+		if err := s.recordTransferDownload(ctx, operatorID, exp.CaseID); err != nil {
 			return nil, err
 		}
+	} else if err := core.EnsureAccessTx(ctx, s.pool, operatorID, exp.CaseID, core.LevelManage); err != nil {
+		return nil, err
 	}
 	obj, err := s.store.Get(ctx, exp.StorageRef)
 	if err != nil {
 		return nil, fmt.Errorf("open archive: %w", err)
 	}
 	return &Archive{Export: exp, Object: obj, Filename: "case-export-" + exp.ID.String() + ".zip"}, nil
+}
+
+// recordTransferDownload logs every download of a transfer package as DOWNLOAD
+// in the sensitive read audit, whatever the case's confidentiality: the
+// package holds the whole case, confidential content included (GLD-032).
+func (s *Service) recordTransferDownload(ctx context.Context, operatorID string, caseID uuid.UUID) error {
+	access, err := core.EffectiveAccessTx(ctx, s.pool, operatorID, caseID)
+	if err != nil {
+		return err
+	}
+	return core.RecordAccessTx(ctx, s.pool, operatorID, access, core.AccessDownload, core.AccessGranted)
 }
 
 // collectOne scans exactly one export row.
