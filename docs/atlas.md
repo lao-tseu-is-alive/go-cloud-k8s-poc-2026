@@ -133,6 +133,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
 - `cmd/goeland-server/metrics.go` — Prometheus metrics on their own listener: requests per RPC or route pattern, database pool, outbox and export backlogs (GLD-010).
 - `cmd/goeland-server/metrics_test.go` — Unit tests of the bounded handler and method labels of the request metrics.
+- `cmd/goeland-server/tracing.go` — OpenTelemetry traces (GLD-010): request spans named by RPC, SQL query spans, OTLP/HTTP export when configured, trace ids in the logs.
+- `cmd/goeland-server/tracing_test.go` — Unit tests of the request span names, the trace ids in the logs and the enabling variables.
 - `cmd/goeland-server/outbox.go` — Builds the outbox worker with the consumers the configuration enables, and the `log` consumer (`GOELAND_OUTBOX_LOG`).
 - `cmd/goeland-server/export.go` — Out-of-proto case export download: streams a built archive to its requester (MANAGE on the case), with a longer write deadline.
 - `cmd/goeland-server/upload.go` — Out-of-proto upload (content ingestion) and governed content download (READ on the document) endpoints with their own bearer and scope check, and the frontend config handler.

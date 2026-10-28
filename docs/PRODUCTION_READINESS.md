@@ -211,6 +211,22 @@ Service). Series, all prefixed `goeland_`:
   every replica; `backlog_scrape_error` turns 1 when such a read fails;
 - `build_info{version,revision}`, plus the Go runtime and process collectors.
 
+## 10. Traces (OpenTelemetry)
+
+Traces are off unless `OTEL_EXPORTER_OTLP_ENDPOINT` (or `OTEL_EXPORTER_OTLP_TRACES_ENDPOINT`)
+names an OTLP/HTTP collector; `OTEL_SDK_DISABLED=true` turns them off again. The other standard
+variables apply as the SDK reads them: `OTEL_SERVICE_NAME` (default `go-cloud-k8s-poc-2026`),
+`OTEL_RESOURCE_ATTRIBUTES`, `OTEL_TRACES_SAMPLER` / `_ARG`, `OTEL_EXPORTER_OTLP_HEADERS`.
+
+- Each request is a server span named like the metrics handler (`GET
+  goeland.v1.CaseService/GetCase`, `GET /health`), continuing an incoming W3C `traceparent`; it
+  carries the method, the route and the status code, never the URL (paths carry ids, queries
+  carry search text).
+- Each SQL query of a traced request is a child span `db.query` with the statement text, never
+  its arguments. Background workers (outbox, exports) are not traced.
+- Logs written with a request's context carry its `trace_id` and `span_id`.
+- Spans still buffered are flushed at shutdown (5 s at most).
+
 ## Known limitations
 
 These are the gaps that make this a POC rather than a production service:
@@ -231,8 +247,6 @@ These are the gaps that make this a POC rather than a production service:
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
   without a shared/persistent volume, and bytes uploaded but never attached to a document are
   not collected (GLD-020, GLD-045).
-- **No tracing yet.** Prometheus metrics are served on their own listener (§9); OpenTelemetry
-  traces are the second step of GLD-010.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),

@@ -29,6 +29,9 @@ import (
 // migrations, module wiring and the first queries.
 const startupWorkBudget = 60 * time.Second
 
+// traceFlushTimeout bounds the export of the last spans at shutdown.
+const traceFlushTimeout = 5 * time.Second
+
 func main() {
 	showVersion := flag.Bool("version", false, "print the version and exit")
 	flag.Parse()
@@ -42,7 +45,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "goeland-server configuration error:", err)
 		os.Exit(1)
 	}
-	log := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: config.LogLevel}))
+	log := slog.New(traceLogHandler{slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: config.LogLevel})})
 	slog.SetDefault(log)
 	log.Info("starting goeland server",
 		"app", version.AppName,
@@ -57,6 +60,12 @@ func main() {
 	// database. Startup may take the database wait plus the migration budget.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
 	defer stop()
+	shutdownTracing, err := setupTracing(ctx, log)
+	if err != nil {
+		log.Error("failed to set up tracing", "error", err)
+		os.Exit(1)
+	}
+	defer flushTraces(ctx, shutdownTracing, log)
 	startupCtx, startupCancel := context.WithTimeout(ctx, config.DBConnectTimeout+startupWorkBudget)
 	app, err := newApplication(startupCtx, config, log)
 	startupCancel()
@@ -89,6 +98,15 @@ func main() {
 }
 
 // versionLine renders the build identity checked by make release-check.
+// flushTraces sends the spans still buffered before the process exits.
+func flushTraces(ctx context.Context, shutdown func(context.Context) error, log *slog.Logger) {
+	flushCtx, cancel := context.WithTimeout(context.WithoutCancel(ctx), traceFlushTimeout)
+	defer cancel()
+	if err := shutdown(flushCtx); err != nil {
+		log.Warn("failed to flush traces", "error", err)
+	}
+}
+
 // listenMetrics opens the metrics listener, or returns nil when the metrics
 // are off (GOELAND_METRICS_ADDRESS empty).
 func listenMetrics(address string) (net.Listener, error) {

@@ -233,7 +233,8 @@ go run ./cmd/goeland-server
 
 Health: `curl http://127.0.0.1:8088/health` · info: `/goAppInfo` · readiness: `/readiness`.
 Add `GOELAND_METRICS_ADDRESS=127.0.0.1:9464` to serve Prometheus metrics on
-`http://127.0.0.1:9464/metrics` (a separate listener, GLD-010).
+`http://127.0.0.1:9464/metrics` (a separate listener, GLD-010), and
+`OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` to send OpenTelemetry traces to a collector.
 Add `GOELAND_DEV_USER_NAME='Jane Doe' GOELAND_DEV_USER_ADMIN=true` to sign in as a named
 administrator (the dev user is bootstrapped with the ADMIN role); governance and audit then show
 that name (users are recorded from their token).

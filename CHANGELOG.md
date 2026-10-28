@@ -14,6 +14,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   serving `GET /metrics` with the requests and their durations per RPC or route pattern, the
   database pool, the outbox and case export backlogs, the build and the Go runtime. Off by
   default; the k8s smoke manifests serve it on port 9464, outside the Service.
+- OpenTelemetry traces (GLD-010, second step): with `OTEL_EXPORTER_OTLP_ENDPOINT` set, each
+  request becomes a span named after its RPC (continuing an incoming `traceparent`), each of its
+  SQL queries a child span (statement only, never the arguments), exported over OTLP/HTTP; the
+  logs written for a request carry its `trace_id`. Off by default.
 
 ### Changed
 

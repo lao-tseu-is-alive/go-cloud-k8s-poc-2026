@@ -90,6 +90,7 @@ func (m *httpMetrics) middleware(next http.Handler) http.Handler {
 		rec := &statusRecorder{ResponseWriter: writer, status: http.StatusOK}
 		next.ServeHTTP(rec, request)
 		handler, method := m.handlerName(request.Pattern, request.Method, path), metricMethod(request.Method)
+		nameSpan(request.Context(), method, handler)
 		m.requests.WithLabelValues(handler, method, strconv.Itoa(rec.status)).Inc()
 		m.duration.WithLabelValues(handler, method).Observe(time.Since(started).Seconds())
 	})

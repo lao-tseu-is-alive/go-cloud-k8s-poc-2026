@@ -364,7 +364,11 @@ listener (`GOELAND_METRICS_ADDRESS`, off when empty, never the public port). Req
 by RPC (`restRoute.procedure`, REST and Connect alike) or mux pattern — never a URL, id or user;
 the middleware wraps the mux directly (it reads `request.Pattern`) and keeps the path read before
 serving (the transcoder rewrites it). Backlogs (outbox, case exports) are read at scrape time. A
-new metric keeps bounded labels.
+new metric keeps bounded labels. Traces (`cmd/goeland-server/tracing.go`) are off unless an OTLP
+endpoint is set (`OTEL_EXPORTER_OTLP_ENDPOINT`): the request span is renamed by the metrics
+middleware after the RPC, SQL queries are child spans (statement only, never arguments), and the
+`traceLogHandler` adds `trace_id` to logs written with a context (`log.InfoContext`). Spans never
+carry a URL, a query string or a request body.
 
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its

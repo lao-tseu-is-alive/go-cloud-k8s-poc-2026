@@ -77,6 +77,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	// a prepared statement PostgreSQL may switch to a generic plan, blind to the
 	// values, which took a text search from 0.2 s to 2.3 s (GLD-053).
 	poolConfig.ConnConfig.RuntimeParams["plan_cache_mode"] = "force_custom_plan"
+	poolConfig.ConnConfig.Tracer = newQueryTracer() // nil when tracing is off (GLD-010)
 	pool, err := pgxpool.NewWithConfig(ctx, poolConfig)
 	if err != nil {
 		return nil, fmt.Errorf("open database pool: %w", err)
@@ -181,8 +182,8 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	cleanup = false
 	return &application{
 		pool: pool,
-		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log,
-			securityHeadersMiddleware(contentSecurityPolicy(config), requestMetrics.middleware(mux))))),
+		handler: recoverMiddleware(log, tracingMiddleware(requestIDMiddleware(requestLogMiddleware(log,
+			securityHeadersMiddleware(contentSecurityPolicy(config), requestMetrics.middleware(mux)))))),
 		log:     log,
 		exports: exportMod.Service(),
 		outbox:  outbox,
@@ -554,7 +555,7 @@ func requestLogMiddleware(log *slog.Logger, next http.Handler) http.Handler {
 		started := time.Now()
 		rec := &statusRecorder{ResponseWriter: writer, status: http.StatusOK}
 		next.ServeHTTP(rec, request)
-		log.Info("HTTP request",
+		log.InfoContext(request.Context(), "HTTP request",
 			"method", request.Method,
 			"path", request.URL.Path,
 			"status", rec.status,
