@@ -200,7 +200,8 @@ Hardened after the technical review (all verified end-to-end):
   document validation, lock propagation, and hash comparison.
 
 Still open from the review (bigger than quick-wins): a real authorization/confidentiality
-policy, streamed probative hashing, metrics/tracing.
+policy, streamed probative hashing, metrics/tracing (authorization since GLD-047..050; Prometheus
+metrics since GLD-010 step 1, 2026-10-28; tracing pending).
 
 ### 3e. Review quick-wins applied (2026-07-09, from `reports/report_20260709_gpt-5.md`)
 

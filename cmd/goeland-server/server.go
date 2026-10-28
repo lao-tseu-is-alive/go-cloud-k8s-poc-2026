@@ -57,6 +57,8 @@ type application struct {
 	exports *caseexport.Service
 	// outbox delivers the outbox events to the consumers (GLD-028); serve runs it.
 	outbox *core.OutboxWorker
+	// metrics is served by serve on the metrics listener (GLD-010).
+	metrics http.Handler
 }
 
 // newApplication opens the pool, migrates the schema, wires the core + document
@@ -140,8 +142,13 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("build shared transcoder: %w", err)
 	}
 
+	requestMetrics, metrics, err := buildMetrics(pool, coreMod.Service(), exportMod.Service(), serviceNames, log)
+	if err != nil {
+		return nil, err
+	}
+
 	mux := http.NewServeMux()
-	mux.Handle("GET /health", healthHandler(pool))
+	mux.HandleFunc("GET /health", healthHandler)
 	mux.HandleFunc("GET /readiness", readinessHandler(pool))
 	mux.HandleFunc("GET /goAppInfo", appInfoHandler)
 	mux.HandleFunc("GET /config", frontendConfigHandler(config))
@@ -160,9 +167,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	mux.Handle("GET /api/case-exports/{id}/content",
 		httpAuthMiddleware(verifier, log, core.ScopeRead, exportContentHandler(exportMod.Service(), log)))
 
-	if err := mountTranscoder(mux, transcoder, serviceNames); err != nil {
-		return nil, err
-	}
+	mountTranscoder(mux, transcoder, requestMetrics.routes, serviceNames)
 
 	// Serve the embedded Vuetify frontend (SPA fallback to index.html).
 	frontendFS, err := fs.Sub(frontendFiles, "goeland-front/dist")
@@ -175,11 +180,13 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 
 	cleanup = false
 	return &application{
-		pool:    pool,
-		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log, securityHeadersMiddleware(contentSecurityPolicy(config), mux)))),
+		pool: pool,
+		handler: recoverMiddleware(log, requestIDMiddleware(requestLogMiddleware(log,
+			securityHeadersMiddleware(contentSecurityPolicy(config), requestMetrics.middleware(mux))))),
 		log:     log,
 		exports: exportMod.Service(),
 		outbox:  outbox,
+		metrics: metrics,
 	}, nil
 }
 
@@ -208,17 +215,12 @@ func buildCoreModule(ctx context.Context, config serverConfig, pool *pgxpool.Poo
 // declared via google.api.http (/api/...), on those explicit prefixes so the
 // embedded SPA can own "/" as the catch-all fallback. REST query parameters
 // are checked against the request messages first (GLD-043).
-func mountTranscoder(mux *http.ServeMux, transcoder http.Handler, serviceNames []string) error {
+func mountTranscoder(mux *http.ServeMux, transcoder http.Handler, routes []restRoute, serviceNames []string) {
 	transcoderHandler := http.MaxBytesHandler(transcoder, maxRequestBodyBytes)
-	routes, err := restRoutes(serviceNames)
-	if err != nil {
-		return fmt.Errorf("read REST bindings: %w", err)
-	}
 	mux.Handle("/api/", unknownQueryParamsMiddleware(routes, transcoderHandler))
 	for _, name := range serviceNames {
 		mux.Handle("/"+name+"/", transcoderHandler)
 	}
-	return nil
 }
 
 // waitForDatabase pings the database until it answers, retrying with a growing
@@ -387,8 +389,9 @@ func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.Toke
 // close releases the database connection pool.
 func (a *application) close() { a.pool.Close() }
 
-// serve starts the HTTP server and blocks until ctx is cancelled or the server fails.
-func (a *application) serve(ctx context.Context, listener net.Listener, shutdownPeriod time.Duration) error {
+// serve starts the HTTP server, and the metrics server when metricsListener is
+// not nil, and blocks until ctx is cancelled or the HTTP server fails.
+func (a *application) serve(ctx context.Context, listener, metricsListener net.Listener, shutdownPeriod time.Duration) error {
 	server := &http.Server{
 		Handler:           a.handler,
 		ReadHeaderTimeout: 5 * time.Second,
@@ -406,6 +409,9 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 	defer stopWorkers()
 	workers.Go(func() { a.exports.Run(workerCtx) })
 	workers.Go(func() { a.outbox.Run(workerCtx) })
+	if metricsListener != nil {
+		workers.Go(func() { a.serveMetrics(workerCtx, metricsListener) })
+	}
 
 	select {
 	case err := <-errCh:
@@ -430,19 +436,25 @@ func (a *application) serve(ctx context.Context, listener net.Listener, shutdown
 	}
 }
 
-func healthHandler(pool *pgxpool.Pool) http.HandlerFunc {
-	return func(writer http.ResponseWriter, _ *http.Request) {
-		resp := map[string]any{"status": "ok"}
-		if pool != nil {
-			stat := pool.Stat()
-			resp["db"] = map[string]any{
-				"acquired_conns": stat.AcquiredConns(),
-				"total_conns":    stat.TotalConns(),
-				"max_conns":      stat.MaxConns(),
-			}
-		}
-		writeJSON(writer, http.StatusOK, resp)
+// serveMetrics serves the Prometheus metrics until ctx is cancelled (GLD-010).
+// Scrapes are short and retried, so the server closes without draining.
+func (a *application) serveMetrics(ctx context.Context, listener net.Listener) {
+	server := &http.Server{
+		Handler:           a.metrics,
+		ReadHeaderTimeout: 5 * time.Second,
+		WriteTimeout:      30 * time.Second,
 	}
+	stop := context.AfterFunc(ctx, func() { _ = server.Close() })
+	defer stop()
+	if err := server.Serve(listener); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		a.log.Error("metrics server stopped", "error", err)
+	}
+}
+
+// healthHandler answers that the process is alive; the pool statistics are
+// metrics (GLD-010), not public.
+func healthHandler(writer http.ResponseWriter, _ *http.Request) {
+	writeJSON(writer, http.StatusOK, map[string]string{"status": "ok"})
 }
 
 // readinessHandler returns 503 when the database cannot be reached within 2 seconds.

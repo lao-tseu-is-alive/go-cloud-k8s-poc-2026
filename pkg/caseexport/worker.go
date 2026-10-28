@@ -174,3 +174,10 @@ func publicError(err error) string {
 	}
 	return "the archive could not be built; the server log has the details"
 }
+
+// QueueCounts returns how many export jobs are queued and running, for the
+// metrics (GLD-010).
+func (s *Service) QueueCounts(ctx context.Context) (queued, running int64, err error) {
+	err = s.pool.QueryRow(ctx, queueCountsSQL).Scan(&queued, &running)
+	return queued, running, err
+}

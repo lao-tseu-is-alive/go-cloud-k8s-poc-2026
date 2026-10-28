@@ -72,8 +72,16 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("goeland server listening", "address", listener.Addr().String())
+	metricsListener, err := listenMetrics(config.MetricsAddress)
+	if err != nil {
+		log.Error("failed to listen for metrics", "error", err)
+		os.Exit(1)
+	}
+	if metricsListener != nil {
+		log.Info("metrics listening", "address", metricsListener.Addr().String())
+	}
 
-	if err := app.serve(ctx, listener, config.ShutdownPeriod); err != nil {
+	if err := app.serve(ctx, listener, metricsListener, config.ShutdownPeriod); err != nil {
 		log.Error("goeland server stopped with error", "error", err)
 		os.Exit(1)
 	}
@@ -81,6 +89,15 @@ func main() {
 }
 
 // versionLine renders the build identity checked by make release-check.
+// listenMetrics opens the metrics listener, or returns nil when the metrics
+// are off (GOELAND_METRICS_ADDRESS empty).
+func listenMetrics(address string) (net.Listener, error) {
+	if address == "" {
+		return nil, nil
+	}
+	return net.Listen("tcp", address)
+}
+
 func versionLine() string {
 	return fmt.Sprintf("%s v%s (revision %s, built %s)", version.AppNameKebab, version.Version, version.Revision, version.BuildStamp)
 }

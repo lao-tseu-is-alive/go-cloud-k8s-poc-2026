@@ -91,3 +91,12 @@ SELECT subject_id, source_system, source_table, source_id, import_batch_id
 FROM subject_provenance
 WHERE subject_id = ANY(@ids::uuid[])
 ORDER BY subject_id;`
+
+// queueCountsSQL counts the jobs waiting or being built (the partial index
+// idx_case_export_queue covers them).
+const queueCountsSQL = `
+SELECT
+    count(*) FILTER (WHERE status = 'QUEUED') AS queued,
+    count(*) FILTER (WHERE status = 'RUNNING') AS running
+FROM case_export
+WHERE status IN ('QUEUED', 'RUNNING');`

@@ -135,7 +135,7 @@ terminator (ingress); set it there.
 
 | Probe      | Endpoint      | Behavior                                                        |
 |------------|---------------|----------------------------------------------------------------|
-| Liveness   | `GET /health` | Returns `{"status":"ok"}` and DB pool stats; process is up.    |
+| Liveness   | `GET /health` | Returns `{"status":"ok"}`; process is up (the pool statistics are metrics, §9). |
 | Readiness  | `GET /readiness` | Pings the database; fails when the DB is unreachable.       |
 
 The scratch image has no shell, so there is no container `HEALTHCHECK` — configure the
@@ -161,6 +161,7 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_OUTBOX_RETENTION_DAYS`     | `7`              | How long delivered outbox events are kept before the purge (1–365, GLD-028). |
 | `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
 | `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
+| `GOELAND_METRICS_ADDRESS`           | — (off)          | `host:port` of the Prometheus metrics listener (`GET /metrics`, GLD-010); never the public port. |
 
 ## 7. Secrets
 
@@ -193,6 +194,23 @@ separately.
 - **Vulnerabilities:** `make vuln-check` (govulncheck, reachable code) gates every release and
   docker-publish scans the image with Trivy before pushing it (fixable HIGH/CRITICAL fail).
 
+## 9. Metrics (Prometheus)
+
+`GOELAND_METRICS_ADDRESS` (e.g. `0.0.0.0:9464`) opens a second listener serving `GET /metrics`;
+empty, the metrics are off. It must use another port than the public listener: scrape it from
+inside the cluster (the smoke manifests name the container port `metrics` and keep it out of the
+Service). Series, all prefixed `goeland_`:
+
+- `http_requests_total` and `http_request_duration_seconds` by `handler` (the RPC, e.g.
+  `goeland.v1.CaseService/GetCase`, whether reached over REST or Connect; otherwise the route
+  pattern such as `GET /health` or `/` for the SPA; `unmatched` for anything else), `method` and
+  `code`: the labels never carry a URL, an id or a user;
+- `db_pool_*`: connections in use, idle, open and maximum, acquire counts and time;
+- `outbox_events{state}`, `outbox_oldest_pending_age_seconds`, `outbox_consumer_failed_events`,
+  `case_export_jobs{status}`: read from the database at scrape time (2 s bound), the same on
+  every replica; `backlog_scrape_error` turns 1 when such a read fails;
+- `build_info{version,revision}`, plus the Go runtime and process collectors.
+
 ## Known limitations
 
 These are the gaps that make this a POC rather than a production service:
@@ -213,7 +231,8 @@ These are the gaps that make this a POC rather than a production service:
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
   without a shared/persistent volume, and bytes uploaded but never attached to a document are
   not collected (GLD-020, GLD-045).
-- **Observability is logs only.** No metrics or tracing endpoints yet.
+- **No tracing yet.** Prometheus metrics are served on their own listener (§9); OpenTelemetry
+  traces are the second step of GLD-010.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),

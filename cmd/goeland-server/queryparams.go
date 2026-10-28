@@ -18,31 +18,42 @@ import (
 // (GLD-043). Invalid values are left to the transcoder, which already answers 400.
 
 // restRoute is one google.api.http binding: its HTTP method, its path template
-// split in segments and the request message it fills.
+// split in segments, the request message it fills and the RPC it calls
+// ("goeland.v1.CaseService/GetCase", the metrics label).
 type restRoute struct {
-	method   string
-	segments []string
-	request  protoreflect.MessageDescriptor
+	method    string
+	segments  []string
+	request   protoreflect.MessageDescriptor
+	procedure string
 }
 
 // restRoutes reads the REST bindings of the named services from the registered
 // descriptors (the generated code registers them).
 func restRoutes(serviceNames []string) ([]restRoute, error) {
 	var routes []restRoute
+	err := eachMethod(serviceNames, func(method protoreflect.MethodDescriptor) {
+		routes = append(routes, methodRoutes(method)...)
+	})
+	return routes, err
+}
+
+// eachMethod calls fn with every RPC of the named services, read from the
+// registered descriptors.
+func eachMethod(serviceNames []string, fn func(protoreflect.MethodDescriptor)) error {
 	for _, name := range serviceNames {
 		desc, err := protoregistry.GlobalFiles.FindDescriptorByName(protoreflect.FullName(name))
 		if err != nil {
-			return nil, fmt.Errorf("find service %s: %w", name, err)
+			return fmt.Errorf("find service %s: %w", name, err)
 		}
 		service, ok := desc.(protoreflect.ServiceDescriptor)
 		if !ok {
-			return nil, fmt.Errorf("%s is not a service", name)
+			return fmt.Errorf("%s is not a service", name)
 		}
 		for i := range service.Methods().Len() {
-			routes = append(routes, methodRoutes(service.Methods().Get(i))...)
+			fn(service.Methods().Get(i))
 		}
 	}
-	return routes, nil
+	return nil
 }
 
 // methodRoutes returns the REST bindings of one RPC (none without google.api.http).
@@ -54,10 +65,16 @@ func methodRoutes(method protoreflect.MethodDescriptor) []restRoute {
 	var routes []restRoute
 	for _, binding := range append([]*annotations.HttpRule{rule}, rule.GetAdditionalBindings()...) {
 		if verb, path := httpRulePattern(binding); path != "" {
-			routes = append(routes, restRoute{method: verb, segments: splitPath(path), request: method.Input()})
+			routes = append(routes, restRoute{method: verb, segments: splitPath(path), request: method.Input(), procedure: procedureName(method)})
 		}
 	}
 	return routes
+}
+
+// procedureName names an RPC as Connect paths do, without the leading slash:
+// "goeland.v1.CaseService/GetCase".
+func procedureName(method protoreflect.MethodDescriptor) string {
+	return string(method.Parent().FullName()) + "/" + string(method.Name())
 }
 
 // httpRulePattern returns the HTTP method and path template of a binding.

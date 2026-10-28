@@ -15,7 +15,7 @@ var configEnv = []string{
 	"AUTH_SERVER_URL", "DATABASE_URL", "GOELAND_BOOTSTRAP_ADMINS", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
 	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
-	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS",
+	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
 	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "LOG_LEVEL",
 }
 
@@ -42,7 +42,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.MaxConnections != defaultMaxConnections || cfg.RequestTimeout != defaultRequestTimeout ||
 		cfg.ShutdownPeriod != defaultShutdownPeriod || cfg.DBConnectTimeout != defaultDBConnectTimeout ||
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
-		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin {
+		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -58,6 +58,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 		"GOELAND_DEV_USER_ID":                "42",
 		"GOELAND_DEV_USER_ADMIN":             "true",
 		"GOELAND_LISTEN_ADDRESS":             "0.0.0.0:8080",
+		"GOELAND_METRICS_ADDRESS":            "0.0.0.0:9464",
 		"GOELAND_DB_CONNECT_TIMEOUT_SECONDS": "0",
 		"GOELAND_REQUEST_TIMEOUT_SECONDS":    "30",
 		"LOG_LEVEL":                          "debug",
@@ -68,7 +69,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 		t.Fatalf("valid settings: %v", err)
 	}
 	if cfg.AuthMode != "dev" || cfg.DevUserID != 42 || !cfg.DevUserAdmin || cfg.DBConnectTimeout != 0 ||
-		cfg.RequestTimeout != 30*time.Second || cfg.LogLevel != slog.LevelDebug ||
+		cfg.RequestTimeout != 30*time.Second || cfg.LogLevel != slog.LevelDebug || cfg.MetricsAddress != "0.0.0.0:9464" ||
 		cfg.AuthServerURL != "https://auth.example.ch" || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
 		t.Fatalf("settings not applied: %+v", cfg)
 	}
@@ -83,6 +84,8 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"no database", map[string]string{"DB_PASSWORD": ""}, "DATABASE_URL or DB_PASSWORD is required"},
 		{"bad database url", map[string]string{"DATABASE_URL": "mysql://x/y"}, "DATABASE_URL is invalid"},
 		{"bad listen address", map[string]string{"GOELAND_LISTEN_ADDRESS": "8080"}, "GOELAND_LISTEN_ADDRESS must be host:port"},
+		{"bad metrics address", map[string]string{"GOELAND_METRICS_ADDRESS": "9464"}, "GOELAND_METRICS_ADDRESS must be host:port"},
+		{"public metrics port", map[string]string{"GOELAND_METRICS_ADDRESS": "0.0.0.0:8080"}, "another port than GOELAND_LISTEN_ADDRESS"},
 		{"unknown auth mode", map[string]string{"GOELAND_AUTH_MODE": "basic"}, "GOELAND_AUTH_MODE must be jwt or dev"},
 		{"dev without token", map[string]string{"GOELAND_AUTH_MODE": "dev"}, "GOELAND_DEV_TOKEN is required"},
 		{"non-integer dev user", map[string]string{"GOELAND_DEV_USER_ID": "u-1"}, "GOELAND_DEV_USER_ID must be an integer"},

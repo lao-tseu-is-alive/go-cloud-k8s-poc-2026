@@ -37,6 +37,10 @@ const defaultDBConnectTimeout = 60 * time.Second
 type serverConfig struct {
 	// ListenAddress is the host:port to bind (GOELAND_LISTEN_ADDRESS).
 	ListenAddress string
+	// MetricsAddress is the host:port of the Prometheus metrics listener
+	// (GOELAND_METRICS_ADDRESS, GLD-010); empty turns the metrics off. It must
+	// differ from ListenAddress: the metrics are never public.
+	MetricsAddress string
 	// DatabaseURL is DATABASE_URL, or a DSN assembled from the DB_* variables.
 	// It carries the database password and must never be logged.
 	DatabaseURL string
@@ -138,6 +142,11 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, fmt.Errorf("GOELAND_LISTEN_ADDRESS must be host:port: %w", err)
 	}
 
+	metricsAddress, err := metricsAddressFromEnv(listenAddress)
+	if err != nil {
+		return serverConfig{}, err
+	}
+
 	authMode := strings.ToLower(strings.TrimSpace(envOrDefault("GOELAND_AUTH_MODE", defaultAuthMode)))
 	if authMode != "jwt" && authMode != "dev" {
 		return serverConfig{}, fmt.Errorf("GOELAND_AUTH_MODE must be jwt or dev")
@@ -166,6 +175,7 @@ func loadConfig() (serverConfig, error) {
 
 	config := serverConfig{
 		ListenAddress:   listenAddress,
+		MetricsAddress:  metricsAddress,
 		DatabaseURL:     databaseURL,
 		AuthMode:        authMode,
 		AuthServerURL:   authServerURL,
@@ -185,6 +195,23 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
 	}
 	return config, nil
+}
+
+// metricsAddressFromEnv reads GOELAND_METRICS_ADDRESS: empty (metrics off) or
+// a host:port other than the public listener's.
+func metricsAddressFromEnv(listenAddress string) (string, error) {
+	address := strings.TrimSpace(os.Getenv("GOELAND_METRICS_ADDRESS"))
+	if address == "" {
+		return "", nil
+	}
+	_, port, err := net.SplitHostPort(address)
+	if err != nil {
+		return "", fmt.Errorf("GOELAND_METRICS_ADDRESS must be host:port: %w", err)
+	}
+	if _, listenPort, _ := net.SplitHostPort(listenAddress); port == listenPort {
+		return "", fmt.Errorf("GOELAND_METRICS_ADDRESS must use another port than GOELAND_LISTEN_ADDRESS")
+	}
+	return address, nil
 }
 
 // readLimits reads the bounded numeric settings: pool size, timeouts and the

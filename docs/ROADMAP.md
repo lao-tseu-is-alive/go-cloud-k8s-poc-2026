@@ -89,8 +89,13 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
 - [~] **GLD-009 — Frontend tests**: add unit/component tests to the SPA. Started with
   GLD-042: Vitest on the pure `utils/` modules in `make front-check`, the contact rules checked
   against the server's own cases (shared fixture); component tests remain.
-- [ ] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces. The pool
-  statistics now shown by the public `/health` move to the metrics endpoint.
+- [~] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces. The pool
+  statistics now shown by the public `/health` move to the metrics endpoint. Decided 2026-10-28,
+  in two steps: (1) Prometheus metrics on their own listener (`GOELAND_METRICS_ADDRESS`, off when
+  empty, never on the public port): requests and durations per RPC or route pattern (bounded
+  labels), the database pool, the outbox and case export backlogs, the Go runtime; (2)
+  OpenTelemetry traces (HTTP, Connect, pgx), off unless the standard `OTEL_*` variables name an
+  OTLP endpoint, with the trace id in the logs.
 - [x] **GLD-042 — Post-audit hardening** (audit of 2026-09-29, decided 2026-09-30): security
   headers on every response; a shared `core` transaction helper and pgx error-mapping base
   (each domain keeps its own messages); batched hydration instead of per-row queries in the

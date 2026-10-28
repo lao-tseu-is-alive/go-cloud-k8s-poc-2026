@@ -359,6 +359,13 @@ are given up after `core.OutboxMaxAttempts`; administrators see and replay them 
 Outbox, `GetOutboxStatus` / `ReplayOutboxEvents`). New consumers (search indexer, notifiers, a
 NATS/Kafka bridge) register in `buildOutboxWorker`.
 
+**Metrics (GLD-010):** `cmd/goeland-server/metrics.go` serves Prometheus metrics on their own
+listener (`GOELAND_METRICS_ADDRESS`, off when empty, never the public port). Requests are labelled
+by RPC (`restRoute.procedure`, REST and Connect alike) or mux pattern — never a URL, id or user;
+the middleware wraps the mux directly (it reads `request.Pattern`) and keeps the path read before
+serving (the transcoder rewrites it). Backlogs (outbox, case exports) are read at scrape time. A
+new metric keeps bounded labels.
+
 **Filtering (GLD-049):** a search or list returns only what the caller may read, inside the SQL
 query so pagination and totals stay exact: the adapter resolves `core.Viewer` (user id plus its
 groups, units and their ancestors) with `Authorizer.Reader` / `ViewerOf`, the filter carries it,

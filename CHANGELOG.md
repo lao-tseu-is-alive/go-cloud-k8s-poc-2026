@@ -8,7 +8,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- Prometheus metrics (GLD-010, first step): `GOELAND_METRICS_ADDRESS` opens a separate listener
+  serving `GET /metrics` with the requests and their durations per RPC or route pattern, the
+  database pool, the outbox and case export backlogs, the build and the Go runtime. Off by
+  default; the k8s smoke manifests serve it on port 9464, outside the Service.
+
 ### Changed
+
+- `/health` answers `{"status":"ok"}` only: the database pool statistics it showed publicly are
+  now metrics.
 
 - The interface draws its icons as inline SVG and bundles only the 102 it uses instead of the
   whole Material Design Icons font (GLD-073): the built assets shrink from 8.9 to 5.2 MB and the

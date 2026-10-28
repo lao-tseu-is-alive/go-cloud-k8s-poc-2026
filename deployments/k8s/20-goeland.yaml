@@ -13,6 +13,8 @@ metadata:
     app.kubernetes.io/part-of: goeland-poc
 data:
   GOELAND_LISTEN_ADDRESS: "0.0.0.0:8080"
+  # Prometheus metrics on their own port, not exposed by the Service (GLD-010).
+  GOELAND_METRICS_ADDRESS: "0.0.0.0:9464"
   GOELAND_AUTH_MODE: "dev"
   GOELAND_DEV_USER_ID: "1"
   GOELAND_DEV_USER_EMAIL: "smoke@goeland.test"
@@ -64,6 +66,8 @@ spec:
           ports:
             - containerPort: 8080
               name: http
+            - containerPort: 9464
+              name: metrics
           envFrom:
             - configMapRef:
                 name: goeland-config
