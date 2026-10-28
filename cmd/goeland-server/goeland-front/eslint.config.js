@@ -11,6 +11,11 @@ export default vuetify(
     ts: true,
   },
   {
+    // TypeScript generated from the protos for the types contract (GLD-072).
+    name: 'goeland/generated',
+    ignores: ['src/api/gen/**'],
+  },
+  {
     name: 'goeland/sonar-parity',
     plugins: {
       // Same module instance as the one registered by eslint-config-vuetify.

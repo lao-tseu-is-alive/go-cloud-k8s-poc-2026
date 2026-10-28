@@ -1,4 +1,4 @@
-import type { CreateTaskRequest, ListTasksResponse, Task, TaskContent, TaskStatus, TaskType } from './types'
+import type { CreateTaskRequest, ListCaseTasksResponse, ListMyTasksResponse, Task, TaskContent, TaskStatus, TaskType } from './types'
 /**
  * TaskService REST calls (case tasks). Every mutation returns the task as
  * stored; the server is the authority on the allowed moves.
@@ -10,13 +10,13 @@ const taskPath = (id: string) => `/api/tasks/${encodeURIComponent(id)}`
 
 type TaskResponse = { task?: Task }
 
-export function listCaseTasks (caseId: string, params: { statuses?: TaskStatus[], pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListTasksResponse> {
-  return apiFetch<ListTasksResponse>(caseTasksPath(caseId), { query: params as Record<string, unknown> })
+export function listCaseTasks (caseId: string, params: { statuses?: TaskStatus[], pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListCaseTasksResponse> {
+  return apiFetch<ListCaseTasksResponse>(caseTasksPath(caseId), { query: params as Record<string, unknown> })
 }
 
 /** The caller's tasks across cases; without statuses, the pending ones. */
-export function listMyTasks (params: { statuses?: TaskStatus[], includeUnits?: boolean, pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListTasksResponse> {
-  return apiFetch<ListTasksResponse>('/api/tasks/mine', { query: params as Record<string, unknown> })
+export function listMyTasks (params: { statuses?: TaskStatus[], includeUnits?: boolean, pageSize?: number, pageToken?: string, orderBy?: string } = {}): Promise<ListMyTasksResponse> {
+  return apiFetch<ListMyTasksResponse>('/api/tasks/mine', { query: params as Record<string, unknown> })
 }
 
 export async function getTask (id: string): Promise<Task> {

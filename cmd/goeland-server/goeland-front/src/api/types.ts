@@ -7,9 +7,16 @@
  *   - Timestamps are RFC3339 strings,
  *   - google.protobuf.Struct (metadata) is a plain JSON object.
  *
- * These are hand-maintained (no codegen in this POC) and only cover the fields
- * the UI actually consumes.
+ * These are hand-maintained (no runtime codegen) and only cover the fields the
+ * UI actually consumes; ./typesContract.ts checks them at compile time against
+ * the proto3-JSON types generated into ./gen (GLD-072).
  */
+
+/** A JSON value, as google.protobuf.Value is serialized. */
+export type JsonValue = string | number | boolean | null | JsonValue[] | { [key: string]: JsonValue }
+
+/** A google.protobuf.Struct (metadata, audit states): a plain JSON object. */
+export type JsonObject = { [key: string]: JsonValue }
 
 export type SubjectKind
   = | 'SUBJECT_KIND_UNSPECIFIED'
@@ -100,7 +107,7 @@ export interface DocumentVersion {
   isRecord?: boolean
   validatedAt?: string
   validatedBy?: string
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   createdAt?: string
   createdBy?: string
 }
@@ -116,7 +123,7 @@ export interface GoDocument {
   externalUrl?: string
   language?: string
   status?: DocumentStatus
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   createdAt?: string
   createdBy?: string
   updatedAt?: string
@@ -356,8 +363,8 @@ export interface AuditEvent {
   eventType?: string
   actorUserId?: string
   occurredAt?: string
-  beforeState?: Record<string, unknown>
-  afterState?: Record<string, unknown>
+  beforeState?: JsonObject
+  afterState?: JsonObject
   reason?: string
   correlationId?: string
   requestId?: string
@@ -415,7 +422,7 @@ export interface CreateDocumentRequest {
   isRecord?: boolean
   language?: string
   pageCount?: number
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   linkToCaseId?: string
 }
 
@@ -430,7 +437,7 @@ export interface AddDocumentVersionRequest {
   isFinal?: boolean
   isRecord?: boolean
   pageCount?: number
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   reason?: string
 }
 
@@ -439,7 +446,7 @@ export interface UpdateDocumentMetadataRequest {
   description?: string
   officialDate?: string
   language?: string
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   reason?: string
 }
 
@@ -517,7 +524,7 @@ export interface GoCase {
   closedAt?: string
   closedBy?: string
   closureReason?: string
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   createdAt?: string
   createdBy?: string
   updatedAt?: string
@@ -528,13 +535,13 @@ export interface CreateCaseRequest {
   caseTypeCode: string
   title: string
   description?: string
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
 }
 
 export interface UpdateCaseRequest {
   title: string
   description?: string
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   reason?: string
 }
 
@@ -654,8 +661,8 @@ export interface ReferenceChange {
   eventType: 'REFERENCE_CREATED' | 'REFERENCE_UPDATED'
   actorUserId?: string
   occurredAt?: string
-  beforeState?: Record<string, unknown>
-  afterState?: Record<string, unknown>
+  beforeState?: JsonObject
+  afterState?: JsonObject
   reason?: string
 }
 
@@ -720,7 +727,7 @@ export interface GoThing {
   anchorN?: number
   parcel?: ParcelDetails
   building?: BuildingDetails
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
   createdAt?: string
   createdBy?: string
   updatedAt?: string
@@ -842,7 +849,7 @@ export interface TimelineEntry {
   withdrawnBy?: string
   withdrawalReason?: string
   /** For a SYSTEM entry: { event, from, to, reason } describing the fact. */
-  metadata?: Record<string, unknown>
+  metadata?: JsonObject
 }
 
 export interface ListTimelineParams {
@@ -1030,11 +1037,14 @@ export interface Task {
   assignments?: TaskAssignment[]
 }
 
-export interface ListTasksResponse {
+export interface ListMyTasksResponse {
   tasks?: Task[]
   nextPageToken?: string
   totalSize?: number
-  /** Pending tasks of the case whatever the filters (case lists only). */
+}
+
+export interface ListCaseTasksResponse extends ListMyTasksResponse {
+  /** Pending tasks of the case whatever the filters. */
   openCount?: number
 }
 
@@ -1254,6 +1264,17 @@ export interface ListGroupsResponse {
 export interface GroupResponse {
   group?: SecurityGroup
   members?: GroupMember[]
+}
+
+/** Answer of a group creation, edit or archiving. */
+export interface GroupChangeResponse {
+  group?: SecurityGroup
+  auditEvent?: AuditEvent
+}
+
+/** Answer of a membership change (no member after a removal). */
+export interface GroupMemberChangeResponse {
+  member?: GroupMember
   auditEvent?: AuditEvent
 }
 

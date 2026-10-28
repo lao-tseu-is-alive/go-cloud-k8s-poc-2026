@@ -25,6 +25,18 @@ plugins:
       - merge_file_name=goeland
       - simple_operation_ids=true
 
+  # 4. Generate TypeScript with proto3-JSON types for the SPA contract check only
+  # (GLD-072): src/api/typesContract.ts compares the hand-written src/api/types.ts
+  # with the *Json types; nothing imports them at runtime. Keep the version equal
+  # to @bufbuild/protobuf in goeland-front/package.json (checked by Vitest).
+  - remote: buf.build/bufbuild/es:v2.16.0
+    out: cmd/goeland-server/goeland-front/src/api/gen
+    include_imports: true
+    opt:
+      - target=ts
+      - json_types=true
+      - import_extension=none
+
 managed:
   enabled: true
   disable:

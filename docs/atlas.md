@@ -51,7 +51,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_tag.sh` — Fails unless a release tag equals `v` + the `Version` constant; used by the publication workflows.
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
-- `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/` or `api/openapi/` differ (`make generated-check`, GLD-008).
+- `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/`, `api/openapi/` or the SPA contract types differ (`make generated-check`, GLD-008, GLD-072).
 - `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
@@ -475,6 +475,23 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/coreClient.ts` — REST client for `CoreService` bindings (relationships, types, audit).
 - `cmd/goeland-server/goeland-front/src/api/documentClient.ts` — REST client for `DocumentService` plus blob upload/download.
 - `cmd/goeland-server/goeland-front/src/api/exportClient.ts` — REST client for `CaseExportService` plus the archive download.
+- `cmd/goeland-server/goeland-front/src/api/gen/buf/validate/validate_pb.ts` — TypeScript with proto3-JSON types generated from `buf/validate/validate.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/access_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/access.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/actor_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/actor.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/case_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/case.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/circulation_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/circulation.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/core_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/core.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/document_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/document.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/export_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/export.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/orgunit_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/orgunit.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/task_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/task.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/thing_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/thing.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/timeline_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/timeline.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/google/api/annotations_pb.ts` — TypeScript with proto3-JSON types generated from `google/api/annotations.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/google/api/field_behavior_pb.ts` — TypeScript with proto3-JSON types generated from `google/api/field_behavior.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/google/api/http_pb.ts` — TypeScript with proto3-JSON types generated from `google/api/http.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/typesContract.ts` — Compile-time check of `types.ts` against the generated proto3-JSON types (GLD-072).
+- `cmd/goeland-server/goeland-front/src/api/__tests__/typesContract.test.ts` — Vitest check that every hand-written type is in the contract and the protobuf-es versions agree.
 - `cmd/goeland-server/goeland-front/src/api/types.ts` — Hand-maintained proto3-JSON projections of the goeland.v1 messages; keep in sync with the protos.
 - `cmd/goeland-server/goeland-front/src/assets/logo.png` — Raster logo asset.
 - `cmd/goeland-server/goeland-front/src/assets/logo.svg` — Vector logo asset.

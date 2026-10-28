@@ -148,10 +148,16 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
 - [x] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
   typed routes (review `reports/report_20261014_gpt-5.md`). Done 2026-10-20: the SPA declares its
   routes by hand, so the vue-router Volar plugins for file-based routing were removed instead.
-- [ ] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
+- [~] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
   type-checking proves the SPA consistent with itself, not with the contract. Generate TypeScript
   types from the protos for a CI comparison only (no connect-es at runtime), so a field renamed or
-  added in a proto fails `make check` until the SPA follows (review `reports/report_20261014_gpt-5.md`).
+  added in a proto fails `make check` until the SPA follows (review `reports/report_20261014_gpt-5.md`). Done
+  2026-10-28: `buf generate` writes protobuf-es proto3-JSON types into `src/api/gen/` and
+  `src/api/typesContract.ts` checks each of the 134 hand-written types (fields known and
+  assignable, enums equal) under `vue-tsc`; a renamed field, an `int64` typed as a number and a
+  missing enum value were each shown to fail. "Added" applies to enum values: the hand types
+  keep covering only the fields the SPA uses. It found the `Struct` fields typed too loosely and
+  the group, membership and "my tasks" answers sharing a shape the server never sends.
 - [~] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
   ~690 KB stylesheet for the few dozen icons it uses; switch to `@mdi/js` SVG icons (Vuetify's
   `mdi-svg` set) so only the icons used are bundled (review `reports/report_20261014_gpt-5.md`). Done

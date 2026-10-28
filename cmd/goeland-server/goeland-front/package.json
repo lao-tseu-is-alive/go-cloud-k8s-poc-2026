@@ -27,6 +27,7 @@
     "vuetify": "^4.3.0"
   },
   "devDependencies": {
+    "@bufbuild/protobuf": "2.16.0",
     "@intellectronica/ruler": "^0.3.37",
     "@tsconfig/node22": "^22.0.6",
     "@types/node": "^24.19.2",

@@ -4,7 +4,7 @@
  * members. Every change needs a level the server checks (FULL_CONTROL to grant,
  * MANAGE on a group to change its members).
  */
-import type { Access, AccessAuditAction, AccessAuditOutcome, AccessGrant, GetMyAccessResponse, GrantChangeResponse, GranteeKind, GroupResponse, ListAccessAuditEventsResponse, ListGrantsResponse, ListGroupsResponse, Permission, SecurityGroup } from './types'
+import type { Access, AccessAuditAction, AccessAuditOutcome, AccessGrant, GetMyAccessResponse, GrantChangeResponse, GranteeKind, GroupChangeResponse, GroupMemberChangeResponse, GroupResponse, ListAccessAuditEventsResponse, ListGrantsResponse, ListGroupsResponse, Permission, SecurityGroup } from './types'
 import { apiFetch } from './client'
 
 const subjectPath = (id: string) => `/api/subjects/${encodeURIComponent(id)}`
@@ -44,28 +44,28 @@ export function getGroup (id: string): Promise<GroupResponse> {
 }
 
 /** Creates a group; its creator gets FULL_CONTROL on it. */
-export function createGroup (name: string, description: string): Promise<GroupResponse> {
-  return apiFetch<GroupResponse>('/api/groups', { method: 'POST', body: { name, description } })
+export function createGroup (name: string, description: string): Promise<GroupChangeResponse> {
+  return apiFetch<GroupChangeResponse>('/api/groups', { method: 'POST', body: { name, description } })
 }
 
 /** Renames or redescribes a live group. */
-export function updateGroup (id: string, name: string, description: string, reason: string): Promise<GroupResponse> {
-  return apiFetch<GroupResponse>(groupPath(id), { method: 'PATCH', body: { name, description, reason } })
+export function updateGroup (id: string, name: string, description: string, reason: string): Promise<GroupChangeResponse> {
+  return apiFetch<GroupChangeResponse>(groupPath(id), { method: 'PATCH', body: { name, description, reason } })
 }
 
 /** Archives a group; its grants stop applying. */
-export function archiveGroup (id: string, reason: string): Promise<GroupResponse> {
-  return apiFetch<GroupResponse>(`${groupPath(id)}/archive`, { method: 'POST', body: { reason } })
+export function archiveGroup (id: string, reason: string): Promise<GroupChangeResponse> {
+  return apiFetch<GroupChangeResponse>(`${groupPath(id)}/archive`, { method: 'POST', body: { reason } })
 }
 
 /** Adds an internal user to a group. */
-export function addGroupMember (id: string, userId: string): Promise<GroupResponse> {
-  return apiFetch<GroupResponse>(`${groupPath(id)}/members`, { method: 'POST', body: { userId } })
+export function addGroupMember (id: string, userId: string): Promise<GroupMemberChangeResponse> {
+  return apiFetch<GroupMemberChangeResponse>(`${groupPath(id)}/members`, { method: 'POST', body: { userId } })
 }
 
 /** Removes a member (the membership is kept as history). */
-export function removeGroupMember (id: string, userId: string, reason: string): Promise<GroupResponse> {
-  return apiFetch<GroupResponse>(`${groupPath(id)}/members/${encodeURIComponent(userId)}/remove`, { method: 'POST', body: { reason } })
+export function removeGroupMember (id: string, userId: string, reason: string): Promise<Pick<GroupMemberChangeResponse, 'auditEvent'>> {
+  return apiFetch<Pick<GroupMemberChangeResponse, 'auditEvent'>>(`${groupPath(id)}/members/${encodeURIComponent(userId)}/remove`, { method: 'POST', body: { reason } })
 }
 
 /** Filters of the sensitive read audit; without subjectId the whole log (administrators only). */

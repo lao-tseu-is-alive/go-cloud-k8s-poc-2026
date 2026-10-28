@@ -13,6 +13,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - The interface draws its icons as inline SVG and bundles only the 102 it uses instead of the
   whole Material Design Icons font (GLD-073): the built assets shrink from 8.9 to 5.2 MB and the
   main stylesheet from 696 to 373 KB.
+- The SPA's hand-written API types are checked against the protos at compile time (GLD-072):
+  `buf generate` also writes proto3-JSON TypeScript types (protobuf-es 2.16.0, type-only) that
+  `make check` compares with `src/api/types.ts`, and `make generated-check` keeps them
+  reproducible. The check tightened the `Struct` fields to JSON objects and gave the group,
+  membership and "my tasks" answers their own types.
 
 ## [0.18.1] - 2026-10-27
 

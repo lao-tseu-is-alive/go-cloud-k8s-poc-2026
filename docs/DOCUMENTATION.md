@@ -143,6 +143,10 @@ the repository:
   `node_modules/` are git-ignored build outputs;
 - `src/api/types.ts` is hand-maintained against the proto contract and MUST be
   updated in the same change as any RPC the SPA uses;
+- `src/api/typesContract.ts` checks those types at compile time against the
+  proto3-JSON types generated into `src/api/gen/` (never edited by hand,
+  reproduced by `make generated-check`); every export of `types.ts` is either
+  checked there or listed in `UNCHECKED_TYPES` with its reason;
 - `make front-check` (frozen install, `vue-tsc` type-check, ESLint, Vitest unit
   tests, build) is part of `make check`.
 

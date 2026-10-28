@@ -488,10 +488,13 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
 **gitignored build artifact** — never hand-edit it; edit `src/` and rebuild.
 
 - **API layer:** plain REST `fetch` against the Vanguard `/api/...` bindings — **no**
-  connect-es codegen. Types are hand-maintained in `src/api/types.ts` and must be
-  kept in sync with the proto by hand. Mind the proto3-JSON quirks: `int64` fields
-  serialize as **strings** (e.g. `fileSizeBytes:"38"`), enums as string names,
-  timestamps as RFC3339.
+  connect-es at runtime. Types are hand-maintained in `src/api/types.ts`; `src/api/typesContract.ts`
+  checks them at compile time against the proto3-JSON types `buf generate` writes into
+  `src/api/gen/` (GLD-072, never hand-edited, type-only): a field renamed or retyped or an enum
+  value added in a proto fails `bun run type-check` until the SPA follows. A new exported type
+  gets a contract line (or an `UNCHECKED_TYPES` reason). Mind the proto3-JSON quirks: `int64`
+  fields serialize as **strings** (e.g. `fileSizeBytes:"38"`), enums as string names,
+  timestamps as RFC3339, `Struct` as `JsonObject`.
 - **Auth (dynamic):** the SPA calls `GET /config` → `{authMode, authBaseUrl}` and
   branches — `dev` uses a manual static token; `jwt` silently mints from
   `${authBaseUrl}/auth/token` (SSO cookie) and re-mints at ~80% of token lifetime.
@@ -520,7 +523,7 @@ relevant `src/api/*` client + component, then `bun run type-check && bun run lin
 
 ## Generated code and protobuf
 
-- `proto/` is the source of truth. Never hand-edit `gen/` or `api/openapi/`.
+- `proto/` is the source of truth. Never hand-edit `gen/`, `api/openapi/` or the SPA's `src/api/gen/`.
 - After changing protos, run `make generate` then `make lint`.
 - `make generate` may change `buf.lock`, `gen/` and `api/openapi/` — review and
   commit intended generated changes together.

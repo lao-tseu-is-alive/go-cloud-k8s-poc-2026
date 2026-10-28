@@ -5,6 +5,7 @@
     "src/utils/**/*.ts",
     "src/plugins/icons.ts",
     "src/plugins/__tests__/*.ts",
+    "src/api/__tests__/*.ts",
     "src/api/types.ts"
   ],
   "compilerOptions": {
