@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- `golang.org/x/net` 0.62.0 fixes GO-2026-6866 and GO-2026-6860 (govulncheck found them in a
+  module the server requires, unreached by its code). GO-2026-5932 (`x/crypto/openpgp`, no fix
+  upstream) stays suppressed, re-verified unreachable.
+
 ### Added
 
 - Prometheus metrics (GLD-010, first step): `GOELAND_METRICS_ADDRESS` opens a separate listener
