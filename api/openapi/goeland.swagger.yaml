@@ -62,6 +62,8 @@ tags:
       OrgUnitService manages the organizational units of the Goéland POC. Every RPC
       carries a google.api.http annotation so Vanguard also exposes it as
       REST/JSON; the Connect/gRPC path /goeland.v1.OrgUnitService/<Method> stays available.
+  - name: RetentionService
+    description: RetentionService manages the retention schedule and the retention of closed cases.
   - name: ThingService
     description: ThingService manages business objects (parcels, buildings, ...) and their geometry.
 consumes:
@@ -458,6 +460,32 @@ paths:
             $ref: '#/definitions/v1CreateCaseTypeRequest'
       tags:
         - CaseService
+  /api/case-types/{caseTypeCode}/apply-retention:
+    post:
+      summary: Give a case type's policy to its closed cases without retention. Requires goeland:admin.
+      operationId: ApplyCaseTypeRetention
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ApplyCaseTypeRetentionResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseTypeCode
+          description: case_type_code is the case type; it must name a default policy.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceApplyCaseTypeRetentionBody'
+      tags:
+        - RetentionService
   /api/case-types/{code}:
     patch:
       summary: |-
@@ -748,6 +776,79 @@ paths:
             $ref: '#/definitions/CaseExportServiceRequestCaseExportBody'
       tags:
         - CaseExportService
+  /api/cases/{caseId}/retention:
+    get:
+      summary: Read the retention of a case. Requires goeland:read and READ on the case.
+      operationId: GetCaseRetention
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetCaseRetentionResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case.
+          in: path
+          required: true
+          type: string
+      tags:
+        - RetentionService
+  /api/cases/{caseId}/retention-hold:
+    post:
+      summary: Place a legal hold on a case. Requires goeland:records.
+      operationId: PlaceRetentionHold
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1PlaceRetentionHoldResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServicePlaceRetentionHoldBody'
+      tags:
+        - RetentionService
+  /api/cases/{caseId}/retention-hold/release:
+    post:
+      summary: Release the legal hold of a case. Requires goeland:records.
+      operationId: ReleaseRetentionHold
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ReleaseRetentionHoldResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: caseId
+          description: case_id is the case.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceReleaseRetentionHoldBody'
+      tags:
+        - RetentionService
   /api/cases/{caseId}/tasks:
     get:
       summary: List the tasks of a case. Requires goeland:read.
@@ -2402,6 +2503,128 @@ paths:
             $ref: '#/definitions/CoreServiceEndRelationshipBody'
       tags:
         - CoreService
+  /api/retention-policies:
+    get:
+      summary: List the retention policies. Requires goeland:read.
+      operationId: ListRetentionPolicies
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListRetentionPoliciesResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: onlyActive
+          description: only_active returns only the policies that may be given to a case type.
+          in: query
+          required: false
+          type: boolean
+      tags:
+        - RetentionService
+    post:
+      summary: Add a retention policy. Requires goeland:admin; logs REFERENCE_CREATED.
+      operationId: CreateRetentionPolicy
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateRetentionPolicyResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateRetentionPolicyRequest adds a policy (administrators only).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateRetentionPolicyRequest'
+      tags:
+        - RetentionService
+  /api/retention-policies/{code}:
+    patch:
+      summary: Change a retention policy. Requires goeland:admin; logs REFERENCE_UPDATED.
+      operationId: UpdateRetentionPolicy
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1UpdateRetentionPolicyResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: code
+          description: code selects the entry to update (its code never changes).
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceUpdateRetentionPolicyBody'
+      tags:
+        - RetentionService
+  /api/retentions/due:
+    get:
+      summary: List the running retentions ending on or before a day. Requires goeland:records or goeland:admin.
+      operationId: ListDueRetentions
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListDueRetentionsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: dueOn
+          description: due_on is the day (YYYY-MM-DD); empty means today (Europe/Zurich).
+          in: query
+          required: false
+          type: string
+        - name: finalDisposition
+          description: |-
+            final_disposition restricts the list to one disposition; unspecified means all.
+
+             - FINAL_DISPOSITION_UNSPECIFIED: FINAL_DISPOSITION_UNSPECIFIED is the zero value; never stored.
+             - FINAL_DISPOSITION_ARCHIVE: FINAL_DISPOSITION_ARCHIVE transfers the case to the archives (versement).
+             - FINAL_DISPOSITION_DESTROY: FINAL_DISPOSITION_DESTROY eliminates the case after an approved bordereau.
+             - FINAL_DISPOSITION_REVIEW: FINAL_DISPOSITION_REVIEW leaves the choice to the records manager, case by case.
+          in: query
+          required: false
+          type: string
+          enum:
+            - FINAL_DISPOSITION_UNSPECIFIED
+            - FINAL_DISPOSITION_ARCHIVE
+            - FINAL_DISPOSITION_DESTROY
+            - FINAL_DISPOSITION_REVIEW
+          default: FINAL_DISPOSITION_UNSPECIFIED
+        - name: includeHeld
+          description: include_held also lists the cases on legal hold.
+          in: query
+          required: false
+          type: boolean
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - RetentionService
   /api/subjects:
     post:
       summary: |-
@@ -3982,6 +4205,11 @@ definitions:
         description: |-
           default_confidentiality_level replaces the minimum confidentiality of
           future cases when present (0-5).
+      defaultRetentionPolicyCode:
+        type: string
+        description: |-
+          default_retention_policy_code replaces the retention policy given to
+          cases closed afterwards when present (an active policy; empty for none).
     description: |-
       UpdateCaseTypeRequest changes a case type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
@@ -4269,6 +4497,67 @@ definitions:
     description: |-
       UpdateOrgUnitTypeRequest changes a unit type (administrators only); absent
       fields are kept. Entries are never deleted: deactivate them with is_active = false.
+  RetentionServiceApplyCaseTypeRetentionBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason is the justification recorded on every case (1-2000 characters).
+    description: |-
+      ApplyCaseTypeRetentionRequest gives the case type's default policy to its
+      closed cases that have no running retention (administrators only), e.g.
+      after a policy was given to the type or for imported cases.
+    required:
+      - reason
+  RetentionServicePlaceRetentionHoldBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the hold (1-2000 characters); it is audited.
+    description: PlaceRetentionHoldRequest places a legal hold on a case (records manager).
+    required:
+      - reason
+  RetentionServiceReleaseRetentionHoldBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the release (1-2000 characters); it is audited.
+    description: ReleaseRetentionHoldRequest releases the active legal hold of a case (records manager).
+    required:
+      - reason
+  RetentionServiceUpdateRetentionPolicyBody:
+    type: object
+    properties:
+      label:
+        type: string
+        description: label replaces the label when present (1-200 characters).
+      description:
+        type: string
+        description: description replaces the description when present (at most 2000 characters).
+      legalBasis:
+        type: string
+        description: legal_basis replaces the legal basis when present (at most 2000 characters).
+      durationYears:
+        type: integer
+        format: int32
+        description: duration_years replaces the duration when present (0-200).
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition replaces the disposition when present.
+      isActive:
+        type: boolean
+        description: |-
+          is_active activates or deactivates the entry when present; an inactive
+          policy can no longer be given to a case type.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: |-
+      UpdateRetentionPolicyRequest changes a policy (administrators only); absent
+      fields are kept. A change applies to cases closed afterwards: running
+      retentions keep the snapshot taken at closing.
   TaskServiceAssignTaskBody:
     type: object
     properties:
@@ -4933,6 +5222,20 @@ definitions:
     description: |-
       AppRole is an application role stored in Goéland (GLD-047). ADMIN is the role
       behind the goeland:admin scope.
+  v1ApplyCaseTypeRetentionResponse:
+    type: object
+    properties:
+      applied:
+        type: integer
+        format: int32
+        description: applied counts the closed cases that received a retention.
+      remaining:
+        type: integer
+        format: int32
+        description: remaining counts the closed cases of the type still without retention.
+    description: |-
+      ApplyCaseTypeRetentionResponse counts the cases given a retention. A call
+      handles at most 1000 cases (each one audited); call again while remaining > 0.
   v1ArchiveGroupResponse:
     type: object
     properties:
@@ -5292,6 +5595,11 @@ definitions:
           default_grants are copied once onto every new case of this type, besides
           the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
           changes of the template leave existing cases unchanged.
+      defaultRetentionPolicyCode:
+        type: string
+        description: |-
+          default_retention_policy_code is the retention policy given to its cases
+          when they are closed (GLD-032); empty when none.
     description: |-
       CaseType is a controlled classification of cases (e.g. OPC_DEMANDE_PC).
       Types are seeded reference data; a case's type is fixed at creation.
@@ -5691,6 +5999,11 @@ definitions:
         type: integer
         format: int32
         description: default_confidentiality_level is the minimum confidentiality of its new cases (0-5).
+      defaultRetentionPolicyCode:
+        type: string
+        description: |-
+          default_retention_policy_code is an active retention policy given to its
+          cases when they are closed; empty for none.
     description: CreateCaseTypeRequest adds a case type (administrators only).
     required:
       - code
@@ -6016,6 +6329,47 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_CREATED entry of the reference change log.
     description: CreateRelationshipTypeResponse returns the new relationship type and its log entry.
+  v1CreateRetentionPolicyRequest:
+    type: object
+    properties:
+      code:
+        type: string
+        description: |-
+          code is the immutable key: upper-case letters, digits and underscores
+          (2-100), starting with a letter; ALREADY_EXISTS when taken.
+      label:
+        type: string
+        description: label is the required human label (1-200 characters).
+      description:
+        type: string
+        description: description documents the policy (at most 2000 characters).
+      legalBasis:
+        type: string
+        description: legal_basis cites the rule the policy applies (at most 2000 characters).
+      durationYears:
+        type: integer
+        format: int32
+        description: duration_years is how long a case is kept after its closing (0-200).
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition is what happens when the retention expires.
+      reason:
+        type: string
+        description: reason is the justification recorded in the reference change log (at most 2000 characters).
+    description: CreateRetentionPolicyRequest adds a policy (administrators only).
+    required:
+      - code
+      - label
+  v1CreateRetentionPolicyResponse:
+    type: object
+    properties:
+      retentionPolicy:
+        $ref: '#/definitions/v1RetentionPolicy'
+        description: retention_policy is the created entry, active.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_CREATED entry of the reference change log.
+    description: CreateRetentionPolicyResponse returns the new policy and its log entry.
   v1CreateSubjectRefRequest:
     type: object
     properties:
@@ -6412,6 +6766,25 @@ definitions:
     description: |-
       DocumentVersion is a dated, append-only state of a document (spec v2 §18). A
       final or record version is immutable; versions are never deleted.
+  v1DueRetention:
+    type: object
+    properties:
+      retention:
+        $ref: '#/definitions/v1SubjectRetention'
+        description: retention is the running retention.
+      caseLabel:
+        type: string
+        description: case_label is the case's label; empty when the caller may not read the case.
+      businessRef:
+        type: string
+        description: business_ref is the case's business reference.
+      caseTypeCode:
+        type: string
+        description: case_type_code is the case's type.
+      onHold:
+        type: boolean
+        description: on_hold reports an active legal hold.
+    description: DueRetention is a running retention in the due list, with its case.
   v1EndRelationshipResponse:
     type: object
     properties:
@@ -6422,6 +6795,21 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the RELATIONSHIP_ENDED audit event.
     description: EndRelationshipResponse returns the ended edge and its audit event.
+  v1FinalDisposition:
+    type: string
+    enum:
+      - FINAL_DISPOSITION_UNSPECIFIED
+      - FINAL_DISPOSITION_ARCHIVE
+      - FINAL_DISPOSITION_DESTROY
+      - FINAL_DISPOSITION_REVIEW
+    default: FINAL_DISPOSITION_UNSPECIFIED
+    description: |-
+      FinalDisposition is what happens to a case when its retention expires.
+
+       - FINAL_DISPOSITION_UNSPECIFIED: FINAL_DISPOSITION_UNSPECIFIED is the zero value; never stored.
+       - FINAL_DISPOSITION_ARCHIVE: FINAL_DISPOSITION_ARCHIVE transfers the case to the archives (versement).
+       - FINAL_DISPOSITION_DESTROY: FINAL_DISPOSITION_DESTROY eliminates the case after an approved bordereau.
+       - FINAL_DISPOSITION_REVIEW: FINAL_DISPOSITION_REVIEW leaves the choice to the records manager, case by case.
   v1FinalizeDocumentResponse:
     type: object
     properties:
@@ -6479,6 +6867,33 @@ definitions:
           $ref: '#/definitions/v1AuditEvent'
         description: recent_audit holds the latest audit events, newest first; empty unless include_audit was set.
     description: GetCaseResponse returns a case and the requested context.
+  v1GetCaseRetentionResponse:
+    type: object
+    properties:
+      current:
+        $ref: '#/definitions/v1SubjectRetention'
+        description: |-
+          current is the running retention; absent while the case is open or when
+          its type has no policy.
+      hold:
+        $ref: '#/definitions/v1RetentionHold'
+        description: hold is the active legal hold, if any.
+      retentions:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectRetention'
+        description: retentions lists every retention of the case, running or ended, newest first.
+      holds:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RetentionHold'
+        description: holds lists every hold of the case, newest first.
+      defaultPolicy:
+        $ref: '#/definitions/v1RetentionPolicy'
+        description: default_policy is the policy of the case's type, applied at its next closing; absent when none.
+    description: GetCaseRetentionResponse describes the retention of a case.
   v1GetCirculationResponse:
     type: object
     properties:
@@ -6881,6 +7296,23 @@ definitions:
           $ref: '#/definitions/v1DocumentVersion'
         description: versions are the versions with their content, newest first.
     description: ListDocumentVersionsResponse returns every version, newest first.
+  v1ListDueRetentionsResponse:
+    type: object
+    properties:
+      retentions:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DueRetention'
+        description: retentions are the due retentions of the page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size counts every matching retention.
+    description: ListDueRetentionsResponse returns a page of due retentions, oldest deadline first.
   v1ListGrantsResponse:
     type: object
     properties:
@@ -6997,6 +7429,16 @@ definitions:
           total_size_capped reports that total_size is a lower bound: counting stops
           at 10000 matches, and so does paging (refine the search to go further).
     description: ListRelationshipsResponse is one page of edges.
+  v1ListRetentionPoliciesResponse:
+    type: object
+    properties:
+      retentionPolicies:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1RetentionPolicy'
+        description: retention_policies are the matching policies.
+    description: ListRetentionPoliciesResponse returns the matching policies, by label (code as tie-break).
   v1ListRoleHoldersResponse:
     type: object
     properties:
@@ -7358,6 +7800,16 @@ definitions:
       identify and address the person (salutation, last and first name), plus the
       link to the CH population register. No birth date, AVS number or other
       civil-registry data is stored.
+  v1PlaceRetentionHoldResponse:
+    type: object
+    properties:
+      hold:
+        $ref: '#/definitions/v1RetentionHold'
+        description: hold is the new active hold.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RETENTION_HOLD_PLACED event on the case.
+    description: PlaceRetentionHoldResponse returns the hold and its audit event.
   v1RecordMetadata:
     type: object
     properties:
@@ -7451,7 +7903,7 @@ definitions:
         readOnly: true
       catalogue:
         type: string
-        description: catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type or task_type.
+        description: catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type, task_type or retention_policy.
         readOnly: true
       code:
         type: string
@@ -7608,6 +8060,16 @@ definitions:
       kinds equal source_kind and target_kind.
     required:
       - code
+  v1ReleaseRetentionHoldResponse:
+    type: object
+    properties:
+      hold:
+        $ref: '#/definitions/v1RetentionHold'
+        description: hold is the released hold.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the RETENTION_HOLD_RELEASED event on the case.
+    description: ReleaseRetentionHoldResponse returns the released hold and its audit event.
   v1RemoveGroupMemberResponse:
     type: object
     properties:
@@ -7662,6 +8124,67 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: response_event is the CIRCULATION_RESPONDED audit event.
     description: RespondToCirculationResponse returns the circulation after the answer.
+  v1RetentionHold:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the hold.
+      subjectId:
+        type: string
+        description: subject_id is the case.
+      reason:
+        type: string
+        description: reason explains the hold (litigation, inquiry, ...).
+      placedAt:
+        type: string
+        format: date-time
+        description: placed_at is when the hold was placed.
+      placedBy:
+        type: string
+        description: placed_by is the records manager who placed it.
+      releasedAt:
+        type: string
+        format: date-time
+        description: released_at is when the hold was released; absent while it is active.
+      releasedBy:
+        type: string
+        description: released_by is the records manager who released it.
+      releaseReason:
+        type: string
+        description: release_reason explains the release.
+    description: 'RetentionHold is a legal hold on a case: no disposal while it is active.'
+  v1RetentionPolicy:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id is the catalogue row UUID.
+      code:
+        type: string
+        description: code is the unique stable key, e.g. EXAMPLE_ARCHIVE_10.
+      label:
+        type: string
+        description: label is the human label.
+      description:
+        type: string
+        description: description documents the policy.
+      legalBasis:
+        type: string
+        description: legal_basis cites the rule the policy applies (law, schedule entry).
+      durationYears:
+        type: integer
+        format: int32
+        description: duration_years is how long a case is kept after its closing (0-200).
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition is what happens when the retention expires.
+      isActive:
+        type: boolean
+        description: is_active reports whether the policy may be given to a case type.
+    description: RetentionPolicy is an entry of the retention schedule.
+    required:
+      - code
   v1RevokeGrantResponse:
     type: object
     properties:
@@ -8008,6 +8531,57 @@ definitions:
       SubjectRelationship is an actual edge in the business graph: typed, validated, soft-deletable.
       At most one open edge (not unlinked, no valid_to) exists per (source, target, type);
       an ended edge stays as history.
+  v1SubjectRetention:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the retention row.
+      subjectId:
+        type: string
+        description: subject_id is the case.
+      policyCode:
+        type: string
+        description: policy_code is the policy applied.
+      policyLabel:
+        type: string
+        description: policy_label is the policy's current label.
+        readOnly: true
+      durationYears:
+        type: integer
+        format: int32
+        description: duration_years is the duration applied (the policy's at closing).
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition is the disposition applied (the policy's at closing).
+      startsOn:
+        type: string
+        description: starts_on is the closing day (YYYY-MM-DD, Europe/Zurich).
+      untilOn:
+        type: string
+        description: |-
+          until_on is the day the retention ends (YYYY-MM-DD, starts_on plus the
+          duration): the case is due for its final disposition from that day.
+      createdAt:
+        type: string
+        format: date-time
+        description: created_at is when the retention was computed.
+      createdBy:
+        type: string
+        description: created_by is the operator who closed the case (or applied the policy).
+      endedAt:
+        type: string
+        format: date-time
+        description: ended_at is when the retention ended (case reopened); absent while it runs.
+      endedBy:
+        type: string
+        description: ended_by is the operator who ended it.
+      endReason:
+        type: string
+        description: end_reason explains the end.
+    description: |-
+      SubjectRetention is the retention of a closed case: a snapshot of its policy
+      taken at closing, ended when the case is reopened.
   v1SubjectSearchGroup:
     type: object
     properties:
@@ -8656,6 +9230,16 @@ definitions:
         $ref: '#/definitions/v1ReferenceChange'
         description: change is the REFERENCE_UPDATED entry of the reference change log.
     description: UpdateRelationshipTypeResponse returns the updated relationship type and its log entry.
+  v1UpdateRetentionPolicyResponse:
+    type: object
+    properties:
+      retentionPolicy:
+        $ref: '#/definitions/v1RetentionPolicy'
+        description: retention_policy is the updated entry.
+      change:
+        $ref: '#/definitions/v1ReferenceChange'
+        description: change is the REFERENCE_UPDATED entry of the reference change log.
+    description: UpdateRetentionPolicyResponse returns the updated policy and its log entry.
   v1UpdateTaskResponse:
     type: object
     properties:

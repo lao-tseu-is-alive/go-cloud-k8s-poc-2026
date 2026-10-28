@@ -400,9 +400,20 @@ covered by an integration test.
   audited, all versions, background job. Done 2026-10-14: migration `0030` (`case_export`),
   `CaseExportService` (request, get, list), `pkg/caseexport` worker (`SKIP LOCKED`, retry,
   expiry), `GET /api/case-exports/{id}/content`, SPA panel on the case page, §50 step 31.
-- [ ] **GLD-032 — Retention policy**: `retention_policy` + `subject_retention`
+- [~] **GLD-032 — Retention policy**: `retention_policy` + `subject_retention`
   evolving `record_metadata.retention_until` / `sort_final` without breaking
-  them, and a governed, proven disposition path (§3g).
+  them, and a governed, proven disposition path (§3g). Decided 2026-10-28: the case is the unit
+  (its documents follow it, kept until the latest deadline of their cases; actors and things out
+  of scope); a policy per case type; two steps. Step A: the `retention_policy` catalogue
+  (duration, start event, final disposition ARCHIVE / DESTROY / REVIEW, legal basis; example
+  policies until the City archives give the real schedule), the case type default, the
+  retention computed at closing and cleared at reopening, a legal hold blocking disposal, the
+  retention on the case page and the list of due cases; nothing destructive. Step B: disposition
+  bordereaux prepared by a RECORDS_MANAGER and approved by a holder of MANAGE on each case's
+  owning unit; ARCHIVE produces the transfer package (the GLD-029 export) and freezes the case
+  (ARCHIVED); DESTROY really deletes the document bytes no longer referenced elsewhere and keeps a
+  minimal notice plus a permanent proof (bordereau, approvers, SHA-256 of the manifest).
+  `retention_until` / `sort_final` stay as read-only V1 preparation fields.
 
 ## Phase 8 — AI proposal and MCP readiness (v2 §39-41)
 

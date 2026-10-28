@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { CatalogueConfig, CatalogueEntry, CatalogueField } from './referenceCatalogues'
+  import type { CatalogueConfig, CatalogueEntry, CatalogueField, ChoiceItem } from './referenceCatalogues'
   import type { ListSort } from '@/utils/listSort'
   import { computed, onMounted, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
@@ -56,6 +56,19 @@
   onMounted(load)
   defineExpose({ reload: load })
 
+  // The choices loaded from the server, per field key (another catalogue).
+  const loadedChoices = ref<Record<string, ChoiceItem[]>>({})
+  async function loadChoices () {
+    for (const field of props.config.fields.filter(f => f.loadChoices)) {
+      try {
+        loadedChoices.value[field.key] = await field.loadChoices!()
+      } catch (error) {
+        report(error)
+      }
+    }
+  }
+  onMounted(loadChoices)
+
   function openCreate () {
     editing.value = null
     draft.value = { code: '', isActive: true, isDirected: true, defaultConfidentialityLevel: 0 }
@@ -79,7 +92,15 @@
 
   function rules (field: CatalogueField) {
     const list = field.required ? [required(t)] : []
+    if (field.kind === 'number') {
+      return [...list, (v: unknown) => inRange(v, field.min ?? 0, field.max ?? Number.MAX_SAFE_INTEGER) || t('validation.range', { min: field.min ?? 0, max: field.max })]
+    }
     return field.max ? [...list, maxLength(t, field.max)] : list
+  }
+
+  function inRange (v: unknown, min: number, max: number): boolean {
+    const n = typeof v === 'number' ? v : Number(v)
+    return Number.isInteger(n) && n >= min && n <= max
   }
 
   const codeRules = [required(t), (v: unknown) => REFERENCE_CODE.test(typeof v === 'string' ? v : '') || t('validation.referenceCode')]
@@ -88,7 +109,7 @@
   function payload (): Record<string, unknown> {
     const body: Record<string, unknown> = { reason: reason.value.trim() || undefined }
     for (const field of props.config.fields) {
-      if (editable(field)) body[field.key] = draft.value[field.key]
+      if (editable(field)) body[field.key] = fieldValue(field)
     }
     if (editing.value) {
       body.isActive = draft.value.isActive
@@ -117,12 +138,21 @@
     }
   }
 
+  // A number is sent as a number, an emptied choice as '' (proto3 JSON would read null as "keep").
+  function fieldValue (field: CatalogueField): unknown {
+    const value = draft.value[field.key]
+    if (field.kind === 'number') return Number(value ?? 0)
+    if (field.clearable) return typeof value === 'string' ? value : ''
+    return value
+  }
+
   // proto3 JSON omits false booleans: an entry is active only when isActive is true.
   function isActive (entry: CatalogueEntry): boolean {
     return entry.isActive === true
   }
 
-  function choiceItems (field: CatalogueField) {
+  function choiceItems (field: CatalogueField): ChoiceItem[] {
+    if (field.loadChoices) return loadedChoices.value[field.key] ?? []
     return (field.choices ?? []).map(value => ({ value, title: field.choiceEnum ? enumLabel(field.choiceEnum, value) : value }))
   }
 
@@ -130,6 +160,10 @@
     const value = entry[field.key]
     if (field.kind === 'subjectKind') return enumLabel('SubjectKind', typeof value === 'string' ? value : undefined)
     if (field.kind === 'confidentiality') return confidentialityLabel(typeof value === 'number' ? value : 0)
+    if (field.kind === 'number') return String(typeof value === 'number' ? value : 0) // proto3 JSON omits 0
+    if (field.kind === 'choice' && typeof value === 'string' && value !== '') {
+      return choiceItems(field).find(c => c.value === value)?.title ?? value
+    }
     return typeof value === 'string' && value !== '' ? value : '—'
   }
 
@@ -239,10 +273,20 @@
                 v-else-if="field.kind === 'choice'"
                 v-model="draft[field.key]"
                 class="mt-2"
+                :clearable="field.clearable"
                 item-title="title"
                 item-value="value"
                 :items="choiceItems(field)"
                 :label="t(`fields.reference.${field.key}`)"
+              />
+
+              <v-text-field
+                v-else-if="field.kind === 'number'"
+                v-model.number="draft[field.key]"
+                class="mt-2"
+                :label="t(`fields.reference.${field.key}`)"
+                :rules="rules(field)"
+                type="number"
               />
 
               <v-select

@@ -31,6 +31,8 @@ const (
 	CatalogueOrgUnitType = "org_unit_type"
 	// CatalogueTaskType is the task_type catalogue.
 	CatalogueTaskType = "task_type"
+	// CatalogueRetentionPolicy is the retention_policy catalogue (GLD-032).
+	CatalogueRetentionPolicy = "retention_policy"
 
 	// ReferenceCreated is the event type of a new catalogue entry.
 	ReferenceCreated = "REFERENCE_CREATED"

@@ -141,6 +141,17 @@ func TestRecordingVerifierScopesComeFromStoredRoles(t *testing.T) {
 	if user, _ := v.VerifyBearerToken(ctx, "t"); !slices.Contains(user.Scopes, ScopeAdmin) {
 		t.Fatalf("a holder of ADMIN gets goeland:admin: %v", user.Scopes)
 	}
+
+	tokenRecords := &authadapter.AuthenticatedUser{AppUserID: 8, Scopes: []string{ScopeRead, ScopeRecords}}
+	v, _ = NewRecordingVerifier(&fakeVerifier{user: tokenRecords}, &fakeRecorder{}, nil, nil)
+	if user, _ := v.VerifyBearerToken(ctx, "t"); slices.Contains(user.Scopes, ScopeRecords) {
+		t.Fatalf("the token's records scope is ignored: %v", user.Scopes)
+	}
+	rec = &fakeRecorder{roles: map[string][]string{"8": {RoleRecordsManager}}}
+	v, _ = NewRecordingVerifier(&fakeVerifier{user: &authadapter.AuthenticatedUser{AppUserID: 8, Scopes: []string{ScopeRead}}}, rec, nil, nil)
+	if user, _ := v.VerifyBearerToken(ctx, "t"); !slices.Contains(user.Scopes, ScopeRecords) || slices.Contains(user.Scopes, ScopeAdmin) {
+		t.Fatalf("a holder of RECORDS_MANAGER gets goeland:records only: %v", user.Scopes)
+	}
 }
 
 func TestRecordingVerifierCachesRolesUntilForgotten(t *testing.T) {

@@ -8,6 +8,7 @@ import (
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/retention"
 )
 
 // CaseTypeInput is a new case type (administrators only, GLD-040).
@@ -22,6 +23,9 @@ type CaseTypeInput struct {
 	BusinessRefNamespace string
 	// DefaultConfidentialityLevel is the minimum confidentiality of its new cases (0-5).
 	DefaultConfidentialityLevel int32
+	// DefaultRetentionPolicyCode is an active retention policy given to its
+	// cases when closed; empty for none (GLD-032).
+	DefaultRetentionPolicyCode string
 	// OperatorID is the administrator, set server-side.
 	OperatorID string
 	// Reason is the justification recorded in the reference change log.
@@ -40,6 +44,9 @@ type CaseTypeUpdate struct {
 	IsActive *bool
 	// DefaultConfidentialityLevel replaces the minimum confidentiality of future cases when non-nil.
 	DefaultConfidentialityLevel *int32
+	// DefaultRetentionPolicyCode replaces the retention policy of cases closed
+	// afterwards when non-nil (empty removes it).
+	DefaultRetentionPolicyCode *string
 	// OperatorID is the administrator, set server-side.
 	OperatorID string
 	// Reason is the justification recorded in the reference change log.
@@ -52,6 +59,7 @@ func caseTypeState(e *CaseType) map[string]any {
 	state := map[string]any{
 		"label": e.Label, "description": e.Description, "business_ref_namespace": e.BusinessRefNamespace,
 		"is_active": e.IsActive, "default_confidentiality_level": e.DefaultConfidentialityLevel,
+		"default_retention_policy_code": e.DefaultRetentionPolicyCode,
 	}
 	if e.DefaultGrants != nil {
 		grants := make([]map[string]any, len(e.DefaultGrants))
@@ -124,9 +132,13 @@ func (r *PostgresRepository) CreateCaseType(ctx context.Context, in CaseTypeInpu
 		Catalogue: core.CatalogueCaseType, Code: in.Code, OperatorID: in.OperatorID, Reason: in.Reason,
 		State: caseTypeState,
 		Apply: func(ctx context.Context, tx pgx.Tx) (*CaseType, *CaseType, error) {
+			in.DefaultRetentionPolicyCode = strings.TrimSpace(in.DefaultRetentionPolicyCode)
+			if err := retention.EnsureActivePolicyTx(ctx, tx, in.DefaultRetentionPolicyCode); err != nil {
+				return nil, nil, err
+			}
 			rows, err := tx.Query(ctx, insertCaseTypeSQL, pgx.NamedArgs{
 				"code": in.Code, "label": in.Label, "description": in.Description, "business_ref_namespace": in.BusinessRefNamespace,
-				"default_confidentiality_level": in.DefaultConfidentialityLevel,
+				"default_confidentiality_level": in.DefaultConfidentialityLevel, "default_retention_policy_code": in.DefaultRetentionPolicyCode,
 			})
 			if err != nil {
 				return nil, nil, core.MapReferenceConflict(err, core.CatalogueCaseType, in.Code)
@@ -151,8 +163,15 @@ func (r *PostgresRepository) UpdateCaseType(ctx context.Context, code string, in
 			if err != nil {
 				return nil, nil, fmt.Errorf("case type %q: %w", code, err)
 			}
+			// A new policy must be active; keeping the current one is always allowed.
+			if p := in.DefaultRetentionPolicyCode; p != nil && strings.TrimSpace(*p) != before.DefaultRetentionPolicyCode {
+				*p = strings.TrimSpace(*p)
+				if err := retention.EnsureActivePolicyTx(ctx, tx, *p); err != nil {
+					return nil, nil, err
+				}
+			}
 			after, err := core.CollectReferenceRow[CaseType](tx.Query(ctx, updateCaseTypeSQL, pgx.NamedArgs{"code": code, "label": in.Label, "description": in.Description, "business_ref_namespace": in.BusinessRefNamespace, "is_active": in.IsActive,
-				"default_confidentiality_level": in.DefaultConfidentialityLevel,
+				"default_confidentiality_level": in.DefaultConfidentialityLevel, "default_retention_policy_code": in.DefaultRetentionPolicyCode,
 			}))
 			return before, after, err
 		},

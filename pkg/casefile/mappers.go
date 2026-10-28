@@ -19,6 +19,7 @@ func TypeToProto(t *CaseType) *goelandv1.CaseType {
 		IsActive:                    t.IsActive,
 		DefaultConfidentialityLevel: t.DefaultConfidentialityLevel,
 		DefaultGrants:               DefaultGrantsToProto(t.DefaultGrants),
+		DefaultRetentionPolicyCode:  t.DefaultRetentionPolicyCode,
 	}
 }
 

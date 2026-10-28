@@ -16,6 +16,7 @@
   import RelationshipTable from '@/components/core/RelationshipTable.vue'
   import SubjectIdentityCard from '@/components/core/SubjectIdentityCard.vue'
   import SubjectRolesPanel from '@/components/core/SubjectRolesPanel.vue'
+  import CaseRetentionPanel from '@/components/retention/CaseRetentionPanel.vue'
   import CaseTasksPanel from '@/components/task/CaseTasksPanel.vue'
   import CaseTimelinePanel from '@/components/timeline/CaseTimelinePanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -417,6 +418,11 @@
               <v-card v-if="canManage" class="mb-4">
                 <v-card-title class="text-subtitle-1">{{ t('export.title') }}</v-card-title>
                 <v-card-text><CaseExportPanel :case-id="id" /></v-card-text>
+              </v-card>
+
+              <v-card class="mb-4">
+                <v-card-title class="text-subtitle-1">{{ t('retention.title') }}</v-card-title>
+                <v-card-text><CaseRetentionPanel :case-id="id" :closed="isClosed" /></v-card-text>
               </v-card>
             </v-col>
 

@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/retention"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
 )
@@ -221,10 +222,29 @@ func (r *PostgresRepository) Transition(ctx context.Context, id uuid.UUID, in Tr
 	if _, err := timeline.RecordSystemEntryTx(ctx, tx, statusChangeEntry(id, current.Status, c.Status, in)); err != nil {
 		return nil, nil, fmt.Errorf("record timeline entry: %w", err)
 	}
+	if err := followRetentionTx(ctx, tx, id, current.Status, c.Status, in); err != nil {
+		return nil, nil, err
+	}
 	if err := tx.Commit(ctx); err != nil {
 		return nil, nil, fmt.Errorf("commit transition case: %w", err)
 	}
 	return c, ev, r.hydrate(ctx, c)
+}
+
+// followRetentionTx starts the retention of a case being closed and ends the
+// one of a case being reopened (GLD-032), in the transition transaction.
+func followRetentionTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, from, to Status, in TransitionInput) error {
+	switch {
+	case to == StatusClosed:
+		if _, err := retention.StartCaseRetentionTx(ctx, tx, id, in.OperatorID, in.Reason); err != nil {
+			return err
+		}
+	case from == StatusClosed:
+		if _, err := retention.EndCaseRetentionTx(ctx, tx, id, in.OperatorID, in.Reason); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 // ensureClosableTx refuses to close a case that still has draft timeline

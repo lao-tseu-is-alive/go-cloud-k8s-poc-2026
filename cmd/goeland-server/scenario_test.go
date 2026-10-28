@@ -12,6 +12,7 @@ import (
 	"mime/multipart"
 	"net/http"
 	"net/http/httptest"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -43,6 +44,8 @@ type e2e struct {
 	writer *httptest.Server
 	// adminApp is the application behind admin; tests drive its export worker.
 	adminApp *application
+	// operators are the dev user ids of the two servers.
+	operators []string
 }
 
 // newE2E starts two servers on the test database: one whose dev user is an
@@ -75,6 +78,7 @@ func newE2E(t *testing.T) *e2e {
 		writer: start(writerToken, base+1, "Writer E2E", false),
 	}
 	e.adminApp = adminApp
+	e.operators = []string{strconv.FormatInt(base, 10), strconv.FormatInt(base+1, 10)}
 	return e
 }
 
@@ -213,12 +217,14 @@ func TestScenarioV2(t *testing.T) {
 }
 
 // outboxCoverage checks the v2 §54 criterion "mutation + audit + outbox"
-// (GLD-028): every audit event the scenario wrote has its outbox event.
+// (GLD-028): every audit event the scenario's operators wrote has its outbox
+// event. Other test packages share the database and may purge their own
+// events meanwhile, so only this run's operators are counted.
 func (s *scenario) outboxCoverage(since time.Time) {
 	var audits, missing int
 	err := s.adminApp.pool.QueryRow(context.Background(), `
 SELECT count(*), count(*) FILTER (WHERE NOT EXISTS (SELECT 1 FROM outbox_event o WHERE o.audit_event_id = a.id))
-FROM audit_event a WHERE a.occurred_at >= $1`, since).Scan(&audits, &missing)
+FROM audit_event a WHERE a.occurred_at >= $1 AND a.actor_user_id = ANY($2)`, since, s.operators).Scan(&audits, &missing)
 	if err != nil || audits == 0 || missing != 0 {
 		s.t.Fatalf("every audit event has its outbox event: %d audits, %d without (%v)", audits, missing, err)
 	}

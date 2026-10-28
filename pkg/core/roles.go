@@ -16,6 +16,10 @@ import (
 // RoleAdmin is the application role behind the goeland:admin scope.
 const RoleAdmin = "ADMIN"
 
+// RoleRecordsManager is the application role behind the goeland:records scope:
+// the archivist following the retention of cases (GLD-032).
+const RoleRecordsManager = "RECORDS_MANAGER"
+
 // Operators recorded when the system, not a person, grants a role.
 const (
 	// OperatorBootstrap grants ADMIN to the users named by GOELAND_BOOTSTRAP_ADMINS.

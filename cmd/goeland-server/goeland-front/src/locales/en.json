@@ -402,6 +402,7 @@
     "actors": "Actors",
     "createActor": "New actor",
     "admin": "Administration",
+    "retention": "Retention",
     "things": "Things",
     "createThing": "New thing"
   },
@@ -492,6 +493,7 @@
     },
     "reference": {
       "task_type": "Task types",
+      "retention_policy": "Retention policies",
       "org_unit_type": "Unit types",
       "case_type": "Case types",
       "relationship_type": "Relationship types",
@@ -634,6 +636,10 @@
     "reference": {
       "confidentialLevel": "{level} — confidential",
       "defaultConfidentialityLevel": "Default confidentiality",
+      "defaultRetentionPolicyCode": "Retention policy",
+      "durationYears": "Duration (years)",
+      "finalDisposition": "Final disposition",
+      "legalBasis": "Legal basis",
       "code": "Code",
       "label": "Label",
       "description": "Description",
@@ -785,6 +791,46 @@
     "confidential": "Confidential",
     "active": "Active",
     "inactive": "Inactive"
+  },
+  "retention": {
+    "title": "Retention",
+    "hint": "When closed, the case gets its type's retention policy: it is kept until the deadline, then transferred, destroyed or reviewed. A hold blocks any destruction.",
+    "running": "Kept until {until}",
+    "since": "since its closing on {start}, {years} year(s) under \"{policy}\"",
+    "due": "Due",
+    "notClosed": "Open case: the policy \"{policy}\" will apply when it is closed.",
+    "noPolicy": "No retention policy for this case type.",
+    "closedWithout": "Closed without a retention policy.",
+    "onHold": "On hold",
+    "holdSince": "Hold placed on {at}: {reason}",
+    "placeHold": "Place a hold",
+    "releaseHold": "Release the hold",
+    "holdReason": "Reason for the hold",
+    "releaseReason": "Reason for the release",
+    "holdPlaced": "Hold placed.",
+    "holdReleased": "Hold released.",
+    "history": "History",
+    "ended": "ended on {at}: {reason}",
+    "released": "released on {at}: {reason}",
+    "page": {
+      "title": "Retention deadlines",
+      "hint": "Cases whose retention ends on or before the chosen day, oldest deadline first. The final disposition (transfer, destruction) will come with the bordereaux.",
+      "forbidden": "This page is for records managers (Records manager role) and administrators.",
+      "dueOn": "Due on",
+      "disposition": "Final disposition",
+      "includeHeld": "Include cases on hold",
+      "case": "Case",
+      "type": "Type",
+      "until": "Deadline",
+      "hidden": "(case not readable)",
+      "empty": "No deadline on this day.",
+      "apply": "Apply a type's policy to its already closed cases",
+      "applyHint": "For a type that just got a policy, or imported cases: the closed cases without retention receive it (1000 per call).",
+      "applyType": "Case type",
+      "applyReason": "Reason",
+      "applySubmit": "Apply",
+      "applied": "{applied} case(s) handled, {remaining} remaining."
+    }
   },
   "export": {
     "title": "Case export",
@@ -975,6 +1021,12 @@
       "ROLE_END_TARGET": "the target",
       "ROLE_END_SOURCE": "the source"
     },
+    "FinalDisposition": {
+      "FINAL_DISPOSITION_UNSPECIFIED": "—",
+      "FINAL_DISPOSITION_ARCHIVE": "Transfer to the Archives",
+      "FINAL_DISPOSITION_DESTROY": "Destruction",
+      "FINAL_DISPOSITION_REVIEW": "Review by the records manager"
+    },
     "CaseExportStatus": {
       "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
       "CASE_EXPORT_STATUS_QUEUED": "Queued",
@@ -1128,6 +1180,7 @@
     "required": "This field is required.",
     "minLength": "This field must contain at least {min} characters.",
     "maxLength": "This field must not exceed {max} characters.",
+    "range": "Enter a whole number between {min} and {max}.",
     "uuid": "Invalid identifier.",
     "sha256": "The SHA-256 fingerprint must contain 64 hexadecimal characters.",
     "pattern": "Invalid field format.",
@@ -1227,6 +1280,7 @@
       "inactiveHint": "An inactive entry stays valid for existing data but is no longer offered. Entries are never deleted.",
       "hint": {
         "task_type": "Task types offered when creating a task.",
+        "retention_policy": "Retention schedule: duration after closing and final disposition. A change applies to cases closed afterwards; the shipped policies are examples until the Archives give the schedule.",
         "org_unit_type": "Organizational unit types; new types are ordered after the seven official ones.",
         "case_type": "Case types offered when opening a case; the reference namespace drives numbering (e.g. OPC).",
         "relationship_type": "Link types between subjects; source and target kinds are fixed at creation.",

@@ -117,7 +117,7 @@ whenever a task starts, completes, changes scope or order.
   entry (`timeline.RecordSystemEntryTx` with a Type), a fully answered step opens the next one,
   the last answer completes the circulation with a SYSTEM summary. `casefile` calls
   `circulation.EnsureNoOpenCirculationsTx` before closing. Import order: casefile → circulation →
-  task → timeline → core (never the reverse).
+  task → timeline → core (never the reverse); likewise casefile → retention → core.
 - **access** (`pkg/access`) — grants and security groups → `AccessService` (GLD-048). A grant gives
   READ < CONTRIBUTE < MANAGE < FULL_CONTROL on one subject to a user, a GROUP subject or an org
   unit (covering its sub-units); changes keep history, are audited on the subject, and the last
@@ -133,6 +133,18 @@ whenever a task starts, completes, changes scope or order.
   the requester downloads (`GET /api/case-exports/{id}/content`, `cmd/goeland-server/export.go`)
   while it holds MANAGE, until `GOELAND_EXPORT_TTL_HOURS` (default 24) expires the bytes. It
   imports the domains; no domain imports it.
+- **retention** (`pkg/retention`) — retention of closed cases (GLD-032 step A, v2 §35-36) →
+  `RetentionService`: the `retention_policy` catalogue (duration, final disposition ARCHIVE /
+  DESTROY / REVIEW, legal basis; `goeland:admin`, logged in `reference_change`), the case type's
+  `default_retention_policy_code`, `subject_retention` (a snapshot of the policy taken at closing:
+  `casefile` calls `retention.StartCaseRetentionTx` when closing and `EndCaseRetentionTx` when
+  reopening, in its transition transaction; days in Europe/Zurich), `retention_hold` (legal hold,
+  one active per case) and the due list. Holds and the due list need `goeland:records` (role
+  RECORDS_MANAGER, given by `core.RecordingVerifier` like ADMIN → `goeland:admin`); reading a
+  case's retention needs READ or that scope. Changes are audited on the CASE subject
+  (`RETENTION_STARTED`, `RETENTION_ENDED`, `RETENTION_HOLD_PLACED` / `_RELEASED`). The case is the
+  unit, its documents follow it; nothing is disposed of yet (step B: bordereaux, ARCHIVED /
+  DISPOSED). `record_metadata.retention_until` / `sort_final` are V1 fields, no longer written.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete, addresses), the Case
@@ -174,7 +186,7 @@ conversation. Rules and runbook: `docs/IMPORT_MAPPING.md`; rebuild with `scripts
 ## Key paths
 
 ```text
-proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto, access.proto, export.proto  (API contract, source of truth)
+proto/goeland/v1/            core.proto, document.proto, actor.proto, case.proto, thing.proto, timeline.proto, orgunit.proto, task.proto, circulation.proto, access.proto, export.proto, retention.proto  (API contract, source of truth)
 gen/goeland/v1/              generated Go + ConnectRPC          (never hand-edit)
 api/openapi/                 generated OpenAPI (goeland.swagger.yaml, from google.api.http; never hand-edit)
 pkg/version/                 build/version metadata
@@ -182,7 +194,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0034 (dbmate format)
+  │   └── db/migrations/     0001..0035 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -200,6 +212,8 @@ pkg/access/                  grants and security groups (AccessService; the effe
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/caseexport/              case export jobs: ZIP archive builder, worker, expiry (CaseExportService)
   └── module/                bundleable module (NO migrations; core owns schema) + worker
+pkg/retention/               retention of closed cases: policies, snapshot at closing, holds, due list (RetentionService)
+  └── module/                bundleable module (NO migrations; core owns schema)
 pkg/circulation/             case circulations (recipients by step, answers in the timeline)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/task/                    case tasks (assignment history, lifecycle, "my tasks")
@@ -401,7 +415,9 @@ holder of the ADMIN role (`app_role` / `app_user_role`, cached 30 s, forgotten a
 made through the core service). `GOELAND_BOOTSTRAP_ADMINS` lists user ids granted ADMIN on their
 next request (`system:bootstrap`); the last administrator cannot be revoked. Grants and
 revocations need a reason and are audited on the user's USER subject (`USER_ROLE_GRANTED` /
-`USER_ROLE_REVOKED`); a revocation keeps the row as history.
+`USER_ROLE_REVOKED`); a revocation keeps the row as history. The same mechanism gives
+`goeland:records` to a holder of RECORDS_MANAGER (GLD-032, `core.roleScopes`); a token claiming it
+is ignored. `goeland:admin` satisfies every scope check, so administrators pass records checks too.
 
 **Reference data administration (GLD-040):** each domain administers its catalogue with
 `Create*` / `Update*` RPCs that require `goeland:admin` (case types, relationship types,
@@ -486,6 +502,9 @@ AccessService: `/api/subjects/{subject_id}/access`, `/api/subjects/{subject_id}/
 OrgUnitService: `/api/org-units` (flat tree), `/api/org-units/search`, `/api/org-units/{id}`,
 `/api/org-units/{id}/dissolve`, `/api/org-unit-types`;
 CaseExportService: `/api/cases/{case_id}/exports` (request, list), `/api/case-exports/{id}`;
+RetentionService: `/api/retention-policies` (+ `/{code}`), `/api/cases/{case_id}/retention`,
+`/api/cases/{case_id}/retention-hold` (+ `/release`), `/api/retentions/due`,
+`/api/case-types/{case_type_code}/apply-retention`;
 TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` with
 `/validate`, `/lock`, `/withdraw` and `/documents[/{document_id}]`).
 

@@ -28,6 +28,7 @@ func TestAPISurface(t *testing.T) {
 	s.orgUnits()
 	s.tasksAndCirculations()
 	s.access()
+	s.retention()
 }
 
 // gRPC status codes asserted by the surface test.
@@ -56,11 +57,14 @@ func missing(prefix string) string {
 // catalogues creates, renames and deactivates one entry of every reference
 // catalogue, and lists them.
 func (s *surface) catalogues() {
-	for _, path := range []string{"/api/organization-categories", "/api/case-types", "/api/document-types", "/api/org-unit-types", "/api/task-types", "/api/thing-types"} {
+	for _, path := range []string{"/api/organization-categories", "/api/case-types", "/api/document-types", "/api/org-unit-types", "/api/task-types", "/api/thing-types", "/api/retention-policies"} {
 		code := s.code("E2E")
 		body := map[string]any{"code": code, "label": "Catalogue E2E", "reason": "test"}
-		if path == "/api/case-types" {
+		switch path {
+		case "/api/case-types":
 			body["businessRefNamespace"] = "E2E" + strings.ToUpper(s.token[:4])
+		case "/api/retention-policies":
+			body["durationYears"], body["finalDisposition"] = 3, "FINAL_DISPOSITION_REVIEW"
 		}
 		s.ok("POST", path, body)
 		s.fails(codeAlreadyExists, "POST", path, body)
@@ -512,4 +516,35 @@ func (s *surface) groups(writer string) {
 	s.ok("POST", "/api/groups/"+id+"/members/"+writer+"/remove", map[string]any{"reason": "départ"})
 	s.ok("POST", "/api/groups/"+id+"/archive", map[string]any{"reason": "commission dissoute"})
 	s.fails(codeNotFound, "GET", missing("/api/groups"), nil)
+}
+
+// retention covers the retention of a closed case (GLD-032): the case type's
+// policy, the retention computed at closing, the legal hold, the due list and
+// the application to already closed cases.
+func (s *surface) retention() {
+	code := s.code("E2ERET")
+	s.ok("POST", "/api/case-types", map[string]any{"code": code, "label": "Conservation E2E", "reason": "test"})
+	id := str(s.ok("POST", "/api/cases", map[string]any{"caseTypeCode": code, "title": "Conservation " + s.token}), "case", "subjectRef", "id")
+	s.ok("POST", "/api/cases/"+id+"/transition", map[string]any{"targetStatus": "CASE_STATUS_CLOSED", "reason": "terminé"})
+	s.fails(codeFailedPrecondition, "POST", "/api/case-types/"+code+"/apply-retention", map[string]any{"reason": "calendrier"})
+	s.fails(codeInvalidArgument, "PATCH", "/api/case-types/"+code, map[string]any{"defaultRetentionPolicyCode": "NO_SUCH_POLICY", "reason": "x"})
+	s.ok("PATCH", "/api/case-types/"+code, map[string]any{"defaultRetentionPolicyCode": "EXAMPLE_DESTROY_5", "reason": "calendrier"})
+	if applied := s.ok("POST", "/api/case-types/"+code+"/apply-retention", map[string]any{"reason": "calendrier"}); applied["applied"] != float64(1) {
+		s.t.Fatalf("apply retention: %v", applied)
+	}
+	got := s.ok("GET", "/api/cases/"+id+"/retention", nil)
+	if str(got, "current", "finalDisposition") != "FINAL_DISPOSITION_DESTROY" || str(got, "defaultPolicy", "code") != "EXAMPLE_DESTROY_5" {
+		s.t.Fatalf("case retention: %v", got)
+	}
+	s.fails(codeNotFound, "GET", "/api/cases/"+uuid.NewString()+"/retention", nil)
+	s.ok("POST", "/api/cases/"+id+"/retention-hold", map[string]any{"reason": "litige"})
+	s.fails(codeAlreadyExists, "POST", "/api/cases/"+id+"/retention-hold", map[string]any{"reason": "encore"})
+	s.ok("POST", "/api/cases/"+id+"/retention-hold/release", map[string]any{"reason": "litige clos"})
+	s.fails(codeFailedPrecondition, "POST", "/api/cases/"+id+"/retention-hold/release", map[string]any{"reason": "encore"})
+	s.fails(codeNotFound, "POST", "/api/cases/"+uuid.NewString()+"/retention-hold", map[string]any{"reason": "x"})
+	due := s.ok("GET", "/api/retentions/due?dueOn=2099-12-31&finalDisposition=FINAL_DISPOSITION_DESTROY&pageSize=200", nil)
+	if len(list(due, "retentions")) == 0 {
+		s.t.Fatalf("due list: %v", due)
+	}
+	s.fails(codeInvalidArgument, "GET", "/api/retentions/due?dueOn=2026-02-30", nil)
 }

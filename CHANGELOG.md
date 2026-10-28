@@ -8,6 +8,23 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- Retention of closed cases (GLD-032, step A, migration `0035`): a `RetentionService` with the
+  retention schedule (`retention_policy`, administered like the other catalogues; three example
+  policies until the City archives give the real one), a default policy per case type, the
+  retention computed when a case is closed (a snapshot: start on the closing day in Europe/Zurich,
+  end the policy's duration later, its final disposition) and ended when it is reopened, legal
+  holds that keep a case off the due list, the due list and the application of a type's policy to
+  its already closed cases (1000 per call, each audited). A new application role, RECORDS_MANAGER
+  (Archiviste), gives the `goeland:records` scope; the SPA shows the retention on the case page
+  (Gouvernance) and a Conservation page with the deadlines. Nothing is disposed of yet.
+
+### Changed
+
+- The end-to-end scenario counts only its own operators' audit events when it checks their outbox
+  events: another test package sharing the database purges its own events meanwhile.
+
 ## [0.19.0] - 2026-10-28
 
 Observability and front-end quality: Prometheus metrics on a separate listener and OpenTelemetry

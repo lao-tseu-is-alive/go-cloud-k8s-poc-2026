@@ -73,6 +73,9 @@ message CaseType {
   // the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
   // changes of the template leave existing cases unchanged.
   repeated CaseTypeDefaultGrant default_grants = 8;
+  // default_retention_policy_code is the retention policy given to its cases
+  // when they are closed (GLD-032); empty when none.
+  string default_retention_policy_code = 9;
 }
 
 // CaseTypeDefaultGrant is one line of a case type's default grants.
@@ -359,6 +362,9 @@ message CreateCaseTypeRequest {
     gte: 0
     lte: 5
   }];
+  // default_retention_policy_code is an active retention policy given to its
+  // cases when they are closed; empty for none.
+  string default_retention_policy_code = 7 [(buf.validate.field).string.max_len = 100];
 }
 
 // CreateCaseTypeResponse returns the new case type and its log entry.
@@ -399,6 +405,9 @@ message UpdateCaseTypeRequest {
     gte: 0
     lte: 5
   }];
+  // default_retention_policy_code replaces the retention policy given to
+  // cases closed afterwards when present (an active policy; empty for none).
+  optional string default_retention_policy_code = 8 [(buf.validate.field).string.max_len = 100];
 }
 
 // SetCaseTypeDefaultGrantsRequest replaces the default grants of a case type.

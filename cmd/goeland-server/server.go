@@ -34,6 +34,7 @@ import (
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	orgunitmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit/module"
+	retentionmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/retention/module"
 	taskmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task/module"
 	thingmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing/module"
 	timelinemodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline/module"
@@ -318,6 +319,10 @@ func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDep
 	if err != nil {
 		return nil, nil, fmt.Errorf("task module: %w", err)
 	}
+	retentionMod, err := retentionmodule.New(ctx, retentionmodule.Config{RequestTimeout: timeout}, retentionmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
+	if err != nil {
+		return nil, nil, fmt.Errorf("retention module: %w", err)
+	}
 	circulationMod, err := circulationmodule.New(ctx, circulationmodule.Config{RequestTimeout: timeout}, circulationmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
 	if err != nil {
 		return nil, nil, fmt.Errorf("circulation module: %w", err)
@@ -339,7 +344,7 @@ func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDep
 	if err != nil {
 		return nil, nil, fmt.Errorf("case export module: %w", err)
 	}
-	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod, accessMod, exportMod}, exportMod, nil
+	return []bundledModule{actorMod, caseMod, thingMod, orgUnitMod, timelineMod, taskMod, circulationMod, accessMod, retentionMod, exportMod}, exportMod, nil
 }
 
 // buildRecordingVerifier wraps the auth-mode verifier so every verified caller

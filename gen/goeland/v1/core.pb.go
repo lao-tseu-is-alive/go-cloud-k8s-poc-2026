@@ -4024,7 +4024,7 @@ type ReferenceChange struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the server-assigned entry UUID.
 	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
-	// catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type or task_type.
+	// catalogue is case_type, relationship_type, organization_category, document_type, thing_type, org_unit_type, task_type or retention_policy.
 	Catalogue string `protobuf:"bytes,2,opt,name=catalogue,proto3" json:"catalogue,omitempty"`
 	// code is the changed entry's code.
 	Code string `protobuf:"bytes,3,opt,name=code,proto3" json:"code,omitempty"`
@@ -5963,10 +5963,10 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\fbefore_state\x18\a \x01(\v2\x17.google.protobuf.StructB\x04\xe2A\x01\x03R\vbeforeState\x12>\n" +
 	"\vafter_state\x18\b \x01(\v2\x17.google.protobuf.StructB\x04\xe2A\x01\x03R\n" +
 	"afterState\x12\x1c\n" +
-	"\x06reason\x18\t \x01(\tB\x04\xe2A\x01\x03R\x06reason\"\xb7\x02\n" +
-	"\x1bListReferenceChangesRequest\x12\x8f\x01\n" +
-	"\tcatalogue\x18\x01 \x01(\tBq\xbaHnrlR\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
-	"thing_typeR\rorg_unit_typeR\ttask_typeR\tcatalogue\x12'\n" +
+	"\x06reason\x18\t \x01(\tB\x04\xe2A\x01\x03R\x06reason\"\xcb\x02\n" +
+	"\x1bListReferenceChangesRequest\x12\xa3\x01\n" +
+	"\tcatalogue\x18\x01 \x01(\tB\x84\x01\xbaH\x80\x01r~R\x00R\tcase_typeR\x11relationship_typeR\x15organization_categoryR\rdocument_typeR\n" +
+	"thing_typeR\rorg_unit_typeR\ttask_typeR\x10retention_policyR\tcatalogue\x12'\n" +
 	"\tpage_size\x18\x02 \x01(\x05B\n" +
 	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12\x1d\n" +
 	"\n" +

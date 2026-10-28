@@ -18,6 +18,13 @@ import (
 // satisfying every other scope check.
 const ScopeAdmin = "goeland:admin"
 
+// ScopeRecords is the records manager scope (retention, GLD-032).
+const ScopeRecords = "goeland:records"
+
+// roleScopes are the scopes that only a stored application role gives: a
+// token claiming them is ignored.
+var roleScopes = map[string]string{RoleAdmin: ScopeAdmin, RoleRecordsManager: ScopeRecords}
+
 // MaxBatchUsers bounds BatchGetUsers.
 const MaxBatchUsers = 200
 
@@ -158,11 +165,13 @@ func (v *RecordingVerifier) VerifyBearerToken(ctx context.Context, token string)
 	if err != nil || user == nil || user.AppUserID <= 0 {
 		return user, err
 	}
-	user.Scopes = slices.DeleteFunc(slices.Clone(user.Scopes), func(s string) bool { return s == ScopeAdmin })
+	user.Scopes = slices.DeleteFunc(slices.Clone(user.Scopes), func(s string) bool { return s == ScopeAdmin || s == ScopeRecords })
 	profile := ProfileFromUser(user)
 	v.record(ctx, profile)
-	if slices.Contains(v.effectiveRoles(ctx, profile.UserID), RoleAdmin) {
-		user.Scopes = append(user.Scopes, ScopeAdmin)
+	for _, role := range v.effectiveRoles(ctx, profile.UserID) {
+		if scope, ok := roleScopes[role]; ok {
+			user.Scopes = append(user.Scopes, scope)
+		}
 	}
 	return user, nil
 }

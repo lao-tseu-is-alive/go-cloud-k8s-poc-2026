@@ -226,7 +226,8 @@ func (s *ConnectServer) CreateCaseType(ctx context.Context, req *connect.Request
 	m := req.Msg
 	entry, change, err := s.service.CreateCaseType(ctx, CaseTypeInput{
 		Code: m.Code, Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace,
-		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, OperatorID: core.OperatorID(user), Reason: m.Reason,
+		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, DefaultRetentionPolicyCode: m.DefaultRetentionPolicyCode,
+		OperatorID: core.OperatorID(user), Reason: m.Reason,
 	})
 	if err != nil {
 		return nil, s.mapError(err)
@@ -243,7 +244,8 @@ func (s *ConnectServer) UpdateCaseType(ctx context.Context, req *connect.Request
 	m := req.Msg
 	entry, change, err := s.service.UpdateCaseType(ctx, m.Code, CaseTypeUpdate{
 		Label: m.Label, Description: m.Description, BusinessRefNamespace: m.BusinessRefNamespace, IsActive: m.IsActive,
-		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, OperatorID: core.OperatorID(user), Reason: m.Reason,
+		DefaultConfidentialityLevel: m.DefaultConfidentialityLevel, DefaultRetentionPolicyCode: m.DefaultRetentionPolicyCode,
+		OperatorID: core.OperatorID(user), Reason: m.Reason,
 	})
 	if err != nil {
 		return nil, s.mapError(err)

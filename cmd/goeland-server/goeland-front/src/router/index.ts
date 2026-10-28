@@ -53,6 +53,11 @@ const router = createRouter({
       component: () => import('@/pages/tasks/MyTasksPage.vue'),
     },
     {
+      path: '/retention',
+      name: 'retention',
+      component: () => import('@/pages/retention/RetentionDuePage.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/pages/admin/AdminPage.vue'),

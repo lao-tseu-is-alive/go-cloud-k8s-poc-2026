@@ -9,11 +9,12 @@ import { listCaseTypes } from '@/api/caseClient'
 import { listRelationshipTypes } from '@/api/coreClient'
 import { listDocumentTypes } from '@/api/documentClient'
 import { listOrgUnitTypes } from '@/api/orgUnitClient'
+import { FINAL_DISPOSITIONS, listRetentionPolicies } from '@/api/retentionClient'
 import { listTaskTypes } from '@/api/taskClient'
 import { listThingTypes } from '@/api/thingClient'
 
 /** confidentiality is a level 0-5 (from 2 a grant is needed to read). */
-export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean' | 'confidentiality' | 'choice'
+export type FieldKind = 'text' | 'textarea' | 'subjectKind' | 'boolean' | 'confidentiality' | 'choice' | 'number'
 
 export interface CatalogueField {
   /** Proto3-JSON field name, also the i18n key under fields.reference. */
@@ -29,8 +30,20 @@ export interface CatalogueField {
   choices?: string[]
   /** The enum whose labels name the choices (useI18nEnum); the values themselves otherwise. */
   choiceEnum?: string
+  /** Loads the choices from the server (another catalogue) instead of `choices`. */
+  loadChoices?: () => Promise<ChoiceItem[]>
+  /** The choice may be emptied (sent as ''), e.g. a case type without retention policy. */
+  clearable?: boolean
+  /** The bounds of a 'number' field. */
+  min?: number
   /** The value of a new entry. */
   initial?: unknown
+}
+
+/** One choice of a 'choice' field. */
+export interface ChoiceItem {
+  value: string
+  title: string
 }
 
 /** Any catalogue entry, as proto3 JSON. */
@@ -56,6 +69,8 @@ export const CATALOGUES: CatalogueConfig[] = [
       LABEL,
       { key: 'businessRefNamespace', kind: 'text', max: 32, column: true },
       { key: 'defaultConfidentialityLevel', kind: 'confidentiality', column: true },
+      // The retention policy given to its cases when closed (GLD-032).
+      { key: 'defaultRetentionPolicyCode', kind: 'choice', column: true, clearable: true, loadChoices: retentionPolicyChoices },
       DESCRIPTION,
     ],
     list: async () => (await listCaseTypes(false)) as unknown as CatalogueEntry[],
@@ -104,7 +119,24 @@ export const CATALOGUES: CatalogueConfig[] = [
     fields: [LABEL, DESCRIPTION],
     list: async () => (await listTaskTypes(false)) as unknown as CatalogueEntry[],
   },
+  {
+    // The retention schedule (GLD-032); a change applies to cases closed afterwards.
+    catalogue: 'retention_policy',
+    fields: [
+      LABEL,
+      { key: 'durationYears', kind: 'number', required: true, min: 0, max: 200, column: true, initial: 10 },
+      { key: 'finalDisposition', kind: 'choice', choices: [...FINAL_DISPOSITIONS], choiceEnum: 'FinalDisposition', column: true, initial: 'FINAL_DISPOSITION_ARCHIVE' },
+      { key: 'legalBasis', kind: 'textarea', max: 2000 },
+      DESCRIPTION,
+    ],
+    list: async () => (await listRetentionPolicies(false)) as unknown as CatalogueEntry[],
+  },
 ]
+
+/** The active retention policies, as choices. */
+async function retentionPolicyChoices (): Promise<ChoiceItem[]> {
+  return (await listRetentionPolicies(true)).map(p => ({ value: p.code, title: p.label }))
+}
 
 /** Confidentiality levels; from CONFIDENTIAL_LEVEL a subject is read only with a grant. */
 export const CONFIDENTIALITY_LEVELS = [0, 1, 2, 3, 4, 5]

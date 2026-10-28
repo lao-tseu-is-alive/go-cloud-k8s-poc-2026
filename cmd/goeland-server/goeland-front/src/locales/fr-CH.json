@@ -402,6 +402,7 @@
     "actors": "Acteurs",
     "createActor": "Nouvel acteur",
     "admin": "Administration",
+    "retention": "Conservation",
     "things": "Objets",
     "createThing": "Nouvel objet"
   },
@@ -492,6 +493,7 @@
     },
     "reference": {
       "task_type": "Types de tâche",
+      "retention_policy": "Politiques de conservation",
       "org_unit_type": "Types d'unité",
       "case_type": "Types d'affaire",
       "relationship_type": "Types de relation",
@@ -634,6 +636,10 @@
     "reference": {
       "confidentialLevel": "{level} — confidentiel",
       "defaultConfidentialityLevel": "Confidentialité par défaut",
+      "defaultRetentionPolicyCode": "Politique de conservation",
+      "durationYears": "Durée (années)",
+      "finalDisposition": "Sort final",
+      "legalBasis": "Base légale",
       "code": "Code",
       "label": "Libellé",
       "description": "Description",
@@ -785,6 +791,46 @@
     "confidential": "Confidentiel",
     "active": "Actif",
     "inactive": "Inactif"
+  },
+  "retention": {
+    "title": "Conservation",
+    "hint": "À la clôture, l'affaire reçoit la politique de conservation de son type : elle est conservée jusqu'à l'échéance, puis versée, éliminée ou triée. Un gel bloque toute élimination.",
+    "running": "Conservée jusqu'au {until}",
+    "since": "depuis la clôture du {start}, {years} an(s) selon « {policy} »",
+    "due": "Échue",
+    "notClosed": "Affaire ouverte : la politique « {policy} » s'appliquera à la clôture.",
+    "noPolicy": "Aucune politique de conservation pour ce type d'affaire.",
+    "closedWithout": "Clôturée sans politique de conservation.",
+    "onHold": "Gelée",
+    "holdSince": "Gel posé le {at} : {reason}",
+    "placeHold": "Geler",
+    "releaseHold": "Lever le gel",
+    "holdReason": "Motif du gel",
+    "releaseReason": "Motif de la levée",
+    "holdPlaced": "Gel posé.",
+    "holdReleased": "Gel levé.",
+    "history": "Historique",
+    "ended": "terminée le {at} : {reason}",
+    "released": "levé le {at} : {reason}",
+    "page": {
+      "title": "Échéances de conservation",
+      "hint": "Affaires dont la conservation se termine au plus tard le jour choisi, échéance la plus ancienne d'abord. Le sort final (versement, élimination) viendra avec les bordereaux.",
+      "forbidden": "Cette page est réservée aux archivistes (rôle Archiviste) et aux administrateurs.",
+      "dueOn": "Échues au",
+      "disposition": "Sort final",
+      "includeHeld": "Inclure les affaires gelées",
+      "case": "Affaire",
+      "type": "Type",
+      "until": "Échéance",
+      "hidden": "(affaire non lisible)",
+      "empty": "Aucune échéance à cette date.",
+      "apply": "Appliquer la politique d'un type aux affaires déjà clôturées",
+      "applyHint": "Pour un type qui vient de recevoir une politique, ou des affaires importées : les affaires clôturées sans conservation la reçoivent (1000 par appel).",
+      "applyType": "Type d'affaire",
+      "applyReason": "Motif",
+      "applySubmit": "Appliquer",
+      "applied": "{applied} affaire(s) traitée(s), {remaining} restante(s)."
+    }
   },
   "export": {
     "title": "Export de l'affaire",
@@ -975,6 +1021,12 @@
       "ROLE_END_TARGET": "la cible",
       "ROLE_END_SOURCE": "la source"
     },
+    "FinalDisposition": {
+      "FINAL_DISPOSITION_UNSPECIFIED": "—",
+      "FINAL_DISPOSITION_ARCHIVE": "Versement aux Archives",
+      "FINAL_DISPOSITION_DESTROY": "Élimination",
+      "FINAL_DISPOSITION_REVIEW": "Tri par l'archiviste"
+    },
     "CaseExportStatus": {
       "CASE_EXPORT_STATUS_UNSPECIFIED": "—",
       "CASE_EXPORT_STATUS_QUEUED": "En attente",
@@ -1128,6 +1180,7 @@
     "required": "Ce champ est obligatoire.",
     "minLength": "Ce champ doit contenir au moins {min} caractères.",
     "maxLength": "Ce champ ne peut pas dépasser {max} caractères.",
+    "range": "Entrez un nombre entier entre {min} et {max}.",
     "uuid": "Identifiant invalide.",
     "sha256": "L'empreinte SHA-256 doit contenir 64 caractères hexadécimaux.",
     "pattern": "Le format de ce champ est invalide.",
@@ -1227,6 +1280,7 @@
       "inactiveHint": "Une entrée inactive reste valable pour les données existantes mais n'est plus proposée. Les entrées ne sont jamais supprimées.",
       "hint": {
         "task_type": "Types de tâche proposés à la création d'une tâche.",
+        "retention_policy": "Calendrier de conservation : durée après la clôture et sort final. Une modification vaut pour les affaires clôturées ensuite ; les politiques livrées sont des exemples en attendant le calendrier des Archives.",
         "org_unit_type": "Types d'unité organisationnelle ; les nouveaux types sont classés après les sept types officiels.",
         "case_type": "Types d'affaire proposés à l'ouverture ; l'espace de référence détermine la numérotation (p. ex. OPC).",
         "relationship_type": "Types de liens entre sujets ; les types de source et de cible ne changent plus après création.",

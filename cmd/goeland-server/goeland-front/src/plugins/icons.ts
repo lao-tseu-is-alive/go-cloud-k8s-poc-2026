@@ -24,6 +24,7 @@ import {
   mdiAlertCircleOutline,
   mdiArchiveArrowDownOutline,
   mdiArchiveCheck,
+  mdiArchiveClockOutline,
   mdiArchiveOutline,
   mdiArrowDown,
   mdiArrowLeft,
@@ -75,6 +76,7 @@ import {
   mdiLinkOff,
   mdiLinkPlus,
   mdiLock,
+  mdiLockOpenVariantOutline,
   mdiLockOutline,
   mdiLogin,
   mdiLogout,
@@ -113,6 +115,8 @@ import {
 } from '@mdi/js'
 
 export const ICON_PATHS: Readonly<Record<string, string>> = {
+  'mdi-lock-open-variant-outline': mdiLockOpenVariantOutline,
+  'mdi-archive-clock-outline': mdiArchiveClockOutline,
   'mdi-account': mdiAccount,
   'mdi-account-arrow-up-outline': mdiAccountArrowUpOutline,
   'mdi-account-circle': mdiAccountCircle,

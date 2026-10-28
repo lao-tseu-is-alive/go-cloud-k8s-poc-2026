@@ -162,7 +162,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0034 (dbmate format)
+      └── db/migrations/  0001..0035 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -185,6 +185,8 @@ pkg/access/              grants and security groups (the effective level is comp
   └── module/            bundleable module (schema owned by core)
 pkg/caseexport/          case export: background ZIP archives (manifest + blobs), worker, expiry
   └── module/            bundleable module (schema owned by core) running the export worker
+pkg/retention/           retention of closed cases: policies, snapshot at closing, legal holds, due list
+  └── module/            bundleable module (schema owned by core)
 pkg/legacyimport/        one-shot legacy data import (set-based, deterministic ids, provenance)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations, every domain, rights and read filter)
 cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
@@ -304,6 +306,10 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
 - **Case export** — a MANAGE holder asks for a ZIP of the case (manifest and every document
   version's bytes, only what the requester may read); it is built in the background and
   downloadable by its requester until it expires (GLD-029).
+- **Retention** — a case type names a retention policy (duration after closing, final
+  disposition: transfer to the archives, destruction or review); closing a case computes its
+  retention, reopening ends it. The records manager (Archiviste role) places or releases legal
+  holds and follows the deadlines (Conservation page); the disposition itself comes next (GLD-032).
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
@@ -449,6 +455,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0032_subject_search.sql      per-kind search index of subject_ref for the global search
 0033_creator_indexes.sql     created_by indexes for the creator filter of the lists
 0034_outbox.sql              outbox_event: transactional outbox, one event per audit event (GLD-028)
+0035_retention.sql           retention_policy, subject_retention, retention_hold, RECORDS_MANAGER role (GLD-032)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

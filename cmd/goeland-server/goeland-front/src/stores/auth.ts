@@ -32,6 +32,8 @@ export const useAuthStore = defineStore('auth', () => {
   const displayName = computed(() =>
     me.value?.displayName || user.value?.name || user.value?.email || me.value?.email || '')
   const isAdmin = computed(() => !!me.value?.isAdmin || scopes.value.includes('goeland:admin'))
+  // The records manager (archivist) follows the retention of the cases (GLD-032); administrators too.
+  const isRecordsManager = computed(() => isAdmin.value || scopes.value.includes('goeland:records'))
 
   /**
    * Loads the caller from the server. Returns false only when the server
@@ -163,7 +165,7 @@ export const useAuthStore = defineStore('auth', () => {
 
   return {
     mode, authBaseUrl, token, user, me, scopes, ready, error,
-    isAuthenticated, displayName, isAdmin, loadMe,
+    isAuthenticated, displayName, isAdmin, isRecordsManager, loadMe,
     bootstrap, applyDevToken, mintToken, signIn, signOut, clear,
   }
 })

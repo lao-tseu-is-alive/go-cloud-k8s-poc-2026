@@ -20,6 +20,7 @@ import type * as corePb from './gen/goeland/v1/core_pb'
 import type * as documentPb from './gen/goeland/v1/document_pb'
 import type * as exportPb from './gen/goeland/v1/export_pb'
 import type * as orgunitPb from './gen/goeland/v1/orgunit_pb'
+import type * as retentionPb from './gen/goeland/v1/retention_pb'
 import type * as taskPb from './gen/goeland/v1/task_pb'
 import type * as thingPb from './gen/goeland/v1/thing_pb'
 import type * as timelinePb from './gen/goeland/v1/timeline_pb'
@@ -188,4 +189,15 @@ export type TypesContract = [
   Ok<Conforms<T.SearchThingsParams, thingPb.SearchThingsRequestJson>>,
   Ok<Conforms<T.UserRoleChangeResponse, corePb.GrantUserRoleResponseJson>>,
   Ok<Conforms<T.UserRoleChangeResponse, corePb.RevokeUserRoleResponseJson>>,
+  Ok<SameEnum<T.FinalDisposition, retentionPb.FinalDispositionJson>>,
+  Ok<Conforms<T.RetentionPolicy, retentionPb.RetentionPolicyJson>>,
+  Ok<Conforms<T.ListRetentionPoliciesResponse, retentionPb.ListRetentionPoliciesResponseJson>>,
+  Ok<Conforms<T.SubjectRetention, retentionPb.SubjectRetentionJson>>,
+  Ok<Conforms<T.RetentionHold, retentionPb.RetentionHoldJson>>,
+  Ok<Conforms<T.GetCaseRetentionResponse, retentionPb.GetCaseRetentionResponseJson>>,
+  Ok<Conforms<T.RetentionHoldResponse, retentionPb.PlaceRetentionHoldResponseJson>>,
+  Ok<Conforms<T.RetentionHoldResponse, retentionPb.ReleaseRetentionHoldResponseJson>>,
+  Ok<Conforms<T.DueRetention, retentionPb.DueRetentionJson>>,
+  Ok<Conforms<T.ListDueRetentionsResponse, retentionPb.ListDueRetentionsResponseJson>>,
+  Ok<Conforms<T.ApplyCaseTypeRetentionResponse, retentionPb.ApplyCaseTypeRetentionResponseJson>>,
 ]

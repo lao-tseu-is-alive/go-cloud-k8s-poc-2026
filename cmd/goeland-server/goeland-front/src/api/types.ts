@@ -503,6 +503,8 @@ export interface CaseType {
   defaultConfidentialityLevel?: number
   /** Grants copied once onto every new case of this type (GLD-050). */
   defaultGrants?: CaseTypeDefaultGrant[]
+  /** Retention policy given to its cases when closed (GLD-032); absent when none. */
+  defaultRetentionPolicyCode?: string
 }
 
 /** One line of a case type's default grants; granteeId is empty for the creator's units. */
@@ -651,7 +653,7 @@ export interface BatchGetUsersResponse {
 // --- Reference data administration (GLD-040) ----------------------------------
 
 /** A catalogue administered through the API. */
-export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type' | 'org_unit_type' | 'task_type'
+export type ReferenceCatalogue = 'case_type' | 'relationship_type' | 'organization_category' | 'document_type' | 'thing_type' | 'org_unit_type' | 'task_type' | 'retention_policy'
 
 /** One entry of the append-only reference change log. */
 export interface ReferenceChange {
@@ -1350,4 +1352,98 @@ export interface OutboxStatus {
   maxAttempts?: number
   consumers?: OutboxConsumerStatus[]
   recentFailed?: OutboxEvent[]
+}
+
+// ---------------------------------------------------------------------------
+// Retention of closed cases (RetentionService, GLD-032)
+// ---------------------------------------------------------------------------
+
+/** What happens to a case when its retention expires. */
+export type FinalDisposition
+  = | 'FINAL_DISPOSITION_UNSPECIFIED'
+    | 'FINAL_DISPOSITION_ARCHIVE'
+    | 'FINAL_DISPOSITION_DESTROY'
+    | 'FINAL_DISPOSITION_REVIEW'
+
+/** An entry of the retention schedule. */
+export interface RetentionPolicy {
+  id: string
+  code: string
+  label: string
+  description?: string
+  legalBasis?: string
+  /** Years kept after the closing (0 is absent in JSON). */
+  durationYears?: number
+  finalDisposition?: FinalDisposition
+  isActive?: boolean
+}
+
+export interface ListRetentionPoliciesResponse {
+  retentionPolicies?: RetentionPolicy[]
+}
+
+/** The retention of a closed case: a snapshot of its policy taken at closing. */
+export interface SubjectRetention {
+  id: string
+  subjectId: string
+  policyCode: string
+  policyLabel?: string
+  durationYears?: number
+  finalDisposition?: FinalDisposition
+  /** Closing day, YYYY-MM-DD (Europe/Zurich). */
+  startsOn: string
+  /** Day the retention ends: the case is due from that day. */
+  untilOn: string
+  createdAt?: string
+  createdBy?: string
+  endedAt?: string
+  endedBy?: string
+  endReason?: string
+}
+
+/** A legal hold: no disposal while it is active. */
+export interface RetentionHold {
+  id: string
+  subjectId: string
+  reason: string
+  placedAt?: string
+  placedBy?: string
+  releasedAt?: string
+  releasedBy?: string
+  releaseReason?: string
+}
+
+export interface GetCaseRetentionResponse {
+  current?: SubjectRetention
+  hold?: RetentionHold
+  retentions?: SubjectRetention[]
+  holds?: RetentionHold[]
+  defaultPolicy?: RetentionPolicy
+}
+
+/** Answer of a hold placed or released. */
+export interface RetentionHoldResponse {
+  hold?: RetentionHold
+  auditEvent?: AuditEvent
+}
+
+/** A due retention with its case; caseLabel is empty for a case the caller may not read. */
+export interface DueRetention {
+  retention: SubjectRetention
+  caseLabel?: string
+  businessRef?: string
+  caseTypeCode?: string
+  onHold?: boolean
+}
+
+export interface ListDueRetentionsResponse {
+  retentions?: DueRetention[]
+  nextPageToken?: string
+  totalSize?: number
+}
+
+export interface ApplyCaseTypeRetentionResponse {
+  applied?: number
+  /** Closed cases of the type still without retention: call again while > 0. */
+  remaining?: number
 }

@@ -79,6 +79,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `proto/goeland/v1/document.proto` — Authoritative `DocumentService` contract: GED document lifecycle, integrity, search.
 - `proto/goeland/v1/orgunit.proto` — Authoritative `OrgUnitService` contract: organizational units, tree nodes, dissolution and the unit type catalogue.
 - `proto/goeland/v1/task.proto` — Authoritative `TaskService` contract: case tasks, lifecycle moves, assignment history, "my tasks" and the task type catalogue.
+- `proto/goeland/v1/retention.proto` — Authoritative `RetentionService` contract: retention policies, the retention and legal hold of a closed case, the due list and the application to closed cases (GLD-032).
 - `proto/goeland/v1/timeline.proto` — Authoritative `TimelineService` contract: case timeline entries, lifecycle, corrections and cited documents.
 - `proto/goeland/v1/thing.proto` — Authoritative `ThingService` contract: things, types, parcel and building details, LV95 GeoJSON geometry, search by extent.
 - `api/openapi/goeland.swagger.yaml` — OpenAPI generated from the `google.api.http` annotations; never edit by hand.
@@ -91,6 +92,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/document.pb.go` — Go messages generated from `document.proto`; never edit by hand.
 - `gen/goeland/v1/orgunit.pb.go` — Go messages generated from `orgunit.proto`; never edit by hand.
 - `gen/goeland/v1/task.pb.go` — Go messages generated from `task.proto`; never edit by hand.
+- `gen/goeland/v1/retention.pb.go` — Go messages generated from `retention.proto`; never edit by hand.
 - `gen/goeland/v1/timeline.pb.go` — Go messages generated from `timeline.proto`; never edit by hand.
 - `gen/goeland/v1/thing.pb.go` — Go messages generated from `thing.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/actor.connect.go` — ConnectRPC stubs generated for `ActorService`; never edit by hand.
@@ -102,6 +104,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `gen/goeland/v1/goelandv1connect/document.connect.go` — ConnectRPC stubs generated for `DocumentService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/orgunit.connect.go` — ConnectRPC stubs generated for `OrgUnitService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/task.connect.go` — ConnectRPC stubs generated for `TaskService`; never edit by hand.
+- `gen/goeland/v1/goelandv1connect/retention.connect.go` — ConnectRPC `RetentionService` client and handler generated from `retention.proto`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/timeline.connect.go` — ConnectRPC stubs generated for `TimelineService`; never edit by hand.
 - `gen/goeland/v1/goelandv1connect/thing.connect.go` — ConnectRPC stubs generated for `ThingService`; never edit by hand.
 
@@ -294,6 +297,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0029_contact_history_relationship_kinds.sql` — Schema migration: `actor_contact.ended_at`/`ended_by` for non-destructive contact replacement (GLD-007) and the trigger checking relationship kinds (GLD-060).
 - `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
 - `pkg/core/module/db/migrations/0034_outbox.sql` — Schema migration: `outbox_event`, one per audit event, with its delivery state and queue indexes (GLD-028).
+- `pkg/core/module/db/migrations/0035_retention.sql` — Schema migration: `retention_policy` (example policies), the case type default policy, `subject_retention`, `retention_hold`, the RECORDS_MANAGER role (GLD-032).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -388,6 +392,20 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/orgunit/module/module.go` — Bundleable org unit module: dependency validation and lifecycle.
 - `pkg/orgunit/module/routes.go` — Org unit interceptor chain, Vanguard services and standalone routes.
 
+## Retention domain (`pkg/retention`)
+
+- `pkg/retention/connect_server.go` — `RetentionService` ConnectRPC adapter: policy administration, case retention (READ or records scope), holds, due list with unreadable labels left out, application.
+- `pkg/retention/doc.go` — Package documentation for the retention of closed cases.
+- `pkg/retention/mappers.go` — Policy, retention, hold and disposition domain ↔ proto mappers.
+- `pkg/retention/model.go` — Dispositions, audit event types, policy, retention snapshot, hold, due list and application models with `db` tags.
+- `pkg/retention/service.go` — Retention rules: policy validation, required hold reasons, due list day and disposition checks, application batches.
+- `pkg/retention/service_test.go` — Tests the validations before the repository and the disposition mapping.
+- `pkg/retention/sql.go` — Raw SQL: policies, retention computed from the case type's policy in Europe/Zurich days, holds, due list, closed cases without retention.
+- `pkg/retention/storage_postgres.go` — pgx implementation: policy administration over `core.MutateReference`, case retention reads, audited holds on a locked case, due list, application in batches.
+- `pkg/retention/tx.go` — Transaction helpers for the case lifecycle: `StartCaseRetentionTx`, `EndCaseRetentionTx` (audited on the case) and `EnsureActivePolicyTx`.
+- `pkg/retention/module/module.go` — Bundleable retention module: dependency validation and lifecycle.
+- `pkg/retention/module/routes.go` — Retention interceptor chain, Vanguard services and standalone routes.
+
 ## Task domain (`pkg/task`)
 
 - `pkg/task/connect_server.go` — `TaskService` ConnectRPC adapter, including "my tasks" and the lifecycle moves.
@@ -441,6 +459,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
+- `pkg/integration/retention_test.go` — Retention: snapshot at closing, end at reopening, policy change kept out of running retentions, holds, due list, application to closed cases, inactive policy refused.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
@@ -473,6 +492,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/timelineClient.ts` — REST client for `TimelineService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/orgUnitClient.ts` — REST client for `OrgUnitService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/taskClient.ts` — REST client for `TaskService` bindings.
+- `cmd/goeland-server/goeland-front/src/api/retentionClient.ts` — REST client for `RetentionService` bindings and the list of final dispositions.
 - `cmd/goeland-server/goeland-front/src/api/thingClient.ts` — REST client for `ThingService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/circulationClient.ts` — REST client for `CirculationService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/client.ts` — Minimal fetch client: bearer token, JSON, query params, typed `ApiError`, authenticated file download.
@@ -489,6 +509,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/export_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/export.proto` for the SPA types contract only (GLD-072); never edit by hand.
 - `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/orgunit_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/orgunit.proto` for the SPA types contract only (GLD-072); never edit by hand.
 - `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/task_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/task.proto` for the SPA types contract only (GLD-072); never edit by hand.
+- `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/retention_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/retention.proto` for the SPA types contract only (GLD-072); never edit by hand.
 - `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/thing_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/thing.proto` for the SPA types contract only (GLD-072); never edit by hand.
 - `cmd/goeland-server/goeland-front/src/api/gen/goeland/v1/timeline_pb.ts` — TypeScript with proto3-JSON types generated from `goeland/v1/timeline.proto` for the SPA types contract only (GLD-072); never edit by hand.
 - `cmd/goeland-server/goeland-front/src/api/gen/google/api/annotations_pb.ts` — TypeScript with proto3-JSON types generated from `google/api/annotations.proto` for the SPA types contract only (GLD-072); never edit by hand.
@@ -524,6 +545,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/actor/OrganizationCategorySelect.vue` — Organization category selector bound to the category code.
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseExportPanel.vue` — Case export panel: request with a reason, the caller's exports refreshed while building, download of a ready archive.
+- `cmd/goeland-server/goeland-front/src/components/retention/CaseRetentionPanel.vue` — Retention of a case: running retention or policy to come, legal hold placed or released by the records manager, history.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseSearchList.vue` — The case list with its filters (type, status, opening, creation, creator), shared by the case page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
@@ -606,6 +628,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
 - `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
+- `cmd/goeland-server/goeland-front/src/pages/retention/RetentionDuePage.vue` — Retention deadlines for records managers (day, disposition, held cases) and, for administrators, a type's policy applied to its closed cases.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing list page: title, creation button and `ThingSearchList`.
 - `cmd/goeland-server/goeland-front/src/plugins/__tests__/icons.test.ts` — Vitest check that the icon registry holds exactly the `mdi-*` names the sources use.
 - `cmd/goeland-server/goeland-front/src/plugins/icons.ts` — Registry of the Material Design Icons used, imported one by one from `@mdi/js` (GLD-073).
@@ -626,7 +649,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
-- `cmd/goeland-server/goeland-front/src/utils/__tests__/navigation.test.ts` — Vitest unit test of the navigation entries shown to administrators only.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/navigation.test.ts` — Vitest unit test of the navigation entries shown to administrators and records managers only.
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/retention.test.ts` — Vitest unit tests of the Zurich day, the due rule and the disposition colours.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/routeFilters.test.ts` — Vitest unit tests of the list filters in the URL.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/documents.test.ts` — Vitest unit tests of the document icon and download helpers.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/globalSearch.test.ts` — Vitest unit tests of the global search suggestions and routes.
@@ -643,6 +667,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/lausanneMap.ts` — City of Lausanne maps: LV95 projection, WMTS base layers from the capabilities, extent, map application link (GLD-069).
 - `cmd/goeland-server/goeland-front/src/utils/listSort.ts` — List sort helpers: order_by of a sort, next sort on a click, browser-side sort of short lists.
 - `cmd/goeland-server/goeland-front/src/utils/navigation.ts` — The main navigation, one list for the app bar and the mobile drawer (main modules flagged to keep their label).
+- `cmd/goeland-server/goeland-front/src/utils/retention.ts` — Retention helpers: today in Europe/Zurich, due rule, disposition colours.
 - `cmd/goeland-server/goeland-front/src/utils/routeFilters.ts` — A list's filters in the URL: read, write, compare, count the active ones; the shared record filter keys (GLD-074).
 - `cmd/goeland-server/goeland-front/src/utils/globalSearch.ts` — Global search suggestions grouped by kind, the results and filtered-list routes (GLD-064).
 - `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).

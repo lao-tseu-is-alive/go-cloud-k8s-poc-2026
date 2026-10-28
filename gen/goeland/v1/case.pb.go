@@ -126,8 +126,11 @@ type CaseType struct {
 	// the creator's FULL_CONTROL and the owning unit's MANAGE (GLD-050); later
 	// changes of the template leave existing cases unchanged.
 	DefaultGrants []*CaseTypeDefaultGrant `protobuf:"bytes,8,rep,name=default_grants,json=defaultGrants,proto3" json:"default_grants,omitempty"`
-	unknownFields protoimpl.UnknownFields
-	sizeCache     protoimpl.SizeCache
+	// default_retention_policy_code is the retention policy given to its cases
+	// when they are closed (GLD-032); empty when none.
+	DefaultRetentionPolicyCode string `protobuf:"bytes,9,opt,name=default_retention_policy_code,json=defaultRetentionPolicyCode,proto3" json:"default_retention_policy_code,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *CaseType) Reset() {
@@ -214,6 +217,13 @@ func (x *CaseType) GetDefaultGrants() []*CaseTypeDefaultGrant {
 		return x.DefaultGrants
 	}
 	return nil
+}
+
+func (x *CaseType) GetDefaultRetentionPolicyCode() string {
+	if x != nil {
+		return x.DefaultRetentionPolicyCode
+	}
+	return ""
 }
 
 // CaseTypeDefaultGrant is one line of a case type's default grants.
@@ -1442,8 +1452,11 @@ type CreateCaseTypeRequest struct {
 	Reason string `protobuf:"bytes,5,opt,name=reason,proto3" json:"reason,omitempty"`
 	// default_confidentiality_level is the minimum confidentiality of its new cases (0-5).
 	DefaultConfidentialityLevel int32 `protobuf:"varint,6,opt,name=default_confidentiality_level,json=defaultConfidentialityLevel,proto3" json:"default_confidentiality_level,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// default_retention_policy_code is an active retention policy given to its
+	// cases when they are closed; empty for none.
+	DefaultRetentionPolicyCode string `protobuf:"bytes,7,opt,name=default_retention_policy_code,json=defaultRetentionPolicyCode,proto3" json:"default_retention_policy_code,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *CreateCaseTypeRequest) Reset() {
@@ -1516,6 +1529,13 @@ func (x *CreateCaseTypeRequest) GetDefaultConfidentialityLevel() int32 {
 		return x.DefaultConfidentialityLevel
 	}
 	return 0
+}
+
+func (x *CreateCaseTypeRequest) GetDefaultRetentionPolicyCode() string {
+	if x != nil {
+		return x.DefaultRetentionPolicyCode
+	}
+	return ""
 }
 
 // CreateCaseTypeResponse returns the new case type and its log entry.
@@ -1594,8 +1614,11 @@ type UpdateCaseTypeRequest struct {
 	// default_confidentiality_level replaces the minimum confidentiality of
 	// future cases when present (0-5).
 	DefaultConfidentialityLevel *int32 `protobuf:"varint,7,opt,name=default_confidentiality_level,json=defaultConfidentialityLevel,proto3,oneof" json:"default_confidentiality_level,omitempty"`
-	unknownFields               protoimpl.UnknownFields
-	sizeCache                   protoimpl.SizeCache
+	// default_retention_policy_code replaces the retention policy given to
+	// cases closed afterwards when present (an active policy; empty for none).
+	DefaultRetentionPolicyCode *string `protobuf:"bytes,8,opt,name=default_retention_policy_code,json=defaultRetentionPolicyCode,proto3,oneof" json:"default_retention_policy_code,omitempty"`
+	unknownFields              protoimpl.UnknownFields
+	sizeCache                  protoimpl.SizeCache
 }
 
 func (x *UpdateCaseTypeRequest) Reset() {
@@ -1675,6 +1698,13 @@ func (x *UpdateCaseTypeRequest) GetDefaultConfidentialityLevel() int32 {
 		return *x.DefaultConfidentialityLevel
 	}
 	return 0
+}
+
+func (x *UpdateCaseTypeRequest) GetDefaultRetentionPolicyCode() string {
+	if x != nil && x.DefaultRetentionPolicyCode != nil {
+		return *x.DefaultRetentionPolicyCode
+	}
+	return ""
 }
 
 // SetCaseTypeDefaultGrantsRequest replaces the default grants of a case type.
@@ -1856,7 +1886,7 @@ var File_goeland_v1_case_proto protoreflect.FileDescriptor
 const file_goeland_v1_case_proto_rawDesc = "" +
 	"\n" +
 	"\x15goeland/v1/case.proto\x12\n" +
-	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17goeland/v1/access.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xf3\x02\n" +
+	"goeland.v1\x1a\x1bbuf/validate/validate.proto\x1a\x17goeland/v1/access.proto\x1a\x15goeland/v1/core.proto\x1a\x1cgoogle/api/annotations.proto\x1a\x1fgoogle/api/field_behavior.proto\x1a\x1cgoogle/protobuf/struct.proto\x1a\x1fgoogle/protobuf/timestamp.proto\"\xb6\x03\n" +
 	"\bCaseType\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12!\n" +
 	"\x04code\x18\x02 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12\x1e\n" +
@@ -1865,7 +1895,8 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x16business_ref_namespace\x18\x05 \x01(\tR\x14businessRefNamespace\x12\x1b\n" +
 	"\tis_active\x18\x06 \x01(\bR\bisActive\x12B\n" +
 	"\x1ddefault_confidentiality_level\x18\a \x01(\x05R\x1bdefaultConfidentialityLevel\x12G\n" +
-	"\x0edefault_grants\x18\b \x03(\v2 .goeland.v1.CaseTypeDefaultGrantR\rdefaultGrants\"\xf2\x01\n" +
+	"\x0edefault_grants\x18\b \x03(\v2 .goeland.v1.CaseTypeDefaultGrantR\rdefaultGrants\x12A\n" +
+	"\x1ddefault_retention_policy_code\x18\t \x01(\tR\x1adefaultRetentionPolicyCode\"\xf2\x01\n" +
 	"\x14CaseTypeDefaultGrant\x12F\n" +
 	"\fgrantee_kind\x18\x01 \x01(\x0e2\x17.goeland.v1.GranteeKindB\n" +
 	"\xbaH\a\x82\x01\x04\x10\x01 \x00R\vgranteeKind\x12'\n" +
@@ -1966,17 +1997,18 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"onlyActive\"L\n" +
 	"\x15ListCaseTypesResponse\x123\n" +
 	"\n" +
-	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\xe9\x02\n" +
+	"case_types\x18\x01 \x03(\v2\x14.goeland.v1.CaseTypeR\tcaseTypes\"\xb5\x03\n" +
 	"\x15CreateCaseTypeRequest\x125\n" +
 	"\x04code\x18\x01 \x01(\tB!\xe2A\x01\x02\xbaH\x1ar\x182\x16^[A-Z][A-Z0-9_]{1,99}$R\x04code\x12$\n" +
 	"\x05label\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xc8\x01R\x05label\x12*\n" +
 	"\vdescription\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\vdescription\x12V\n" +
 	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$R\x14businessRefNamespace\x12 \n" +
 	"\x06reason\x18\x05 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12M\n" +
-	"\x1ddefault_confidentiality_level\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x1bdefaultConfidentialityLevel\"\x80\x01\n" +
+	"\x1ddefault_confidentiality_level\x18\x06 \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00R\x1bdefaultConfidentialityLevel\x12J\n" +
+	"\x1ddefault_retention_policy_code\x18\a \x01(\tB\a\xbaH\x04r\x02\x18dR\x1adefaultRetentionPolicyCode\"\x80\x01\n" +
 	"\x16CreateCaseTypeResponse\x121\n" +
 	"\tcase_type\x18\x01 \x01(\v2\x14.goeland.v1.CaseTypeR\bcaseType\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xec\x03\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xdf\x04\n" +
 	"\x15UpdateCaseTypeRequest\x12!\n" +
 	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12%\n" +
 	"\x05label\x18\x02 \x01(\tB\n" +
@@ -1985,13 +2017,15 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x16business_ref_namespace\x18\x04 \x01(\tB \xbaH\x1dr\x1b2\x19^$|^[A-Z][A-Z0-9_]{0,31}$H\x02R\x14businessRefNamespace\x88\x01\x01\x12 \n" +
 	"\tis_active\x18\x05 \x01(\bH\x03R\bisActive\x88\x01\x01\x12 \n" +
 	"\x06reason\x18\x06 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\x12R\n" +
-	"\x1ddefault_confidentiality_level\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00H\x04R\x1bdefaultConfidentialityLevel\x88\x01\x01B\b\n" +
+	"\x1ddefault_confidentiality_level\x18\a \x01(\x05B\t\xbaH\x06\x1a\x04\x18\x05(\x00H\x04R\x1bdefaultConfidentialityLevel\x88\x01\x01\x12O\n" +
+	"\x1ddefault_retention_policy_code\x18\b \x01(\tB\a\xbaH\x04r\x02\x18dH\x05R\x1adefaultRetentionPolicyCode\x88\x01\x01B\b\n" +
 	"\x06_labelB\x0e\n" +
 	"\f_descriptionB\x19\n" +
 	"\x17_business_ref_namespaceB\f\n" +
 	"\n" +
 	"_is_activeB \n" +
-	"\x1e_default_confidentiality_level\"\xaa\x01\n" +
+	"\x1e_default_confidentiality_levelB \n" +
+	"\x1e_default_retention_policy_code\"\xaa\x01\n" +
 	"\x1fSetCaseTypeDefaultGrantsRequest\x12!\n" +
 	"\x04code\x18\x01 \x01(\tB\r\xe2A\x01\x02\xbaH\x06r\x04\x10\x01\x18dR\x04code\x12B\n" +
 	"\x06grants\x18\x02 \x03(\v2 .goeland.v1.CaseTypeDefaultGrantB\b\xbaH\x05\x92\x01\x02\x102R\x06grants\x12 \n" +

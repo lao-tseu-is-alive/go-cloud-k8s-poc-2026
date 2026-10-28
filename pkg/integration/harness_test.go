@@ -23,6 +23,7 @@ import (
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/retention"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/task"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/thing"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/timeline"
@@ -54,6 +55,8 @@ type testEnv struct {
 	exportSvc *caseexport.Service
 	// store is the per-test blob store.
 	store blobstore.Store
+	// retentionSvc is the retention service (GLD-032).
+	retentionSvc *retention.Service
 }
 
 // newTestEnv connects to the test database named by GOELAND_TEST_DATABASE_URL,
@@ -190,7 +193,15 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("build case export service: %v", err)
 	}
-	return &testEnv{ctx: ctx, accessSvc: accessSvc, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root(), exportSvc: exportSvc, store: store}
+	retentionRepo, err := retention.NewPostgresRepository(pool, log)
+	if err != nil {
+		t.Fatalf("retention repository: %v", err)
+	}
+	retentionSvc, err := retention.NewService(retentionRepo, log)
+	if err != nil {
+		t.Fatalf("retention service: %v", err)
+	}
+	return &testEnv{ctx: ctx, retentionSvc: retentionSvc, accessSvc: accessSvc, pool: pool, coreRepo: coreRepo, coreSvc: coreSvc, thingSvc: thingSvc, docSvc: docSvc, actorSvc: actorSvc, caseSvc: caseSvc, orgUnitSvc: orgUnitSvc, timelineSvc: timelineSvc, taskSvc: taskSvc, circulationSvc: circulationSvc, blobDir: store.Root(), exportSvc: exportSvc, store: store}
 }
 
 // uniqueToken returns a lowercase, hyphen-free token safe to embed in a title and

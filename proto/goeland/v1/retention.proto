@@ -1,0 +1,411 @@
+// Goéland POC - Retention of closed cases (spec v2 §35-36, roadmap GLD-032 step A).
+//
+// Proto-first definition for RetentionService + supporting messages. A
+// retention policy says how long a closed case is kept and its final
+// disposition; a case type names its default policy (CaseType.
+// default_retention_policy_code). Closing a case computes its retention in the
+// same transaction, as a snapshot of the policy; reopening ends it. A legal
+// hold blocks any disposal while it lasts. The case is the unit: its documents
+// follow it. Nothing here disposes of anything (step B: disposition
+// bordereaux).
+//
+// The policy catalogue is administered with goeland:admin and logged in the
+// reference change log; holds and the due list belong to the records manager
+// (application role RECORDS_MANAGER, scope goeland:records). Retention changes
+// are audited on the CASE subject.
+
+syntax = "proto3";
+
+package goeland.v1;
+
+import "buf/validate/validate.proto";
+import "goeland/v1/core.proto";
+import "google/api/annotations.proto";
+import "google/api/field_behavior.proto";
+import "google/protobuf/timestamp.proto";
+
+option go_package = "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1";
+
+// =============================================
+// POLICIES
+// =============================================
+
+// FinalDisposition is what happens to a case when its retention expires.
+enum FinalDisposition {
+  // FINAL_DISPOSITION_UNSPECIFIED is the zero value; never stored.
+  FINAL_DISPOSITION_UNSPECIFIED = 0;
+  // FINAL_DISPOSITION_ARCHIVE transfers the case to the archives (versement).
+  FINAL_DISPOSITION_ARCHIVE = 1;
+  // FINAL_DISPOSITION_DESTROY eliminates the case after an approved bordereau.
+  FINAL_DISPOSITION_DESTROY = 2;
+  // FINAL_DISPOSITION_REVIEW leaves the choice to the records manager, case by case.
+  FINAL_DISPOSITION_REVIEW = 3;
+}
+
+// RetentionPolicy is an entry of the retention schedule.
+message RetentionPolicy {
+  // id is the catalogue row UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // code is the unique stable key, e.g. EXAMPLE_ARCHIVE_10.
+  string code = 2 [(google.api.field_behavior) = REQUIRED];
+  // label is the human label.
+  string label = 3;
+  // description documents the policy.
+  string description = 4;
+  // legal_basis cites the rule the policy applies (law, schedule entry).
+  string legal_basis = 5;
+  // duration_years is how long a case is kept after its closing (0-200).
+  int32 duration_years = 6;
+  // final_disposition is what happens when the retention expires.
+  FinalDisposition final_disposition = 7;
+  // is_active reports whether the policy may be given to a case type.
+  bool is_active = 8;
+}
+
+// ListRetentionPoliciesRequest filters the retention schedule.
+message ListRetentionPoliciesRequest {
+  // only_active returns only the policies that may be given to a case type.
+  bool only_active = 1;
+}
+
+// ListRetentionPoliciesResponse returns the matching policies, by label (code as tie-break).
+message ListRetentionPoliciesResponse {
+  // retention_policies are the matching policies.
+  repeated RetentionPolicy retention_policies = 1;
+}
+
+// CreateRetentionPolicyRequest adds a policy (administrators only).
+message CreateRetentionPolicyRequest {
+  // code is the immutable key: upper-case letters, digits and underscores
+  // (2-100), starting with a letter; ALREADY_EXISTS when taken.
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.pattern = "^[A-Z][A-Z0-9_]{1,99}$"
+  ];
+  // label is the required human label (1-200 characters).
+  string label = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 200
+  ];
+  // description documents the policy (at most 2000 characters).
+  string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // legal_basis cites the rule the policy applies (at most 2000 characters).
+  string legal_basis = 4 [(buf.validate.field).string.max_len = 2000];
+  // duration_years is how long a case is kept after its closing (0-200).
+  int32 duration_years = 5 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  // final_disposition is what happens when the retention expires.
+  FinalDisposition final_disposition = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 7 [(buf.validate.field).string.max_len = 2000];
+}
+
+// CreateRetentionPolicyResponse returns the new policy and its log entry.
+message CreateRetentionPolicyResponse {
+  // retention_policy is the created entry, active.
+  RetentionPolicy retention_policy = 1;
+  // change is the REFERENCE_CREATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// UpdateRetentionPolicyRequest changes a policy (administrators only); absent
+// fields are kept. A change applies to cases closed afterwards: running
+// retentions keep the snapshot taken at closing.
+message UpdateRetentionPolicyRequest {
+  // code selects the entry to update (its code never changes).
+  string code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // label replaces the label when present (1-200 characters).
+  optional string label = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // description replaces the description when present (at most 2000 characters).
+  optional string description = 3 [(buf.validate.field).string.max_len = 2000];
+  // legal_basis replaces the legal basis when present (at most 2000 characters).
+  optional string legal_basis = 4 [(buf.validate.field).string.max_len = 2000];
+  // duration_years replaces the duration when present (0-200).
+  optional int32 duration_years = 5 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  // final_disposition replaces the disposition when present.
+  optional FinalDisposition final_disposition = 6 [(buf.validate.field).enum = {
+    defined_only: true
+    not_in: [0]
+  }];
+  // is_active activates or deactivates the entry when present; an inactive
+  // policy can no longer be given to a case type.
+  optional bool is_active = 7;
+  // reason is the justification recorded in the reference change log (at most 2000 characters).
+  string reason = 8 [(buf.validate.field).string.max_len = 2000];
+}
+
+// UpdateRetentionPolicyResponse returns the updated policy and its log entry.
+message UpdateRetentionPolicyResponse {
+  // retention_policy is the updated entry.
+  RetentionPolicy retention_policy = 1;
+  // change is the REFERENCE_UPDATED entry of the reference change log.
+  ReferenceChange change = 2;
+}
+
+// =============================================
+// RETENTION OF A CASE
+// =============================================
+
+// SubjectRetention is the retention of a closed case: a snapshot of its policy
+// taken at closing, ended when the case is reopened.
+message SubjectRetention {
+  // id identifies the retention row.
+  string id = 1;
+  // subject_id is the case.
+  string subject_id = 2;
+  // policy_code is the policy applied.
+  string policy_code = 3;
+  // policy_label is the policy's current label.
+  string policy_label = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // duration_years is the duration applied (the policy's at closing).
+  int32 duration_years = 5;
+  // final_disposition is the disposition applied (the policy's at closing).
+  FinalDisposition final_disposition = 6;
+  // starts_on is the closing day (YYYY-MM-DD, Europe/Zurich).
+  string starts_on = 7;
+  // until_on is the day the retention ends (YYYY-MM-DD, starts_on plus the
+  // duration): the case is due for its final disposition from that day.
+  string until_on = 8;
+  // created_at is when the retention was computed.
+  google.protobuf.Timestamp created_at = 9;
+  // created_by is the operator who closed the case (or applied the policy).
+  string created_by = 10;
+  // ended_at is when the retention ended (case reopened); absent while it runs.
+  google.protobuf.Timestamp ended_at = 11;
+  // ended_by is the operator who ended it.
+  string ended_by = 12;
+  // end_reason explains the end.
+  string end_reason = 13;
+}
+
+// RetentionHold is a legal hold on a case: no disposal while it is active.
+message RetentionHold {
+  // id identifies the hold.
+  string id = 1;
+  // subject_id is the case.
+  string subject_id = 2;
+  // reason explains the hold (litigation, inquiry, ...).
+  string reason = 3;
+  // placed_at is when the hold was placed.
+  google.protobuf.Timestamp placed_at = 4;
+  // placed_by is the records manager who placed it.
+  string placed_by = 5;
+  // released_at is when the hold was released; absent while it is active.
+  google.protobuf.Timestamp released_at = 6;
+  // released_by is the records manager who released it.
+  string released_by = 7;
+  // release_reason explains the release.
+  string release_reason = 8;
+}
+
+// GetCaseRetentionRequest reads the retention of a case.
+message GetCaseRetentionRequest {
+  // case_id is the case.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// GetCaseRetentionResponse describes the retention of a case.
+message GetCaseRetentionResponse {
+  // current is the running retention; absent while the case is open or when
+  // its type has no policy.
+  SubjectRetention current = 1;
+  // hold is the active legal hold, if any.
+  RetentionHold hold = 2;
+  // retentions lists every retention of the case, running or ended, newest first.
+  repeated SubjectRetention retentions = 3;
+  // holds lists every hold of the case, newest first.
+  repeated RetentionHold holds = 4;
+  // default_policy is the policy of the case's type, applied at its next closing; absent when none.
+  RetentionPolicy default_policy = 5;
+}
+
+// PlaceRetentionHoldRequest places a legal hold on a case (records manager).
+message PlaceRetentionHoldRequest {
+  // case_id is the case.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // reason explains the hold (1-2000 characters); it is audited.
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// PlaceRetentionHoldResponse returns the hold and its audit event.
+message PlaceRetentionHoldResponse {
+  // hold is the new active hold.
+  RetentionHold hold = 1;
+  // audit_event is the RETENTION_HOLD_PLACED event on the case.
+  AuditEvent audit_event = 2;
+}
+
+// ReleaseRetentionHoldRequest releases the active legal hold of a case (records manager).
+message ReleaseRetentionHoldRequest {
+  // case_id is the case.
+  string case_id = 1 [(buf.validate.field).string.uuid = true];
+  // reason explains the release (1-2000 characters); it is audited.
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// ReleaseRetentionHoldResponse returns the released hold and its audit event.
+message ReleaseRetentionHoldResponse {
+  // hold is the released hold.
+  RetentionHold hold = 1;
+  // audit_event is the RETENTION_HOLD_RELEASED event on the case.
+  AuditEvent audit_event = 2;
+}
+
+// =============================================
+// DUE LIST
+// =============================================
+
+// DueRetention is a running retention in the due list, with its case.
+message DueRetention {
+  // retention is the running retention.
+  SubjectRetention retention = 1;
+  // case_label is the case's label; empty when the caller may not read the case.
+  string case_label = 2;
+  // business_ref is the case's business reference.
+  string business_ref = 3;
+  // case_type_code is the case's type.
+  string case_type_code = 4;
+  // on_hold reports an active legal hold.
+  bool on_hold = 5;
+}
+
+// ListDueRetentionsRequest pages the running retentions ending on or before a
+// day (records manager or administrator).
+message ListDueRetentionsRequest {
+  // due_on is the day (YYYY-MM-DD); empty means today (Europe/Zurich).
+  string due_on = 1 [(buf.validate.field).string.pattern = "^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$"];
+  // final_disposition restricts the list to one disposition; unspecified means all.
+  FinalDisposition final_disposition = 2 [(buf.validate.field).enum.defined_only = true];
+  // include_held also lists the cases on legal hold.
+  bool include_held = 3;
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 4 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 5 [(buf.validate.field).string.max_len = 1024];
+}
+
+// ListDueRetentionsResponse returns a page of due retentions, oldest deadline first.
+message ListDueRetentionsResponse {
+  // retentions are the due retentions of the page.
+  repeated DueRetention retentions = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size counts every matching retention.
+  int32 total_size = 3;
+}
+
+// ApplyCaseTypeRetentionRequest gives the case type's default policy to its
+// closed cases that have no running retention (administrators only), e.g.
+// after a policy was given to the type or for imported cases.
+message ApplyCaseTypeRetentionRequest {
+  // case_type_code is the case type; it must name a default policy.
+  string case_type_code = 1 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 100
+  ];
+  // reason is the justification recorded on every case (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// ApplyCaseTypeRetentionResponse counts the cases given a retention. A call
+// handles at most 1000 cases (each one audited); call again while remaining > 0.
+message ApplyCaseTypeRetentionResponse {
+  // applied counts the closed cases that received a retention.
+  int32 applied = 1;
+  // remaining counts the closed cases of the type still without retention.
+  int32 remaining = 2;
+}
+
+// =============================================
+// SERVICE
+// =============================================
+
+// RetentionService manages the retention schedule and the retention of closed cases.
+service RetentionService {
+  // List the retention policies. Requires goeland:read.
+  rpc ListRetentionPolicies(ListRetentionPoliciesRequest) returns (ListRetentionPoliciesResponse) {
+    option (google.api.http) = {get: "/api/retention-policies"};
+  }
+
+  // Add a retention policy. Requires goeland:admin; logs REFERENCE_CREATED.
+  rpc CreateRetentionPolicy(CreateRetentionPolicyRequest) returns (CreateRetentionPolicyResponse) {
+    option (google.api.http) = {
+      post: "/api/retention-policies"
+      body: "*"
+    };
+  }
+
+  // Change a retention policy. Requires goeland:admin; logs REFERENCE_UPDATED.
+  rpc UpdateRetentionPolicy(UpdateRetentionPolicyRequest) returns (UpdateRetentionPolicyResponse) {
+    option (google.api.http) = {
+      patch: "/api/retention-policies/{code}"
+      body: "*"
+    };
+  }
+
+  // Read the retention of a case. Requires goeland:read and READ on the case.
+  rpc GetCaseRetention(GetCaseRetentionRequest) returns (GetCaseRetentionResponse) {
+    option (google.api.http) = {get: "/api/cases/{case_id}/retention"};
+  }
+
+  // Place a legal hold on a case. Requires goeland:records.
+  rpc PlaceRetentionHold(PlaceRetentionHoldRequest) returns (PlaceRetentionHoldResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/retention-hold"
+      body: "*"
+    };
+  }
+
+  // Release the legal hold of a case. Requires goeland:records.
+  rpc ReleaseRetentionHold(ReleaseRetentionHoldRequest) returns (ReleaseRetentionHoldResponse) {
+    option (google.api.http) = {
+      post: "/api/cases/{case_id}/retention-hold/release"
+      body: "*"
+    };
+  }
+
+  // List the running retentions ending on or before a day. Requires goeland:records or goeland:admin.
+  rpc ListDueRetentions(ListDueRetentionsRequest) returns (ListDueRetentionsResponse) {
+    option (google.api.http) = {get: "/api/retentions/due"};
+  }
+
+  // Give a case type's policy to its closed cases without retention. Requires goeland:admin.
+  rpc ApplyCaseTypeRetention(ApplyCaseTypeRetentionRequest) returns (ApplyCaseTypeRetentionResponse) {
+    option (google.api.http) = {
+      post: "/api/case-types/{case_type_code}/apply-retention"
+      body: "*"
+    };
+  }
+}

@@ -46,7 +46,8 @@ RETURNING ` + caseColumns + `;`
 
 // --- case_type -------------------------------------------------------------------
 
-const caseTypeColumns = `id, code, label, description, business_ref_namespace, is_active, default_confidentiality_level`
+const caseTypeColumns = `id, code, label, description, business_ref_namespace, is_active, default_confidentiality_level,
+coalesce(default_retention_policy_code, '') AS default_retention_policy_code`
 
 const getCaseTypeByCodeSQL = `
 SELECT ` + caseTypeColumns + `
@@ -106,8 +107,8 @@ WHERE (@query = ''
 // --- case_type administration (GLD-040) ---------------------------------------------
 
 const insertCaseTypeSQL = `
-INSERT INTO case_type (code, label, description, business_ref_namespace, default_confidentiality_level)
-VALUES (@code, @label, @description, @business_ref_namespace, @default_confidentiality_level)
+INSERT INTO case_type (code, label, description, business_ref_namespace, default_confidentiality_level, default_retention_policy_code)
+VALUES (@code, @label, @description, @business_ref_namespace, @default_confidentiality_level, nullif(@default_retention_policy_code::text, ''))
 RETURNING ` + caseTypeColumns + `;`
 
 const getCaseTypeForUpdateSQL = `
@@ -124,7 +125,9 @@ SET label = coalesce(@label::text, label),
     description = coalesce(@description::text, description),
     business_ref_namespace = coalesce(@business_ref_namespace::text, business_ref_namespace),
     is_active = coalesce(@is_active::boolean, is_active),
-    default_confidentiality_level = coalesce(@default_confidentiality_level::smallint, default_confidentiality_level)
+    default_confidentiality_level = coalesce(@default_confidentiality_level::smallint, default_confidentiality_level),
+    default_retention_policy_code = CASE WHEN @default_retention_policy_code::text IS NULL THEN default_retention_policy_code
+                                         ELSE nullif(@default_retention_policy_code::text, '') END
 WHERE code = @code
 RETURNING ` + caseTypeColumns + `;`
 

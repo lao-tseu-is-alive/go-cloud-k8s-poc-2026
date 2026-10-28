@@ -73,6 +73,9 @@ type CaseType struct {
 	// DefaultConfidentialityLevel is the minimum confidentiality of a new case
 	// of this type (GLD-050).
 	DefaultConfidentialityLevel int32 `db:"default_confidentiality_level"`
+	// DefaultRetentionPolicyCode is the retention policy given to its cases
+	// when they are closed (GLD-032); empty when none.
+	DefaultRetentionPolicyCode string `db:"default_retention_policy_code"`
 	// DefaultGrants are copied once onto every new case of this type; hydrated
 	// on the catalogue paths only.
 	DefaultGrants []core.DefaultGrant `db:"-"`

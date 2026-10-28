@@ -6,6 +6,8 @@ export interface NavItem {
   label: string
   /** Shown to administrators only. */
   admin?: boolean
+  /** Shown to records managers and administrators only. */
+  records?: boolean
   /** A main module: keeps its label on a large screen where the others show their icon only. */
   primary?: boolean
 }
@@ -18,10 +20,11 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/tasks/mine', icon: 'mdi-checkbox-marked-circle-outline', label: 'nav.myTasks' },
   { to: '/org-units', icon: 'mdi-sitemap-outline', label: 'nav.orgUnits' },
   { to: '/groups', icon: 'mdi-account-group-outline', label: 'nav.groups' },
+  { to: '/retention', icon: 'mdi-archive-clock-outline', label: 'nav.retention', records: true },
   { to: '/admin', icon: 'mdi-cog-outline', label: 'nav.admin', admin: true },
 ]
 
-/** The entries a user sees: the administration only for administrators. */
-export function navItemsFor (isAdmin: boolean): NavItem[] {
-  return NAV_ITEMS.filter(item => !item.admin || isAdmin)
+/** The entries a user sees: the administration only for administrators, the retention for records managers. */
+export function navItemsFor (isAdmin: boolean, isRecordsManager = false): NavItem[] {
+  return NAV_ITEMS.filter(item => (!item.admin || isAdmin) && (!item.records || isRecordsManager))
 }
