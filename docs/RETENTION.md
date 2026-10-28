@@ -2,13 +2,14 @@
 
 Reference for records managers (archivistes), data protection officers, case managers and
 operators. It states what Goéland does with a case once it is closed, who decides what, what is
-kept as proof, and what is not built yet. Roadmap: GLD-076 (built, this document), GLD-077
-(elimination, not built). Spec: v2 §35-36.
+kept as proof, and what is not built yet. Roadmap: GLD-076 (retention, holds, transfer) and
+GLD-077 (elimination, rebuilding a transfer package). Spec: v2 §35-36.
 
-> **Status.** Retention, legal holds, disposition bordereaux and the transfer to the archives
-> are built. **Nothing is destroyed yet**: an elimination bordereau can be prepared and approved,
-> but its execution is refused until GLD-077. The three retention policies shipped are
-> **examples**: the real schedule must come from the City archives before any use on real cases.
+> **Status.** Retention, legal holds, disposition bordereaux, the transfer to the archives and
+> the **elimination** are built. An elimination is **irreversible**: it erases the content of the
+> approved cases and destroys the files only they hold (§5b). The three retention policies shipped
+> are **examples**: the real schedule must come from the City archives before any use on real
+> cases.
 
 ## 1. Vocabulary
 
@@ -38,7 +39,7 @@ kept as proof, and what is not built yet. Roadmap: GLD-076 (built, this document
         │ approved by the owning unit's manager
         ▼
  executed:  ARCHIVE ──▶ ARCHIVED: transfer package built, case frozen
-            DESTROY ──▶ DISPOSED: not built yet (GLD-077)
+            DESTROY ──▶ DISPOSED: notice kept, content erased, files destroyed
 ```
 
 The case is the unit of retention. Its documents follow it; actors and things (reference data)
@@ -84,8 +85,9 @@ approved cases are handled. For a transfer (ARCHIVE), for each approved case:
 3. the case is **frozen** (locked: it can no longer change nor be reopened);
 4. its retention is marked ARCHIVED.
 
-The bordereau is then closed with its proof (§4). An open bordereau can be cancelled with a
-reason; its cases become due again.
+For an elimination (DESTROY), see §5b. The bordereau is then closed with its proof (§4). An open
+bordereau can be cancelled with a reason; its cases become due again. The execution page asks for
+an explicit confirmation before an elimination.
 
 ## 4. Proof
 
@@ -101,7 +103,9 @@ the SHA-256 shown on the page. Each transfer package also shows its own SHA-256.
 The case keeps its own trail in its audit log (`audit_event`, append-only):
 `RETENTION_STARTED`, `RETENTION_ENDED`, `RETENTION_HOLD_PLACED`, `RETENTION_HOLD_RELEASED`,
 `RETENTION_DISPOSITION_PROPOSED`, `RETENTION_DISPOSITION_APPROVED`, `RETENTION_DISPOSITION_REJECTED`,
-`RETENTION_DISPOSITION_WITHDRAWN` (cancelled bordereau), `RETENTION_ARCHIVED`.
+`RETENTION_DISPOSITION_WITHDRAWN` (cancelled bordereau), `RETENTION_ARCHIVED`,
+`RETENTION_TRANSFER_REBUILT`, `RETENTION_DISPOSED`. After an elimination these events stay (who,
+when, what) but their states and reasons are erased (§5b), except `RETENTION_DISPOSED`.
 
 ## 5. Transfer package
 
@@ -115,7 +119,40 @@ content included. Therefore:
 - it stays downloadable **90 days**, then its bytes are removed like any export.
 
 The handover to the archives is manual: a records manager downloads each package and delivers it
-(with the bordereau manifest) according to the archives' procedure.
+(with the bordereau manifest) according to the archives' procedure. A package that failed or
+expired is rebuilt from the bordereau page (Reconstruire le paquet): a new package is queued,
+recorded as EXPORT and audited (`RETENTION_TRANSFER_REBUILT`); the case stays frozen.
+
+## 5b. Elimination
+
+Executing an approved DESTROY bordereau, for each approved case, in one transaction:
+
+| Kept | Erased |
+|---|---|
+| The case as a **notice**: id, kind, type, business reference, dates (opening, closing, retention), owning unit, relationships (which subjects it was linked to) | Its title (replaced by « Affaire éliminée <référence> »), description, closure reason, metadata |
+| The timeline entries, tasks, circulations and answers as rows (type, status, dates, people) | Their titles, bodies, descriptions, notes, reasons, answers and metadata |
+| Its audit events: type, author, date | Their before/after states and reasons (replaced by `{"eliminated": true}`) |
+| The bordereau, its manifest and SHA-256 (§4), the `RETENTION_DISPOSED` event | The ordinary exports of the case (archives removed) |
+
+Its **documents** go with it unless still linked to a **thing** or to a **case that stays** (not
+in this elimination, not already eliminated): such a document is kept untouched. A document that
+goes is blanked (« Document éliminé », no description, metadata or external reference), its
+version metadata erased, and it is logically deleted (it leaves every list; its content is no
+longer served). Its **files** are destroyed when no other document version references them; a
+file shared with a kept document stays. The bytes are deleted from the blob store just after the
+transaction commits; should a deletion fail, the server logs the storage reference to remove by
+hand (the database already records the file as destroyed). Uploading the same file again later
+stores it anew.
+
+The case is frozen and its retention marked DISPOSED. The protected tables (audit log, validated
+timeline entries, validated or record document versions) accept this erasure only inside the
+elimination transaction (`SET LOCAL goeland.disposal = 'on'`, migration `0037`); outside it they
+stay append-only or immutable, and deletions are always refused.
+
+What an elimination does **not** reach: the bordereau's own manifest (it names the case's
+reference, type and the approvers' reasons, as proof), the transfer packages already handed over,
+backups of the database and of the blob store (their retention is an operations matter), the
+access log (`access_audit_event`, references only), and the outbox (references only).
 
 ## 6. Roles and rights
 
@@ -143,9 +180,9 @@ out; its reference stays visible.
 
 ## 8. Known limitations
 
-- **No elimination yet** (GLD-077): DESTROY bordereaux are refused at execution.
-- **A failed or expired transfer package cannot be rebuilt**: the case is already frozen and
-  ARCHIVED. Download the packages promptly after execution; rebuilding is part of GLD-077.
+- **Backups keep eliminated data** until they expire: align the backup retention of the
+  database and the blob store with the elimination schedule.
+- The approvers' reasons stay in the bordereau manifest (the proof): they must not contain
+  personal data.
 - The handover to the archives (format, receipt) is manual; no archival system is connected.
-- Documents attached to several cases are not yet treated specially (relevant for elimination).
 - Retention applies to cases only; actors (personal data under the nLPD) have none yet.

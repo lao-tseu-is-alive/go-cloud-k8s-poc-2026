@@ -1521,3 +1521,7 @@ export interface ListMyDispositionApprovalsResponse {
 export interface DecideDispositionItemResponse {
   item?: DispositionItem
 }
+
+export interface RebuildTransferPackageResponse {
+  item?: DispositionItem
+}

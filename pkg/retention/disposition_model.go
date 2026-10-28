@@ -55,6 +55,10 @@ const (
 	EventDispositionWithdrawn = "RETENTION_DISPOSITION_WITHDRAWN"
 	// EventArchived records a case transferred to the archives and frozen.
 	EventArchived = "RETENTION_ARCHIVED"
+	// EventDisposed records an eliminated case (its earlier events are blanked).
+	EventDisposed = "RETENTION_DISPOSED"
+	// EventTransferRebuilt records a transfer package queued again.
+	EventTransferRebuilt = "RETENTION_TRANSFER_REBUILT"
 )
 
 // MaxBordereauCases bounds the cases of one bordereau.

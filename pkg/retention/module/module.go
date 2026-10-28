@@ -15,6 +15,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/retention"
 )
@@ -43,6 +44,9 @@ type Deps struct {
 	Verifier authadapter.TokenVerifier
 	// Logger receives module logs; nil falls back to slog.Default.
 	Logger *slog.Logger
+	// BlobStore holds the document bytes an elimination destroys (GLD-077);
+	// nil refuses the execution of elimination bordereaux.
+	BlobStore blobstore.Store
 }
 
 // Module encapsulates the retention domain: repository, service and Connect handler.
@@ -69,6 +73,7 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retention module: storage init: %w", err)
 	}
+	repo.WithBlobStore(deps.BlobStore)
 	svc, err := retention.NewService(repo, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("retention module: service init: %w", err)

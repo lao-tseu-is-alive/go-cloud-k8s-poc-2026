@@ -4,7 +4,7 @@
   import { computed, onBeforeUnmount, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute } from 'vue-router'
-  import { cancelDispositionBordereau, downloadTransferPackage, executeDispositionBordereau, getDispositionBordereau } from '@/api/retentionClient'
+  import { cancelDispositionBordereau, downloadTransferPackage, executeDispositionBordereau, getDispositionBordereau, rebuildTransferPackage } from '@/api/retentionClient'
   import UserLabel from '@/components/core/UserLabel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
@@ -37,6 +37,11 @@
 
   const open = computed(() => b.value?.status === 'BORDEREAU_STATUS_OPEN')
   const executable = computed(() => open.value && (b.value?.pendingCount ?? 0) === 0)
+  // An elimination is irreversible: its execution asks for an explicit confirmation.
+  const destroying = computed(() => b.value?.finalDisposition === 'FINAL_DISPOSITION_DESTROY')
+  const confirmOpen = ref(false)
+  const confirmed = ref(false)
+  const rebuilding = ref('')
   const building = computed(() => (b.value?.items ?? []).some(it => it.exportStatus === 'QUEUED' || it.exportStatus === 'RUNNING'))
 
   async function load () {
@@ -54,7 +59,31 @@
   watch(id, load, { immediate: true })
   onBeforeUnmount(() => clearTimeout(timer))
 
+  function askExecute () {
+    if (destroying.value) {
+      confirmed.value = false
+      confirmOpen.value = true
+      return
+    }
+    void execute()
+  }
+
+  // A failed or expired transfer package is queued again.
+  async function rebuild (item: DispositionItem) {
+    rebuilding.value = item.id
+    try {
+      await rebuildTransferPackage(item.id)
+      ui.notify(t('retention.bordereau.rebuilt'), 'success')
+      await load()
+    } catch (error) {
+      report(error)
+    } finally {
+      rebuilding.value = ''
+    }
+  }
+
   async function execute () {
+    confirmOpen.value = false
     busy.value = true
     try {
       b.value = (await executeDispositionBordereau(id.value)) ?? b.value
@@ -149,13 +178,13 @@
 
           <div v-if="open" class="d-flex flex-wrap ga-2 mt-3">
             <v-btn
-              color="primary"
+              :color="destroying ? 'error' : 'primary'"
               :disabled="!executable"
               :loading="busy"
-              prepend-icon="mdi-check-all"
+              :prepend-icon="destroying ? 'mdi-delete-forever' : 'mdi-check-all'"
               variant="flat"
-              @click="execute"
-            >{{ t('retention.bordereau.execute') }}</v-btn>
+              @click="askExecute"
+            >{{ destroying ? t('retention.bordereau.eliminate') : t('retention.bordereau.execute') }}</v-btn>
 
             <v-btn prepend-icon="mdi-close-circle-outline" variant="tonal" @click="cancelling = true">{{ t('retention.bordereau.cancel') }}</v-btn>
           </div>
@@ -206,6 +235,15 @@
                   @click="download(item)"
                 >{{ t('retention.bordereau.download') }}</v-btn>
 
+                <v-btn
+                  v-else-if="item.exportStatus === 'FAILED' || item.exportStatus === 'EXPIRED'"
+                  :loading="rebuilding === item.id"
+                  prepend-icon="mdi-refresh"
+                  size="small"
+                  variant="text"
+                  @click="rebuild(item)"
+                >{{ t('retention.bordereau.rebuild') }}</v-btn>
+
                 <span v-else-if="item.exportStatus" class="text-caption">{{ enumLabel('CaseExportStatus', `CASE_EXPORT_STATUS_${item.exportStatus}`) }}</span>
                 <div v-if="item.exportSha256" class="text-caption text-medium-emphasis"><code>{{ item.exportSha256.slice(0, 16) }}…</code></div>
               </td>
@@ -213,6 +251,30 @@
           </tbody>
         </v-table>
       </v-card>
+
+      <v-dialog v-model="confirmOpen" max-width="560">
+        <v-card>
+          <v-card-title>{{ t('retention.bordereau.eliminate') }}</v-card-title>
+
+          <v-card-text>
+            <v-alert class="mb-3" type="error" variant="tonal">{{ t('retention.bordereau.eliminateWarning', { n: b.approvedCount ?? 0 }) }}</v-alert>
+            <v-checkbox v-model="confirmed" density="compact" hide-details :label="t('retention.bordereau.eliminateConfirm')" />
+          </v-card-text>
+
+          <v-card-actions>
+            <v-spacer />
+            <v-btn variant="text" @click="confirmOpen = false">{{ t('actions.common.cancel') }}</v-btn>
+
+            <v-btn
+              color="error"
+              :disabled="!confirmed"
+              :loading="busy"
+              variant="flat"
+              @click="execute"
+            >{{ t('retention.bordereau.eliminate') }}</v-btn>
+          </v-card-actions>
+        </v-card>
+      </v-dialog>
     </template>
   </v-container>
 </template>

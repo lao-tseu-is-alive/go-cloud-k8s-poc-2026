@@ -84,6 +84,16 @@ func (s *Service) Execute(ctx context.Context, id uuid.UUID, operatorID string) 
 	return b, nil
 }
 
+// RebuildTransfer queues again a failed or expired transfer package.
+func (s *Service) RebuildTransfer(ctx context.Context, itemID uuid.UUID, operatorID string) (*Item, error) {
+	item, err := s.repo.RebuildTransfer(ctx, itemID, operatorID)
+	if err != nil {
+		return nil, err
+	}
+	s.log.Info("transfer package queued again", "item_id", itemID, "operator", operatorID)
+	return item, nil
+}
+
 // Cancel abandons an open bordereau.
 func (s *Service) Cancel(ctx context.Context, id uuid.UUID, reason, operatorID string) (*Bordereau, error) {
 	reason = strings.TrimSpace(reason)

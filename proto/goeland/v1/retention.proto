@@ -581,6 +581,19 @@ message ExecuteDispositionBordereauRequest {
   string id = 1 [(buf.validate.field).string.uuid = true];
 }
 
+// RebuildTransferPackageRequest queues again the transfer package of a
+// transferred case whose package failed or expired (records manager).
+message RebuildTransferPackageRequest {
+  // id is the bordereau item of the transferred case.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// RebuildTransferPackageResponse returns the item with its new package.
+message RebuildTransferPackageResponse {
+  // item is the item, now linked to the queued package.
+  DispositionItem item = 1;
+}
+
 // CancelDispositionBordereauRequest abandons an open bordereau (records manager).
 message CancelDispositionBordereauRequest {
   // id is the bordereau.
@@ -690,6 +703,14 @@ service RetentionService {
   rpc ExecuteDispositionBordereau(ExecuteDispositionBordereauRequest) returns (ExecuteDispositionBordereauResponse) {
     option (google.api.http) = {
       post: "/api/disposition-bordereaux/{id}/execute"
+      body: "*"
+    };
+  }
+
+  // Queue again the failed or expired transfer package of a transferred case. Requires goeland:records.
+  rpc RebuildTransferPackage(RebuildTransferPackageRequest) returns (RebuildTransferPackageResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-items/{id}/rebuild-transfer"
       body: "*"
     };
   }

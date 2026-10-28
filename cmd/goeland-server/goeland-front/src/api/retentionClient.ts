@@ -5,8 +5,8 @@
  */
 import type {
   ApplyCaseTypeRetentionResponse, BordereauStatus, DecideDispositionItemResponse, DispositionBordereau, DispositionBordereauResponse,
-  DispositionItem, FinalDisposition, GetCaseRetentionResponse, ListDispositionBordereauxResponse, ListDueRetentionsResponse,
-  ListMyDispositionApprovalsResponse, ListRetentionPoliciesResponse, RetentionHold, RetentionHoldResponse, RetentionPolicy,
+  DispositionItem, FinalDisposition, GetCaseRetentionResponse, ListDispositionBordereauxResponse, ListDueRetentionsResponse, ListMyDispositionApprovalsResponse,
+  ListRetentionPoliciesResponse, RebuildTransferPackageResponse, RetentionHold, RetentionHoldResponse, RetentionPolicy,
 } from './types'
 import { apiFetch, downloadAs } from './client'
 
@@ -92,4 +92,9 @@ export async function decideDispositionItem (id: string, approve: boolean, reaso
 /** Saves a built transfer package (records manager). */
 export function downloadTransferPackage (exportId: string): Promise<void> {
   return downloadAs(`/api/case-exports/${encodeURIComponent(exportId)}/content`, `transfer-${exportId}.zip`)
+}
+
+/** Queues again the failed or expired transfer package of a transferred case (records manager). */
+export async function rebuildTransferPackage (itemId: string): Promise<DispositionItem | undefined> {
+  return (await apiFetch<RebuildTransferPackageResponse>(`/api/disposition-items/${encodeURIComponent(itemId)}/rebuild-transfer`, { method: 'POST', body: {} })).item
 }

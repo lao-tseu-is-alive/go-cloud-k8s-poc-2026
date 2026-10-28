@@ -417,7 +417,7 @@ covered by an integration test.
   view without read filter, records managers only, every download logged, 90 days), records
   EXPORT, freezes the case (ARCHIVED) and keeps the manifest and its SHA-256 as proof.
   `retention_until` / `sort_final` stay as read-only V1 fields. Reference: `docs/RETENTION.md`.
-- [ ] **GLD-077 — Elimination of cases** (decided 2026-10-28): executing a DESTROY bordereau
+- [~] **GLD-077 — Elimination of cases** (decided 2026-10-28): executing a DESTROY bordereau
   deletes the document bytes no longer referenced elsewhere, blanks the case's texts (title,
   description, timeline bodies, task texts, document titles and metadata) and replaces the
   business data of its audit states by a marker, through controlled exceptions to the immutability

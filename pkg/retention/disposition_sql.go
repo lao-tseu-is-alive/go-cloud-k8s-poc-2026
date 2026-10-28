@@ -86,6 +86,17 @@ UPDATE disposition_item
 SET decision = @decision, decided_at = now(), decided_by = @operator_id, decision_reason = @reason
 WHERE id = @id AND decision = 'PENDING';`
 
+// rebuildableItemSQL reads a transferred item whose package failed or expired.
+const rebuildableItemSQL = `
+SELECT i.id
+FROM disposition_item i
+JOIN disposition_bordereau b ON b.id = i.bordereau_id
+JOIN subject_retention r ON r.id = i.retention_id
+LEFT JOIN case_export x ON x.id = i.export_id
+WHERE i.id = @id AND b.status = 'EXECUTED' AND b.final_disposition = 'ARCHIVE'
+  AND r.disposition_status = 'ARCHIVED' AND (x.id IS NULL OR x.status IN ('FAILED', 'EXPIRED'))
+FOR UPDATE OF i;`
+
 const setItemExportSQL = `UPDATE disposition_item SET export_id = @export_id WHERE id = @id;`
 
 // queueTransferSQL queues the complete transfer package of a case (built by

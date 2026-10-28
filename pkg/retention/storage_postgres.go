@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
@@ -17,6 +18,14 @@ import (
 type PostgresRepository struct {
 	pool *pgxpool.Pool
 	log  *slog.Logger
+	// store holds the document bytes an elimination destroys; nil refuses eliminations.
+	store blobstore.Store
+}
+
+// WithBlobStore sets the store whose bytes an elimination destroys (GLD-077).
+func (r *PostgresRepository) WithBlobStore(store blobstore.Store) *PostgresRepository {
+	r.store = store
+	return r
 }
 
 // NewPostgresRepository builds a PostgresRepository from a connection pool. A

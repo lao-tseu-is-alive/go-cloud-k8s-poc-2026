@@ -150,7 +150,13 @@ whenever a task starts, completes, changes scope or order.
   purpose TRANSFER (built with `core.SystemViewer`, no read filter, downloaded by records managers,
   kept 90 days), records EXPORT, locks the case and marks its retention ARCHIVED, and keeps the
   proof manifest (stored as exact text, so its SHA-256 can be recomputed); every download of a
-  transfer package is logged as DOWNLOAD. DESTROY execution is GLD-077. The reference for this
+  transfer package is logged as DOWNLOAD. Executing a DESTROY bordereau (GLD-077,
+  `pkg/retention/elimination.go`) runs `SET LOCAL goeland.disposal = 'on'`, the only way the audit,
+  timeline and document version guards accept a change (blanking content; migration `0037`): the
+  case becomes a notice, its texts and audit states are erased, the documents only it held are
+  blanked and logically deleted, and files no other version references are destroyed after the
+  commit (`content_blob.disposed_at`; an identical upload stores them again). Never set that
+  setting anywhere else. A failed or expired transfer package is rebuilt. The reference for this
   domain is `docs/RETENTION.md`: keep it true when the retention rules change. `record_metadata.retention_until` /
   `sort_final` are V1 fields, no longer written.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
@@ -202,7 +208,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0036 (dbmate format)
+  │   └── db/migrations/     0001..0037 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral

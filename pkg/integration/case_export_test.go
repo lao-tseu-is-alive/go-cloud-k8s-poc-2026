@@ -33,6 +33,25 @@ func caseDocument(t *testing.T, env *testEnv, caseID uuid.UUID, content string, 
 	return created.Document
 }
 
+// buildExport runs the worker until the export is no longer waiting: other
+// tests share the queue, so the next job may not be this one.
+func buildExport(t *testing.T, env *testEnv, id uuid.UUID) {
+	t.Helper()
+	for range 50 {
+		var status string
+		if err := env.pool.QueryRow(env.ctx, `SELECT status FROM case_export WHERE id = $1`, id).Scan(&status); err != nil {
+			t.Fatal(err)
+		}
+		if status != string(caseexport.StatusQueued) && status != string(caseexport.StatusRunning) {
+			return
+		}
+		if _, err := env.exportSvc.ProcessNext(env.ctx); err != nil {
+			t.Fatalf("the worker builds the export: %v", err)
+		}
+	}
+	t.Fatalf("export %s still waiting", id)
+}
+
 // readArchive downloads an export as its requester and returns its files.
 func readArchive(t *testing.T, env *testEnv, id uuid.UUID, requester string) map[string][]byte {
 	t.Helper()
@@ -112,9 +131,7 @@ func TestCaseExport(t *testing.T) {
 	if err != nil || exp.Status != caseexport.StatusQueued {
 		t.Fatalf("request export: %+v (%v)", exp, err)
 	}
-	if processed, err := env.exportSvc.ProcessNext(env.ctx); err != nil || !processed {
-		t.Fatalf("the worker builds the export: %v (%v)", processed, err)
-	}
+	buildExport(t, env, exp.ID)
 	if exp, err = env.exportSvc.Get(env.ctx, exp.ID, manager.UserID, false); err != nil || exp.Status != caseexport.StatusDone || exp.SizeBytes == 0 {
 		t.Fatalf("the export is built: %+v (%v)", exp, err)
 	}
@@ -152,9 +169,7 @@ func TestCaseExport(t *testing.T) {
 	if _, _, err := env.accessSvc.RevokeGrant(env.ctx, managerGrant.ID, testOperator, "fin du mandat"); err != nil {
 		t.Fatalf("revoke MANAGE: %v", err)
 	}
-	if _, err := env.exportSvc.ProcessNext(env.ctx); err != nil {
-		t.Fatalf("process the second export: %v", err)
-	}
+	buildExport(t, env, late.ID)
 	if late, err = env.exportSvc.Get(env.ctx, late.ID, manager.UserID, false); err != nil || late.Status != caseexport.StatusFailed || late.Error == "" {
 		t.Fatalf("an export whose requester lost MANAGE fails with a reason: %+v (%v)", late, err)
 	}

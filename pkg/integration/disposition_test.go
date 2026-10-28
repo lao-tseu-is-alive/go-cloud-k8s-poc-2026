@@ -158,7 +158,7 @@ func assertTransferPackage(t *testing.T, env *testEnv, b *retention.Bordereau, c
 	}
 }
 
-// TestDispositionBordereauRules covers what may not enter or leave a bordereau.
+// TestDispositionBordereauRules covers what may not enter a bordereau and its cancellation.
 func TestDispositionBordereauRules(t *testing.T) {
 	env := newTestEnv(t)
 	ctx := env.ctx
@@ -186,12 +186,6 @@ func TestDispositionBordereauRules(t *testing.T) {
 	b, err := env.retentionSvc.CreateBordereau(ctx, in(retention.DispositionDestroy, destroy.ID))
 	if err != nil {
 		t.Fatalf("create destroy bordereau: %v", err)
-	}
-	if _, err := env.retentionSvc.Decide(ctx, retention.DecisionInput{ItemID: b.Items[0].ID, Approve: true, Reason: "ok", OperatorID: testOperator}); err != nil {
-		t.Fatal(err)
-	}
-	if _, err := env.retentionSvc.Execute(ctx, b.ID, archivist.UserID); !errors.Is(err, core.ErrInvalidState) {
-		t.Fatalf("the elimination comes with step B2: %v", err)
 	}
 	cancelled, err := env.retentionSvc.Cancel(ctx, b.ID, "reporté", archivist.UserID)
 	if err != nil || cancelled.Status != retention.BordereauCancelled {

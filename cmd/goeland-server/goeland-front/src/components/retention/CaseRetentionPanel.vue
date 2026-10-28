@@ -94,6 +94,16 @@
           {{ t('retention.archived', { at: formatDate(current.disposedAt) }) }}
         </v-chip>
 
+        <v-chip
+          v-else-if="current.dispositionStatus === 'DISPOSITION_STATUS_DISPOSED'"
+          color="error"
+          label
+          prepend-icon="mdi-delete-forever"
+          size="small"
+        >
+          {{ t('retention.disposed', { at: formatDate(current.disposedAt) }) }}
+        </v-chip>
+
         <v-chip v-else-if="due" color="warning" label size="small">{{ t('retention.due') }}</v-chip>
       </div>
 

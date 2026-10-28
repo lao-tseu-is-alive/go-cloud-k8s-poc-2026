@@ -48,6 +48,7 @@ import {
   mdiCogOutline,
   mdiCommentTextOutline,
   mdiDelete,
+  mdiDeleteForever,
   mdiDomain,
   mdiDotsVertical,
   mdiDownload,
@@ -116,6 +117,7 @@ import {
 } from '@mdi/js'
 
 export const ICON_PATHS: Readonly<Record<string, string>> = {
+  'mdi-delete-forever': mdiDeleteForever,
   'mdi-file-sign': mdiFileSign,
   'mdi-lock-open-variant-outline': mdiLockOpenVariantOutline,
   'mdi-archive-clock-outline': mdiArchiveClockOutline,

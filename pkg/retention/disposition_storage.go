@@ -210,16 +210,7 @@ func (r *PostgresRepository) Decide(ctx context.Context, in DecisionInput) (*Ite
 	if err != nil {
 		return nil, err
 	}
-	items, err := listItems(ctx, r.pool, bordereauID)
-	if err != nil {
-		return nil, err
-	}
-	for _, it := range items {
-		if it.ID == in.ItemID {
-			return it, nil
-		}
-	}
-	return nil, fmt.Errorf("%w: item %s", core.ErrNotFound, in.ItemID)
+	return r.findItem(ctx, bordereauID, in.ItemID)
 }
 
 // checkDeciderTx requires a pending item, a decider other than the preparer
@@ -238,46 +229,80 @@ func checkDeciderTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, op
 // its proof. ARCHIVE queues each case's transfer package, records the EXPORT,
 // freezes the case and marks its retention ARCHIVED; DESTROY is step B2.
 func (r *PostgresRepository) Execute(ctx context.Context, id uuid.UUID, operatorID string) (*Bordereau, error) {
+	var refs []string
 	err := core.InTx(ctx, r.pool, "execute bordereau", func(tx pgx.Tx) error {
-		return executeTx(ctx, tx, id, operatorID)
+		var err error
+		refs, err = r.executeTx(ctx, tx, id, operatorID)
+		return err
 	})
 	if err != nil {
 		return nil, err
 	}
+	r.destroyFiles(ctx, refs)
 	return r.GetBordereau(ctx, id)
 }
 
-// executeTx runs Execute in tx.
-func executeTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, operatorID string) error {
+// executeTx runs Execute in tx and returns the storage references of the
+// files an elimination destroyed, to delete after the commit.
+func (r *PostgresRepository) executeTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, operatorID string) ([]string, error) {
 	b, err := lockOpenBordereauTx(ctx, tx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if err := executable(b); err != nil {
-		return err
+	if err := r.executable(b); err != nil {
+		return nil, err
 	}
 	items, err := listItems(ctx, tx, id)
 	if err != nil {
-		return err
+		return nil, err
 	}
+	approved := approvedCases(items)
+	if b.FinalDisposition == DispositionDestroy {
+		if _, err := tx.Exec(ctx, enableDisposalSQL); err != nil {
+			return nil, fmt.Errorf("declare elimination: %w", err)
+		}
+	}
+	var refs []string
 	for _, item := range items {
 		if item.Decision != DecisionApproved {
 			continue
 		}
-		if err := archiveItemTx(ctx, tx, b, item, operatorID); err != nil {
-			return err
+		destroyed, err := handleItemTx(ctx, tx, b, item, approved, operatorID)
+		if err != nil {
+			return nil, err
 		}
+		refs = append(refs, destroyed...)
 	}
-	return closeWithProofTx(ctx, tx, b, items, operatorID)
+	return refs, closeWithProofTx(ctx, tx, b, items, operatorID)
 }
 
-// executable refuses a bordereau with undecided cases, or an elimination (step B2).
-func executable(b *Bordereau) error {
+// handleItemTx transfers or eliminates one approved case.
+func handleItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, approved []uuid.UUID, operatorID string) ([]string, error) {
+	if b.FinalDisposition == DispositionDestroy {
+		return eliminateItemTx(ctx, tx, b, item, approved, operatorID)
+	}
+	return nil, archiveItemTx(ctx, tx, b, item, operatorID)
+}
+
+// approvedCases lists the cases of the approved items.
+func approvedCases(items []*Item) []uuid.UUID {
+	var ids []uuid.UUID
+	for _, it := range items {
+		if it.Decision == DecisionApproved {
+			ids = append(ids, it.CaseID)
+		}
+	}
+	return ids
+}
+
+// executable refuses a bordereau with undecided cases, or an elimination
+// without the store holding the bytes to destroy.
+func (r *PostgresRepository) executable(b *Bordereau) error {
 	if b.PendingCount > 0 {
 		return fmt.Errorf("%w: %d case(s) still wait for a decision", core.ErrInvalidState, b.PendingCount)
 	}
-	if b.FinalDisposition != DispositionArchive {
-		return fmt.Errorf("%w: the elimination of cases is not available yet", core.ErrInvalidState)
+	if b.FinalDisposition == DispositionDestroy && r.store == nil {
+		return fmt.Errorf("%w: no content store is configured to destroy the files", core.ErrInvalidState)
 	}
 	return nil
 }
@@ -285,46 +310,86 @@ func executable(b *Bordereau) error {
 // archiveItemTx transfers one approved case: no legal hold may have been
 // placed since the approval.
 func archiveItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, operatorID string) error {
-	if err := findCase(ctx, tx, lockCaseSQL, item.CaseID); err != nil {
+	if err := lockUnheldCaseTx(ctx, tx, item.CaseID); err != nil {
 		return err
 	}
-	var held bool
-	if err := tx.QueryRow(ctx, activeHoldSQL, pgx.NamedArgs{"case_id": item.CaseID}).Scan(&held); err != nil {
-		return fmt.Errorf("read hold: %w", err)
-	}
-	if held {
-		return fmt.Errorf("%w: case %s was put on legal hold; reject it or release the hold", core.ErrInvalidState, item.CaseID)
-	}
-	var exportID uuid.UUID
-	if err := tx.QueryRow(ctx, queueTransferSQL, pgx.NamedArgs{"case_id": item.CaseID, "operator_id": operatorID, "reason": b.Reason}).Scan(&exportID); err != nil {
-		return fmt.Errorf("queue transfer package: %w", err)
-	}
-	item.ExportID = &exportID
-	if _, err := tx.Exec(ctx, setItemExportSQL, pgx.NamedArgs{"id": item.ID, "export_id": exportID}); err != nil {
-		return fmt.Errorf("link transfer package: %w", err)
-	}
-	access, err := core.EffectiveAccessTx(ctx, tx, operatorID, item.CaseID)
+	exportID, err := queueTransferTx(ctx, tx, item, b.Reason, operatorID)
 	if err != nil {
 		return err
 	}
-	if err := core.RecordAccessTx(ctx, tx, operatorID, access, core.AccessExport, core.AccessGranted); err != nil {
+	if err := recordOutcomeTx(ctx, tx, b, item, OutcomeArchived, operatorID); err != nil {
 		return err
-	}
-	if _, err := core.LockRecordMetadataTx(ctx, tx, item.CaseID, operatorID); err != nil {
-		return err
-	}
-	tag, err := tx.Exec(ctx, executeRetentionSQL, pgx.NamedArgs{"id": item.RetentionID, "outcome": OutcomeArchived, "bordereau_id": b.ID})
-	if err != nil {
-		return fmt.Errorf("record outcome: %w", err)
-	}
-	if tag.RowsAffected() == 0 {
-		return fmt.Errorf("%w: the retention of case %s is no longer running", core.ErrInvalidState, item.CaseID)
 	}
 	_, err = core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID: item.CaseID, EventType: EventArchived, ActorUserID: operatorID, Reason: b.Reason,
 		AfterState: map[string]any{"bordereau_id": b.ID, "export_id": exportID},
 	})
 	return err
+}
+
+// queueTransferTx queues the complete transfer package of an item's case,
+// links it to the item and records the EXPORT.
+func queueTransferTx(ctx context.Context, tx pgx.Tx, item *Item, reason, operatorID string) (uuid.UUID, error) {
+	var exportID uuid.UUID
+	if err := tx.QueryRow(ctx, queueTransferSQL, pgx.NamedArgs{"case_id": item.CaseID, "operator_id": operatorID, "reason": reason}).Scan(&exportID); err != nil {
+		return uuid.Nil, fmt.Errorf("queue transfer package: %w", err)
+	}
+	item.ExportID = &exportID
+	if _, err := tx.Exec(ctx, setItemExportSQL, pgx.NamedArgs{"id": item.ID, "export_id": exportID}); err != nil {
+		return uuid.Nil, fmt.Errorf("link transfer package: %w", err)
+	}
+	access, err := core.EffectiveAccessTx(ctx, tx, operatorID, item.CaseID)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	return exportID, core.RecordAccessTx(ctx, tx, operatorID, access, core.AccessExport, core.AccessGranted)
+}
+
+// RebuildTransfer queues again the transfer package of a transferred case
+// whose package failed or expired, records the EXPORT and audits it.
+func (r *PostgresRepository) RebuildTransfer(ctx context.Context, itemID uuid.UUID, operatorID string) (*Item, error) {
+	var bordereauID uuid.UUID
+	err := core.InTx(ctx, r.pool, "rebuild transfer package", func(tx pgx.Tx) error {
+		item, err := collectItem(tx.Query(ctx, lockItemSQL, pgx.NamedArgs{"id": itemID}))
+		if err != nil {
+			return err
+		}
+		bordereauID = item.BordereauID
+		var id uuid.UUID
+		if err := tx.QueryRow(ctx, rebuildableItemSQL, pgx.NamedArgs{"id": itemID}).Scan(&id); err != nil {
+			if errors.Is(err, pgx.ErrNoRows) {
+				return fmt.Errorf("%w: only a transferred case whose package failed or expired is rebuilt", core.ErrInvalidState)
+			}
+			return fmt.Errorf("read item: %w", err)
+		}
+		exportID, err := queueTransferTx(ctx, tx, item, "rebuilt transfer package", operatorID)
+		if err != nil {
+			return err
+		}
+		_, err = core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
+			SubjectID: item.CaseID, EventType: EventTransferRebuilt, ActorUserID: operatorID,
+			AfterState: map[string]any{"bordereau_id": item.BordereauID, "export_id": exportID},
+		})
+		return err
+	})
+	if err != nil {
+		return nil, err
+	}
+	return r.findItem(ctx, bordereauID, itemID)
+}
+
+// findItem reads one item of a bordereau with its labels.
+func (r *PostgresRepository) findItem(ctx context.Context, bordereauID, itemID uuid.UUID) (*Item, error) {
+	items, err := listItems(ctx, r.pool, bordereauID)
+	if err != nil {
+		return nil, err
+	}
+	for _, it := range items {
+		if it.ID == itemID {
+			return it, nil
+		}
+	}
+	return nil, fmt.Errorf("%w: item %s", core.ErrNotFound, itemID)
 }
 
 // closeWithProofTx executes the bordereau with the SHA-256 of its manifest.

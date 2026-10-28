@@ -235,15 +235,17 @@ approve; an executed transfer builds a complete package and freezes the case. Be
 real cases, replace the three **example** policies with the archives' schedule, give each case type
 its policy, apply it to the already closed cases, and grant the role. Transfer packages hold the
 whole case (confidential content included), are downloadable by records managers only, logged at
-every download, and kept 90 days in the blob store. Full reference: [RETENTION.md](RETENTION.md).
+every download, and kept 90 days in the blob store. Executing an approved elimination is
+irreversible: it erases the content of the cases and deletes from the blob store the files only
+they held. Full reference: [RETENTION.md](RETENTION.md).
 
 ## Known limitations
 
 These are the gaps that make this a POC rather than a production service:
 
-- **No elimination yet, and a failed transfer package cannot be rebuilt** (GLD-077). Elimination
-  bordereaux can be prepared and approved but not executed; an ARCHIVED case whose package failed
-  or expired stays frozen without a package. The retention policies shipped are examples.
+- **Eliminations do not reach the backups** (GLD-077): align the backup retention of the
+  database and the blob store with the elimination schedule. The retention policies shipped are
+  examples.
 
 - **The sensitive read audit has no retention policy.** Access is enforced on every mutation and
   read (GLD-048), searches and lists return only readable subjects, and document bytes are

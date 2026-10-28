@@ -353,6 +353,24 @@ func (s *ConnectServer) CancelDispositionBordereau(ctx context.Context, req *con
 	return connect.NewResponse(&goelandv1.CancelDispositionBordereauResponse{Bordereau: out}), nil
 }
 
+// RebuildTransferPackage queues again a failed or expired transfer package (records manager).
+func (s *ConnectServer) RebuildTransferPackage(ctx context.Context, req *connect.Request[goelandv1.RebuildTransferPackageRequest]) (*connect.Response[goelandv1.RebuildTransferPackageResponse], error) {
+	id, err := s.bordereauID(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	user, _ := core.RequireCaller(ctx, core.ScopeRecords)
+	item, err := s.service.RebuildTransfer(ctx, id, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.itemsToProto(ctx, []*Item{item})
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.RebuildTransferPackageResponse{Item: out[0]}), nil
+}
+
 // bordereauID checks the records manager scope and parses a bordereau id.
 func (s *ConnectServer) bordereauID(ctx context.Context, raw string) (uuid.UUID, error) {
 	id, err := core.ParseUUID(raw)

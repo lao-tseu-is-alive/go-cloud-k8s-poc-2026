@@ -8,6 +8,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- Elimination of cases (GLD-077, migration `0037`): executing an approved elimination bordereau
+  keeps each case as a notice (« Affaire éliminée <référence> », frozen, retention DISPOSED) and
+  erases the rest: its texts, those of its timeline, tasks and circulations, the states and
+  reasons of its audit events (who and when stay), its ordinary exports, and the documents only it
+  held (blanked and logically deleted); their files are destroyed when no other document version
+  references them. The audit, timeline and document version guards accept this erasure only inside
+  the elimination transaction. The page asks for an explicit confirmation. A failed or expired
+  transfer package is rebuilt from the bordereau page. See `docs/RETENTION.md` §5b.
+
 ## [0.20.0] - 2026-10-28
 
 Retention of closed cases and their transfer to the archives (GLD-076): a retention schedule

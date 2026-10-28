@@ -24,7 +24,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `README.md` — Project overview, operator walkthrough and current-version banner.
 - `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
 - `docs/IMPORT_MAPPING.md` — Legacy data import: principles, runbook (rebuild and rerun), wave 1 mapping and decisions; rules and orders of magnitude only, never real values.
-- `docs/RETENTION.md` — Retention and final disposition of cases: vocabulary, lifecycle, rules, proof, transfer package, roles, operations and limits (GLD-076); for archivists, data protection and operators.
+- `docs/RETENTION.md` — Retention and final disposition of cases: vocabulary, lifecycle, rules, proof, transfer package, elimination, roles, operations and limits (GLD-076, GLD-077); for archivists, data protection and operators.
 - `docs/ROADMAP.md` — Authoritative implementation order and `GLD-NNN` task state; version-bannered, traced against the changelog.
 - `docs/PRODUCTION_READINESS.md` — Deployment contract: extensions, migrations, storage, auth, probes, secrets, limits.
 - `docs/atlas.md` — This file: exact file-by-file responsibility index, version-bannered.
@@ -300,6 +300,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0034_outbox.sql` — Schema migration: `outbox_event`, one per audit event, with its delivery state and queue indexes (GLD-028).
 - `pkg/core/module/db/migrations/0035_retention.sql` — Schema migration: `retention_policy` (example policies), the case type default policy, `subject_retention`, `retention_hold`, the RECORDS_MANAGER role (GLD-032).
 - `pkg/core/module/db/migrations/0036_disposition.sql` — Schema migration: `disposition_bordereau` and `disposition_item` (approval per case), the retention outcome (ARCHIVED / DISPOSED), the TRANSFER purpose of `case_export` (GLD-032 step B1).
+- `pkg/core/module/db/migrations/0037_elimination.sql` — Schema migration: the controlled exception of the audit, timeline and document version guards during an elimination (`goeland.disposal`), destroyed files (`content_blob.disposed_at`) (GLD-077).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -397,6 +398,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Retention domain (`pkg/retention`)
 
 - `pkg/retention/connect_server.go` — `RetentionService` ConnectRPC adapter: policy administration, case retention (READ or records scope), holds, due list with unreadable labels left out, application.
+- `pkg/retention/elimination.go` — Elimination of an approved case: notice, blanked content and audit states, documents only it held eliminated, files destroyed after the commit (GLD-077).
+- `pkg/retention/elimination_sql.go` — Raw SQL of the elimination: documents kept or eliminated, blanking statements, destroyed files, purged exports.
 - `pkg/retention/disposition_model.go` — Bordereau, item, decision and outcome models, audit event types and the proof manifest.
 - `pkg/retention/disposition_service.go` — Bordereau rules: disposition, reason and case list checks before preparation, decisions, execution and cancellation.
 - `pkg/retention/disposition_sql.go` — Raw SQL of the bordereaux: eligibility of a due case and its approver, items with labels and transfer package, decisions, transfer queueing, outcome.
@@ -466,6 +469,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/retention_test.go` — Retention: snapshot at closing, end at reopening, policy change kept out of running retentions, holds, due list, application to closed cases, inactive policy refused.
+- `pkg/integration/elimination_test.go` — Elimination: notice, blanked timeline and audit, own document eliminated and file destroyed, shared document kept, guards outside an elimination, revived file; rebuilding a failed transfer package.
 - `pkg/integration/disposition_test.go` — Bordereaux: approver unit or case, preparer refused, pending execution refused, approval and rejection, ARCHIVED and frozen case, transfer package built and downloaded by records managers only, eligibility rules, cancellation.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.

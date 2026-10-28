@@ -580,6 +580,9 @@ func (s *surface) bordereaux() {
 	s.fails(codeNotFound, "GET", missing("/api/disposition-bordereaux"), nil)
 	s.fails(codeFailedPrecondition, "POST", "/api/disposition-bordereaux/"+bid+"/cancel", map[string]any{"reason": "trop tard"})
 	s.fails(codeNotFound, "POST", missing("/api/disposition-items")+"/decide", map[string]any{"approve": true, "reason": "x"})
+	// The package is still queued: nothing to rebuild yet (GLD-077).
+	s.fails(codeFailedPrecondition, "POST", "/api/disposition-items/"+item+"/rebuild-transfer", map[string]any{})
+	s.fails(codeNotFound, "POST", missing("/api/disposition-items")+"/rebuild-transfer", map[string]any{})
 }
 
 // writerDo calls as the writer (reads and writes, no role) and requires a 2xx reply.

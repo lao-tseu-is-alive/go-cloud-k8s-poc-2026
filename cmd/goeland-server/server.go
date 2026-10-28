@@ -319,7 +319,7 @@ func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDep
 	if err != nil {
 		return nil, nil, fmt.Errorf("task module: %w", err)
 	}
-	retentionMod, err := retentionmodule.New(ctx, retentionmodule.Config{RequestTimeout: timeout}, retentionmodule.Deps{Pool: pool, Verifier: verifier, Logger: log})
+	retentionMod, err := retentionmodule.New(ctx, retentionmodule.Config{RequestTimeout: timeout}, retentionmodule.Deps{Pool: pool, Verifier: verifier, Logger: log, BlobStore: deps.store})
 	if err != nil {
 		return nil, nil, fmt.Errorf("retention module: %w", err)
 	}

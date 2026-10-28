@@ -120,11 +120,13 @@ const blobColumns = `
 b.id, b.sha256, b.storage_ref, b.mime_type, b.file_size_bytes, b.created_at, b.created_by, b.verified_at`
 
 // insertBlobSQL registers content unless its digest is already known; zero rows
-// means another blob holds the digest (see getBlobBySHA256SQL).
+// means another blob holds the digest (see getBlobBySHA256SQL). A blob whose
+// bytes were destroyed by an elimination (GLD-077) takes the new bytes back.
 const insertBlobSQL = `
 INSERT INTO content_blob AS b (sha256, storage_ref, mime_type, file_size_bytes, created_by)
 VALUES (@sha256, @storage_ref, @mime_type, @file_size_bytes, @created_by)
-ON CONFLICT (sha256) DO NOTHING
+ON CONFLICT (sha256) DO UPDATE SET storage_ref = EXCLUDED.storage_ref, disposed_at = NULL
+    WHERE b.disposed_at IS NOT NULL
 RETURNING ` + blobColumns + `;`
 
 const getBlobBySHA256SQL = `

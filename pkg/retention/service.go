@@ -30,6 +30,7 @@ type Repository interface {
 	Decide(ctx context.Context, in DecisionInput) (*Item, error)
 	Execute(ctx context.Context, id uuid.UUID, operatorID string) (*Bordereau, error)
 	Cancel(ctx context.Context, id uuid.UUID, reason, operatorID string) (*Bordereau, error)
+	RebuildTransfer(ctx context.Context, itemID uuid.UUID, operatorID string) (*Item, error)
 }
 
 // Service validates and runs the retention use cases.

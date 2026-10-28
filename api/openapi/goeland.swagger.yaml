@@ -1407,6 +1407,32 @@ paths:
             $ref: '#/definitions/RetentionServiceDecideDispositionItemBody'
       tags:
         - RetentionService
+  /api/disposition-items/{id}/rebuild-transfer:
+    post:
+      summary: Queue again the failed or expired transfer package of a transferred case. Requires goeland:records.
+      operationId: RebuildTransferPackage
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RebuildTransferPackageResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the bordereau item of the transferred case.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceRebuildTransferPackageBody'
+      tags:
+        - RetentionService
   /api/document-types:
     get:
       summary: |-
@@ -4723,6 +4749,11 @@ definitions:
     description: PlaceRetentionHoldRequest places a legal hold on a case (records manager).
     required:
       - reason
+  RetentionServiceRebuildTransferPackageBody:
+    type: object
+    description: |-
+      RebuildTransferPackageRequest queues again the transfer package of a
+      transferred case whose package failed or expired (records manager).
   RetentionServiceReleaseRetentionHoldBody:
     type: object
     properties:
@@ -8256,6 +8287,13 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the RETENTION_HOLD_PLACED event on the case.
     description: PlaceRetentionHoldResponse returns the hold and its audit event.
+  v1RebuildTransferPackageResponse:
+    type: object
+    properties:
+      item:
+        $ref: '#/definitions/v1DispositionItem'
+        description: item is the item, now linked to the queued package.
+    description: RebuildTransferPackageResponse returns the item with its new package.
   v1RecordMetadata:
     type: object
     properties:
