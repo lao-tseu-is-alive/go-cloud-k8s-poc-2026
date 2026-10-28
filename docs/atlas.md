@@ -586,10 +586,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
 - `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing list page: title, creation button and `ThingSearchList`.
+- `cmd/goeland-server/goeland-front/src/plugins/__tests__/icons.test.ts` — Vitest check that the icon registry holds exactly the `mdi-*` names the sources use.
+- `cmd/goeland-server/goeland-front/src/plugins/icons.ts` — Registry of the Material Design Icons used, imported one by one from `@mdi/js` (GLD-073).
 - `cmd/goeland-server/goeland-front/src/plugins/README.md` — Scaffold note on the plugins folder.
 - `cmd/goeland-server/goeland-front/src/plugins/i18n.ts` — vue-i18n setup with fr-CH default and English.
 - `cmd/goeland-server/goeland-front/src/plugins/index.ts` — Registers Vuetify, Pinia, router and i18n on the app.
-- `cmd/goeland-server/goeland-front/src/plugins/vuetify.ts` — Vuetify instance and theme configuration.
+- `cmd/goeland-server/goeland-front/src/plugins/vuetify.ts` — Vuetify instance, theme and the SVG icon set resolving `mdi-*` names.
 - `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, things, actors and administration.
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).

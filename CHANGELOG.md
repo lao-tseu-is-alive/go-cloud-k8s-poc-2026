@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Changed
+
+- The interface draws its icons as inline SVG and bundles only the 102 it uses instead of the
+  whole Material Design Icons font (GLD-073): the built assets shrink from 8.9 to 5.2 MB and the
+  main stylesheet from 696 to 373 KB.
+
 ## [0.18.1] - 2026-10-27
 
 The app bar works on phones and tablets, plus quick fixes (dates in the interface language, list

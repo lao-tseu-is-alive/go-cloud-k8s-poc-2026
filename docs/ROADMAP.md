@@ -152,9 +152,12 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
   type-checking proves the SPA consistent with itself, not with the contract. Generate TypeScript
   types from the protos for a CI comparison only (no connect-es at runtime), so a field renamed or
   added in a proto fails `make check` until the SPA follows (review `reports/report_20261014_gpt-5.md`).
-- [ ] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
+- [~] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
   ~690 KB stylesheet for the few dozen icons it uses; switch to `@mdi/js` SVG icons (Vuetify's
-  `mdi-svg` set) so only the icons used are bundled (review `reports/report_20261014_gpt-5.md`).
+  `mdi-svg` set) so only the icons used are bundled (review `reports/report_20261014_gpt-5.md`). Done
+  2026-10-28: a registry (`plugins/icons.ts`) maps the 102 `mdi-*` names to `@mdi/js` paths for
+  an SVG default set, a Vitest check keeps it equal to the names the sources use; the build loses
+  the font files (~3.9 MB) and half the stylesheet.
 
 ## Phase 0 — V2 alignment without regression (v2 §8, §15-23, §57)
 
