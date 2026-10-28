@@ -64,6 +64,7 @@ import {
   mdiFilePlus,
   mdiFilePowerpointOutline,
   mdiFileReplaceOutline,
+  mdiFileSign,
   mdiFileTree,
   mdiFileWordOutline,
   mdiFolderZipOutline,
@@ -115,6 +116,7 @@ import {
 } from '@mdi/js'
 
 export const ICON_PATHS: Readonly<Record<string, string>> = {
+  'mdi-file-sign': mdiFileSign,
   'mdi-lock-open-variant-outline': mdiLockOpenVariantOutline,
   'mdi-archive-clock-outline': mdiArchiveClockOutline,
   'mdi-account': mdiAccount,

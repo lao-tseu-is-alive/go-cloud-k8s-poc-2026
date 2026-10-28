@@ -6,8 +6,8 @@
 // default_retention_policy_code). Closing a case computes its retention in the
 // same transaction, as a snapshot of the policy; reopening ends it. A legal
 // hold blocks any disposal while it lasts. The case is the unit: its documents
-// follow it. Nothing here disposes of anything (step B: disposition
-// bordereaux).
+// follow it. Due cases are then handled through disposition bordereaux
+// (step B): approved per case, executed by the records manager.
 //
 // The policy catalogue is administered with goeland:admin and logged in the
 // reference change log; holds and the due list belong to the records manager
@@ -192,6 +192,23 @@ message SubjectRetention {
   string ended_by = 12;
   // end_reason explains the end.
   string end_reason = 13;
+  // disposition_status is the outcome of the retention: ARCHIVED (transferred
+  // and frozen) or DISPOSED; unspecified while the case waits.
+  DispositionStatus disposition_status = 14;
+  // disposed_at is when the outcome was executed.
+  google.protobuf.Timestamp disposed_at = 15;
+  // bordereau_id is the bordereau that executed it.
+  string bordereau_id = 16;
+}
+
+// DispositionStatus is the executed outcome of a retention.
+enum DispositionStatus {
+  // DISPOSITION_STATUS_UNSPECIFIED: not executed yet.
+  DISPOSITION_STATUS_UNSPECIFIED = 0;
+  // DISPOSITION_STATUS_ARCHIVED: transferred to the archives and frozen.
+  DISPOSITION_STATUS_ARCHIVED = 1;
+  // DISPOSITION_STATUS_DISPOSED: eliminated, only a notice and the proof are kept.
+  DISPOSITION_STATUS_DISPOSED = 2;
 }
 
 // RetentionHold is a legal hold on a case: no disposal while it is active.
@@ -349,6 +366,231 @@ message ApplyCaseTypeRetentionResponse {
 }
 
 // =============================================
+// DISPOSITION BORDEREAUX (step B)
+// =============================================
+
+// BordereauStatus is the state of a disposition bordereau.
+enum BordereauStatus {
+  // BORDEREAU_STATUS_UNSPECIFIED is the zero value; never stored.
+  BORDEREAU_STATUS_UNSPECIFIED = 0;
+  // BORDEREAU_STATUS_OPEN waits for the approvals, then for its execution.
+  BORDEREAU_STATUS_OPEN = 1;
+  // BORDEREAU_STATUS_EXECUTED handled its approved cases; its proof is kept.
+  BORDEREAU_STATUS_EXECUTED = 2;
+  // BORDEREAU_STATUS_CANCELLED was abandoned before its execution.
+  BORDEREAU_STATUS_CANCELLED = 3;
+}
+
+// DispositionDecision is the approval of one case of a bordereau.
+enum DispositionDecision {
+  // DISPOSITION_DECISION_UNSPECIFIED is the zero value; never stored.
+  DISPOSITION_DECISION_UNSPECIFIED = 0;
+  // DISPOSITION_DECISION_PENDING waits for its approver.
+  DISPOSITION_DECISION_PENDING = 1;
+  // DISPOSITION_DECISION_APPROVED: the case will be handled at execution.
+  DISPOSITION_DECISION_APPROVED = 2;
+  // DISPOSITION_DECISION_REJECTED: the case is left out of the execution.
+  DISPOSITION_DECISION_REJECTED = 3;
+}
+
+// DispositionItem is one case of a bordereau with its approval.
+message DispositionItem {
+  // id identifies the item.
+  string id = 1;
+  // bordereau_id is its bordereau.
+  string bordereau_id = 2;
+  // case_id is the case.
+  string case_id = 3;
+  // case_label is the case's label; empty when the caller may not read the case.
+  string case_label = 4;
+  // business_ref is the case's business reference.
+  string business_ref = 5;
+  // until_on is the end of the case's retention (YYYY-MM-DD).
+  string until_on = 6;
+  // policy_code is the policy applied to the case.
+  string policy_code = 7;
+  // approver_subject_id is who approves: the owning unit (MANAGE on it) or the case itself.
+  string approver_subject_id = 8;
+  // approver_label is the approver subject's label.
+  string approver_label = 9;
+  // decision is the approval state.
+  DispositionDecision decision = 10;
+  // decided_at is when the approver decided.
+  google.protobuf.Timestamp decided_at = 11;
+  // decided_by is the approver.
+  string decided_by = 12;
+  // decision_reason explains the decision.
+  string decision_reason = 13;
+  // export_id is the transfer package of an executed ARCHIVE item.
+  string export_id = 14;
+  // export_status is the state of that package (QUEUED, RUNNING, DONE, FAILED, EXPIRED).
+  string export_status = 15;
+  // export_sha256 is the package's SHA-256 once built.
+  string export_sha256 = 16;
+}
+
+// DispositionBordereau gathers due cases of one final disposition for approval and execution.
+message DispositionBordereau {
+  // id identifies the bordereau.
+  string id = 1;
+  // final_disposition is ARCHIVE or DESTROY.
+  FinalDisposition final_disposition = 2;
+  // status is the bordereau state.
+  BordereauStatus status = 3;
+  // reason explains the bordereau.
+  string reason = 4;
+  // prepared_by is the records manager who prepared it (never an approver).
+  string prepared_by = 5;
+  // prepared_at is when it was prepared.
+  google.protobuf.Timestamp prepared_at = 6;
+  // closed_at is when it was executed or cancelled.
+  google.protobuf.Timestamp closed_at = 7;
+  // closed_by is who executed or cancelled it.
+  string closed_by = 8;
+  // close_reason explains a cancellation.
+  string close_reason = 9;
+  // proof_sha256 is the SHA-256 of the proof manifest, set at execution.
+  string proof_sha256 = 10;
+  // items are its cases (GetDispositionBordereau only).
+  repeated DispositionItem items = 11;
+  // item_count counts its cases.
+  int32 item_count = 12;
+  // pending_count counts its cases waiting for a decision.
+  int32 pending_count = 13;
+  // approved_count counts its approved cases.
+  int32 approved_count = 14;
+}
+
+// CreateDispositionBordereauRequest prepares a bordereau (records manager).
+message CreateDispositionBordereauRequest {
+  // final_disposition is ARCHIVE or DESTROY; a case of a REVIEW policy fits either.
+  FinalDisposition final_disposition = 1 [(buf.validate.field).enum = {
+    in: [
+      1,
+      2
+    ]
+  }];
+  // reason explains the bordereau (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+  // case_ids are the due cases (1-500), each with a running retention ended,
+  // no legal hold and no other open bordereau.
+  repeated string case_ids = 3 [(buf.validate.field).repeated = {
+    min_items: 1
+    max_items: 500
+    unique: true
+    items: {
+      string: {uuid: true}
+    }
+  }];
+}
+
+// CreateDispositionBordereauResponse returns the prepared bordereau, open, with its items.
+message CreateDispositionBordereauResponse {
+  // bordereau is the bordereau.
+  DispositionBordereau bordereau = 1;
+}
+
+// GetDispositionBordereauResponse returns the bordereau with its items.
+message GetDispositionBordereauResponse {
+  // bordereau is the bordereau.
+  DispositionBordereau bordereau = 1;
+}
+
+// ExecuteDispositionBordereauResponse returns the executed bordereau with its items and proof.
+message ExecuteDispositionBordereauResponse {
+  // bordereau is the bordereau.
+  DispositionBordereau bordereau = 1;
+}
+
+// CancelDispositionBordereauResponse returns the cancelled bordereau.
+message CancelDispositionBordereauResponse {
+  // bordereau is the bordereau.
+  DispositionBordereau bordereau = 1;
+}
+
+// GetDispositionBordereauRequest reads a bordereau (records manager).
+message GetDispositionBordereauRequest {
+  // id is the bordereau.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// ListDispositionBordereauxRequest pages the bordereaux, newest first (records manager).
+message ListDispositionBordereauxRequest {
+  // status restricts the list to one state; unspecified means all.
+  BordereauStatus status = 1 [(buf.validate.field).enum.defined_only = true];
+  // page_size is the page length; 0 means the default (25), at most 200.
+  int32 page_size = 2 [(buf.validate.field).int32 = {
+    gte: 0
+    lte: 200
+  }];
+  // page_token is the next_page_token of the previous page; empty for the first page.
+  string page_token = 3 [(buf.validate.field).string.max_len = 1024];
+}
+
+// ListDispositionBordereauxResponse returns a page of bordereaux (without items).
+message ListDispositionBordereauxResponse {
+  // bordereaux are the bordereaux of the page.
+  repeated DispositionBordereau bordereaux = 1;
+  // next_page_token fetches the next page; empty on the last page.
+  string next_page_token = 2;
+  // total_size counts every matching bordereau.
+  int32 total_size = 3;
+}
+
+// ListMyDispositionApprovalsRequest lists the cases waiting for the caller's approval.
+message ListMyDispositionApprovalsRequest {}
+
+// ListMyDispositionApprovalsResponse returns the items the caller may decide, oldest bordereau first.
+message ListMyDispositionApprovalsResponse {
+  // items are the pending items whose approver subject the caller manages.
+  repeated DispositionItem items = 1;
+  // dispositions gives, per item id, its bordereau's final disposition.
+  map<string, FinalDisposition> dispositions = 2;
+}
+
+// DecideDispositionItemRequest approves or rejects one case of a bordereau.
+message DecideDispositionItemRequest {
+  // id is the item.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // approve approves the case; false rejects it.
+  bool approve = 2;
+  // reason explains the decision (1-2000 characters); it is audited.
+  string reason = 3 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// DecideDispositionItemResponse returns the decided item.
+message DecideDispositionItemResponse {
+  // item is the decided item.
+  DispositionItem item = 1;
+}
+
+// ExecuteDispositionBordereauRequest executes a bordereau whose cases are all decided (records manager).
+message ExecuteDispositionBordereauRequest {
+  // id is the bordereau.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// CancelDispositionBordereauRequest abandons an open bordereau (records manager).
+message CancelDispositionBordereauRequest {
+  // id is the bordereau.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // reason explains the cancellation (1-2000 characters).
+  string reason = 2 [
+    (google.api.field_behavior) = REQUIRED,
+    (buf.validate.field).string.min_len = 1,
+    (buf.validate.field).string.max_len = 2000
+  ];
+}
+
+// =============================================
 // SERVICE
 // =============================================
 
@@ -405,6 +647,54 @@ service RetentionService {
   rpc ApplyCaseTypeRetention(ApplyCaseTypeRetentionRequest) returns (ApplyCaseTypeRetentionResponse) {
     option (google.api.http) = {
       post: "/api/case-types/{case_type_code}/apply-retention"
+      body: "*"
+    };
+  }
+
+  // Prepare a disposition bordereau. Requires goeland:records.
+  rpc CreateDispositionBordereau(CreateDispositionBordereauRequest) returns (CreateDispositionBordereauResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-bordereaux"
+      body: "*"
+    };
+  }
+
+  // List the bordereaux. Requires goeland:records.
+  rpc ListDispositionBordereaux(ListDispositionBordereauxRequest) returns (ListDispositionBordereauxResponse) {
+    option (google.api.http) = {get: "/api/disposition-bordereaux"};
+  }
+
+  // Read a bordereau with its cases. Requires goeland:records.
+  rpc GetDispositionBordereau(GetDispositionBordereauRequest) returns (GetDispositionBordereauResponse) {
+    option (google.api.http) = {get: "/api/disposition-bordereaux/{id}"};
+  }
+
+  // List the cases waiting for the caller's approval. Requires goeland:read.
+  rpc ListMyDispositionApprovals(ListMyDispositionApprovalsRequest) returns (ListMyDispositionApprovalsResponse) {
+    option (google.api.http) = {get: "/api/disposition-items/mine"};
+  }
+
+  // Approve or reject a case of a bordereau. Requires goeland:write and MANAGE
+  // on the approver subject; the preparer never decides.
+  rpc DecideDispositionItem(DecideDispositionItemRequest) returns (DecideDispositionItemResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-items/{id}/decide"
+      body: "*"
+    };
+  }
+
+  // Execute a bordereau whose cases are all decided. Requires goeland:records.
+  rpc ExecuteDispositionBordereau(ExecuteDispositionBordereauRequest) returns (ExecuteDispositionBordereauResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-bordereaux/{id}/execute"
+      body: "*"
+    };
+  }
+
+  // Abandon an open bordereau. Requires goeland:records.
+  rpc CancelDispositionBordereau(CancelDispositionBordereauRequest) returns (CancelDispositionBordereauResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-bordereaux/{id}/cancel"
       body: "*"
     };
   }

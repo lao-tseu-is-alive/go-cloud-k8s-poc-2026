@@ -28,3 +28,25 @@ export function dispositionColor (disposition: string | undefined): string {
     }
   }
 }
+
+/** Chip colour of a bordereau state. */
+export function bordereauStatusColor (status: string | undefined): string {
+  if (status === 'BORDEREAU_STATUS_OPEN') {
+    return 'info'
+  }
+  if (status === 'BORDEREAU_STATUS_EXECUTED') {
+    return 'success'
+  }
+  return 'default'
+}
+
+/** Chip colour of a case's decision in a bordereau. */
+export function decisionColor (decision: string | undefined): string {
+  if (decision === 'DISPOSITION_DECISION_APPROVED') {
+    return 'success'
+  }
+  if (decision === 'DISPOSITION_DECISION_REJECTED') {
+    return 'error'
+  }
+  return 'warning'
+}

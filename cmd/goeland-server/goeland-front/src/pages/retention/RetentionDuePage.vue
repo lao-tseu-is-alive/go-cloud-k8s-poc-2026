@@ -3,8 +3,11 @@
   import { storeToRefs } from 'pinia'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
+  import { useRouter } from 'vue-router'
   import { listCaseTypes } from '@/api/caseClient'
   import { applyCaseTypeRetention, FINAL_DISPOSITIONS, listDueRetentions } from '@/api/retentionClient'
+  import BordereauCreateDialog from '@/components/retention/BordereauCreateDialog.vue'
+  import BordereauList from '@/components/retention/BordereauList.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { useAuthStore } from '@/stores/auth'
@@ -15,14 +18,19 @@
 
   // The retention deadlines (GLD-032): the closed cases whose retention ends on
   // or before a day, oldest first, for the records manager. Administrators also
-  // give a case type's policy to its already closed cases. The final
-  // disposition itself (bordereaux) is step B.
+  // give a case type's policy to its already closed cases. Due cases are
+  // selected into a disposition bordereau (second tab).
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
   const { report } = useApiErrors()
   const ui = useUiStore()
   const { isAdmin, isRecordsManager } = storeToRefs(useAuthStore())
   const PAGE_SIZE = 50
+  const router = useRouter()
+  const tab = ref('due')
+  // The selected due cases (not on hold), put in a new bordereau.
+  const selected = ref<string[]>([])
+  const creating = ref(false)
 
   const dueOn = ref(zurichToday())
   const disposition = ref<FinalDisposition | null>(null)
@@ -46,6 +54,7 @@
         pageToken: append ? nextToken.value : undefined,
       })
       rows.value = append ? [...rows.value, ...(res.retentions ?? [])] : (res.retentions ?? [])
+      if (!append) selected.value = []
       total.value = res.totalSize ?? 0
       nextToken.value = res.nextPageToken ?? ''
     } catch (error) {
@@ -100,9 +109,29 @@
     <v-alert v-if="!isRecordsManager" type="warning" variant="tonal">{{ t('retention.page.forbidden') }}</v-alert>
 
     <template v-else>
-      <v-card class="mb-4">
+      <v-tabs v-model="tab" class="mb-2" color="primary">
+        <v-tab value="due">{{ t('retention.page.dueTab') }}</v-tab>
+        <v-tab value="bordereaux">{{ t('retention.bordereau.tab') }}</v-tab>
+      </v-tabs>
+
+      <v-card v-if="tab === 'bordereaux'" class="mb-4">
+        <v-card-text><BordereauList /></v-card-text>
+      </v-card>
+
+      <v-card v-else class="mb-4">
         <v-card-text>
-          <p class="text-caption text-medium-emphasis mb-2">{{ t('retention.page.hint') }}</p>
+          <div class="d-flex flex-wrap align-center ga-2 mb-2">
+            <p class="text-caption text-medium-emphasis mb-0 flex-grow-1">{{ t('retention.page.hint') }}</p>
+
+            <v-btn
+              color="primary"
+              :disabled="selected.length === 0"
+              prepend-icon="mdi-file-sign"
+              size="small"
+              variant="flat"
+              @click="creating = true"
+            >{{ t('retention.bordereau.createN', { n: selected.length }) }}</v-btn>
+          </div>
 
           <v-row dense>
             <v-col cols="12" md="3" sm="6">
@@ -145,6 +174,7 @@
           <v-table v-else density="compact">
             <thead>
               <tr>
+                <th scope="col"><span class="d-sr-only">{{ t('retention.bordereau.select') }}</span></th>
                 <th scope="col">{{ t('retention.page.case') }}</th>
                 <th scope="col">{{ t('retention.page.type') }}</th>
                 <th scope="col">{{ t('retention.page.until') }}</th>
@@ -155,6 +185,16 @@
 
             <tbody>
               <tr v-for="row in rows" :key="row.retention.id">
+                <td>
+                  <v-checkbox-btn
+                    v-model="selected"
+                    :aria-label="t('retention.bordereau.select')"
+                    density="compact"
+                    :disabled="row.onHold"
+                    :value="row.retention.subjectId"
+                  />
+                </td>
+
                 <td>
                   <router-link :to="`/cases/${row.retention.subjectId}`">
                     <span v-if="row.businessRef" class="text-medium-emphasis mr-1">{{ row.businessRef }}</span>
@@ -190,7 +230,9 @@
         </v-card-text>
       </v-card>
 
-      <v-card v-if="isAdmin">
+      <BordereauCreateDialog v-model="creating" :case-ids="selected" @created="router.push(`/retention/bordereaux/${$event}`)" />
+
+      <v-card v-if="isAdmin && tab === 'due'">
         <v-card-title class="text-subtitle-1">{{ t('retention.page.apply') }}</v-card-title>
 
         <v-card-text>

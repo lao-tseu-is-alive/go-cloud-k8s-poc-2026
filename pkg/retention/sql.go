@@ -52,7 +52,7 @@ WHERE c.id = @case_id;`
 const retentionColumns = `r.id, r.subject_id, r.policy_code,
 coalesce((SELECT p.label FROM retention_policy p WHERE p.code = r.policy_code), '') AS policy_label,
 r.duration_years, r.final_disposition, r.starts_on, r.until_on, r.created_at, r.created_by,
-r.ended_at, r.ended_by, r.end_reason`
+r.ended_at, r.ended_by, r.end_reason, r.disposition_status, r.disposed_at, r.bordereau_id`
 
 // startRetentionSQL computes the retention of a closed case from its type's
 // default policy: it starts on the closing day (Europe/Zurich) and ends the
@@ -120,7 +120,7 @@ FROM subject_retention r
 JOIN subject_ref s ON s.id = r.subject_id
 JOIN case_file c ON c.id = r.subject_id
 JOIN case_type t ON t.id = c.case_type_id
-WHERE r.ended_at IS NULL
+WHERE r.ended_at IS NULL AND r.disposition_status IS NULL
   AND r.until_on <= coalesce(nullif(@due_on, '')::date, (now() AT TIME ZONE 'Europe/Zurich')::date)
   AND (@disposition = '' OR r.final_disposition = @disposition)
   AND (@include_held OR NOT EXISTS (SELECT 1 FROM retention_hold h WHERE h.subject_id = r.subject_id AND h.released_at IS NULL))

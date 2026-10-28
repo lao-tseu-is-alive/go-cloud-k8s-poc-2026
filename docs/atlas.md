@@ -298,6 +298,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0030_case_export.sql` — Schema migration: `case_export` jobs of the case export (GLD-029): queue, archive reference and expiry.
 - `pkg/core/module/db/migrations/0034_outbox.sql` — Schema migration: `outbox_event`, one per audit event, with its delivery state and queue indexes (GLD-028).
 - `pkg/core/module/db/migrations/0035_retention.sql` — Schema migration: `retention_policy` (example policies), the case type default policy, `subject_retention`, `retention_hold`, the RECORDS_MANAGER role (GLD-032).
+- `pkg/core/module/db/migrations/0036_disposition.sql` — Schema migration: `disposition_bordereau` and `disposition_item` (approval per case), the retention outcome (ARCHIVED / DISPOSED), the TRANSFER purpose of `case_export` (GLD-032 step B1).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -395,6 +396,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Retention domain (`pkg/retention`)
 
 - `pkg/retention/connect_server.go` — `RetentionService` ConnectRPC adapter: policy administration, case retention (READ or records scope), holds, due list with unreadable labels left out, application.
+- `pkg/retention/disposition_model.go` — Bordereau, item, decision and outcome models, audit event types and the proof manifest.
+- `pkg/retention/disposition_service.go` — Bordereau rules: disposition, reason and case list checks before preparation, decisions, execution and cancellation.
+- `pkg/retention/disposition_sql.go` — Raw SQL of the bordereaux: eligibility of a due case and its approver, items with labels and transfer package, decisions, transfer queueing, outcome.
+- `pkg/retention/disposition_storage.go` — pgx implementation: preparation of locked and checked cases, approvals by MANAGE on the approver subject (never the preparer), execution (transfer package, EXPORT, frozen case, ARCHIVED) with the SHA-256 proof, cancellation.
 - `pkg/retention/doc.go` — Package documentation for the retention of closed cases.
 - `pkg/retention/mappers.go` — Policy, retention, hold and disposition domain ↔ proto mappers.
 - `pkg/retention/model.go` — Dispositions, audit event types, policy, retention snapshot, hold, due list and application models with `db` tags.
@@ -460,6 +465,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/retention_test.go` — Retention: snapshot at closing, end at reopening, policy change kept out of running retentions, holds, due list, application to closed cases, inactive policy refused.
+- `pkg/integration/disposition_test.go` — Bordereaux: approver unit or case, preparer refused, pending execution refused, approval and rejection, ARCHIVED and frozen case, transfer package built and downloaded by records managers only, eligibility rules, cancellation.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
@@ -546,6 +552,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/actor/actorForm.ts` — Actor form model and mappers to create/update requests.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseExportPanel.vue` — Case export panel: request with a reason, the caller's exports refreshed while building, download of a ready archive.
 - `cmd/goeland-server/goeland-front/src/components/retention/CaseRetentionPanel.vue` — Retention of a case: running retention or policy to come, legal hold placed or released by the records manager, history.
+- `cmd/goeland-server/goeland-front/src/components/retention/BordereauCreateDialog.vue` — Dialog preparing a bordereau of the selected due cases (disposition and reason).
+- `cmd/goeland-server/goeland-front/src/components/retention/BordereauList.vue` — The bordereaux by state, newest first, with their counts, each opening its page.
+- `cmd/goeland-server/goeland-front/src/components/retention/DispositionApprovalsCard.vue` — The cases waiting for the caller's approval or rejection (shown on "my tasks" when there are some).
 - `cmd/goeland-server/goeland-front/src/components/case/CaseStatusChip.vue` — Colored case status chip.
 - `cmd/goeland-server/goeland-front/src/components/case/CaseSearchList.vue` — The case list with its filters (type, status, opening, creation, creator), shared by the case page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/case/CaseTypeSelect.vue` — Case type selector bound to the type code.
@@ -628,7 +637,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
 - `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
-- `cmd/goeland-server/goeland-front/src/pages/retention/RetentionDuePage.vue` — Retention deadlines for records managers (day, disposition, held cases) and, for administrators, a type's policy applied to its closed cases.
+- `cmd/goeland-server/goeland-front/src/pages/retention/RetentionDuePage.vue` — Retention page for records managers: deadlines (day, disposition, held cases) with selection into a bordereau, the bordereaux tab and, for administrators, a type's policy applied to its closed cases.
+- `cmd/goeland-server/goeland-front/src/pages/retention/BordereauDetailPage.vue` — A bordereau: its cases and decisions, execution and cancellation, transfer packages to download, proof.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing list page: title, creation button and `ThingSearchList`.
 - `cmd/goeland-server/goeland-front/src/plugins/__tests__/icons.test.ts` — Vitest check that the icon registry holds exactly the `mdi-*` names the sources use.
 - `cmd/goeland-server/goeland-front/src/plugins/icons.ts` — Registry of the Material Design Icons used, imported one by one from `@mdi/js` (GLD-073).

@@ -18,7 +18,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   holds that keep a case off the due list, the due list and the application of a type's policy to
   its already closed cases (1000 per call, each audited). A new application role, RECORDS_MANAGER
   (Archiviste), gives the `goeland:records` scope; the SPA shows the retention on the case page
-  (Gouvernance) and a Conservation page with the deadlines. Nothing is disposed of yet.
+  (Gouvernance) and a Conservation page with the deadlines.
+- Disposition bordereaux (GLD-032, step B1, migration `0036`): a records manager gathers due cases
+  (not on hold) of one final disposition in a bordereau; each case is approved or rejected by a
+  holder of MANAGE on its owning unit, or on the case without one, never by the preparer (the
+  approvals appear on "Mes tâches"); executing a transfer bordereau builds each approved case's
+  complete package (the export format of GLD-029, built by the system without read filter,
+  downloadable by records managers for 90 days), records it as EXPORT, freezes the case and keeps
+  the SHA-256 of the bordereau's manifest as proof. Executing an elimination comes next (B2).
 
 ### Changed
 

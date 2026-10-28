@@ -58,6 +58,11 @@ const router = createRouter({
       component: () => import('@/pages/retention/RetentionDuePage.vue'),
     },
     {
+      path: '/retention/bordereaux/:id',
+      name: 'retention-bordereau',
+      component: () => import('@/pages/retention/BordereauDetailPage.vue'),
+    },
+    {
       path: '/admin',
       name: 'admin',
       component: () => import('@/pages/admin/AdminPage.vue'),

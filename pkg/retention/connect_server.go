@@ -208,6 +208,203 @@ func (s *ConnectServer) ApplyCaseTypeRetention(ctx context.Context, req *connect
 	return connect.NewResponse(&goelandv1.ApplyCaseTypeRetentionResponse{Applied: res.Applied, Remaining: res.Remaining}), nil
 }
 
+// CreateDispositionBordereau prepares a bordereau of due cases (records manager).
+func (s *ConnectServer) CreateDispositionBordereau(ctx context.Context, req *connect.Request[goelandv1.CreateDispositionBordereauRequest]) (*connect.Response[goelandv1.CreateDispositionBordereauResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeRecords)
+	if err != nil {
+		return nil, err
+	}
+	ids := make([]uuid.UUID, 0, len(req.Msg.CaseIds))
+	for _, raw := range req.Msg.CaseIds {
+		id, err := core.ParseUUID(raw)
+		if err != nil {
+			return nil, err
+		}
+		ids = append(ids, id)
+	}
+	b, err := s.service.CreateBordereau(ctx, BordereauInput{
+		Disposition: DispositionFromProto(req.Msg.FinalDisposition), Reason: req.Msg.Reason, CaseIDs: ids, OperatorID: core.OperatorID(user),
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.bordereauToProto(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.CreateDispositionBordereauResponse{Bordereau: out}), nil
+}
+
+// ListDispositionBordereaux pages the bordereaux (records manager).
+func (s *ConnectServer) ListDispositionBordereaux(ctx context.Context, req *connect.Request[goelandv1.ListDispositionBordereauxRequest]) (*connect.Response[goelandv1.ListDispositionBordereauxResponse], error) {
+	if _, err := core.RequireCaller(ctx, core.ScopeRecords); err != nil {
+		return nil, err
+	}
+	offset, err := core.ParsePageToken(req.Msg.PageToken)
+	if err != nil {
+		return nil, connect.NewError(connect.CodeInvalidArgument, err)
+	}
+	res, err := s.service.ListBordereaux(ctx, BordereauFilter{Status: BordereauStatusFromProto(req.Msg.Status), Limit: int(req.Msg.PageSize), Offset: offset})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out := make([]*goelandv1.DispositionBordereau, 0, len(res.Bordereaux))
+	for _, b := range res.Bordereaux {
+		out = append(out, BordereauToProto(b))
+	}
+	return connect.NewResponse(&goelandv1.ListDispositionBordereauxResponse{
+		Bordereaux: out, NextPageToken: core.NextPageToken(offset, len(out), res.TotalSize), TotalSize: res.TotalSize,
+	}), nil
+}
+
+// GetDispositionBordereau reads a bordereau with its cases (records manager).
+func (s *ConnectServer) GetDispositionBordereau(ctx context.Context, req *connect.Request[goelandv1.GetDispositionBordereauRequest]) (*connect.Response[goelandv1.GetDispositionBordereauResponse], error) {
+	id, err := s.bordereauID(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	b, err := s.service.GetBordereau(ctx, id)
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.bordereauToProto(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.GetDispositionBordereauResponse{Bordereau: out}), nil
+}
+
+// ListMyDispositionApprovals lists the cases waiting for the caller's decision.
+func (s *ConnectServer) ListMyDispositionApprovals(ctx context.Context, _ *connect.Request[goelandv1.ListMyDispositionApprovalsRequest]) (*connect.Response[goelandv1.ListMyDispositionApprovalsResponse], error) {
+	user, err := core.RequireCaller(ctx, core.ScopeRead)
+	if err != nil {
+		return nil, err
+	}
+	approvals, err := s.service.MyApprovals(ctx, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	items := make([]*Item, 0, len(approvals))
+	out := &goelandv1.ListMyDispositionApprovalsResponse{Dispositions: map[string]goelandv1.FinalDisposition{}}
+	for _, a := range approvals {
+		items = append(items, a.Item)
+		out.Dispositions[a.Item.ID.String()] = DispositionToProto(a.Disposition)
+	}
+	if out.Items, err = s.itemsToProto(ctx, items); err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(out), nil
+}
+
+// DecideDispositionItem approves or rejects a case of a bordereau.
+func (s *ConnectServer) DecideDispositionItem(ctx context.Context, req *connect.Request[goelandv1.DecideDispositionItemRequest]) (*connect.Response[goelandv1.DecideDispositionItemResponse], error) {
+	id, err := core.ParseUUID(req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	user, err := core.RequireCaller(ctx, core.ScopeWrite)
+	if err != nil {
+		return nil, err
+	}
+	item, err := s.service.Decide(ctx, DecisionInput{ItemID: id, Approve: req.Msg.Approve, Reason: req.Msg.Reason, OperatorID: core.OperatorID(user)})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.itemsToProto(ctx, []*Item{item})
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.DecideDispositionItemResponse{Item: out[0]}), nil
+}
+
+// ExecuteDispositionBordereau executes a fully decided bordereau (records manager).
+func (s *ConnectServer) ExecuteDispositionBordereau(ctx context.Context, req *connect.Request[goelandv1.ExecuteDispositionBordereauRequest]) (*connect.Response[goelandv1.ExecuteDispositionBordereauResponse], error) {
+	id, err := s.bordereauID(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	user, _ := core.RequireCaller(ctx, core.ScopeRecords)
+	b, err := s.service.Execute(ctx, id, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.bordereauToProto(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.ExecuteDispositionBordereauResponse{Bordereau: out}), nil
+}
+
+// CancelDispositionBordereau abandons an open bordereau (records manager).
+func (s *ConnectServer) CancelDispositionBordereau(ctx context.Context, req *connect.Request[goelandv1.CancelDispositionBordereauRequest]) (*connect.Response[goelandv1.CancelDispositionBordereauResponse], error) {
+	id, err := s.bordereauID(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	user, _ := core.RequireCaller(ctx, core.ScopeRecords)
+	b, err := s.service.Cancel(ctx, id, req.Msg.Reason, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	out, err := s.bordereauToProto(ctx, b)
+	if err != nil {
+		return nil, err
+	}
+	return connect.NewResponse(&goelandv1.CancelDispositionBordereauResponse{Bordereau: out}), nil
+}
+
+// bordereauID checks the records manager scope and parses a bordereau id.
+func (s *ConnectServer) bordereauID(ctx context.Context, raw string) (uuid.UUID, error) {
+	id, err := core.ParseUUID(raw)
+	if err != nil {
+		return uuid.Nil, err
+	}
+	if _, err := core.RequireCaller(ctx, core.ScopeRecords); err != nil {
+		return uuid.Nil, err
+	}
+	return id, nil
+}
+
+// bordereauToProto converts a bordereau, its items' unreadable labels left out.
+func (s *ConnectServer) bordereauToProto(ctx context.Context, b *Bordereau) (*goelandv1.DispositionBordereau, error) {
+	items, err := s.itemsToProto(ctx, b.Items)
+	if err != nil {
+		return nil, err
+	}
+	out := BordereauToProto(&Bordereau{
+		ID: b.ID, FinalDisposition: b.FinalDisposition, Status: b.Status, Reason: b.Reason, PreparedBy: b.PreparedBy,
+		PreparedAt: b.PreparedAt, ClosedAt: b.ClosedAt, ClosedBy: b.ClosedBy, CloseReason: b.CloseReason,
+		ProofSHA256: b.ProofSHA256, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
+	})
+	out.Items = items
+	return out, nil
+}
+
+// itemsToProto converts items, blanking the case and approver labels the
+// caller may not read (GLD-070).
+func (s *ConnectServer) itemsToProto(ctx context.Context, items []*Item) ([]*goelandv1.DispositionItem, error) {
+	ids := make([]uuid.UUID, 0, 2*len(items))
+	for _, it := range items {
+		ids = append(ids, it.CaseID, it.ApproverSubjectID)
+	}
+	hidden, err := s.authz.Unreadable(ctx, ids)
+	if err != nil {
+		return nil, err
+	}
+	out := make([]*goelandv1.DispositionItem, 0, len(items))
+	for _, it := range items {
+		p := ItemToProto(it)
+		if hidden[it.CaseID] {
+			p.CaseLabel = ""
+		}
+		if hidden[it.ApproverSubjectID] {
+			p.ApproverLabel = ""
+		}
+		out = append(out, p)
+	}
+	return out, nil
+}
+
 func (s *ConnectServer) mapError(err error) *connect.Error {
 	return core.ToConnectError(s.log, "retention", err)
 }

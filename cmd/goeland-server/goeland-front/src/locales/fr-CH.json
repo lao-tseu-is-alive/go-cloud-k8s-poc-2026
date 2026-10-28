@@ -812,7 +812,46 @@
     "history": "Historique",
     "ended": "terminée le {at} : {reason}",
     "released": "levé le {at} : {reason}",
+    "archived": "Versée le {at}",
+    "bordereau": {
+      "tab": "Bordereaux",
+      "title": "Bordereau d'élimination ou de versement",
+      "create": "Préparer un bordereau",
+      "createN": "Préparer un bordereau ({n})",
+      "createHint": "{n} affaire(s) échue(s). Chacune sera approuvée par un responsable de son unité propriétaire (ou de l'affaire si elle n'en a pas), jamais par vous.",
+      "prepare": "Préparer",
+      "select": "Sélectionner l'affaire",
+      "reason": "Motif",
+      "empty": "Aucun bordereau.",
+      "preparedAt": "Préparé le",
+      "cases": "Affaires",
+      "counts": "{total} (en attente {pending}, approuvées {approved})",
+      "status": "État",
+      "preparedBy": "Préparé le {at} par",
+      "closedBy": "Clos le {at} par",
+      "proof": "Preuve (SHA-256 du manifeste) :",
+      "approvalHint": "Chaque affaire attend la décision d'un responsable de son unité propriétaire. L'exécution est possible quand toutes sont décidées ; seules les affaires approuvées sont traitées.",
+      "execute": "Exécuter",
+      "executed": "Bordereau exécuté.",
+      "cancel": "Annuler le bordereau",
+      "cancelReason": "Motif de l'annulation",
+      "cancelled": "Bordereau annulé.",
+      "approver": "Approbation par",
+      "decision": "Décision",
+      "package": "Paquet de versement",
+      "download": "Télécharger"
+    },
+    "approvals": {
+      "title": "Sort final à approuver ({n})",
+      "hint": "L'archiviste propose ces affaires échues au versement ou à l'élimination ; vous en êtes responsable par leur unité propriétaire ou par l'affaire.",
+      "approve": "Approuver",
+      "reject": "Refuser",
+      "approveReason": "Motif de l'approbation",
+      "rejectReason": "Motif du refus",
+      "done": "Décision enregistrée."
+    },
     "page": {
+      "dueTab": "Échéances",
       "title": "Échéances de conservation",
       "hint": "Affaires dont la conservation se termine au plus tard le jour choisi, échéance la plus ancienne d'abord. Le sort final (versement, élimination) viendra avec les bordereaux.",
       "forbidden": "Cette page est réservée aux archivistes (rôle Archiviste) et aux administrateurs.",
@@ -1020,6 +1059,18 @@
       "ROLE_END_UNSPECIFIED": "—",
       "ROLE_END_TARGET": "la cible",
       "ROLE_END_SOURCE": "la source"
+    },
+    "BordereauStatus": {
+      "BORDEREAU_STATUS_UNSPECIFIED": "—",
+      "BORDEREAU_STATUS_OPEN": "Ouvert",
+      "BORDEREAU_STATUS_EXECUTED": "Exécuté",
+      "BORDEREAU_STATUS_CANCELLED": "Annulé"
+    },
+    "DispositionDecision": {
+      "DISPOSITION_DECISION_UNSPECIFIED": "—",
+      "DISPOSITION_DECISION_PENDING": "En attente",
+      "DISPOSITION_DECISION_APPROVED": "Approuvée",
+      "DISPOSITION_DECISION_REJECTED": "Refusée"
     },
     "FinalDisposition": {
       "FINAL_DISPOSITION_UNSPECIFIED": "—",

@@ -6,8 +6,8 @@
 // default_retention_policy_code). Closing a case computes its retention in the
 // same transaction, as a snapshot of the policy; reopening ends it. A legal
 // hold blocks any disposal while it lasts. The case is the unit: its documents
-// follow it. Nothing here disposes of anything (step B: disposition
-// bordereaux).
+// follow it. Due cases are then handled through disposition bordereaux
+// (step B): approved per case, executed by the records manager.
 //
 // The policy catalogue is administered with goeland:admin and logged in the
 // reference change log; holds and the due list belong to the records manager
@@ -33,7 +33,7 @@ import type { Message } from "@bufbuild/protobuf";
  * Describes the file goeland/v1/retention.proto.
  */
 export const file_goeland_v1_retention: GenFile = /*@__PURE__*/
-  fileDesc("Chpnb2VsYW5kL3YxL3JldGVudGlvbi5wcm90bxIKZ29lbGFuZC52MSLYAQoPUmV0ZW50aW9uUG9saWN5EhQKAmlkGAEgASgJQgi6SAVyA7ABARISCgRjb2RlGAIgASgJQgTiQQECEg0KBWxhYmVsGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhMKC2xlZ2FsX2Jhc2lzGAUgASgJEhYKDmR1cmF0aW9uX3llYXJzGAYgASgFEjcKEWZpbmFsX2Rpc3Bvc2l0aW9uGAcgASgOMhwuZ29lbGFuZC52MS5GaW5hbERpc3Bvc2l0aW9uEhEKCWlzX2FjdGl2ZRgIIAEoCCIzChxMaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0EhMKC29ubHlfYWN0aXZlGAEgASgIIlgKHUxpc3RSZXRlbnRpb25Qb2xpY2llc1Jlc3BvbnNlEjcKEnJldGVudGlvbl9wb2xpY2llcxgBIAMoCzIbLmdvZWxhbmQudjEuUmV0ZW50aW9uUG9saWN5Iq8CChxDcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0Ei8KBGNvZGUYASABKAlCIeJBAQK6SBpyGDIWXltBLVpdW0EtWjAtOV9dezEsOTl9JBIdCgVsYWJlbBgCIAEoCUIO4kEBArpIB3IFEAEYyAESHQoLZGVzY3JpcHRpb24YAyABKAlCCLpIBXIDGNAPEh0KC2xlZ2FsX2Jhc2lzGAQgASgJQgi6SAVyAxjQDxIiCg5kdXJhdGlvbl95ZWFycxgFIAEoBUIKukgHGgUYyAEoABJDChFmaW5hbF9kaXNwb3NpdGlvbhgGIAEoDjIcLmdvZWxhbmQudjEuRmluYWxEaXNwb3NpdGlvbkIKukgHggEEEAEgABIYCgZyZWFzb24YByABKAlCCLpIBXIDGNAPIoMBCh1DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRI1ChByZXRlbnRpb25fcG9saWN5GAEgASgLMhsuZ29lbGFuZC52MS5SZXRlbnRpb25Qb2xpY3kSKwoGY2hhbmdlGAIgASgLMhsuZ29lbGFuZC52MS5SZWZlcmVuY2VDaGFuZ2UiqQMKHFVwZGF0ZVJldGVudGlvblBvbGljeVJlcXVlc3QSGwoEY29kZRgBIAEoCUIN4kEBArpIBnIEEAEYZBIeCgVsYWJlbBgCIAEoCUIKukgHcgUQARjIAUgAiAEBEiIKC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQD0gBiAEBEiIKC2xlZ2FsX2Jhc2lzGAQgASgJQgi6SAVyAxjQD0gCiAEBEicKDmR1cmF0aW9uX3llYXJzGAUgASgFQgq6SAcaBRjIASgASAOIAQESSAoRZmluYWxfZGlzcG9zaXRpb24YBiABKA4yHC5nb2VsYW5kLnYxLkZpbmFsRGlzcG9zaXRpb25CCrpIB4IBBBABIABIBIgBARIWCglpc19hY3RpdmUYByABKAhIBYgBARIYCgZyZWFzb24YCCABKAlCCLpIBXIDGNAPQggKBl9sYWJlbEIOCgxfZGVzY3JpcHRpb25CDgoMX2xlZ2FsX2Jhc2lzQhEKD19kdXJhdGlvbl95ZWFyc0IUChJfZmluYWxfZGlzcG9zaXRpb25CDAoKX2lzX2FjdGl2ZSKDAQodVXBkYXRlUmV0ZW50aW9uUG9saWN5UmVzcG9uc2USNQoQcmV0ZW50aW9uX3BvbGljeRgBIAEoCzIbLmdvZWxhbmQudjEuUmV0ZW50aW9uUG9saWN5EisKBmNoYW5nZRgCIAEoCzIbLmdvZWxhbmQudjEuUmVmZXJlbmNlQ2hhbmdlIvECChBTdWJqZWN0UmV0ZW50aW9uEgoKAmlkGAEgASgJEhIKCnN1YmplY3RfaWQYAiABKAkSEwoLcG9saWN5X2NvZGUYAyABKAkSGgoMcG9saWN5X2xhYmVsGAQgASgJQgTiQQEDEhYKDmR1cmF0aW9uX3llYXJzGAUgASgFEjcKEWZpbmFsX2Rpc3Bvc2l0aW9uGAYgASgOMhwuZ29lbGFuZC52MS5GaW5hbERpc3Bvc2l0aW9uEhEKCXN0YXJ0c19vbhgHIAEoCRIQCgh1bnRpbF9vbhgIIAEoCRIuCgpjcmVhdGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjcmVhdGVkX2J5GAogASgJEiwKCGVuZGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghlbmRlZF9ieRgMIAEoCRISCgplbmRfcmVhc29uGA0gASgJIt8BCg1SZXRlbnRpb25Ib2xkEgoKAmlkGAEgASgJEhIKCnN1YmplY3RfaWQYAiABKAkSDgoGcmVhc29uGAMgASgJEi0KCXBsYWNlZF9hdBgEIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEQoJcGxhY2VkX2J5GAUgASgJEi8KC3JlbGVhc2VkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBITCgtyZWxlYXNlZF9ieRgHIAEoCRIWCg5yZWxlYXNlX3JlYXNvbhgIIAEoCSI0ChdHZXRDYXNlUmV0ZW50aW9uUmVxdWVzdBIZCgdjYXNlX2lkGAEgASgJQgi6SAVyA7ABASKDAgoYR2V0Q2FzZVJldGVudGlvblJlc3BvbnNlEi0KB2N1cnJlbnQYASABKAsyHC5nb2VsYW5kLnYxLlN1YmplY3RSZXRlbnRpb24SJwoEaG9sZBgCIAEoCzIZLmdvZWxhbmQudjEuUmV0ZW50aW9uSG9sZBIwCgpyZXRlbnRpb25zGAMgAygLMhwuZ29lbGFuZC52MS5TdWJqZWN0UmV0ZW50aW9uEigKBWhvbGRzGAQgAygLMhkuZ29lbGFuZC52MS5SZXRlbnRpb25Ib2xkEjMKDmRlZmF1bHRfcG9saWN5GAUgASgLMhsuZ29lbGFuZC52MS5SZXRlbnRpb25Qb2xpY3kiVgoZUGxhY2VSZXRlbnRpb25Ib2xkUmVxdWVzdBIZCgdjYXNlX2lkGAEgASgJQgi6SAVyA7ABARIeCgZyZWFzb24YAiABKAlCDuJBAQK6SAdyBRABGNAPInIKGlBsYWNlUmV0ZW50aW9uSG9sZFJlc3BvbnNlEicKBGhvbGQYASABKAsyGS5nb2VsYW5kLnYxLlJldGVudGlvbkhvbGQSKwoLYXVkaXRfZXZlbnQYAiABKAsyFi5nb2VsYW5kLnYxLkF1ZGl0RXZlbnQiWAobUmVsZWFzZVJldGVudGlvbkhvbGRSZXF1ZXN0EhkKB2Nhc2VfaWQYASABKAlCCLpIBXIDsAEBEh4KBnJlYXNvbhgCIAEoCUIO4kEBArpIB3IFEAEY0A8idAocUmVsZWFzZVJldGVudGlvbkhvbGRSZXNwb25zZRInCgRob2xkGAEgASgLMhkuZ29lbGFuZC52MS5SZXRlbnRpb25Ib2xkEisKC2F1ZGl0X2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50IpIBCgxEdWVSZXRlbnRpb24SLwoJcmV0ZW50aW9uGAEgASgLMhwuZ29lbGFuZC52MS5TdWJqZWN0UmV0ZW50aW9uEhIKCmNhc2VfbGFiZWwYAiABKAkSFAoMYnVzaW5lc3NfcmVmGAMgASgJEhYKDmNhc2VfdHlwZV9jb2RlGAQgASgJEg8KB29uX2hvbGQYBSABKAgi6AEKGExpc3REdWVSZXRlbnRpb25zUmVxdWVzdBI2CgZkdWVfb24YASABKAlCJrpII3IhMh9eJHxeWzAtOV17NH0tWzAtOV17Mn0tWzAtOV17Mn0kEkEKEWZpbmFsX2Rpc3Bvc2l0aW9uGAIgASgOMhwuZ29lbGFuZC52MS5GaW5hbERpc3Bvc2l0aW9uQgi6SAWCAQIQARIUCgxpbmNsdWRlX2hlbGQYAyABKAgSHQoJcGFnZV9zaXplGAQgASgFQgq6SAcaBRjIASgAEhwKCnBhZ2VfdG9rZW4YBSABKAlCCLpIBXIDGIAIInYKGUxpc3REdWVSZXRlbnRpb25zUmVzcG9uc2USLAoKcmV0ZW50aW9ucxgBIAMoCzIYLmdvZWxhbmQudjEuRHVlUmV0ZW50aW9uEhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgFImYKHUFwcGx5Q2FzZVR5cGVSZXRlbnRpb25SZXF1ZXN0EiUKDmNhc2VfdHlwZV9jb2RlGAEgASgJQg3iQQECukgGcgQQARhkEh4KBnJlYXNvbhgCIAEoCUIO4kEBArpIB3IFEAEY0A8iRAoeQXBwbHlDYXNlVHlwZVJldGVudGlvblJlc3BvbnNlEg8KB2FwcGxpZWQYASABKAUSEQoJcmVtYWluaW5nGAIgASgFKpEBChBGaW5hbERpc3Bvc2l0aW9uEiEKHUZJTkFMX0RJU1BPU0lUSU9OX1VOU1BFQ0lGSUVEEAASHQoZRklOQUxfRElTUE9TSVRJT05fQVJDSElWRRABEh0KGUZJTkFMX0RJU1BPU0lUSU9OX0RFU1RST1kQAhIcChhGSU5BTF9ESVNQT1NJVElPTl9SRVZJRVcQAzK/CQoQUmV0ZW50aW9uU2VydmljZRKNAQoVTGlzdFJldGVudGlvblBvbGljaWVzEiguZ29lbGFuZC52MS5MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0GikuZ29lbGFuZC52MS5MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXNwb25zZSIfgtPkkwIZEhcvYXBpL3JldGVudGlvbi1wb2xpY2llcxKQAQoVQ3JlYXRlUmV0ZW50aW9uUG9saWN5EiguZ29lbGFuZC52MS5DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0GikuZ29lbGFuZC52MS5DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZSIigtPkkwIcOgEqIhcvYXBpL3JldGVudGlvbi1wb2xpY2llcxKXAQoVVXBkYXRlUmV0ZW50aW9uUG9saWN5EiguZ29lbGFuZC52MS5VcGRhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0GikuZ29lbGFuZC52MS5VcGRhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZSIpgtPkkwIjOgEqMh4vYXBpL3JldGVudGlvbi1wb2xpY2llcy97Y29kZX0ShQEKEEdldENhc2VSZXRlbnRpb24SIy5nb2VsYW5kLnYxLkdldENhc2VSZXRlbnRpb25SZXF1ZXN0GiQuZ29lbGFuZC52MS5HZXRDYXNlUmV0ZW50aW9uUmVzcG9uc2UiJoLT5JMCIBIeL2FwaS9jYXNlcy97Y2FzZV9pZH0vcmV0ZW50aW9uEpMBChJQbGFjZVJldGVudGlvbkhvbGQSJS5nb2VsYW5kLnYxLlBsYWNlUmV0ZW50aW9uSG9sZFJlcXVlc3QaJi5nb2VsYW5kLnYxLlBsYWNlUmV0ZW50aW9uSG9sZFJlc3BvbnNlIi6C0+STAig6ASoiIy9hcGkvY2FzZXMve2Nhc2VfaWR9L3JldGVudGlvbi1ob2xkEqEBChRSZWxlYXNlUmV0ZW50aW9uSG9sZBInLmdvZWxhbmQudjEuUmVsZWFzZVJldGVudGlvbkhvbGRSZXF1ZXN0GiguZ29lbGFuZC52MS5SZWxlYXNlUmV0ZW50aW9uSG9sZFJlc3BvbnNlIjaC0+STAjA6ASoiKy9hcGkvY2FzZXMve2Nhc2VfaWR9L3JldGVudGlvbi1ob2xkL3JlbGVhc2USfQoRTGlzdER1ZVJldGVudGlvbnMSJC5nb2VsYW5kLnYxLkxpc3REdWVSZXRlbnRpb25zUmVxdWVzdBolLmdvZWxhbmQudjEuTGlzdER1ZVJldGVudGlvbnNSZXNwb25zZSIbgtPkkwIVEhMvYXBpL3JldGVudGlvbnMvZHVlEqwBChZBcHBseUNhc2VUeXBlUmV0ZW50aW9uEikuZ29lbGFuZC52MS5BcHBseUNhc2VUeXBlUmV0ZW50aW9uUmVxdWVzdBoqLmdvZWxhbmQudjEuQXBwbHlDYXNlVHlwZVJldGVudGlvblJlc3BvbnNlIjuC0+STAjU6ASoiMC9hcGkvY2FzZS10eXBlcy97Y2FzZV90eXBlX2NvZGV9L2FwcGx5LXJldGVudGlvbkK2AQoOY29tLmdvZWxhbmQudjFCDlJldGVudGlvblByb3RvUAFaS2dpdGh1Yi5jb20vbGFvLXRzZXUtaXMtYWxpdmUvZ28tY2xvdWQtazhzLXBvYy0yMDI2L2dlbi9nb2VsYW5kL3YxO2dvZWxhbmR2MaICA0dYWKoCCkdvZWxhbmQuVjHKAgpHb2VsYW5kXFYx4gIWR29lbGFuZFxWMVxHUEJNZXRhZGF0YeoCC0dvZWxhbmQ6OlYxYgZwcm90bzM", [file_buf_validate_validate, file_goeland_v1_core, file_google_api_annotations, file_google_api_field_behavior, file_google_protobuf_timestamp]);
+  fileDesc("Chpnb2VsYW5kL3YxL3JldGVudGlvbi5wcm90bxIKZ29lbGFuZC52MSLYAQoPUmV0ZW50aW9uUG9saWN5EhQKAmlkGAEgASgJQgi6SAVyA7ABARISCgRjb2RlGAIgASgJQgTiQQECEg0KBWxhYmVsGAMgASgJEhMKC2Rlc2NyaXB0aW9uGAQgASgJEhMKC2xlZ2FsX2Jhc2lzGAUgASgJEhYKDmR1cmF0aW9uX3llYXJzGAYgASgFEjcKEWZpbmFsX2Rpc3Bvc2l0aW9uGAcgASgOMhwuZ29lbGFuZC52MS5GaW5hbERpc3Bvc2l0aW9uEhEKCWlzX2FjdGl2ZRgIIAEoCCIzChxMaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0EhMKC29ubHlfYWN0aXZlGAEgASgIIlgKHUxpc3RSZXRlbnRpb25Qb2xpY2llc1Jlc3BvbnNlEjcKEnJldGVudGlvbl9wb2xpY2llcxgBIAMoCzIbLmdvZWxhbmQudjEuUmV0ZW50aW9uUG9saWN5Iq8CChxDcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0Ei8KBGNvZGUYASABKAlCIeJBAQK6SBpyGDIWXltBLVpdW0EtWjAtOV9dezEsOTl9JBIdCgVsYWJlbBgCIAEoCUIO4kEBArpIB3IFEAEYyAESHQoLZGVzY3JpcHRpb24YAyABKAlCCLpIBXIDGNAPEh0KC2xlZ2FsX2Jhc2lzGAQgASgJQgi6SAVyAxjQDxIiCg5kdXJhdGlvbl95ZWFycxgFIAEoBUIKukgHGgUYyAEoABJDChFmaW5hbF9kaXNwb3NpdGlvbhgGIAEoDjIcLmdvZWxhbmQudjEuRmluYWxEaXNwb3NpdGlvbkIKukgHggEEEAEgABIYCgZyZWFzb24YByABKAlCCLpIBXIDGNAPIoMBCh1DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZRI1ChByZXRlbnRpb25fcG9saWN5GAEgASgLMhsuZ29lbGFuZC52MS5SZXRlbnRpb25Qb2xpY3kSKwoGY2hhbmdlGAIgASgLMhsuZ29lbGFuZC52MS5SZWZlcmVuY2VDaGFuZ2UiqQMKHFVwZGF0ZVJldGVudGlvblBvbGljeVJlcXVlc3QSGwoEY29kZRgBIAEoCUIN4kEBArpIBnIEEAEYZBIeCgVsYWJlbBgCIAEoCUIKukgHcgUQARjIAUgAiAEBEiIKC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQD0gBiAEBEiIKC2xlZ2FsX2Jhc2lzGAQgASgJQgi6SAVyAxjQD0gCiAEBEicKDmR1cmF0aW9uX3llYXJzGAUgASgFQgq6SAcaBRjIASgASAOIAQESSAoRZmluYWxfZGlzcG9zaXRpb24YBiABKA4yHC5nb2VsYW5kLnYxLkZpbmFsRGlzcG9zaXRpb25CCrpIB4IBBBABIABIBIgBARIWCglpc19hY3RpdmUYByABKAhIBYgBARIYCgZyZWFzb24YCCABKAlCCLpIBXIDGNAPQggKBl9sYWJlbEIOCgxfZGVzY3JpcHRpb25CDgoMX2xlZ2FsX2Jhc2lzQhEKD19kdXJhdGlvbl95ZWFyc0IUChJfZmluYWxfZGlzcG9zaXRpb25CDAoKX2lzX2FjdGl2ZSKDAQodVXBkYXRlUmV0ZW50aW9uUG9saWN5UmVzcG9uc2USNQoQcmV0ZW50aW9uX3BvbGljeRgBIAEoCzIbLmdvZWxhbmQudjEuUmV0ZW50aW9uUG9saWN5EisKBmNoYW5nZRgCIAEoCzIbLmdvZWxhbmQudjEuUmVmZXJlbmNlQ2hhbmdlIvMDChBTdWJqZWN0UmV0ZW50aW9uEgoKAmlkGAEgASgJEhIKCnN1YmplY3RfaWQYAiABKAkSEwoLcG9saWN5X2NvZGUYAyABKAkSGgoMcG9saWN5X2xhYmVsGAQgASgJQgTiQQEDEhYKDmR1cmF0aW9uX3llYXJzGAUgASgFEjcKEWZpbmFsX2Rpc3Bvc2l0aW9uGAYgASgOMhwuZ29lbGFuZC52MS5GaW5hbERpc3Bvc2l0aW9uEhEKCXN0YXJ0c19vbhgHIAEoCRIQCgh1bnRpbF9vbhgIIAEoCRIuCgpjcmVhdGVkX2F0GAkgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBISCgpjcmVhdGVkX2J5GAogASgJEiwKCGVuZGVkX2F0GAsgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIQCghlbmRlZF9ieRgMIAEoCRISCgplbmRfcmVhc29uGA0gASgJEjkKEmRpc3Bvc2l0aW9uX3N0YXR1cxgOIAEoDjIdLmdvZWxhbmQudjEuRGlzcG9zaXRpb25TdGF0dXMSLwoLZGlzcG9zZWRfYXQYDyABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhQKDGJvcmRlcmVhdV9pZBgQIAEoCSLfAQoNUmV0ZW50aW9uSG9sZBIKCgJpZBgBIAEoCRISCgpzdWJqZWN0X2lkGAIgASgJEg4KBnJlYXNvbhgDIAEoCRItCglwbGFjZWRfYXQYBCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCXBsYWNlZF9ieRgFIAEoCRIvCgtyZWxlYXNlZF9hdBgGIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEwoLcmVsZWFzZWRfYnkYByABKAkSFgoOcmVsZWFzZV9yZWFzb24YCCABKAkiNAoXR2V0Q2FzZVJldGVudGlvblJlcXVlc3QSGQoHY2FzZV9pZBgBIAEoCUIIukgFcgOwAQEigwIKGEdldENhc2VSZXRlbnRpb25SZXNwb25zZRItCgdjdXJyZW50GAEgASgLMhwuZ29lbGFuZC52MS5TdWJqZWN0UmV0ZW50aW9uEicKBGhvbGQYAiABKAsyGS5nb2VsYW5kLnYxLlJldGVudGlvbkhvbGQSMAoKcmV0ZW50aW9ucxgDIAMoCzIcLmdvZWxhbmQudjEuU3ViamVjdFJldGVudGlvbhIoCgVob2xkcxgEIAMoCzIZLmdvZWxhbmQudjEuUmV0ZW50aW9uSG9sZBIzCg5kZWZhdWx0X3BvbGljeRgFIAEoCzIbLmdvZWxhbmQudjEuUmV0ZW50aW9uUG9saWN5IlYKGVBsYWNlUmV0ZW50aW9uSG9sZFJlcXVlc3QSGQoHY2FzZV9pZBgBIAEoCUIIukgFcgOwAQESHgoGcmVhc29uGAIgASgJQg7iQQECukgHcgUQARjQDyJyChpQbGFjZVJldGVudGlvbkhvbGRSZXNwb25zZRInCgRob2xkGAEgASgLMhkuZ29lbGFuZC52MS5SZXRlbnRpb25Ib2xkEisKC2F1ZGl0X2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50IlgKG1JlbGVhc2VSZXRlbnRpb25Ib2xkUmVxdWVzdBIZCgdjYXNlX2lkGAEgASgJQgi6SAVyA7ABARIeCgZyZWFzb24YAiABKAlCDuJBAQK6SAdyBRABGNAPInQKHFJlbGVhc2VSZXRlbnRpb25Ib2xkUmVzcG9uc2USJwoEaG9sZBgBIAEoCzIZLmdvZWxhbmQudjEuUmV0ZW50aW9uSG9sZBIrCgthdWRpdF9ldmVudBgCIAEoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCKSAQoMRHVlUmV0ZW50aW9uEi8KCXJldGVudGlvbhgBIAEoCzIcLmdvZWxhbmQudjEuU3ViamVjdFJldGVudGlvbhISCgpjYXNlX2xhYmVsGAIgASgJEhQKDGJ1c2luZXNzX3JlZhgDIAEoCRIWCg5jYXNlX3R5cGVfY29kZRgEIAEoCRIPCgdvbl9ob2xkGAUgASgIIugBChhMaXN0RHVlUmV0ZW50aW9uc1JlcXVlc3QSNgoGZHVlX29uGAEgASgJQia6SCNyITIfXiR8XlswLTldezR9LVswLTldezJ9LVswLTldezJ9JBJBChFmaW5hbF9kaXNwb3NpdGlvbhgCIAEoDjIcLmdvZWxhbmQudjEuRmluYWxEaXNwb3NpdGlvbkIIukgFggECEAESFAoMaW5jbHVkZV9oZWxkGAMgASgIEh0KCXBhZ2Vfc2l6ZRgEIAEoBUIKukgHGgUYyAEoABIcCgpwYWdlX3Rva2VuGAUgASgJQgi6SAVyAxiACCJ2ChlMaXN0RHVlUmV0ZW50aW9uc1Jlc3BvbnNlEiwKCnJldGVudGlvbnMYASADKAsyGC5nb2VsYW5kLnYxLkR1ZVJldGVudGlvbhIXCg9uZXh0X3BhZ2VfdG9rZW4YAiABKAkSEgoKdG90YWxfc2l6ZRgDIAEoBSJmCh1BcHBseUNhc2VUeXBlUmV0ZW50aW9uUmVxdWVzdBIlCg5jYXNlX3R5cGVfY29kZRgBIAEoCUIN4kEBArpIBnIEEAEYZBIeCgZyZWFzb24YAiABKAlCDuJBAQK6SAdyBRABGNAPIkQKHkFwcGx5Q2FzZVR5cGVSZXRlbnRpb25SZXNwb25zZRIPCgdhcHBsaWVkGAEgASgFEhEKCXJlbWFpbmluZxgCIAEoBSKbAwoPRGlzcG9zaXRpb25JdGVtEgoKAmlkGAEgASgJEhQKDGJvcmRlcmVhdV9pZBgCIAEoCRIPCgdjYXNlX2lkGAMgASgJEhIKCmNhc2VfbGFiZWwYBCABKAkSFAoMYnVzaW5lc3NfcmVmGAUgASgJEhAKCHVudGlsX29uGAYgASgJEhMKC3BvbGljeV9jb2RlGAcgASgJEhsKE2FwcHJvdmVyX3N1YmplY3RfaWQYCCABKAkSFgoOYXBwcm92ZXJfbGFiZWwYCSABKAkSMQoIZGVjaXNpb24YCiABKA4yHy5nb2VsYW5kLnYxLkRpc3Bvc2l0aW9uRGVjaXNpb24SLgoKZGVjaWRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXASEgoKZGVjaWRlZF9ieRgMIAEoCRIXCg9kZWNpc2lvbl9yZWFzb24YDSABKAkSEQoJZXhwb3J0X2lkGA4gASgJEhUKDWV4cG9ydF9zdGF0dXMYDyABKAkSFQoNZXhwb3J0X3NoYTI1NhgQIAEoCSK7AwoURGlzcG9zaXRpb25Cb3JkZXJlYXUSCgoCaWQYASABKAkSNwoRZmluYWxfZGlzcG9zaXRpb24YAiABKA4yHC5nb2VsYW5kLnYxLkZpbmFsRGlzcG9zaXRpb24SKwoGc3RhdHVzGAMgASgOMhsuZ29lbGFuZC52MS5Cb3JkZXJlYXVTdGF0dXMSDgoGcmVhc29uGAQgASgJEhMKC3ByZXBhcmVkX2J5GAUgASgJEi8KC3ByZXBhcmVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBItCgljbG9zZWRfYXQYByABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wEhEKCWNsb3NlZF9ieRgIIAEoCRIUCgxjbG9zZV9yZWFzb24YCSABKAkSFAoMcHJvb2Zfc2hhMjU2GAogASgJEioKBWl0ZW1zGAsgAygLMhsuZ29lbGFuZC52MS5EaXNwb3NpdGlvbkl0ZW0SEgoKaXRlbV9jb3VudBgMIAEoBRIVCg1wZW5kaW5nX2NvdW50GA0gASgFEhYKDmFwcHJvdmVkX2NvdW50GA4gASgFIrABCiFDcmVhdGVEaXNwb3NpdGlvbkJvcmRlcmVhdVJlcXVlc3QSQwoRZmluYWxfZGlzcG9zaXRpb24YASABKA4yHC5nb2VsYW5kLnYxLkZpbmFsRGlzcG9zaXRpb25CCrpIB4IBBBgBGAISHgoGcmVhc29uGAIgASgJQg7iQQECukgHcgUQARjQDxImCghjYXNlX2lkcxgDIAMoCUIUukgRkgEOCAEQ9AMYASIFcgOwAQEiWQoiQ3JlYXRlRGlzcG9zaXRpb25Cb3JkZXJlYXVSZXNwb25zZRIzCglib3JkZXJlYXUYASABKAsyIC5nb2VsYW5kLnYxLkRpc3Bvc2l0aW9uQm9yZGVyZWF1IlYKH0dldERpc3Bvc2l0aW9uQm9yZGVyZWF1UmVzcG9uc2USMwoJYm9yZGVyZWF1GAEgASgLMiAuZ29lbGFuZC52MS5EaXNwb3NpdGlvbkJvcmRlcmVhdSJaCiNFeGVjdXRlRGlzcG9zaXRpb25Cb3JkZXJlYXVSZXNwb25zZRIzCglib3JkZXJlYXUYASABKAsyIC5nb2VsYW5kLnYxLkRpc3Bvc2l0aW9uQm9yZGVyZWF1IlkKIkNhbmNlbERpc3Bvc2l0aW9uQm9yZGVyZWF1UmVzcG9uc2USMwoJYm9yZGVyZWF1GAEgASgLMiAuZ29lbGFuZC52MS5EaXNwb3NpdGlvbkJvcmRlcmVhdSI2Ch5HZXREaXNwb3NpdGlvbkJvcmRlcmVhdVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBIpYBCiBMaXN0RGlzcG9zaXRpb25Cb3JkZXJlYXV4UmVxdWVzdBI1CgZzdGF0dXMYASABKA4yGy5nb2VsYW5kLnYxLkJvcmRlcmVhdVN0YXR1c0IIukgFggECEAESHQoJcGFnZV9zaXplGAIgASgFQgq6SAcaBRjIASgAEhwKCnBhZ2VfdG9rZW4YAyABKAlCCLpIBXIDGIAIIoYBCiFMaXN0RGlzcG9zaXRpb25Cb3JkZXJlYXV4UmVzcG9uc2USNAoKYm9yZGVyZWF1eBgBIAMoCzIgLmdvZWxhbmQudjEuRGlzcG9zaXRpb25Cb3JkZXJlYXUSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEhIKCnRvdGFsX3NpemUYAyABKAUiIwohTGlzdE15RGlzcG9zaXRpb25BcHByb3ZhbHNSZXF1ZXN0IvsBCiJMaXN0TXlEaXNwb3NpdGlvbkFwcHJvdmFsc1Jlc3BvbnNlEioKBWl0ZW1zGAEgAygLMhsuZ29lbGFuZC52MS5EaXNwb3NpdGlvbkl0ZW0SVgoMZGlzcG9zaXRpb25zGAIgAygLMkAuZ29lbGFuZC52MS5MaXN0TXlEaXNwb3NpdGlvbkFwcHJvdmFsc1Jlc3BvbnNlLkRpc3Bvc2l0aW9uc0VudHJ5GlEKEURpc3Bvc2l0aW9uc0VudHJ5EgsKA2tleRgBIAEoCRIrCgV2YWx1ZRgCIAEoDjIcLmdvZWxhbmQudjEuRmluYWxEaXNwb3NpdGlvbjoCOAEiZQocRGVjaWRlRGlzcG9zaXRpb25JdGVtUmVxdWVzdBIUCgJpZBgBIAEoCUIIukgFcgOwAQESDwoHYXBwcm92ZRgCIAEoCBIeCgZyZWFzb24YAyABKAlCDuJBAQK6SAdyBRABGNAPIkoKHURlY2lkZURpc3Bvc2l0aW9uSXRlbVJlc3BvbnNlEikKBGl0ZW0YASABKAsyGy5nb2VsYW5kLnYxLkRpc3Bvc2l0aW9uSXRlbSI6CiJFeGVjdXRlRGlzcG9zaXRpb25Cb3JkZXJlYXVSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABASJZCiFDYW5jZWxEaXNwb3NpdGlvbkJvcmRlcmVhdVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEh4KBnJlYXNvbhgCIAEoCUIO4kEBArpIB3IFEAEY0A8qkQEKEEZpbmFsRGlzcG9zaXRpb24SIQodRklOQUxfRElTUE9TSVRJT05fVU5TUEVDSUZJRUQQABIdChlGSU5BTF9ESVNQT1NJVElPTl9BUkNISVZFEAESHQoZRklOQUxfRElTUE9TSVRJT05fREVTVFJPWRACEhwKGEZJTkFMX0RJU1BPU0lUSU9OX1JFVklFVxADKnkKEURpc3Bvc2l0aW9uU3RhdHVzEiIKHkRJU1BPU0lUSU9OX1NUQVRVU19VTlNQRUNJRklFRBAAEh8KG0RJU1BPU0lUSU9OX1NUQVRVU19BUkNISVZFRBABEh8KG0RJU1BPU0lUSU9OX1NUQVRVU19ESVNQT1NFRBACKo0BCg9Cb3JkZXJlYXVTdGF0dXMSIAocQk9SREVSRUFVX1NUQVRVU19VTlNQRUNJRklFRBAAEhkKFUJPUkRFUkVBVV9TVEFUVVNfT1BFThABEh0KGUJPUkRFUkVBVV9TVEFUVVNfRVhFQ1VURUQQAhIeChpCT1JERVJFQVVfU1RBVFVTX0NBTkNFTExFRBADKqMBChNEaXNwb3NpdGlvbkRlY2lzaW9uEiQKIERJU1BPU0lUSU9OX0RFQ0lTSU9OX1VOU1BFQ0lGSUVEEAASIAocRElTUE9TSVRJT05fREVDSVNJT05fUEVORElORxABEiEKHURJU1BPU0lUSU9OX0RFQ0lTSU9OX0FQUFJPVkVEEAISIQodRElTUE9TSVRJT05fREVDSVNJT05fUkVKRUNURUQQAzLNEgoQUmV0ZW50aW9uU2VydmljZRKNAQoVTGlzdFJldGVudGlvblBvbGljaWVzEiguZ29lbGFuZC52MS5MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXF1ZXN0GikuZ29lbGFuZC52MS5MaXN0UmV0ZW50aW9uUG9saWNpZXNSZXNwb25zZSIfgtPkkwIZEhcvYXBpL3JldGVudGlvbi1wb2xpY2llcxKQAQoVQ3JlYXRlUmV0ZW50aW9uUG9saWN5EiguZ29lbGFuZC52MS5DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0GikuZ29lbGFuZC52MS5DcmVhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZSIigtPkkwIcOgEqIhcvYXBpL3JldGVudGlvbi1wb2xpY2llcxKXAQoVVXBkYXRlUmV0ZW50aW9uUG9saWN5EiguZ29lbGFuZC52MS5VcGRhdGVSZXRlbnRpb25Qb2xpY3lSZXF1ZXN0GikuZ29lbGFuZC52MS5VcGRhdGVSZXRlbnRpb25Qb2xpY3lSZXNwb25zZSIpgtPkkwIjOgEqMh4vYXBpL3JldGVudGlvbi1wb2xpY2llcy97Y29kZX0ShQEKEEdldENhc2VSZXRlbnRpb24SIy5nb2VsYW5kLnYxLkdldENhc2VSZXRlbnRpb25SZXF1ZXN0GiQuZ29lbGFuZC52MS5HZXRDYXNlUmV0ZW50aW9uUmVzcG9uc2UiJoLT5JMCIBIeL2FwaS9jYXNlcy97Y2FzZV9pZH0vcmV0ZW50aW9uEpMBChJQbGFjZVJldGVudGlvbkhvbGQSJS5nb2VsYW5kLnYxLlBsYWNlUmV0ZW50aW9uSG9sZFJlcXVlc3QaJi5nb2VsYW5kLnYxLlBsYWNlUmV0ZW50aW9uSG9sZFJlc3BvbnNlIi6C0+STAig6ASoiIy9hcGkvY2FzZXMve2Nhc2VfaWR9L3JldGVudGlvbi1ob2xkEqEBChRSZWxlYXNlUmV0ZW50aW9uSG9sZBInLmdvZWxhbmQudjEuUmVsZWFzZVJldGVudGlvbkhvbGRSZXF1ZXN0GiguZ29lbGFuZC52MS5SZWxlYXNlUmV0ZW50aW9uSG9sZFJlc3BvbnNlIjaC0+STAjA6ASoiKy9hcGkvY2FzZXMve2Nhc2VfaWR9L3JldGVudGlvbi1ob2xkL3JlbGVhc2USfQoRTGlzdER1ZVJldGVudGlvbnMSJC5nb2VsYW5kLnYxLkxpc3REdWVSZXRlbnRpb25zUmVxdWVzdBolLmdvZWxhbmQudjEuTGlzdER1ZVJldGVudGlvbnNSZXNwb25zZSIbgtPkkwIVEhMvYXBpL3JldGVudGlvbnMvZHVlEqwBChZBcHBseUNhc2VUeXBlUmV0ZW50aW9uEikuZ29lbGFuZC52MS5BcHBseUNhc2VUeXBlUmV0ZW50aW9uUmVxdWVzdBoqLmdvZWxhbmQudjEuQXBwbHlDYXNlVHlwZVJldGVudGlvblJlc3BvbnNlIjuC0+STAjU6ASoiMC9hcGkvY2FzZS10eXBlcy97Y2FzZV90eXBlX2NvZGV9L2FwcGx5LXJldGVudGlvbhKjAQoaQ3JlYXRlRGlzcG9zaXRpb25Cb3JkZXJlYXUSLS5nb2VsYW5kLnYxLkNyZWF0ZURpc3Bvc2l0aW9uQm9yZGVyZWF1UmVxdWVzdBouLmdvZWxhbmQudjEuQ3JlYXRlRGlzcG9zaXRpb25Cb3JkZXJlYXVSZXNwb25zZSImgtPkkwIgOgEqIhsvYXBpL2Rpc3Bvc2l0aW9uLWJvcmRlcmVhdXgSnQEKGUxpc3REaXNwb3NpdGlvbkJvcmRlcmVhdXgSLC5nb2VsYW5kLnYxLkxpc3REaXNwb3NpdGlvbkJvcmRlcmVhdXhSZXF1ZXN0Gi0uZ29lbGFuZC52MS5MaXN0RGlzcG9zaXRpb25Cb3JkZXJlYXV4UmVzcG9uc2UiI4LT5JMCHRIbL2FwaS9kaXNwb3NpdGlvbi1ib3JkZXJlYXV4EpwBChdHZXREaXNwb3NpdGlvbkJvcmRlcmVhdRIqLmdvZWxhbmQudjEuR2V0RGlzcG9zaXRpb25Cb3JkZXJlYXVSZXF1ZXN0GisuZ29lbGFuZC52MS5HZXREaXNwb3NpdGlvbkJvcmRlcmVhdVJlc3BvbnNlIiiC0+STAiISIC9hcGkvZGlzcG9zaXRpb24tYm9yZGVyZWF1eC97aWR9EqABChpMaXN0TXlEaXNwb3NpdGlvbkFwcHJvdmFscxItLmdvZWxhbmQudjEuTGlzdE15RGlzcG9zaXRpb25BcHByb3ZhbHNSZXF1ZXN0Gi4uZ29lbGFuZC52MS5MaXN0TXlEaXNwb3NpdGlvbkFwcHJvdmFsc1Jlc3BvbnNlIiOC0+STAh0SGy9hcGkvZGlzcG9zaXRpb24taXRlbXMvbWluZRKbAQoVRGVjaWRlRGlzcG9zaXRpb25JdGVtEiguZ29lbGFuZC52MS5EZWNpZGVEaXNwb3NpdGlvbkl0ZW1SZXF1ZXN0GikuZ29lbGFuZC52MS5EZWNpZGVEaXNwb3NpdGlvbkl0ZW1SZXNwb25zZSItgtPkkwInOgEqIiIvYXBpL2Rpc3Bvc2l0aW9uLWl0ZW1zL3tpZH0vZGVjaWRlErMBChtFeGVjdXRlRGlzcG9zaXRpb25Cb3JkZXJlYXUSLi5nb2VsYW5kLnYxLkV4ZWN1dGVEaXNwb3NpdGlvbkJvcmRlcmVhdVJlcXVlc3QaLy5nb2VsYW5kLnYxLkV4ZWN1dGVEaXNwb3NpdGlvbkJvcmRlcmVhdVJlc3BvbnNlIjOC0+STAi06ASoiKC9hcGkvZGlzcG9zaXRpb24tYm9yZGVyZWF1eC97aWR9L2V4ZWN1dGUSrwEKGkNhbmNlbERpc3Bvc2l0aW9uQm9yZGVyZWF1Ei0uZ29lbGFuZC52MS5DYW5jZWxEaXNwb3NpdGlvbkJvcmRlcmVhdVJlcXVlc3QaLi5nb2VsYW5kLnYxLkNhbmNlbERpc3Bvc2l0aW9uQm9yZGVyZWF1UmVzcG9uc2UiMoLT5JMCLDoBKiInL2FwaS9kaXNwb3NpdGlvbi1ib3JkZXJlYXV4L3tpZH0vY2FuY2VsQrYBCg5jb20uZ29lbGFuZC52MUIOUmV0ZW50aW9uUHJvdG9QAVpLZ2l0aHViLmNvbS9sYW8tdHNldS1pcy1hbGl2ZS9nby1jbG91ZC1rOHMtcG9jLTIwMjYvZ2VuL2dvZWxhbmQvdjE7Z29lbGFuZHYxogIDR1hYqgIKR29lbGFuZC5WMcoCCkdvZWxhbmRcVjHiAhZHb2VsYW5kXFYxXEdQQk1ldGFkYXRh6gILR29lbGFuZDo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_goeland_v1_core, file_google_api_annotations, file_google_api_field_behavior, file_google_protobuf_timestamp]);
 
 /**
  * RetentionPolicy is an entry of the retention schedule.
@@ -694,6 +694,28 @@ export type SubjectRetention = Message<"goeland.v1.SubjectRetention"> & {
    * @generated from field: string end_reason = 13;
    */
   endReason: string;
+
+  /**
+   * disposition_status is the outcome of the retention: ARCHIVED (transferred
+   * and frozen) or DISPOSED; unspecified while the case waits.
+   *
+   * @generated from field: goeland.v1.DispositionStatus disposition_status = 14;
+   */
+  dispositionStatus: DispositionStatus;
+
+  /**
+   * disposed_at is when the outcome was executed.
+   *
+   * @generated from field: google.protobuf.Timestamp disposed_at = 15;
+   */
+  disposedAt?: Timestamp | undefined;
+
+  /**
+   * bordereau_id is the bordereau that executed it.
+   *
+   * @generated from field: string bordereau_id = 16;
+   */
+  bordereauId: string;
 };
 
 /**
@@ -794,6 +816,28 @@ export type SubjectRetentionJson = {
    * @generated from field: string end_reason = 13;
    */
   endReason?: string;
+
+  /**
+   * disposition_status is the outcome of the retention: ARCHIVED (transferred
+   * and frozen) or DISPOSED; unspecified while the case waits.
+   *
+   * @generated from field: goeland.v1.DispositionStatus disposition_status = 14;
+   */
+  dispositionStatus?: DispositionStatusJson;
+
+  /**
+   * disposed_at is when the outcome was executed.
+   *
+   * @generated from field: google.protobuf.Timestamp disposed_at = 15;
+   */
+  disposedAt?: TimestampJson;
+
+  /**
+   * bordereau_id is the bordereau that executed it.
+   *
+   * @generated from field: string bordereau_id = 16;
+   */
+  bordereauId?: string;
 };
 
 /**
@@ -1612,6 +1656,1088 @@ export const ApplyCaseTypeRetentionResponseSchema: GenMessage<ApplyCaseTypeReten
   messageDesc(file_goeland_v1_retention, 19);
 
 /**
+ * DispositionItem is one case of a bordereau with its approval.
+ *
+ * @generated from message goeland.v1.DispositionItem
+ */
+export type DispositionItem = Message<"goeland.v1.DispositionItem"> & {
+  /**
+   * id identifies the item.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * bordereau_id is its bordereau.
+   *
+   * @generated from field: string bordereau_id = 2;
+   */
+  bordereauId: string;
+
+  /**
+   * case_id is the case.
+   *
+   * @generated from field: string case_id = 3;
+   */
+  caseId: string;
+
+  /**
+   * case_label is the case's label; empty when the caller may not read the case.
+   *
+   * @generated from field: string case_label = 4;
+   */
+  caseLabel: string;
+
+  /**
+   * business_ref is the case's business reference.
+   *
+   * @generated from field: string business_ref = 5;
+   */
+  businessRef: string;
+
+  /**
+   * until_on is the end of the case's retention (YYYY-MM-DD).
+   *
+   * @generated from field: string until_on = 6;
+   */
+  untilOn: string;
+
+  /**
+   * policy_code is the policy applied to the case.
+   *
+   * @generated from field: string policy_code = 7;
+   */
+  policyCode: string;
+
+  /**
+   * approver_subject_id is who approves: the owning unit (MANAGE on it) or the case itself.
+   *
+   * @generated from field: string approver_subject_id = 8;
+   */
+  approverSubjectId: string;
+
+  /**
+   * approver_label is the approver subject's label.
+   *
+   * @generated from field: string approver_label = 9;
+   */
+  approverLabel: string;
+
+  /**
+   * decision is the approval state.
+   *
+   * @generated from field: goeland.v1.DispositionDecision decision = 10;
+   */
+  decision: DispositionDecision;
+
+  /**
+   * decided_at is when the approver decided.
+   *
+   * @generated from field: google.protobuf.Timestamp decided_at = 11;
+   */
+  decidedAt?: Timestamp | undefined;
+
+  /**
+   * decided_by is the approver.
+   *
+   * @generated from field: string decided_by = 12;
+   */
+  decidedBy: string;
+
+  /**
+   * decision_reason explains the decision.
+   *
+   * @generated from field: string decision_reason = 13;
+   */
+  decisionReason: string;
+
+  /**
+   * export_id is the transfer package of an executed ARCHIVE item.
+   *
+   * @generated from field: string export_id = 14;
+   */
+  exportId: string;
+
+  /**
+   * export_status is the state of that package (QUEUED, RUNNING, DONE, FAILED, EXPIRED).
+   *
+   * @generated from field: string export_status = 15;
+   */
+  exportStatus: string;
+
+  /**
+   * export_sha256 is the package's SHA-256 once built.
+   *
+   * @generated from field: string export_sha256 = 16;
+   */
+  exportSha256: string;
+};
+
+/**
+ * DispositionItem is one case of a bordereau with its approval.
+ *
+ * @generated from message goeland.v1.DispositionItem
+ */
+export type DispositionItemJson = {
+  /**
+   * id identifies the item.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * bordereau_id is its bordereau.
+   *
+   * @generated from field: string bordereau_id = 2;
+   */
+  bordereauId?: string;
+
+  /**
+   * case_id is the case.
+   *
+   * @generated from field: string case_id = 3;
+   */
+  caseId?: string;
+
+  /**
+   * case_label is the case's label; empty when the caller may not read the case.
+   *
+   * @generated from field: string case_label = 4;
+   */
+  caseLabel?: string;
+
+  /**
+   * business_ref is the case's business reference.
+   *
+   * @generated from field: string business_ref = 5;
+   */
+  businessRef?: string;
+
+  /**
+   * until_on is the end of the case's retention (YYYY-MM-DD).
+   *
+   * @generated from field: string until_on = 6;
+   */
+  untilOn?: string;
+
+  /**
+   * policy_code is the policy applied to the case.
+   *
+   * @generated from field: string policy_code = 7;
+   */
+  policyCode?: string;
+
+  /**
+   * approver_subject_id is who approves: the owning unit (MANAGE on it) or the case itself.
+   *
+   * @generated from field: string approver_subject_id = 8;
+   */
+  approverSubjectId?: string;
+
+  /**
+   * approver_label is the approver subject's label.
+   *
+   * @generated from field: string approver_label = 9;
+   */
+  approverLabel?: string;
+
+  /**
+   * decision is the approval state.
+   *
+   * @generated from field: goeland.v1.DispositionDecision decision = 10;
+   */
+  decision?: DispositionDecisionJson;
+
+  /**
+   * decided_at is when the approver decided.
+   *
+   * @generated from field: google.protobuf.Timestamp decided_at = 11;
+   */
+  decidedAt?: TimestampJson;
+
+  /**
+   * decided_by is the approver.
+   *
+   * @generated from field: string decided_by = 12;
+   */
+  decidedBy?: string;
+
+  /**
+   * decision_reason explains the decision.
+   *
+   * @generated from field: string decision_reason = 13;
+   */
+  decisionReason?: string;
+
+  /**
+   * export_id is the transfer package of an executed ARCHIVE item.
+   *
+   * @generated from field: string export_id = 14;
+   */
+  exportId?: string;
+
+  /**
+   * export_status is the state of that package (QUEUED, RUNNING, DONE, FAILED, EXPIRED).
+   *
+   * @generated from field: string export_status = 15;
+   */
+  exportStatus?: string;
+
+  /**
+   * export_sha256 is the package's SHA-256 once built.
+   *
+   * @generated from field: string export_sha256 = 16;
+   */
+  exportSha256?: string;
+};
+
+/**
+ * Describes the message goeland.v1.DispositionItem.
+ * Use `create(DispositionItemSchema)` to create a new message.
+ */
+export const DispositionItemSchema: GenMessage<DispositionItem, {jsonType: DispositionItemJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 20);
+
+/**
+ * DispositionBordereau gathers due cases of one final disposition for approval and execution.
+ *
+ * @generated from message goeland.v1.DispositionBordereau
+ */
+export type DispositionBordereau = Message<"goeland.v1.DispositionBordereau"> & {
+  /**
+   * id identifies the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * final_disposition is ARCHIVE or DESTROY.
+   *
+   * @generated from field: goeland.v1.FinalDisposition final_disposition = 2;
+   */
+  finalDisposition: FinalDisposition;
+
+  /**
+   * status is the bordereau state.
+   *
+   * @generated from field: goeland.v1.BordereauStatus status = 3;
+   */
+  status: BordereauStatus;
+
+  /**
+   * reason explains the bordereau.
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason: string;
+
+  /**
+   * prepared_by is the records manager who prepared it (never an approver).
+   *
+   * @generated from field: string prepared_by = 5;
+   */
+  preparedBy: string;
+
+  /**
+   * prepared_at is when it was prepared.
+   *
+   * @generated from field: google.protobuf.Timestamp prepared_at = 6;
+   */
+  preparedAt?: Timestamp | undefined;
+
+  /**
+   * closed_at is when it was executed or cancelled.
+   *
+   * @generated from field: google.protobuf.Timestamp closed_at = 7;
+   */
+  closedAt?: Timestamp | undefined;
+
+  /**
+   * closed_by is who executed or cancelled it.
+   *
+   * @generated from field: string closed_by = 8;
+   */
+  closedBy: string;
+
+  /**
+   * close_reason explains a cancellation.
+   *
+   * @generated from field: string close_reason = 9;
+   */
+  closeReason: string;
+
+  /**
+   * proof_sha256 is the SHA-256 of the proof manifest, set at execution.
+   *
+   * @generated from field: string proof_sha256 = 10;
+   */
+  proofSha256: string;
+
+  /**
+   * items are its cases (GetDispositionBordereau only).
+   *
+   * @generated from field: repeated goeland.v1.DispositionItem items = 11;
+   */
+  items: DispositionItem[];
+
+  /**
+   * item_count counts its cases.
+   *
+   * @generated from field: int32 item_count = 12;
+   */
+  itemCount: number;
+
+  /**
+   * pending_count counts its cases waiting for a decision.
+   *
+   * @generated from field: int32 pending_count = 13;
+   */
+  pendingCount: number;
+
+  /**
+   * approved_count counts its approved cases.
+   *
+   * @generated from field: int32 approved_count = 14;
+   */
+  approvedCount: number;
+};
+
+/**
+ * DispositionBordereau gathers due cases of one final disposition for approval and execution.
+ *
+ * @generated from message goeland.v1.DispositionBordereau
+ */
+export type DispositionBordereauJson = {
+  /**
+   * id identifies the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * final_disposition is ARCHIVE or DESTROY.
+   *
+   * @generated from field: goeland.v1.FinalDisposition final_disposition = 2;
+   */
+  finalDisposition?: FinalDispositionJson;
+
+  /**
+   * status is the bordereau state.
+   *
+   * @generated from field: goeland.v1.BordereauStatus status = 3;
+   */
+  status?: BordereauStatusJson;
+
+  /**
+   * reason explains the bordereau.
+   *
+   * @generated from field: string reason = 4;
+   */
+  reason?: string;
+
+  /**
+   * prepared_by is the records manager who prepared it (never an approver).
+   *
+   * @generated from field: string prepared_by = 5;
+   */
+  preparedBy?: string;
+
+  /**
+   * prepared_at is when it was prepared.
+   *
+   * @generated from field: google.protobuf.Timestamp prepared_at = 6;
+   */
+  preparedAt?: TimestampJson;
+
+  /**
+   * closed_at is when it was executed or cancelled.
+   *
+   * @generated from field: google.protobuf.Timestamp closed_at = 7;
+   */
+  closedAt?: TimestampJson;
+
+  /**
+   * closed_by is who executed or cancelled it.
+   *
+   * @generated from field: string closed_by = 8;
+   */
+  closedBy?: string;
+
+  /**
+   * close_reason explains a cancellation.
+   *
+   * @generated from field: string close_reason = 9;
+   */
+  closeReason?: string;
+
+  /**
+   * proof_sha256 is the SHA-256 of the proof manifest, set at execution.
+   *
+   * @generated from field: string proof_sha256 = 10;
+   */
+  proofSha256?: string;
+
+  /**
+   * items are its cases (GetDispositionBordereau only).
+   *
+   * @generated from field: repeated goeland.v1.DispositionItem items = 11;
+   */
+  items?: DispositionItemJson[];
+
+  /**
+   * item_count counts its cases.
+   *
+   * @generated from field: int32 item_count = 12;
+   */
+  itemCount?: number;
+
+  /**
+   * pending_count counts its cases waiting for a decision.
+   *
+   * @generated from field: int32 pending_count = 13;
+   */
+  pendingCount?: number;
+
+  /**
+   * approved_count counts its approved cases.
+   *
+   * @generated from field: int32 approved_count = 14;
+   */
+  approvedCount?: number;
+};
+
+/**
+ * Describes the message goeland.v1.DispositionBordereau.
+ * Use `create(DispositionBordereauSchema)` to create a new message.
+ */
+export const DispositionBordereauSchema: GenMessage<DispositionBordereau, {jsonType: DispositionBordereauJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 21);
+
+/**
+ * CreateDispositionBordereauRequest prepares a bordereau (records manager).
+ *
+ * @generated from message goeland.v1.CreateDispositionBordereauRequest
+ */
+export type CreateDispositionBordereauRequest = Message<"goeland.v1.CreateDispositionBordereauRequest"> & {
+  /**
+   * final_disposition is ARCHIVE or DESTROY; a case of a REVIEW policy fits either.
+   *
+   * @generated from field: goeland.v1.FinalDisposition final_disposition = 1;
+   */
+  finalDisposition: FinalDisposition;
+
+  /**
+   * reason explains the bordereau (1-2000 characters).
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+
+  /**
+   * case_ids are the due cases (1-500), each with a running retention ended,
+   * no legal hold and no other open bordereau.
+   *
+   * @generated from field: repeated string case_ids = 3;
+   */
+  caseIds: string[];
+};
+
+/**
+ * CreateDispositionBordereauRequest prepares a bordereau (records manager).
+ *
+ * @generated from message goeland.v1.CreateDispositionBordereauRequest
+ */
+export type CreateDispositionBordereauRequestJson = {
+  /**
+   * final_disposition is ARCHIVE or DESTROY; a case of a REVIEW policy fits either.
+   *
+   * @generated from field: goeland.v1.FinalDisposition final_disposition = 1;
+   */
+  finalDisposition?: FinalDispositionJson;
+
+  /**
+   * reason explains the bordereau (1-2000 characters).
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason?: string;
+
+  /**
+   * case_ids are the due cases (1-500), each with a running retention ended,
+   * no legal hold and no other open bordereau.
+   *
+   * @generated from field: repeated string case_ids = 3;
+   */
+  caseIds?: string[];
+};
+
+/**
+ * Describes the message goeland.v1.CreateDispositionBordereauRequest.
+ * Use `create(CreateDispositionBordereauRequestSchema)` to create a new message.
+ */
+export const CreateDispositionBordereauRequestSchema: GenMessage<CreateDispositionBordereauRequest, {jsonType: CreateDispositionBordereauRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 22);
+
+/**
+ * CreateDispositionBordereauResponse returns the prepared bordereau, open, with its items.
+ *
+ * @generated from message goeland.v1.CreateDispositionBordereauResponse
+ */
+export type CreateDispositionBordereauResponse = Message<"goeland.v1.CreateDispositionBordereauResponse"> & {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereau | undefined;
+};
+
+/**
+ * CreateDispositionBordereauResponse returns the prepared bordereau, open, with its items.
+ *
+ * @generated from message goeland.v1.CreateDispositionBordereauResponse
+ */
+export type CreateDispositionBordereauResponseJson = {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereauJson;
+};
+
+/**
+ * Describes the message goeland.v1.CreateDispositionBordereauResponse.
+ * Use `create(CreateDispositionBordereauResponseSchema)` to create a new message.
+ */
+export const CreateDispositionBordereauResponseSchema: GenMessage<CreateDispositionBordereauResponse, {jsonType: CreateDispositionBordereauResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 23);
+
+/**
+ * GetDispositionBordereauResponse returns the bordereau with its items.
+ *
+ * @generated from message goeland.v1.GetDispositionBordereauResponse
+ */
+export type GetDispositionBordereauResponse = Message<"goeland.v1.GetDispositionBordereauResponse"> & {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereau | undefined;
+};
+
+/**
+ * GetDispositionBordereauResponse returns the bordereau with its items.
+ *
+ * @generated from message goeland.v1.GetDispositionBordereauResponse
+ */
+export type GetDispositionBordereauResponseJson = {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereauJson;
+};
+
+/**
+ * Describes the message goeland.v1.GetDispositionBordereauResponse.
+ * Use `create(GetDispositionBordereauResponseSchema)` to create a new message.
+ */
+export const GetDispositionBordereauResponseSchema: GenMessage<GetDispositionBordereauResponse, {jsonType: GetDispositionBordereauResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 24);
+
+/**
+ * ExecuteDispositionBordereauResponse returns the executed bordereau with its items and proof.
+ *
+ * @generated from message goeland.v1.ExecuteDispositionBordereauResponse
+ */
+export type ExecuteDispositionBordereauResponse = Message<"goeland.v1.ExecuteDispositionBordereauResponse"> & {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereau | undefined;
+};
+
+/**
+ * ExecuteDispositionBordereauResponse returns the executed bordereau with its items and proof.
+ *
+ * @generated from message goeland.v1.ExecuteDispositionBordereauResponse
+ */
+export type ExecuteDispositionBordereauResponseJson = {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereauJson;
+};
+
+/**
+ * Describes the message goeland.v1.ExecuteDispositionBordereauResponse.
+ * Use `create(ExecuteDispositionBordereauResponseSchema)` to create a new message.
+ */
+export const ExecuteDispositionBordereauResponseSchema: GenMessage<ExecuteDispositionBordereauResponse, {jsonType: ExecuteDispositionBordereauResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 25);
+
+/**
+ * CancelDispositionBordereauResponse returns the cancelled bordereau.
+ *
+ * @generated from message goeland.v1.CancelDispositionBordereauResponse
+ */
+export type CancelDispositionBordereauResponse = Message<"goeland.v1.CancelDispositionBordereauResponse"> & {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereau | undefined;
+};
+
+/**
+ * CancelDispositionBordereauResponse returns the cancelled bordereau.
+ *
+ * @generated from message goeland.v1.CancelDispositionBordereauResponse
+ */
+export type CancelDispositionBordereauResponseJson = {
+  /**
+   * bordereau is the bordereau.
+   *
+   * @generated from field: goeland.v1.DispositionBordereau bordereau = 1;
+   */
+  bordereau?: DispositionBordereauJson;
+};
+
+/**
+ * Describes the message goeland.v1.CancelDispositionBordereauResponse.
+ * Use `create(CancelDispositionBordereauResponseSchema)` to create a new message.
+ */
+export const CancelDispositionBordereauResponseSchema: GenMessage<CancelDispositionBordereauResponse, {jsonType: CancelDispositionBordereauResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 26);
+
+/**
+ * GetDispositionBordereauRequest reads a bordereau (records manager).
+ *
+ * @generated from message goeland.v1.GetDispositionBordereauRequest
+ */
+export type GetDispositionBordereauRequest = Message<"goeland.v1.GetDispositionBordereauRequest"> & {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * GetDispositionBordereauRequest reads a bordereau (records manager).
+ *
+ * @generated from message goeland.v1.GetDispositionBordereauRequest
+ */
+export type GetDispositionBordereauRequestJson = {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message goeland.v1.GetDispositionBordereauRequest.
+ * Use `create(GetDispositionBordereauRequestSchema)` to create a new message.
+ */
+export const GetDispositionBordereauRequestSchema: GenMessage<GetDispositionBordereauRequest, {jsonType: GetDispositionBordereauRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 27);
+
+/**
+ * ListDispositionBordereauxRequest pages the bordereaux, newest first (records manager).
+ *
+ * @generated from message goeland.v1.ListDispositionBordereauxRequest
+ */
+export type ListDispositionBordereauxRequest = Message<"goeland.v1.ListDispositionBordereauxRequest"> & {
+  /**
+   * status restricts the list to one state; unspecified means all.
+   *
+   * @generated from field: goeland.v1.BordereauStatus status = 1;
+   */
+  status: BordereauStatus;
+
+  /**
+   * page_size is the page length; 0 means the default (25), at most 200.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize: number;
+
+  /**
+   * page_token is the next_page_token of the previous page; empty for the first page.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken: string;
+};
+
+/**
+ * ListDispositionBordereauxRequest pages the bordereaux, newest first (records manager).
+ *
+ * @generated from message goeland.v1.ListDispositionBordereauxRequest
+ */
+export type ListDispositionBordereauxRequestJson = {
+  /**
+   * status restricts the list to one state; unspecified means all.
+   *
+   * @generated from field: goeland.v1.BordereauStatus status = 1;
+   */
+  status?: BordereauStatusJson;
+
+  /**
+   * page_size is the page length; 0 means the default (25), at most 200.
+   *
+   * @generated from field: int32 page_size = 2;
+   */
+  pageSize?: number;
+
+  /**
+   * page_token is the next_page_token of the previous page; empty for the first page.
+   *
+   * @generated from field: string page_token = 3;
+   */
+  pageToken?: string;
+};
+
+/**
+ * Describes the message goeland.v1.ListDispositionBordereauxRequest.
+ * Use `create(ListDispositionBordereauxRequestSchema)` to create a new message.
+ */
+export const ListDispositionBordereauxRequestSchema: GenMessage<ListDispositionBordereauxRequest, {jsonType: ListDispositionBordereauxRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 28);
+
+/**
+ * ListDispositionBordereauxResponse returns a page of bordereaux (without items).
+ *
+ * @generated from message goeland.v1.ListDispositionBordereauxResponse
+ */
+export type ListDispositionBordereauxResponse = Message<"goeland.v1.ListDispositionBordereauxResponse"> & {
+  /**
+   * bordereaux are the bordereaux of the page.
+   *
+   * @generated from field: repeated goeland.v1.DispositionBordereau bordereaux = 1;
+   */
+  bordereaux: DispositionBordereau[];
+
+  /**
+   * next_page_token fetches the next page; empty on the last page.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken: string;
+
+  /**
+   * total_size counts every matching bordereau.
+   *
+   * @generated from field: int32 total_size = 3;
+   */
+  totalSize: number;
+};
+
+/**
+ * ListDispositionBordereauxResponse returns a page of bordereaux (without items).
+ *
+ * @generated from message goeland.v1.ListDispositionBordereauxResponse
+ */
+export type ListDispositionBordereauxResponseJson = {
+  /**
+   * bordereaux are the bordereaux of the page.
+   *
+   * @generated from field: repeated goeland.v1.DispositionBordereau bordereaux = 1;
+   */
+  bordereaux?: DispositionBordereauJson[];
+
+  /**
+   * next_page_token fetches the next page; empty on the last page.
+   *
+   * @generated from field: string next_page_token = 2;
+   */
+  nextPageToken?: string;
+
+  /**
+   * total_size counts every matching bordereau.
+   *
+   * @generated from field: int32 total_size = 3;
+   */
+  totalSize?: number;
+};
+
+/**
+ * Describes the message goeland.v1.ListDispositionBordereauxResponse.
+ * Use `create(ListDispositionBordereauxResponseSchema)` to create a new message.
+ */
+export const ListDispositionBordereauxResponseSchema: GenMessage<ListDispositionBordereauxResponse, {jsonType: ListDispositionBordereauxResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 29);
+
+/**
+ * ListMyDispositionApprovalsRequest lists the cases waiting for the caller's approval.
+ *
+ * @generated from message goeland.v1.ListMyDispositionApprovalsRequest
+ */
+export type ListMyDispositionApprovalsRequest = Message<"goeland.v1.ListMyDispositionApprovalsRequest"> & {
+};
+
+/**
+ * ListMyDispositionApprovalsRequest lists the cases waiting for the caller's approval.
+ *
+ * @generated from message goeland.v1.ListMyDispositionApprovalsRequest
+ */
+export type ListMyDispositionApprovalsRequestJson = {
+};
+
+/**
+ * Describes the message goeland.v1.ListMyDispositionApprovalsRequest.
+ * Use `create(ListMyDispositionApprovalsRequestSchema)` to create a new message.
+ */
+export const ListMyDispositionApprovalsRequestSchema: GenMessage<ListMyDispositionApprovalsRequest, {jsonType: ListMyDispositionApprovalsRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 30);
+
+/**
+ * ListMyDispositionApprovalsResponse returns the items the caller may decide, oldest bordereau first.
+ *
+ * @generated from message goeland.v1.ListMyDispositionApprovalsResponse
+ */
+export type ListMyDispositionApprovalsResponse = Message<"goeland.v1.ListMyDispositionApprovalsResponse"> & {
+  /**
+   * items are the pending items whose approver subject the caller manages.
+   *
+   * @generated from field: repeated goeland.v1.DispositionItem items = 1;
+   */
+  items: DispositionItem[];
+
+  /**
+   * dispositions gives, per item id, its bordereau's final disposition.
+   *
+   * @generated from field: map<string, goeland.v1.FinalDisposition> dispositions = 2;
+   */
+  dispositions: { [key: string]: FinalDisposition };
+};
+
+/**
+ * ListMyDispositionApprovalsResponse returns the items the caller may decide, oldest bordereau first.
+ *
+ * @generated from message goeland.v1.ListMyDispositionApprovalsResponse
+ */
+export type ListMyDispositionApprovalsResponseJson = {
+  /**
+   * items are the pending items whose approver subject the caller manages.
+   *
+   * @generated from field: repeated goeland.v1.DispositionItem items = 1;
+   */
+  items?: DispositionItemJson[];
+
+  /**
+   * dispositions gives, per item id, its bordereau's final disposition.
+   *
+   * @generated from field: map<string, goeland.v1.FinalDisposition> dispositions = 2;
+   */
+  dispositions?: { [key: string]: FinalDispositionJson };
+};
+
+/**
+ * Describes the message goeland.v1.ListMyDispositionApprovalsResponse.
+ * Use `create(ListMyDispositionApprovalsResponseSchema)` to create a new message.
+ */
+export const ListMyDispositionApprovalsResponseSchema: GenMessage<ListMyDispositionApprovalsResponse, {jsonType: ListMyDispositionApprovalsResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 31);
+
+/**
+ * DecideDispositionItemRequest approves or rejects one case of a bordereau.
+ *
+ * @generated from message goeland.v1.DecideDispositionItemRequest
+ */
+export type DecideDispositionItemRequest = Message<"goeland.v1.DecideDispositionItemRequest"> & {
+  /**
+   * id is the item.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * approve approves the case; false rejects it.
+   *
+   * @generated from field: bool approve = 2;
+   */
+  approve: boolean;
+
+  /**
+   * reason explains the decision (1-2000 characters); it is audited.
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason: string;
+};
+
+/**
+ * DecideDispositionItemRequest approves or rejects one case of a bordereau.
+ *
+ * @generated from message goeland.v1.DecideDispositionItemRequest
+ */
+export type DecideDispositionItemRequestJson = {
+  /**
+   * id is the item.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * approve approves the case; false rejects it.
+   *
+   * @generated from field: bool approve = 2;
+   */
+  approve?: boolean;
+
+  /**
+   * reason explains the decision (1-2000 characters); it is audited.
+   *
+   * @generated from field: string reason = 3;
+   */
+  reason?: string;
+};
+
+/**
+ * Describes the message goeland.v1.DecideDispositionItemRequest.
+ * Use `create(DecideDispositionItemRequestSchema)` to create a new message.
+ */
+export const DecideDispositionItemRequestSchema: GenMessage<DecideDispositionItemRequest, {jsonType: DecideDispositionItemRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 32);
+
+/**
+ * DecideDispositionItemResponse returns the decided item.
+ *
+ * @generated from message goeland.v1.DecideDispositionItemResponse
+ */
+export type DecideDispositionItemResponse = Message<"goeland.v1.DecideDispositionItemResponse"> & {
+  /**
+   * item is the decided item.
+   *
+   * @generated from field: goeland.v1.DispositionItem item = 1;
+   */
+  item?: DispositionItem | undefined;
+};
+
+/**
+ * DecideDispositionItemResponse returns the decided item.
+ *
+ * @generated from message goeland.v1.DecideDispositionItemResponse
+ */
+export type DecideDispositionItemResponseJson = {
+  /**
+   * item is the decided item.
+   *
+   * @generated from field: goeland.v1.DispositionItem item = 1;
+   */
+  item?: DispositionItemJson;
+};
+
+/**
+ * Describes the message goeland.v1.DecideDispositionItemResponse.
+ * Use `create(DecideDispositionItemResponseSchema)` to create a new message.
+ */
+export const DecideDispositionItemResponseSchema: GenMessage<DecideDispositionItemResponse, {jsonType: DecideDispositionItemResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 33);
+
+/**
+ * ExecuteDispositionBordereauRequest executes a bordereau whose cases are all decided (records manager).
+ *
+ * @generated from message goeland.v1.ExecuteDispositionBordereauRequest
+ */
+export type ExecuteDispositionBordereauRequest = Message<"goeland.v1.ExecuteDispositionBordereauRequest"> & {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+};
+
+/**
+ * ExecuteDispositionBordereauRequest executes a bordereau whose cases are all decided (records manager).
+ *
+ * @generated from message goeland.v1.ExecuteDispositionBordereauRequest
+ */
+export type ExecuteDispositionBordereauRequestJson = {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+};
+
+/**
+ * Describes the message goeland.v1.ExecuteDispositionBordereauRequest.
+ * Use `create(ExecuteDispositionBordereauRequestSchema)` to create a new message.
+ */
+export const ExecuteDispositionBordereauRequestSchema: GenMessage<ExecuteDispositionBordereauRequest, {jsonType: ExecuteDispositionBordereauRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 34);
+
+/**
+ * CancelDispositionBordereauRequest abandons an open bordereau (records manager).
+ *
+ * @generated from message goeland.v1.CancelDispositionBordereauRequest
+ */
+export type CancelDispositionBordereauRequest = Message<"goeland.v1.CancelDispositionBordereauRequest"> & {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * reason explains the cancellation (1-2000 characters).
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason: string;
+};
+
+/**
+ * CancelDispositionBordereauRequest abandons an open bordereau (records manager).
+ *
+ * @generated from message goeland.v1.CancelDispositionBordereauRequest
+ */
+export type CancelDispositionBordereauRequestJson = {
+  /**
+   * id is the bordereau.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * reason explains the cancellation (1-2000 characters).
+   *
+   * @generated from field: string reason = 2;
+   */
+  reason?: string;
+};
+
+/**
+ * Describes the message goeland.v1.CancelDispositionBordereauRequest.
+ * Use `create(CancelDispositionBordereauRequestSchema)` to create a new message.
+ */
+export const CancelDispositionBordereauRequestSchema: GenMessage<CancelDispositionBordereauRequest, {jsonType: CancelDispositionBordereauRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_retention, 35);
+
+/**
  * FinalDisposition is what happens to a case when its retention expires.
  *
  * @generated from enum goeland.v1.FinalDisposition
@@ -1658,6 +2784,143 @@ export type FinalDispositionJson = "FINAL_DISPOSITION_UNSPECIFIED" | "FINAL_DISP
  */
 export const FinalDispositionSchema: GenEnum<FinalDisposition, FinalDispositionJson> = /*@__PURE__*/
   enumDesc(file_goeland_v1_retention, 0);
+
+/**
+ * DispositionStatus is the executed outcome of a retention.
+ *
+ * @generated from enum goeland.v1.DispositionStatus
+ */
+export enum DispositionStatus {
+  /**
+   * DISPOSITION_STATUS_UNSPECIFIED: not executed yet.
+   *
+   * @generated from enum value: DISPOSITION_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * DISPOSITION_STATUS_ARCHIVED: transferred to the archives and frozen.
+   *
+   * @generated from enum value: DISPOSITION_STATUS_ARCHIVED = 1;
+   */
+  ARCHIVED = 1,
+
+  /**
+   * DISPOSITION_STATUS_DISPOSED: eliminated, only a notice and the proof are kept.
+   *
+   * @generated from enum value: DISPOSITION_STATUS_DISPOSED = 2;
+   */
+  DISPOSED = 2,
+}
+
+/**
+ * DispositionStatus is the executed outcome of a retention.
+ *
+ * @generated from enum goeland.v1.DispositionStatus
+ */
+export type DispositionStatusJson = "DISPOSITION_STATUS_UNSPECIFIED" | "DISPOSITION_STATUS_ARCHIVED" | "DISPOSITION_STATUS_DISPOSED";
+
+/**
+ * Describes the enum goeland.v1.DispositionStatus.
+ */
+export const DispositionStatusSchema: GenEnum<DispositionStatus, DispositionStatusJson> = /*@__PURE__*/
+  enumDesc(file_goeland_v1_retention, 1);
+
+/**
+ * BordereauStatus is the state of a disposition bordereau.
+ *
+ * @generated from enum goeland.v1.BordereauStatus
+ */
+export enum BordereauStatus {
+  /**
+   * BORDEREAU_STATUS_UNSPECIFIED is the zero value; never stored.
+   *
+   * @generated from enum value: BORDEREAU_STATUS_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * BORDEREAU_STATUS_OPEN waits for the approvals, then for its execution.
+   *
+   * @generated from enum value: BORDEREAU_STATUS_OPEN = 1;
+   */
+  OPEN = 1,
+
+  /**
+   * BORDEREAU_STATUS_EXECUTED handled its approved cases; its proof is kept.
+   *
+   * @generated from enum value: BORDEREAU_STATUS_EXECUTED = 2;
+   */
+  EXECUTED = 2,
+
+  /**
+   * BORDEREAU_STATUS_CANCELLED was abandoned before its execution.
+   *
+   * @generated from enum value: BORDEREAU_STATUS_CANCELLED = 3;
+   */
+  CANCELLED = 3,
+}
+
+/**
+ * BordereauStatus is the state of a disposition bordereau.
+ *
+ * @generated from enum goeland.v1.BordereauStatus
+ */
+export type BordereauStatusJson = "BORDEREAU_STATUS_UNSPECIFIED" | "BORDEREAU_STATUS_OPEN" | "BORDEREAU_STATUS_EXECUTED" | "BORDEREAU_STATUS_CANCELLED";
+
+/**
+ * Describes the enum goeland.v1.BordereauStatus.
+ */
+export const BordereauStatusSchema: GenEnum<BordereauStatus, BordereauStatusJson> = /*@__PURE__*/
+  enumDesc(file_goeland_v1_retention, 2);
+
+/**
+ * DispositionDecision is the approval of one case of a bordereau.
+ *
+ * @generated from enum goeland.v1.DispositionDecision
+ */
+export enum DispositionDecision {
+  /**
+   * DISPOSITION_DECISION_UNSPECIFIED is the zero value; never stored.
+   *
+   * @generated from enum value: DISPOSITION_DECISION_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * DISPOSITION_DECISION_PENDING waits for its approver.
+   *
+   * @generated from enum value: DISPOSITION_DECISION_PENDING = 1;
+   */
+  PENDING = 1,
+
+  /**
+   * DISPOSITION_DECISION_APPROVED: the case will be handled at execution.
+   *
+   * @generated from enum value: DISPOSITION_DECISION_APPROVED = 2;
+   */
+  APPROVED = 2,
+
+  /**
+   * DISPOSITION_DECISION_REJECTED: the case is left out of the execution.
+   *
+   * @generated from enum value: DISPOSITION_DECISION_REJECTED = 3;
+   */
+  REJECTED = 3,
+}
+
+/**
+ * DispositionDecision is the approval of one case of a bordereau.
+ *
+ * @generated from enum goeland.v1.DispositionDecision
+ */
+export type DispositionDecisionJson = "DISPOSITION_DECISION_UNSPECIFIED" | "DISPOSITION_DECISION_PENDING" | "DISPOSITION_DECISION_APPROVED" | "DISPOSITION_DECISION_REJECTED";
+
+/**
+ * Describes the enum goeland.v1.DispositionDecision.
+ */
+export const DispositionDecisionSchema: GenEnum<DispositionDecision, DispositionDecisionJson> = /*@__PURE__*/
+  enumDesc(file_goeland_v1_retention, 3);
 
 /**
  * RetentionService manages the retention schedule and the retention of closed cases.
@@ -1744,6 +3007,77 @@ export const RetentionService: GenService<{
     methodKind: "unary";
     input: typeof ApplyCaseTypeRetentionRequestSchema;
     output: typeof ApplyCaseTypeRetentionResponseSchema;
+  },
+  /**
+   * Prepare a disposition bordereau. Requires goeland:records.
+   *
+   * @generated from rpc goeland.v1.RetentionService.CreateDispositionBordereau
+   */
+  createDispositionBordereau: {
+    methodKind: "unary";
+    input: typeof CreateDispositionBordereauRequestSchema;
+    output: typeof CreateDispositionBordereauResponseSchema;
+  },
+  /**
+   * List the bordereaux. Requires goeland:records.
+   *
+   * @generated from rpc goeland.v1.RetentionService.ListDispositionBordereaux
+   */
+  listDispositionBordereaux: {
+    methodKind: "unary";
+    input: typeof ListDispositionBordereauxRequestSchema;
+    output: typeof ListDispositionBordereauxResponseSchema;
+  },
+  /**
+   * Read a bordereau with its cases. Requires goeland:records.
+   *
+   * @generated from rpc goeland.v1.RetentionService.GetDispositionBordereau
+   */
+  getDispositionBordereau: {
+    methodKind: "unary";
+    input: typeof GetDispositionBordereauRequestSchema;
+    output: typeof GetDispositionBordereauResponseSchema;
+  },
+  /**
+   * List the cases waiting for the caller's approval. Requires goeland:read.
+   *
+   * @generated from rpc goeland.v1.RetentionService.ListMyDispositionApprovals
+   */
+  listMyDispositionApprovals: {
+    methodKind: "unary";
+    input: typeof ListMyDispositionApprovalsRequestSchema;
+    output: typeof ListMyDispositionApprovalsResponseSchema;
+  },
+  /**
+   * Approve or reject a case of a bordereau. Requires goeland:write and MANAGE
+   * on the approver subject; the preparer never decides.
+   *
+   * @generated from rpc goeland.v1.RetentionService.DecideDispositionItem
+   */
+  decideDispositionItem: {
+    methodKind: "unary";
+    input: typeof DecideDispositionItemRequestSchema;
+    output: typeof DecideDispositionItemResponseSchema;
+  },
+  /**
+   * Execute a bordereau whose cases are all decided. Requires goeland:records.
+   *
+   * @generated from rpc goeland.v1.RetentionService.ExecuteDispositionBordereau
+   */
+  executeDispositionBordereau: {
+    methodKind: "unary";
+    input: typeof ExecuteDispositionBordereauRequestSchema;
+    output: typeof ExecuteDispositionBordereauResponseSchema;
+  },
+  /**
+   * Abandon an open bordereau. Requires goeland:records.
+   *
+   * @generated from rpc goeland.v1.RetentionService.CancelDispositionBordereau
+   */
+  cancelDispositionBordereau: {
+    methodKind: "unary";
+    input: typeof CancelDispositionBordereauRequestSchema;
+    output: typeof CancelDispositionBordereauResponseSchema;
   },
 }> = /*@__PURE__*/
   serviceDesc(file_goeland_v1_retention, 0);

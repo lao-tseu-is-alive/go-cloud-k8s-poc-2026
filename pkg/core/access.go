@@ -285,6 +285,14 @@ type Viewer struct {
 	UserID string
 	// Principals are the group and unit subject ids the user's grants may come through.
 	Principals []uuid.UUID
+	// All reads every subject, confidential ones included: the system building a
+	// transfer package for the archives (GLD-032), never a person.
+	All bool
+}
+
+// SystemViewer reads everything; only the transfer to the archives uses it.
+func SystemViewer(operatorID string) Viewer {
+	return Viewer{UserID: operatorID, All: true}
 }
 
 // ViewerTx resolves the principals of userID.
@@ -300,27 +308,27 @@ func ViewerTx(ctx context.Context, q Querier, userID string) (Viewer, error) {
 	return Viewer{UserID: userID, Principals: ids}, nil
 }
 
-// AddTo sets the viewer's query arguments (@viewer_id, @viewer_principals) on args.
+// AddTo sets the viewer's query arguments (@viewer_id, @viewer_principals, @viewer_all) on args.
 func (v Viewer) AddTo(args pgx.NamedArgs) pgx.NamedArgs {
 	principals := v.Principals
 	if principals == nil {
 		principals = []uuid.UUID{}
 	}
-	args["viewer_id"], args["viewer_principals"] = v.UserID, principals
+	args["viewer_id"], args["viewer_principals"], args["viewer_all"] = v.UserID, principals, v.All
 	return args
 }
 
 // ReadableSQL is the SQL predicate "the viewer may read subject idExpr": every
 // grant gives at least READ, so a subject is readable when it is not
 // confidential or when the viewer, one of its groups or one of its units (or
-// an ancestor) holds a current grant on it. rmAlias is the subject's
+// an ancestor) holds a current grant on it; the system viewer reads everything. rmAlias is the subject's
 // record_metadata alias in the query, or "" to look it up.
 func ReadableSQL(idExpr, rmAlias string) string {
 	confidentiality := "COALESCE(" + rmAlias + ".confidentiality_level, 0)"
 	if rmAlias == "" {
 		confidentiality = "COALESCE((SELECT rmx.confidentiality_level FROM record_metadata rmx WHERE rmx.subject_id = " + idExpr + "), 0)"
 	}
-	return "(" + confidentiality + " < " + fmt.Sprint(ConfidentialLevel) + `
+	return "(@viewer_all::boolean OR " + confidentiality + " < " + fmt.Sprint(ConfidentialLevel) + `
        OR EXISTS (SELECT 1 FROM access_grant ag
                   WHERE ag.subject_id = ` + idExpr + ` AND ag.revoked_at IS NULL
                     AND (ag.grantee_user_id = @viewer_id OR ag.grantee_subject_id = ANY(@viewer_principals::uuid[]))))`

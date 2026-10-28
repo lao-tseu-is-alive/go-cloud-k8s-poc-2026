@@ -1399,7 +1399,13 @@ export interface SubjectRetention {
   endedAt?: string
   endedBy?: string
   endReason?: string
+  /** Executed outcome: transferred and frozen, or eliminated. */
+  dispositionStatus?: DispositionStatus
+  disposedAt?: string
+  bordereauId?: string
 }
+
+export type DispositionStatus = 'DISPOSITION_STATUS_UNSPECIFIED' | 'DISPOSITION_STATUS_ARCHIVED' | 'DISPOSITION_STATUS_DISPOSED'
 
 /** A legal hold: no disposal while it is active. */
 export interface RetentionHold {
@@ -1446,4 +1452,70 @@ export interface ApplyCaseTypeRetentionResponse {
   applied?: number
   /** Closed cases of the type still without retention: call again while > 0. */
   remaining?: number
+}
+
+// --- Disposition bordereaux (GLD-032 step B) --------------------------------
+
+export type BordereauStatus = 'BORDEREAU_STATUS_UNSPECIFIED' | 'BORDEREAU_STATUS_OPEN' | 'BORDEREAU_STATUS_EXECUTED' | 'BORDEREAU_STATUS_CANCELLED'
+
+export type DispositionDecision = 'DISPOSITION_DECISION_UNSPECIFIED' | 'DISPOSITION_DECISION_PENDING' | 'DISPOSITION_DECISION_APPROVED' | 'DISPOSITION_DECISION_REJECTED'
+
+/** One case of a bordereau; labels are empty when the caller may not read the subject. */
+export interface DispositionItem {
+  id: string
+  bordereauId: string
+  caseId: string
+  caseLabel?: string
+  businessRef?: string
+  untilOn?: string
+  policyCode?: string
+  /** The owning unit, or the case itself without one. */
+  approverSubjectId: string
+  approverLabel?: string
+  decision?: DispositionDecision
+  decidedAt?: string
+  decidedBy?: string
+  decisionReason?: string
+  /** The transfer package of an executed ARCHIVE item. */
+  exportId?: string
+  exportStatus?: string
+  exportSha256?: string
+}
+
+export interface DispositionBordereau {
+  id: string
+  finalDisposition?: FinalDisposition
+  status?: BordereauStatus
+  reason: string
+  preparedBy?: string
+  preparedAt?: string
+  closedAt?: string
+  closedBy?: string
+  closeReason?: string
+  proofSha256?: string
+  items?: DispositionItem[]
+  itemCount?: number
+  pendingCount?: number
+  approvedCount?: number
+}
+
+/** Answer of a bordereau created, read, executed or cancelled. */
+export interface DispositionBordereauResponse {
+  bordereau?: DispositionBordereau
+}
+
+export interface ListDispositionBordereauxResponse {
+  bordereaux?: DispositionBordereau[]
+  nextPageToken?: string
+  totalSize?: number
+}
+
+export interface ListMyDispositionApprovalsResponse {
+  items?: DispositionItem[]
+  /** The final disposition of each item's bordereau, by item id. */
+  dispositions?: Record<string, FinalDisposition>
+}
+
+export interface DecideDispositionItemResponse {
+  item?: DispositionItem
 }

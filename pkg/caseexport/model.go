@@ -68,7 +68,23 @@ type Export struct {
 	SizeBytes int64 `db:"size_bytes"`
 	// Error explains a failed export.
 	Error string `db:"error"`
+	// Purpose is PurposeCopy (the requester's view) or PurposeTransfer (the
+	// complete package for the archives, GLD-032).
+	Purpose string `db:"purpose"`
 }
+
+// Export purposes (case_export.purpose).
+const (
+	// PurposeCopy is an ordinary export: the requester's view, for the requester.
+	PurposeCopy = "COPY"
+	// PurposeTransfer is a transfer package for the archives (GLD-032): queued by
+	// the retention when a bordereau is executed, built by the system without
+	// read filter, downloaded by records managers, kept TransferTTL.
+	PurposeTransfer = "TRANSFER"
+)
+
+// TransferTTL is how long a transfer package stays downloadable.
+const TransferTTL = 90 * 24 * time.Hour
 
 // RequestInput holds a request for an export.
 type RequestInput struct {

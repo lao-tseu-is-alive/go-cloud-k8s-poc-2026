@@ -143,8 +143,14 @@ whenever a task starts, completes, changes scope or order.
   RECORDS_MANAGER, given by `core.RecordingVerifier` like ADMIN → `goeland:admin`); reading a
   case's retention needs READ or that scope. Changes are audited on the CASE subject
   (`RETENTION_STARTED`, `RETENTION_ENDED`, `RETENTION_HOLD_PLACED` / `_RELEASED`). The case is the
-  unit, its documents follow it; nothing is disposed of yet (step B: bordereaux, ARCHIVED /
-  DISPOSED). `record_metadata.retention_until` / `sort_final` are V1 fields, no longer written.
+  unit, its documents follow it. Step B1: a RECORDS_MANAGER gathers due cases (no hold, one open
+  bordereau at a time) of one disposition in a `disposition_bordereau`; each `disposition_item` is
+  approved by a holder of MANAGE on the case's live owning unit, or on the case without one, never
+  by the preparer ("my tasks" lists them); executing an ARCHIVE bordereau queues a `case_export` of
+  purpose TRANSFER (built with `core.SystemViewer`, no read filter, downloaded by records managers,
+  kept 90 days), records EXPORT, locks the case and marks its retention ARCHIVED, and keeps the
+  SHA-256 of the proof manifest. DESTROY execution is step B2. `record_metadata.retention_until` /
+  `sort_final` are V1 fields, no longer written.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
   slices of the Document module (list/create+upload/detail/edit/finalize/verify/link/
   delete), the Actor module (list/create/detail/edit/activate/delete, addresses), the Case
@@ -194,7 +200,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0035 (dbmate format)
+  │   └── db/migrations/     0001..0036 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -504,7 +510,8 @@ OrgUnitService: `/api/org-units` (flat tree), `/api/org-units/search`, `/api/org
 CaseExportService: `/api/cases/{case_id}/exports` (request, list), `/api/case-exports/{id}`;
 RetentionService: `/api/retention-policies` (+ `/{code}`), `/api/cases/{case_id}/retention`,
 `/api/cases/{case_id}/retention-hold` (+ `/release`), `/api/retentions/due`,
-`/api/case-types/{case_type_code}/apply-retention`;
+`/api/case-types/{case_type_code}/apply-retention`, `/api/disposition-bordereaux` (+ `/{id}`, `/execute`,
+`/cancel`), `/api/disposition-items/mine`, `/api/disposition-items/{id}/decide`;
 TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` with
 `/validate`, `/lock`, `/withdraw` and `/documents[/{document_id}]`).
 

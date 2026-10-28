@@ -162,7 +162,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0035 (dbmate format)
+      └── db/migrations/  0001..0036 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -309,7 +309,9 @@ Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA
 - **Retention** — a case type names a retention policy (duration after closing, final
   disposition: transfer to the archives, destruction or review); closing a case computes its
   retention, reopening ends it. The records manager (Archiviste role) places or releases legal
-  holds and follows the deadlines (Conservation page); the disposition itself comes next (GLD-032).
+  holds and follows the deadlines (Conservation page), then gathers due cases in a bordereau: each
+  case is approved by a manager of its owning unit, and executing a transfer bordereau builds the
+  complete package, freezes the case and keeps a SHA-256 proof (GLD-032; elimination comes next).
 
 All add read-only governance and audit panels. Bilingual (fr-CH default, en).
 
@@ -456,6 +458,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0033_creator_indexes.sql     created_by indexes for the creator filter of the lists
 0034_outbox.sql              outbox_event: transactional outbox, one event per audit event (GLD-028)
 0035_retention.sql           retention_policy, subject_retention, retention_hold, RECORDS_MANAGER role (GLD-032)
+0036_disposition.sql         disposition bordereaux and items, retention outcome, transfer exports (GLD-032)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

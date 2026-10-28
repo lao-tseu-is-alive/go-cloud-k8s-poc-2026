@@ -1226,6 +1226,187 @@ paths:
             $ref: '#/definitions/CirculationServiceCancelCirculationBody'
       tags:
         - CirculationService
+  /api/disposition-bordereaux:
+    get:
+      summary: List the bordereaux. Requires goeland:records.
+      operationId: ListDispositionBordereaux
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListDispositionBordereauxResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: status
+          description: |-
+            status restricts the list to one state; unspecified means all.
+
+             - BORDEREAU_STATUS_UNSPECIFIED: BORDEREAU_STATUS_UNSPECIFIED is the zero value; never stored.
+             - BORDEREAU_STATUS_OPEN: BORDEREAU_STATUS_OPEN waits for the approvals, then for its execution.
+             - BORDEREAU_STATUS_EXECUTED: BORDEREAU_STATUS_EXECUTED handled its approved cases; its proof is kept.
+             - BORDEREAU_STATUS_CANCELLED: BORDEREAU_STATUS_CANCELLED was abandoned before its execution.
+          in: query
+          required: false
+          type: string
+          enum:
+            - BORDEREAU_STATUS_UNSPECIFIED
+            - BORDEREAU_STATUS_OPEN
+            - BORDEREAU_STATUS_EXECUTED
+            - BORDEREAU_STATUS_CANCELLED
+          default: BORDEREAU_STATUS_UNSPECIFIED
+        - name: pageSize
+          description: page_size is the page length; 0 means the default (25), at most 200.
+          in: query
+          required: false
+          type: integer
+          format: int32
+        - name: pageToken
+          description: page_token is the next_page_token of the previous page; empty for the first page.
+          in: query
+          required: false
+          type: string
+      tags:
+        - RetentionService
+    post:
+      summary: Prepare a disposition bordereau. Requires goeland:records.
+      operationId: CreateDispositionBordereau
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CreateDispositionBordereauResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: CreateDispositionBordereauRequest prepares a bordereau (records manager).
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1CreateDispositionBordereauRequest'
+      tags:
+        - RetentionService
+  /api/disposition-bordereaux/{id}:
+    get:
+      summary: Read a bordereau with its cases. Requires goeland:records.
+      operationId: GetDispositionBordereau
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1GetDispositionBordereauResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the bordereau.
+          in: path
+          required: true
+          type: string
+      tags:
+        - RetentionService
+  /api/disposition-bordereaux/{id}/cancel:
+    post:
+      summary: Abandon an open bordereau. Requires goeland:records.
+      operationId: CancelDispositionBordereau
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1CancelDispositionBordereauResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the bordereau.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceCancelDispositionBordereauBody'
+      tags:
+        - RetentionService
+  /api/disposition-bordereaux/{id}/execute:
+    post:
+      summary: Execute a bordereau whose cases are all decided. Requires goeland:records.
+      operationId: ExecuteDispositionBordereau
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ExecuteDispositionBordereauResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the bordereau.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceExecuteDispositionBordereauBody'
+      tags:
+        - RetentionService
+  /api/disposition-items/mine:
+    get:
+      summary: List the cases waiting for the caller's approval. Requires goeland:read.
+      operationId: ListMyDispositionApprovals
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1ListMyDispositionApprovalsResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      tags:
+        - RetentionService
+  /api/disposition-items/{id}/decide:
+    post:
+      summary: |-
+        Approve or reject a case of a bordereau. Requires goeland:write and MANAGE
+        on the approver subject; the preparer never decides.
+      operationId: DecideDispositionItem
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1DecideDispositionItemResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the item.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceDecideDispositionItemBody'
+      tags:
+        - RetentionService
   /api/document-types:
     get:
       summary: |-
@@ -4509,6 +4690,30 @@ definitions:
       after a policy was given to the type or for imported cases.
     required:
       - reason
+  RetentionServiceCancelDispositionBordereauBody:
+    type: object
+    properties:
+      reason:
+        type: string
+        description: reason explains the cancellation (1-2000 characters).
+    description: CancelDispositionBordereauRequest abandons an open bordereau (records manager).
+    required:
+      - reason
+  RetentionServiceDecideDispositionItemBody:
+    type: object
+    properties:
+      approve:
+        type: boolean
+        description: approve approves the case; false rejects it.
+      reason:
+        type: string
+        description: reason explains the decision (1-2000 characters); it is audited.
+    description: DecideDispositionItemRequest approves or rejects one case of a bordereau.
+    required:
+      - reason
+  RetentionServiceExecuteDispositionBordereauBody:
+    type: object
+    description: ExecuteDispositionBordereauRequest executes a bordereau whose cases are all decided (records manager).
   RetentionServicePlaceRetentionHoldBody:
     type: object
     properties:
@@ -5327,6 +5532,21 @@ definitions:
           $ref: '#/definitions/v1User'
         description: users are the resolved users, ordered by id.
     description: BatchGetUsersResponse returns the known users; unknown ids are absent.
+  v1BordereauStatus:
+    type: string
+    enum:
+      - BORDEREAU_STATUS_UNSPECIFIED
+      - BORDEREAU_STATUS_OPEN
+      - BORDEREAU_STATUS_EXECUTED
+      - BORDEREAU_STATUS_CANCELLED
+    default: BORDEREAU_STATUS_UNSPECIFIED
+    description: |-
+      BordereauStatus is the state of a disposition bordereau.
+
+       - BORDEREAU_STATUS_UNSPECIFIED: BORDEREAU_STATUS_UNSPECIFIED is the zero value; never stored.
+       - BORDEREAU_STATUS_OPEN: BORDEREAU_STATUS_OPEN waits for the approvals, then for its execution.
+       - BORDEREAU_STATUS_EXECUTED: BORDEREAU_STATUS_EXECUTED handled its approved cases; its proof is kept.
+       - BORDEREAU_STATUS_CANCELLED: BORDEREAU_STATUS_CANCELLED was abandoned before its execution.
   v1BuildingDetails:
     type: object
     properties:
@@ -5399,6 +5619,13 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: cancel_event is the CIRCULATION_CANCELLED audit event.
     description: CancelCirculationResponse returns the cancelled circulation.
+  v1CancelDispositionBordereauResponse:
+    type: object
+    properties:
+      bordereau:
+        $ref: '#/definitions/v1DispositionBordereau'
+        description: bordereau is the bordereau.
+    description: CancelDispositionBordereauResponse returns the cancelled bordereau.
   v1CancelTaskResponse:
     type: object
     properties:
@@ -6028,6 +6255,32 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the CIRCULATION_CREATED audit event (on the case subject).
     description: CreateCirculationResponse returns the new circulation.
+  v1CreateDispositionBordereauRequest:
+    type: object
+    properties:
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition is ARCHIVE or DESTROY; a case of a REVIEW policy fits either.
+      reason:
+        type: string
+        description: reason explains the bordereau (1-2000 characters).
+      caseIds:
+        type: array
+        items:
+          type: string
+        description: |-
+          case_ids are the due cases (1-500), each with a running retention ended,
+          no legal hold and no other open bordereau.
+    description: CreateDispositionBordereauRequest prepares a bordereau (records manager).
+    required:
+      - reason
+  v1CreateDispositionBordereauResponse:
+    type: object
+    properties:
+      bordereau:
+        $ref: '#/definitions/v1DispositionBordereau'
+        description: bordereau is the bordereau.
+    description: CreateDispositionBordereauResponse returns the prepared bordereau, open, with its items.
   v1CreateDocumentRequest:
     type: object
     properties:
@@ -6551,6 +6804,13 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: created_event is the TIMELINE_ENTRY_ADDED audit event (on the case subject).
     description: CreateTimelineEntryResponse returns the new draft.
+  v1DecideDispositionItemResponse:
+    type: object
+    properties:
+      item:
+        $ref: '#/definitions/v1DispositionItem'
+        description: item is the decided item.
+    description: DecideDispositionItemResponse returns the decided item.
   v1DeleteActorResponse:
     type: object
     properties:
@@ -6591,6 +6851,141 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: delete_event is the THING_DELETED audit event.
     description: DeleteThingResponse confirms a soft delete.
+  v1DispositionBordereau:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the bordereau.
+      finalDisposition:
+        $ref: '#/definitions/v1FinalDisposition'
+        description: final_disposition is ARCHIVE or DESTROY.
+      status:
+        $ref: '#/definitions/v1BordereauStatus'
+        description: status is the bordereau state.
+      reason:
+        type: string
+        description: reason explains the bordereau.
+      preparedBy:
+        type: string
+        description: prepared_by is the records manager who prepared it (never an approver).
+      preparedAt:
+        type: string
+        format: date-time
+        description: prepared_at is when it was prepared.
+      closedAt:
+        type: string
+        format: date-time
+        description: closed_at is when it was executed or cancelled.
+      closedBy:
+        type: string
+        description: closed_by is who executed or cancelled it.
+      closeReason:
+        type: string
+        description: close_reason explains a cancellation.
+      proofSha256:
+        type: string
+        description: proof_sha256 is the SHA-256 of the proof manifest, set at execution.
+      items:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DispositionItem'
+        description: items are its cases (GetDispositionBordereau only).
+      itemCount:
+        type: integer
+        format: int32
+        description: item_count counts its cases.
+      pendingCount:
+        type: integer
+        format: int32
+        description: pending_count counts its cases waiting for a decision.
+      approvedCount:
+        type: integer
+        format: int32
+        description: approved_count counts its approved cases.
+    description: DispositionBordereau gathers due cases of one final disposition for approval and execution.
+  v1DispositionDecision:
+    type: string
+    enum:
+      - DISPOSITION_DECISION_UNSPECIFIED
+      - DISPOSITION_DECISION_PENDING
+      - DISPOSITION_DECISION_APPROVED
+      - DISPOSITION_DECISION_REJECTED
+    default: DISPOSITION_DECISION_UNSPECIFIED
+    description: |-
+      DispositionDecision is the approval of one case of a bordereau.
+
+       - DISPOSITION_DECISION_UNSPECIFIED: DISPOSITION_DECISION_UNSPECIFIED is the zero value; never stored.
+       - DISPOSITION_DECISION_PENDING: DISPOSITION_DECISION_PENDING waits for its approver.
+       - DISPOSITION_DECISION_APPROVED: DISPOSITION_DECISION_APPROVED: the case will be handled at execution.
+       - DISPOSITION_DECISION_REJECTED: DISPOSITION_DECISION_REJECTED: the case is left out of the execution.
+  v1DispositionItem:
+    type: object
+    properties:
+      id:
+        type: string
+        description: id identifies the item.
+      bordereauId:
+        type: string
+        description: bordereau_id is its bordereau.
+      caseId:
+        type: string
+        description: case_id is the case.
+      caseLabel:
+        type: string
+        description: case_label is the case's label; empty when the caller may not read the case.
+      businessRef:
+        type: string
+        description: business_ref is the case's business reference.
+      untilOn:
+        type: string
+        description: until_on is the end of the case's retention (YYYY-MM-DD).
+      policyCode:
+        type: string
+        description: policy_code is the policy applied to the case.
+      approverSubjectId:
+        type: string
+        description: 'approver_subject_id is who approves: the owning unit (MANAGE on it) or the case itself.'
+      approverLabel:
+        type: string
+        description: approver_label is the approver subject's label.
+      decision:
+        $ref: '#/definitions/v1DispositionDecision'
+        description: decision is the approval state.
+      decidedAt:
+        type: string
+        format: date-time
+        description: decided_at is when the approver decided.
+      decidedBy:
+        type: string
+        description: decided_by is the approver.
+      decisionReason:
+        type: string
+        description: decision_reason explains the decision.
+      exportId:
+        type: string
+        description: export_id is the transfer package of an executed ARCHIVE item.
+      exportStatus:
+        type: string
+        description: export_status is the state of that package (QUEUED, RUNNING, DONE, FAILED, EXPIRED).
+      exportSha256:
+        type: string
+        description: export_sha256 is the package's SHA-256 once built.
+    description: DispositionItem is one case of a bordereau with its approval.
+  v1DispositionStatus:
+    type: string
+    enum:
+      - DISPOSITION_STATUS_UNSPECIFIED
+      - DISPOSITION_STATUS_ARCHIVED
+      - DISPOSITION_STATUS_DISPOSED
+    default: DISPOSITION_STATUS_UNSPECIFIED
+    description: |-
+      DispositionStatus is the executed outcome of a retention.
+
+       - DISPOSITION_STATUS_UNSPECIFIED: DISPOSITION_STATUS_UNSPECIFIED: not executed yet.
+       - DISPOSITION_STATUS_ARCHIVED: DISPOSITION_STATUS_ARCHIVED: transferred to the archives and frozen.
+       - DISPOSITION_STATUS_DISPOSED: DISPOSITION_STATUS_DISPOSED: eliminated, only a notice and the proof are kept.
   v1DissolveOrgUnitResponse:
     type: object
     properties:
@@ -6795,6 +7190,13 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the RELATIONSHIP_ENDED audit event.
     description: EndRelationshipResponse returns the ended edge and its audit event.
+  v1ExecuteDispositionBordereauResponse:
+    type: object
+    properties:
+      bordereau:
+        $ref: '#/definitions/v1DispositionBordereau'
+        description: bordereau is the bordereau.
+    description: ExecuteDispositionBordereauResponse returns the executed bordereau with its items and proof.
   v1FinalDisposition:
     type: string
     enum:
@@ -6915,6 +7317,13 @@ definitions:
           scopes are the caller's effective scopes: those of its token, plus
           goeland:admin when the user holds the ADMIN role (never from the token).
     description: GetCurrentUserResponse describes the authenticated caller.
+  v1GetDispositionBordereauResponse:
+    type: object
+    properties:
+      bordereau:
+        $ref: '#/definitions/v1DispositionBordereau'
+        description: bordereau is the bordereau.
+    description: GetDispositionBordereauResponse returns the bordereau with its items.
   v1GetDocumentResponse:
     type: object
     properties:
@@ -7276,6 +7685,23 @@ definitions:
           $ref: '#/definitions/v1CaseType'
         description: case_types are the matching types.
     description: ListCaseTypesResponse returns the matching case types, ordered by label (code as tie-break).
+  v1ListDispositionBordereauxResponse:
+    type: object
+    properties:
+      bordereaux:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DispositionBordereau'
+        description: bordereaux are the bordereaux of the page.
+      nextPageToken:
+        type: string
+        description: next_page_token fetches the next page; empty on the last page.
+      totalSize:
+        type: integer
+        format: int32
+        description: total_size counts every matching bordereau.
+    description: ListDispositionBordereauxResponse returns a page of bordereaux (without items).
   v1ListDocumentTypesResponse:
     type: object
     properties:
@@ -7333,6 +7759,21 @@ definitions:
           $ref: '#/definitions/v1SecurityGroup'
         description: groups are the matching groups.
     description: ListGroupsResponse returns the groups.
+  v1ListMyDispositionApprovalsResponse:
+    type: object
+    properties:
+      items:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1DispositionItem'
+        description: items are the pending items whose approver subject the caller manages.
+      dispositions:
+        type: object
+        additionalProperties:
+          $ref: '#/definitions/v1FinalDisposition'
+        description: dispositions gives, per item id, its bordereau's final disposition.
+    description: ListMyDispositionApprovalsResponse returns the items the caller may decide, oldest bordereau first.
   v1ListMyTasksResponse:
     type: object
     properties:
@@ -8579,6 +9020,18 @@ definitions:
       endReason:
         type: string
         description: end_reason explains the end.
+      dispositionStatus:
+        $ref: '#/definitions/v1DispositionStatus'
+        description: |-
+          disposition_status is the outcome of the retention: ARCHIVED (transferred
+          and frozen) or DISPOSED; unspecified while the case waits.
+      disposedAt:
+        type: string
+        format: date-time
+        description: disposed_at is when the outcome was executed.
+      bordereauId:
+        type: string
+        description: bordereau_id is the bordereau that executed it.
     description: |-
       SubjectRetention is the retention of a closed case: a snapshot of its policy
       taken at closing, ended when the case is reopened.

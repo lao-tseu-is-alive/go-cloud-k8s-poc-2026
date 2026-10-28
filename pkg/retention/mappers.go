@@ -55,6 +55,76 @@ func RetentionToProto(r *Retention) *goelandv1.SubjectRetention {
 	if r.EndedBy != nil {
 		out.EndedBy = *r.EndedBy
 	}
+	if r.DispositionStatus != nil {
+		out.DispositionStatus = outcomeToProto[*r.DispositionStatus]
+		out.DisposedAt = core.TimestampPtrOrNil(r.DisposedAt)
+	}
+	if r.BordereauID != nil {
+		out.BordereauId = r.BordereauID.String()
+	}
+	return out
+}
+
+var outcomeToProto = map[string]goelandv1.DispositionStatus{
+	OutcomeArchived: goelandv1.DispositionStatus_DISPOSITION_STATUS_ARCHIVED,
+	OutcomeDisposed: goelandv1.DispositionStatus_DISPOSITION_STATUS_DISPOSED,
+}
+
+var bordereauStatusToProto = map[BordereauStatus]goelandv1.BordereauStatus{
+	BordereauOpen:      goelandv1.BordereauStatus_BORDEREAU_STATUS_OPEN,
+	BordereauExecuted:  goelandv1.BordereauStatus_BORDEREAU_STATUS_EXECUTED,
+	BordereauCancelled: goelandv1.BordereauStatus_BORDEREAU_STATUS_CANCELLED,
+}
+
+var decisionToProto = map[Decision]goelandv1.DispositionDecision{
+	DecisionPending:  goelandv1.DispositionDecision_DISPOSITION_DECISION_PENDING,
+	DecisionApproved: goelandv1.DispositionDecision_DISPOSITION_DECISION_APPROVED,
+	DecisionRejected: goelandv1.DispositionDecision_DISPOSITION_DECISION_REJECTED,
+}
+
+// BordereauStatusFromProto converts a proto bordereau state ("" for UNSPECIFIED).
+func BordereauStatusFromProto(st goelandv1.BordereauStatus) BordereauStatus {
+	for domain, wire := range bordereauStatusToProto {
+		if wire == st {
+			return domain
+		}
+	}
+	return ""
+}
+
+// ItemToProto converts a bordereau item (nil for nil).
+func ItemToProto(it *Item) *goelandv1.DispositionItem {
+	if it == nil {
+		return nil
+	}
+	out := &goelandv1.DispositionItem{
+		Id: it.ID.String(), BordereauId: it.BordereauID.String(), CaseId: it.CaseID.String(), CaseLabel: it.CaseLabel,
+		BusinessRef: it.BusinessRef, UntilOn: it.UntilOn.Format(time.DateOnly), PolicyCode: it.PolicyCode,
+		ApproverSubjectId: it.ApproverSubjectID.String(), ApproverLabel: it.ApproverLabel,
+		Decision: decisionToProto[it.Decision], DecidedAt: core.TimestampPtrOrNil(it.DecidedAt),
+		DecidedBy: deref(it.DecidedBy), DecisionReason: it.DecisionReason,
+		ExportStatus: deref(it.ExportStatus), ExportSha256: deref(it.ExportSHA256),
+	}
+	if it.ExportID != nil {
+		out.ExportId = it.ExportID.String()
+	}
+	return out
+}
+
+// BordereauToProto converts a bordereau with its items (nil for nil).
+func BordereauToProto(b *Bordereau) *goelandv1.DispositionBordereau {
+	if b == nil {
+		return nil
+	}
+	out := &goelandv1.DispositionBordereau{
+		Id: b.ID.String(), FinalDisposition: DispositionToProto(b.FinalDisposition), Status: bordereauStatusToProto[b.Status],
+		Reason: b.Reason, PreparedBy: b.PreparedBy, PreparedAt: core.TimestampOrNil(b.PreparedAt),
+		ClosedAt: core.TimestampPtrOrNil(b.ClosedAt), ClosedBy: deref(b.ClosedBy), CloseReason: b.CloseReason,
+		ProofSha256: b.ProofSHA256, ItemCount: b.ItemCount, PendingCount: b.PendingCount, ApprovedCount: b.ApprovedCount,
+	}
+	for _, it := range b.Items {
+		out.Items = append(out.Items, ItemToProto(it))
+	}
 	return out
 }
 

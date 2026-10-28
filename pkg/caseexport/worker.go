@@ -88,21 +88,15 @@ func (s *Service) ProcessNext(ctx context.Context) (bool, error) {
 }
 
 // build assembles the archive as the requester, who must still hold MANAGE on
-// the case, stores it and marks the job DONE, recording EXPORT for each
-// confidential document it holds.
+// the case (or, for a transfer package, as the system reading everything),
+// stores it and marks the job DONE, recording EXPORT for each confidential
+// document of an ordinary export.
 func (s *Service) build(ctx context.Context, exp *Export) error {
-	access, err := core.EffectiveAccessTx(ctx, s.pool, exp.RequestedBy, exp.CaseID)
+	viewer, level, err := s.builder(ctx, exp)
 	if err != nil {
 		return err
 	}
-	if err := access.Require(core.LevelManage); err != nil {
-		return err
-	}
-	viewer, err := core.ViewerTx(ctx, s.pool, exp.RequestedBy)
-	if err != nil {
-		return err
-	}
-	a, err := s.assemble(ctx, exp, viewer, access.Level)
+	a, err := s.assemble(ctx, exp, viewer, level)
 	if err != nil {
 		return err
 	}
@@ -117,18 +111,43 @@ func (s *Service) build(ctx context.Context, exp *Export) error {
 	return nil
 }
 
+// builder returns who reads the case for the archive and at which level: the
+// system for a transfer package (the bordereau execution recorded the EXPORT),
+// otherwise the requester, who must still hold MANAGE.
+func (s *Service) builder(ctx context.Context, exp *Export) (core.Viewer, core.Level, error) {
+	if exp.Purpose == PurposeTransfer {
+		return core.SystemViewer(exp.RequestedBy), core.LevelFullControl, nil
+	}
+	access, err := core.EffectiveAccessTx(ctx, s.pool, exp.RequestedBy, exp.CaseID)
+	if err != nil {
+		return core.Viewer{}, 0, err
+	}
+	if err := access.Require(core.LevelManage); err != nil {
+		return core.Viewer{}, 0, err
+	}
+	viewer, err := core.ViewerTx(ctx, s.pool, exp.RequestedBy)
+	return viewer, access.Level, err
+}
+
 // finish marks the job DONE and records EXPORT for each confidential document
-// of the archive, in one transaction.
+// of an ordinary archive, in one transaction.
 func (s *Service) finish(ctx context.Context, exp *Export, a *assembly, stored blobstore.Stored) error {
+	ttl := s.cfg.TTL
+	if exp.Purpose == PurposeTransfer {
+		ttl = TransferTTL
+	}
 	return core.InTx(ctx, s.pool, "finish export", func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, finishExportSQL, pgx.NamedArgs{
-			"id": exp.ID, "ttl": s.cfg.TTL, "storage_ref": stored.Ref, "sha256": stored.SHA256, "size_bytes": stored.Size,
+			"id": exp.ID, "ttl": ttl, "storage_ref": stored.Ref, "sha256": stored.SHA256, "size_bytes": stored.Size,
 		})
 		if err != nil {
 			return err
 		}
 		if tag.RowsAffected() == 0 {
 			return errors.New("the export is no longer running (taken over by another worker)")
+		}
+		if exp.Purpose == PurposeTransfer {
+			return nil
 		}
 		for _, id := range a.documents {
 			access, err := core.EffectiveAccessTx(ctx, tx, exp.RequestedBy, id)

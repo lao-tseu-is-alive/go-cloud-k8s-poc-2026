@@ -547,4 +547,47 @@ func (s *surface) retention() {
 		s.t.Fatalf("due list: %v", due)
 	}
 	s.fails(codeInvalidArgument, "GET", "/api/retentions/due?dueOn=2026-02-30", nil)
+	s.bordereaux()
+}
+
+// bordereaux covers the disposition bordereaux (GLD-032 step B1): a due case
+// of a zero-year policy is proposed, decided by the writer (its creator, never
+// the preparer) and transferred.
+func (s *surface) bordereaux() {
+	policy := s.code("E2EZERO")
+	s.ok("POST", "/api/retention-policies", map[string]any{"code": policy, "label": "Immédiate", "durationYears": 0, "finalDisposition": "FINAL_DISPOSITION_ARCHIVE", "reason": "test"})
+	code := s.code("E2EDUE")
+	s.ok("POST", "/api/case-types", map[string]any{"code": code, "label": "Échue E2E", "defaultRetentionPolicyCode": policy, "reason": "test"})
+	id := str(s.writerDo("POST", "/api/cases", map[string]any{"caseTypeCode": code, "title": "Versement " + s.token}), "case", "subjectRef", "id")
+	s.writerDo("POST", "/api/cases/"+id+"/transition", map[string]any{"targetStatus": "CASE_STATUS_CLOSED", "reason": "terminé"})
+
+	b := s.ok("POST", "/api/disposition-bordereaux", map[string]any{"finalDisposition": "FINAL_DISPOSITION_ARCHIVE", "reason": "versement", "caseIds": []string{id}})
+	bid := str(b, "bordereau", "id")
+	item := str(list(b["bordereau"].(map[string]any), "items")[0], "id")
+	s.fails(codeInvalidArgument, "POST", "/api/disposition-bordereaux", map[string]any{"finalDisposition": "FINAL_DISPOSITION_REVIEW", "reason": "x", "caseIds": []string{id}})
+	s.fails(codePermissionDenied, "POST", "/api/disposition-items/"+item+"/decide", map[string]any{"approve": true, "reason": "préparateur"})
+	s.fails(codeFailedPrecondition, "POST", "/api/disposition-bordereaux/"+bid+"/execute", map[string]any{})
+	if mine := s.writerDo("GET", "/api/disposition-items/mine", nil); len(list(mine, "items")) == 0 {
+		s.t.Fatalf("the case's manager sees the approval: %v", mine)
+	}
+	s.writerDo("POST", "/api/disposition-items/"+item+"/decide", map[string]any{"approve": true, "reason": "d'accord"})
+	done := s.ok("POST", "/api/disposition-bordereaux/"+bid+"/execute", map[string]any{})
+	if str(done, "bordereau", "status") != "BORDEREAU_STATUS_EXECUTED" || len(str(done, "bordereau", "proofSha256")) != 64 {
+		s.t.Fatalf("execute: %v", done)
+	}
+	s.ok("GET", "/api/disposition-bordereaux/"+bid, nil)
+	s.ok("GET", "/api/disposition-bordereaux?status=BORDEREAU_STATUS_EXECUTED", nil)
+	s.fails(codeNotFound, "GET", missing("/api/disposition-bordereaux"), nil)
+	s.fails(codeFailedPrecondition, "POST", "/api/disposition-bordereaux/"+bid+"/cancel", map[string]any{"reason": "trop tard"})
+	s.fails(codeNotFound, "POST", missing("/api/disposition-items")+"/decide", map[string]any{"approve": true, "reason": "x"})
+}
+
+// writerDo calls as the writer (reads and writes, no role) and requires a 2xx reply.
+func (s *surface) writerDo(method, path string, body any) map[string]any {
+	s.t.Helper()
+	r := s.call(s.writer, writerToken, method, path, body)
+	if r.status/100 != 2 {
+		s.t.Fatalf("%s %s as writer: HTTP %d %v", method, path, r.status, r.body)
+	}
+	return r.body
 }

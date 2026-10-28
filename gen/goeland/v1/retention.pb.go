@@ -6,8 +6,8 @@
 // default_retention_policy_code). Closing a case computes its retention in the
 // same transaction, as a snapshot of the policy; reopening ends it. A legal
 // hold blocks any disposal while it lasts. The case is the unit: its documents
-// follow it. Nothing here disposes of anything (step B: disposition
-// bordereaux).
+// follow it. Due cases are then handled through disposition bordereaux
+// (step B): approved per case, executed by the records manager.
 //
 // The policy catalogue is administered with goeland:admin and logged in the
 // reference change log; holds and the due list belong to the records manager
@@ -95,6 +95,173 @@ func (x FinalDisposition) Number() protoreflect.EnumNumber {
 // Deprecated: Use FinalDisposition.Descriptor instead.
 func (FinalDisposition) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{0}
+}
+
+// DispositionStatus is the executed outcome of a retention.
+type DispositionStatus int32
+
+const (
+	// DISPOSITION_STATUS_UNSPECIFIED: not executed yet.
+	DispositionStatus_DISPOSITION_STATUS_UNSPECIFIED DispositionStatus = 0
+	// DISPOSITION_STATUS_ARCHIVED: transferred to the archives and frozen.
+	DispositionStatus_DISPOSITION_STATUS_ARCHIVED DispositionStatus = 1
+	// DISPOSITION_STATUS_DISPOSED: eliminated, only a notice and the proof are kept.
+	DispositionStatus_DISPOSITION_STATUS_DISPOSED DispositionStatus = 2
+)
+
+// Enum value maps for DispositionStatus.
+var (
+	DispositionStatus_name = map[int32]string{
+		0: "DISPOSITION_STATUS_UNSPECIFIED",
+		1: "DISPOSITION_STATUS_ARCHIVED",
+		2: "DISPOSITION_STATUS_DISPOSED",
+	}
+	DispositionStatus_value = map[string]int32{
+		"DISPOSITION_STATUS_UNSPECIFIED": 0,
+		"DISPOSITION_STATUS_ARCHIVED":    1,
+		"DISPOSITION_STATUS_DISPOSED":    2,
+	}
+)
+
+func (x DispositionStatus) Enum() *DispositionStatus {
+	p := new(DispositionStatus)
+	*p = x
+	return p
+}
+
+func (x DispositionStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DispositionStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_retention_proto_enumTypes[1].Descriptor()
+}
+
+func (DispositionStatus) Type() protoreflect.EnumType {
+	return &file_goeland_v1_retention_proto_enumTypes[1]
+}
+
+func (x DispositionStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DispositionStatus.Descriptor instead.
+func (DispositionStatus) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{1}
+}
+
+// BordereauStatus is the state of a disposition bordereau.
+type BordereauStatus int32
+
+const (
+	// BORDEREAU_STATUS_UNSPECIFIED is the zero value; never stored.
+	BordereauStatus_BORDEREAU_STATUS_UNSPECIFIED BordereauStatus = 0
+	// BORDEREAU_STATUS_OPEN waits for the approvals, then for its execution.
+	BordereauStatus_BORDEREAU_STATUS_OPEN BordereauStatus = 1
+	// BORDEREAU_STATUS_EXECUTED handled its approved cases; its proof is kept.
+	BordereauStatus_BORDEREAU_STATUS_EXECUTED BordereauStatus = 2
+	// BORDEREAU_STATUS_CANCELLED was abandoned before its execution.
+	BordereauStatus_BORDEREAU_STATUS_CANCELLED BordereauStatus = 3
+)
+
+// Enum value maps for BordereauStatus.
+var (
+	BordereauStatus_name = map[int32]string{
+		0: "BORDEREAU_STATUS_UNSPECIFIED",
+		1: "BORDEREAU_STATUS_OPEN",
+		2: "BORDEREAU_STATUS_EXECUTED",
+		3: "BORDEREAU_STATUS_CANCELLED",
+	}
+	BordereauStatus_value = map[string]int32{
+		"BORDEREAU_STATUS_UNSPECIFIED": 0,
+		"BORDEREAU_STATUS_OPEN":        1,
+		"BORDEREAU_STATUS_EXECUTED":    2,
+		"BORDEREAU_STATUS_CANCELLED":   3,
+	}
+)
+
+func (x BordereauStatus) Enum() *BordereauStatus {
+	p := new(BordereauStatus)
+	*p = x
+	return p
+}
+
+func (x BordereauStatus) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (BordereauStatus) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_retention_proto_enumTypes[2].Descriptor()
+}
+
+func (BordereauStatus) Type() protoreflect.EnumType {
+	return &file_goeland_v1_retention_proto_enumTypes[2]
+}
+
+func (x BordereauStatus) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use BordereauStatus.Descriptor instead.
+func (BordereauStatus) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{2}
+}
+
+// DispositionDecision is the approval of one case of a bordereau.
+type DispositionDecision int32
+
+const (
+	// DISPOSITION_DECISION_UNSPECIFIED is the zero value; never stored.
+	DispositionDecision_DISPOSITION_DECISION_UNSPECIFIED DispositionDecision = 0
+	// DISPOSITION_DECISION_PENDING waits for its approver.
+	DispositionDecision_DISPOSITION_DECISION_PENDING DispositionDecision = 1
+	// DISPOSITION_DECISION_APPROVED: the case will be handled at execution.
+	DispositionDecision_DISPOSITION_DECISION_APPROVED DispositionDecision = 2
+	// DISPOSITION_DECISION_REJECTED: the case is left out of the execution.
+	DispositionDecision_DISPOSITION_DECISION_REJECTED DispositionDecision = 3
+)
+
+// Enum value maps for DispositionDecision.
+var (
+	DispositionDecision_name = map[int32]string{
+		0: "DISPOSITION_DECISION_UNSPECIFIED",
+		1: "DISPOSITION_DECISION_PENDING",
+		2: "DISPOSITION_DECISION_APPROVED",
+		3: "DISPOSITION_DECISION_REJECTED",
+	}
+	DispositionDecision_value = map[string]int32{
+		"DISPOSITION_DECISION_UNSPECIFIED": 0,
+		"DISPOSITION_DECISION_PENDING":     1,
+		"DISPOSITION_DECISION_APPROVED":    2,
+		"DISPOSITION_DECISION_REJECTED":    3,
+	}
+)
+
+func (x DispositionDecision) Enum() *DispositionDecision {
+	p := new(DispositionDecision)
+	*p = x
+	return p
+}
+
+func (x DispositionDecision) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (DispositionDecision) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_retention_proto_enumTypes[3].Descriptor()
+}
+
+func (DispositionDecision) Type() protoreflect.EnumType {
+	return &file_goeland_v1_retention_proto_enumTypes[3]
+}
+
+func (x DispositionDecision) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use DispositionDecision.Descriptor instead.
+func (DispositionDecision) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{3}
 }
 
 // RetentionPolicy is an entry of the retention schedule.
@@ -651,7 +818,14 @@ type SubjectRetention struct {
 	// ended_by is the operator who ended it.
 	EndedBy string `protobuf:"bytes,12,opt,name=ended_by,json=endedBy,proto3" json:"ended_by,omitempty"`
 	// end_reason explains the end.
-	EndReason     string `protobuf:"bytes,13,opt,name=end_reason,json=endReason,proto3" json:"end_reason,omitempty"`
+	EndReason string `protobuf:"bytes,13,opt,name=end_reason,json=endReason,proto3" json:"end_reason,omitempty"`
+	// disposition_status is the outcome of the retention: ARCHIVED (transferred
+	// and frozen) or DISPOSED; unspecified while the case waits.
+	DispositionStatus DispositionStatus `protobuf:"varint,14,opt,name=disposition_status,json=dispositionStatus,proto3,enum=goeland.v1.DispositionStatus" json:"disposition_status,omitempty"`
+	// disposed_at is when the outcome was executed.
+	DisposedAt *timestamppb.Timestamp `protobuf:"bytes,15,opt,name=disposed_at,json=disposedAt,proto3" json:"disposed_at,omitempty"`
+	// bordereau_id is the bordereau that executed it.
+	BordereauId   string `protobuf:"bytes,16,opt,name=bordereau_id,json=bordereauId,proto3" json:"bordereau_id,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -773,6 +947,27 @@ func (x *SubjectRetention) GetEndedBy() string {
 func (x *SubjectRetention) GetEndReason() string {
 	if x != nil {
 		return x.EndReason
+	}
+	return ""
+}
+
+func (x *SubjectRetention) GetDispositionStatus() DispositionStatus {
+	if x != nil {
+		return x.DispositionStatus
+	}
+	return DispositionStatus_DISPOSITION_STATUS_UNSPECIFIED
+}
+
+func (x *SubjectRetention) GetDisposedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DisposedAt
+	}
+	return nil
+}
+
+func (x *SubjectRetention) GetBordereauId() string {
+	if x != nil {
+		return x.BordereauId
 	}
 	return ""
 }
@@ -1577,6 +1772,1076 @@ func (x *ApplyCaseTypeRetentionResponse) GetRemaining() int32 {
 	return 0
 }
 
+// DispositionItem is one case of a bordereau with its approval.
+type DispositionItem struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id identifies the item.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// bordereau_id is its bordereau.
+	BordereauId string `protobuf:"bytes,2,opt,name=bordereau_id,json=bordereauId,proto3" json:"bordereau_id,omitempty"`
+	// case_id is the case.
+	CaseId string `protobuf:"bytes,3,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"`
+	// case_label is the case's label; empty when the caller may not read the case.
+	CaseLabel string `protobuf:"bytes,4,opt,name=case_label,json=caseLabel,proto3" json:"case_label,omitempty"`
+	// business_ref is the case's business reference.
+	BusinessRef string `protobuf:"bytes,5,opt,name=business_ref,json=businessRef,proto3" json:"business_ref,omitempty"`
+	// until_on is the end of the case's retention (YYYY-MM-DD).
+	UntilOn string `protobuf:"bytes,6,opt,name=until_on,json=untilOn,proto3" json:"until_on,omitempty"`
+	// policy_code is the policy applied to the case.
+	PolicyCode string `protobuf:"bytes,7,opt,name=policy_code,json=policyCode,proto3" json:"policy_code,omitempty"`
+	// approver_subject_id is who approves: the owning unit (MANAGE on it) or the case itself.
+	ApproverSubjectId string `protobuf:"bytes,8,opt,name=approver_subject_id,json=approverSubjectId,proto3" json:"approver_subject_id,omitempty"`
+	// approver_label is the approver subject's label.
+	ApproverLabel string `protobuf:"bytes,9,opt,name=approver_label,json=approverLabel,proto3" json:"approver_label,omitempty"`
+	// decision is the approval state.
+	Decision DispositionDecision `protobuf:"varint,10,opt,name=decision,proto3,enum=goeland.v1.DispositionDecision" json:"decision,omitempty"`
+	// decided_at is when the approver decided.
+	DecidedAt *timestamppb.Timestamp `protobuf:"bytes,11,opt,name=decided_at,json=decidedAt,proto3" json:"decided_at,omitempty"`
+	// decided_by is the approver.
+	DecidedBy string `protobuf:"bytes,12,opt,name=decided_by,json=decidedBy,proto3" json:"decided_by,omitempty"`
+	// decision_reason explains the decision.
+	DecisionReason string `protobuf:"bytes,13,opt,name=decision_reason,json=decisionReason,proto3" json:"decision_reason,omitempty"`
+	// export_id is the transfer package of an executed ARCHIVE item.
+	ExportId string `protobuf:"bytes,14,opt,name=export_id,json=exportId,proto3" json:"export_id,omitempty"`
+	// export_status is the state of that package (QUEUED, RUNNING, DONE, FAILED, EXPIRED).
+	ExportStatus string `protobuf:"bytes,15,opt,name=export_status,json=exportStatus,proto3" json:"export_status,omitempty"`
+	// export_sha256 is the package's SHA-256 once built.
+	ExportSha256  string `protobuf:"bytes,16,opt,name=export_sha256,json=exportSha256,proto3" json:"export_sha256,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DispositionItem) Reset() {
+	*x = DispositionItem{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[20]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DispositionItem) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DispositionItem) ProtoMessage() {}
+
+func (x *DispositionItem) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[20]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DispositionItem.ProtoReflect.Descriptor instead.
+func (*DispositionItem) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{20}
+}
+
+func (x *DispositionItem) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetBordereauId() string {
+	if x != nil {
+		return x.BordereauId
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetCaseId() string {
+	if x != nil {
+		return x.CaseId
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetCaseLabel() string {
+	if x != nil {
+		return x.CaseLabel
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetBusinessRef() string {
+	if x != nil {
+		return x.BusinessRef
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetUntilOn() string {
+	if x != nil {
+		return x.UntilOn
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetPolicyCode() string {
+	if x != nil {
+		return x.PolicyCode
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetApproverSubjectId() string {
+	if x != nil {
+		return x.ApproverSubjectId
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetApproverLabel() string {
+	if x != nil {
+		return x.ApproverLabel
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetDecision() DispositionDecision {
+	if x != nil {
+		return x.Decision
+	}
+	return DispositionDecision_DISPOSITION_DECISION_UNSPECIFIED
+}
+
+func (x *DispositionItem) GetDecidedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.DecidedAt
+	}
+	return nil
+}
+
+func (x *DispositionItem) GetDecidedBy() string {
+	if x != nil {
+		return x.DecidedBy
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetDecisionReason() string {
+	if x != nil {
+		return x.DecisionReason
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetExportId() string {
+	if x != nil {
+		return x.ExportId
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetExportStatus() string {
+	if x != nil {
+		return x.ExportStatus
+	}
+	return ""
+}
+
+func (x *DispositionItem) GetExportSha256() string {
+	if x != nil {
+		return x.ExportSha256
+	}
+	return ""
+}
+
+// DispositionBordereau gathers due cases of one final disposition for approval and execution.
+type DispositionBordereau struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id identifies the bordereau.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// final_disposition is ARCHIVE or DESTROY.
+	FinalDisposition FinalDisposition `protobuf:"varint,2,opt,name=final_disposition,json=finalDisposition,proto3,enum=goeland.v1.FinalDisposition" json:"final_disposition,omitempty"`
+	// status is the bordereau state.
+	Status BordereauStatus `protobuf:"varint,3,opt,name=status,proto3,enum=goeland.v1.BordereauStatus" json:"status,omitempty"`
+	// reason explains the bordereau.
+	Reason string `protobuf:"bytes,4,opt,name=reason,proto3" json:"reason,omitempty"`
+	// prepared_by is the records manager who prepared it (never an approver).
+	PreparedBy string `protobuf:"bytes,5,opt,name=prepared_by,json=preparedBy,proto3" json:"prepared_by,omitempty"`
+	// prepared_at is when it was prepared.
+	PreparedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=prepared_at,json=preparedAt,proto3" json:"prepared_at,omitempty"`
+	// closed_at is when it was executed or cancelled.
+	ClosedAt *timestamppb.Timestamp `protobuf:"bytes,7,opt,name=closed_at,json=closedAt,proto3" json:"closed_at,omitempty"`
+	// closed_by is who executed or cancelled it.
+	ClosedBy string `protobuf:"bytes,8,opt,name=closed_by,json=closedBy,proto3" json:"closed_by,omitempty"`
+	// close_reason explains a cancellation.
+	CloseReason string `protobuf:"bytes,9,opt,name=close_reason,json=closeReason,proto3" json:"close_reason,omitempty"`
+	// proof_sha256 is the SHA-256 of the proof manifest, set at execution.
+	ProofSha256 string `protobuf:"bytes,10,opt,name=proof_sha256,json=proofSha256,proto3" json:"proof_sha256,omitempty"`
+	// items are its cases (GetDispositionBordereau only).
+	Items []*DispositionItem `protobuf:"bytes,11,rep,name=items,proto3" json:"items,omitempty"`
+	// item_count counts its cases.
+	ItemCount int32 `protobuf:"varint,12,opt,name=item_count,json=itemCount,proto3" json:"item_count,omitempty"`
+	// pending_count counts its cases waiting for a decision.
+	PendingCount int32 `protobuf:"varint,13,opt,name=pending_count,json=pendingCount,proto3" json:"pending_count,omitempty"`
+	// approved_count counts its approved cases.
+	ApprovedCount int32 `protobuf:"varint,14,opt,name=approved_count,json=approvedCount,proto3" json:"approved_count,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DispositionBordereau) Reset() {
+	*x = DispositionBordereau{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[21]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DispositionBordereau) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DispositionBordereau) ProtoMessage() {}
+
+func (x *DispositionBordereau) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[21]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DispositionBordereau.ProtoReflect.Descriptor instead.
+func (*DispositionBordereau) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{21}
+}
+
+func (x *DispositionBordereau) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetFinalDisposition() FinalDisposition {
+	if x != nil {
+		return x.FinalDisposition
+	}
+	return FinalDisposition_FINAL_DISPOSITION_UNSPECIFIED
+}
+
+func (x *DispositionBordereau) GetStatus() BordereauStatus {
+	if x != nil {
+		return x.Status
+	}
+	return BordereauStatus_BORDEREAU_STATUS_UNSPECIFIED
+}
+
+func (x *DispositionBordereau) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetPreparedBy() string {
+	if x != nil {
+		return x.PreparedBy
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetPreparedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.PreparedAt
+	}
+	return nil
+}
+
+func (x *DispositionBordereau) GetClosedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.ClosedAt
+	}
+	return nil
+}
+
+func (x *DispositionBordereau) GetClosedBy() string {
+	if x != nil {
+		return x.ClosedBy
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetCloseReason() string {
+	if x != nil {
+		return x.CloseReason
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetProofSha256() string {
+	if x != nil {
+		return x.ProofSha256
+	}
+	return ""
+}
+
+func (x *DispositionBordereau) GetItems() []*DispositionItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *DispositionBordereau) GetItemCount() int32 {
+	if x != nil {
+		return x.ItemCount
+	}
+	return 0
+}
+
+func (x *DispositionBordereau) GetPendingCount() int32 {
+	if x != nil {
+		return x.PendingCount
+	}
+	return 0
+}
+
+func (x *DispositionBordereau) GetApprovedCount() int32 {
+	if x != nil {
+		return x.ApprovedCount
+	}
+	return 0
+}
+
+// CreateDispositionBordereauRequest prepares a bordereau (records manager).
+type CreateDispositionBordereauRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// final_disposition is ARCHIVE or DESTROY; a case of a REVIEW policy fits either.
+	FinalDisposition FinalDisposition `protobuf:"varint,1,opt,name=final_disposition,json=finalDisposition,proto3,enum=goeland.v1.FinalDisposition" json:"final_disposition,omitempty"`
+	// reason explains the bordereau (1-2000 characters).
+	Reason string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	// case_ids are the due cases (1-500), each with a running retention ended,
+	// no legal hold and no other open bordereau.
+	CaseIds       []string `protobuf:"bytes,3,rep,name=case_ids,json=caseIds,proto3" json:"case_ids,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateDispositionBordereauRequest) Reset() {
+	*x = CreateDispositionBordereauRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[22]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateDispositionBordereauRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateDispositionBordereauRequest) ProtoMessage() {}
+
+func (x *CreateDispositionBordereauRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[22]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateDispositionBordereauRequest.ProtoReflect.Descriptor instead.
+func (*CreateDispositionBordereauRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{22}
+}
+
+func (x *CreateDispositionBordereauRequest) GetFinalDisposition() FinalDisposition {
+	if x != nil {
+		return x.FinalDisposition
+	}
+	return FinalDisposition_FINAL_DISPOSITION_UNSPECIFIED
+}
+
+func (x *CreateDispositionBordereauRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+func (x *CreateDispositionBordereauRequest) GetCaseIds() []string {
+	if x != nil {
+		return x.CaseIds
+	}
+	return nil
+}
+
+// CreateDispositionBordereauResponse returns the prepared bordereau, open, with its items.
+type CreateDispositionBordereauResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bordereau is the bordereau.
+	Bordereau     *DispositionBordereau `protobuf:"bytes,1,opt,name=bordereau,proto3" json:"bordereau,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CreateDispositionBordereauResponse) Reset() {
+	*x = CreateDispositionBordereauResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[23]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CreateDispositionBordereauResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CreateDispositionBordereauResponse) ProtoMessage() {}
+
+func (x *CreateDispositionBordereauResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[23]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CreateDispositionBordereauResponse.ProtoReflect.Descriptor instead.
+func (*CreateDispositionBordereauResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{23}
+}
+
+func (x *CreateDispositionBordereauResponse) GetBordereau() *DispositionBordereau {
+	if x != nil {
+		return x.Bordereau
+	}
+	return nil
+}
+
+// GetDispositionBordereauResponse returns the bordereau with its items.
+type GetDispositionBordereauResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bordereau is the bordereau.
+	Bordereau     *DispositionBordereau `protobuf:"bytes,1,opt,name=bordereau,proto3" json:"bordereau,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDispositionBordereauResponse) Reset() {
+	*x = GetDispositionBordereauResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[24]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDispositionBordereauResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDispositionBordereauResponse) ProtoMessage() {}
+
+func (x *GetDispositionBordereauResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[24]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDispositionBordereauResponse.ProtoReflect.Descriptor instead.
+func (*GetDispositionBordereauResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{24}
+}
+
+func (x *GetDispositionBordereauResponse) GetBordereau() *DispositionBordereau {
+	if x != nil {
+		return x.Bordereau
+	}
+	return nil
+}
+
+// ExecuteDispositionBordereauResponse returns the executed bordereau with its items and proof.
+type ExecuteDispositionBordereauResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bordereau is the bordereau.
+	Bordereau     *DispositionBordereau `protobuf:"bytes,1,opt,name=bordereau,proto3" json:"bordereau,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecuteDispositionBordereauResponse) Reset() {
+	*x = ExecuteDispositionBordereauResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[25]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteDispositionBordereauResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteDispositionBordereauResponse) ProtoMessage() {}
+
+func (x *ExecuteDispositionBordereauResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[25]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteDispositionBordereauResponse.ProtoReflect.Descriptor instead.
+func (*ExecuteDispositionBordereauResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{25}
+}
+
+func (x *ExecuteDispositionBordereauResponse) GetBordereau() *DispositionBordereau {
+	if x != nil {
+		return x.Bordereau
+	}
+	return nil
+}
+
+// CancelDispositionBordereauResponse returns the cancelled bordereau.
+type CancelDispositionBordereauResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bordereau is the bordereau.
+	Bordereau     *DispositionBordereau `protobuf:"bytes,1,opt,name=bordereau,proto3" json:"bordereau,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelDispositionBordereauResponse) Reset() {
+	*x = CancelDispositionBordereauResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[26]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelDispositionBordereauResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelDispositionBordereauResponse) ProtoMessage() {}
+
+func (x *CancelDispositionBordereauResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[26]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelDispositionBordereauResponse.ProtoReflect.Descriptor instead.
+func (*CancelDispositionBordereauResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{26}
+}
+
+func (x *CancelDispositionBordereauResponse) GetBordereau() *DispositionBordereau {
+	if x != nil {
+		return x.Bordereau
+	}
+	return nil
+}
+
+// GetDispositionBordereauRequest reads a bordereau (records manager).
+type GetDispositionBordereauRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the bordereau.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *GetDispositionBordereauRequest) Reset() {
+	*x = GetDispositionBordereauRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[27]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *GetDispositionBordereauRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*GetDispositionBordereauRequest) ProtoMessage() {}
+
+func (x *GetDispositionBordereauRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[27]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use GetDispositionBordereauRequest.ProtoReflect.Descriptor instead.
+func (*GetDispositionBordereauRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{27}
+}
+
+func (x *GetDispositionBordereauRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// ListDispositionBordereauxRequest pages the bordereaux, newest first (records manager).
+type ListDispositionBordereauxRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// status restricts the list to one state; unspecified means all.
+	Status BordereauStatus `protobuf:"varint,1,opt,name=status,proto3,enum=goeland.v1.BordereauStatus" json:"status,omitempty"`
+	// page_size is the page length; 0 means the default (25), at most 200.
+	PageSize int32 `protobuf:"varint,2,opt,name=page_size,json=pageSize,proto3" json:"page_size,omitempty"`
+	// page_token is the next_page_token of the previous page; empty for the first page.
+	PageToken     string `protobuf:"bytes,3,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDispositionBordereauxRequest) Reset() {
+	*x = ListDispositionBordereauxRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[28]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDispositionBordereauxRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDispositionBordereauxRequest) ProtoMessage() {}
+
+func (x *ListDispositionBordereauxRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[28]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDispositionBordereauxRequest.ProtoReflect.Descriptor instead.
+func (*ListDispositionBordereauxRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{28}
+}
+
+func (x *ListDispositionBordereauxRequest) GetStatus() BordereauStatus {
+	if x != nil {
+		return x.Status
+	}
+	return BordereauStatus_BORDEREAU_STATUS_UNSPECIFIED
+}
+
+func (x *ListDispositionBordereauxRequest) GetPageSize() int32 {
+	if x != nil {
+		return x.PageSize
+	}
+	return 0
+}
+
+func (x *ListDispositionBordereauxRequest) GetPageToken() string {
+	if x != nil {
+		return x.PageToken
+	}
+	return ""
+}
+
+// ListDispositionBordereauxResponse returns a page of bordereaux (without items).
+type ListDispositionBordereauxResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// bordereaux are the bordereaux of the page.
+	Bordereaux []*DispositionBordereau `protobuf:"bytes,1,rep,name=bordereaux,proto3" json:"bordereaux,omitempty"`
+	// next_page_token fetches the next page; empty on the last page.
+	NextPageToken string `protobuf:"bytes,2,opt,name=next_page_token,json=nextPageToken,proto3" json:"next_page_token,omitempty"`
+	// total_size counts every matching bordereau.
+	TotalSize     int32 `protobuf:"varint,3,opt,name=total_size,json=totalSize,proto3" json:"total_size,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListDispositionBordereauxResponse) Reset() {
+	*x = ListDispositionBordereauxResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[29]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListDispositionBordereauxResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListDispositionBordereauxResponse) ProtoMessage() {}
+
+func (x *ListDispositionBordereauxResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[29]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListDispositionBordereauxResponse.ProtoReflect.Descriptor instead.
+func (*ListDispositionBordereauxResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{29}
+}
+
+func (x *ListDispositionBordereauxResponse) GetBordereaux() []*DispositionBordereau {
+	if x != nil {
+		return x.Bordereaux
+	}
+	return nil
+}
+
+func (x *ListDispositionBordereauxResponse) GetNextPageToken() string {
+	if x != nil {
+		return x.NextPageToken
+	}
+	return ""
+}
+
+func (x *ListDispositionBordereauxResponse) GetTotalSize() int32 {
+	if x != nil {
+		return x.TotalSize
+	}
+	return 0
+}
+
+// ListMyDispositionApprovalsRequest lists the cases waiting for the caller's approval.
+type ListMyDispositionApprovalsRequest struct {
+	state         protoimpl.MessageState `protogen:"open.v1"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyDispositionApprovalsRequest) Reset() {
+	*x = ListMyDispositionApprovalsRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[30]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyDispositionApprovalsRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyDispositionApprovalsRequest) ProtoMessage() {}
+
+func (x *ListMyDispositionApprovalsRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[30]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyDispositionApprovalsRequest.ProtoReflect.Descriptor instead.
+func (*ListMyDispositionApprovalsRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{30}
+}
+
+// ListMyDispositionApprovalsResponse returns the items the caller may decide, oldest bordereau first.
+type ListMyDispositionApprovalsResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// items are the pending items whose approver subject the caller manages.
+	Items []*DispositionItem `protobuf:"bytes,1,rep,name=items,proto3" json:"items,omitempty"`
+	// dispositions gives, per item id, its bordereau's final disposition.
+	Dispositions  map[string]FinalDisposition `protobuf:"bytes,2,rep,name=dispositions,proto3" json:"dispositions,omitempty" protobuf_key:"bytes,1,opt,name=key" protobuf_val:"varint,2,opt,name=value,enum=goeland.v1.FinalDisposition"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ListMyDispositionApprovalsResponse) Reset() {
+	*x = ListMyDispositionApprovalsResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[31]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ListMyDispositionApprovalsResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ListMyDispositionApprovalsResponse) ProtoMessage() {}
+
+func (x *ListMyDispositionApprovalsResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[31]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ListMyDispositionApprovalsResponse.ProtoReflect.Descriptor instead.
+func (*ListMyDispositionApprovalsResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{31}
+}
+
+func (x *ListMyDispositionApprovalsResponse) GetItems() []*DispositionItem {
+	if x != nil {
+		return x.Items
+	}
+	return nil
+}
+
+func (x *ListMyDispositionApprovalsResponse) GetDispositions() map[string]FinalDisposition {
+	if x != nil {
+		return x.Dispositions
+	}
+	return nil
+}
+
+// DecideDispositionItemRequest approves or rejects one case of a bordereau.
+type DecideDispositionItemRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the item.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// approve approves the case; false rejects it.
+	Approve bool `protobuf:"varint,2,opt,name=approve,proto3" json:"approve,omitempty"`
+	// reason explains the decision (1-2000 characters); it is audited.
+	Reason        string `protobuf:"bytes,3,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecideDispositionItemRequest) Reset() {
+	*x = DecideDispositionItemRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[32]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecideDispositionItemRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideDispositionItemRequest) ProtoMessage() {}
+
+func (x *DecideDispositionItemRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[32]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideDispositionItemRequest.ProtoReflect.Descriptor instead.
+func (*DecideDispositionItemRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{32}
+}
+
+func (x *DecideDispositionItemRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *DecideDispositionItemRequest) GetApprove() bool {
+	if x != nil {
+		return x.Approve
+	}
+	return false
+}
+
+func (x *DecideDispositionItemRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
+// DecideDispositionItemResponse returns the decided item.
+type DecideDispositionItemResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// item is the decided item.
+	Item          *DispositionItem `protobuf:"bytes,1,opt,name=item,proto3" json:"item,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *DecideDispositionItemResponse) Reset() {
+	*x = DecideDispositionItemResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[33]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *DecideDispositionItemResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*DecideDispositionItemResponse) ProtoMessage() {}
+
+func (x *DecideDispositionItemResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[33]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use DecideDispositionItemResponse.ProtoReflect.Descriptor instead.
+func (*DecideDispositionItemResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{33}
+}
+
+func (x *DecideDispositionItemResponse) GetItem() *DispositionItem {
+	if x != nil {
+		return x.Item
+	}
+	return nil
+}
+
+// ExecuteDispositionBordereauRequest executes a bordereau whose cases are all decided (records manager).
+type ExecuteDispositionBordereauRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the bordereau.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *ExecuteDispositionBordereauRequest) Reset() {
+	*x = ExecuteDispositionBordereauRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[34]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *ExecuteDispositionBordereauRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*ExecuteDispositionBordereauRequest) ProtoMessage() {}
+
+func (x *ExecuteDispositionBordereauRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[34]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use ExecuteDispositionBordereauRequest.ProtoReflect.Descriptor instead.
+func (*ExecuteDispositionBordereauRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{34}
+}
+
+func (x *ExecuteDispositionBordereauRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// CancelDispositionBordereauRequest abandons an open bordereau (records manager).
+type CancelDispositionBordereauRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the bordereau.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// reason explains the cancellation (1-2000 characters).
+	Reason        string `protobuf:"bytes,2,opt,name=reason,proto3" json:"reason,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *CancelDispositionBordereauRequest) Reset() {
+	*x = CancelDispositionBordereauRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[35]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *CancelDispositionBordereauRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*CancelDispositionBordereauRequest) ProtoMessage() {}
+
+func (x *CancelDispositionBordereauRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[35]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use CancelDispositionBordereauRequest.ProtoReflect.Descriptor instead.
+func (*CancelDispositionBordereauRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{35}
+}
+
+func (x *CancelDispositionBordereauRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *CancelDispositionBordereauRequest) GetReason() string {
+	if x != nil {
+		return x.Reason
+	}
+	return ""
+}
+
 var File_goeland_v1_retention_proto protoreflect.FileDescriptor
 
 const file_goeland_v1_retention_proto_rawDesc = "" +
@@ -1634,7 +2899,7 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"_is_active\"\x9c\x01\n" +
 	"\x1dUpdateRetentionPolicyResponse\x12F\n" +
 	"\x10retention_policy\x18\x01 \x01(\v2\x1b.goeland.v1.RetentionPolicyR\x0fretentionPolicy\x123\n" +
-	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\x80\x04\n" +
+	"\x06change\x18\x02 \x01(\v2\x1b.goeland.v1.ReferenceChangeR\x06change\"\xae\x05\n" +
 	"\x10SubjectRetention\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1654,7 +2919,11 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\bended_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\aendedAt\x12\x19\n" +
 	"\bended_by\x18\f \x01(\tR\aendedBy\x12\x1d\n" +
 	"\n" +
-	"end_reason\x18\r \x01(\tR\tendReason\"\xb1\x02\n" +
+	"end_reason\x18\r \x01(\tR\tendReason\x12L\n" +
+	"\x12disposition_status\x18\x0e \x01(\x0e2\x1d.goeland.v1.DispositionStatusR\x11dispositionStatus\x12;\n" +
+	"\vdisposed_at\x18\x0f \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"disposedAt\x12!\n" +
+	"\fbordereau_id\x18\x10 \x01(\tR\vbordereauId\"\xb1\x02\n" +
 	"\rRetentionHold\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\tR\x02id\x12\x1d\n" +
 	"\n" +
@@ -1718,12 +2987,113 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"X\n" +
 	"\x1eApplyCaseTypeRetentionResponse\x12\x18\n" +
 	"\aapplied\x18\x01 \x01(\x05R\aapplied\x12\x1c\n" +
-	"\tremaining\x18\x02 \x01(\x05R\tremaining*\x91\x01\n" +
+	"\tremaining\x18\x02 \x01(\x05R\tremaining\"\xd9\x04\n" +
+	"\x0fDispositionItem\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12!\n" +
+	"\fbordereau_id\x18\x02 \x01(\tR\vbordereauId\x12\x17\n" +
+	"\acase_id\x18\x03 \x01(\tR\x06caseId\x12\x1d\n" +
+	"\n" +
+	"case_label\x18\x04 \x01(\tR\tcaseLabel\x12!\n" +
+	"\fbusiness_ref\x18\x05 \x01(\tR\vbusinessRef\x12\x19\n" +
+	"\buntil_on\x18\x06 \x01(\tR\auntilOn\x12\x1f\n" +
+	"\vpolicy_code\x18\a \x01(\tR\n" +
+	"policyCode\x12.\n" +
+	"\x13approver_subject_id\x18\b \x01(\tR\x11approverSubjectId\x12%\n" +
+	"\x0eapprover_label\x18\t \x01(\tR\rapproverLabel\x12;\n" +
+	"\bdecision\x18\n" +
+	" \x01(\x0e2\x1f.goeland.v1.DispositionDecisionR\bdecision\x129\n" +
+	"\n" +
+	"decided_at\x18\v \x01(\v2\x1a.google.protobuf.TimestampR\tdecidedAt\x12\x1d\n" +
+	"\n" +
+	"decided_by\x18\f \x01(\tR\tdecidedBy\x12'\n" +
+	"\x0fdecision_reason\x18\r \x01(\tR\x0edecisionReason\x12\x1b\n" +
+	"\texport_id\x18\x0e \x01(\tR\bexportId\x12#\n" +
+	"\rexport_status\x18\x0f \x01(\tR\fexportStatus\x12#\n" +
+	"\rexport_sha256\x18\x10 \x01(\tR\fexportSha256\"\xd6\x04\n" +
+	"\x14DispositionBordereau\x12\x0e\n" +
+	"\x02id\x18\x01 \x01(\tR\x02id\x12I\n" +
+	"\x11final_disposition\x18\x02 \x01(\x0e2\x1c.goeland.v1.FinalDispositionR\x10finalDisposition\x123\n" +
+	"\x06status\x18\x03 \x01(\x0e2\x1b.goeland.v1.BordereauStatusR\x06status\x12\x16\n" +
+	"\x06reason\x18\x04 \x01(\tR\x06reason\x12\x1f\n" +
+	"\vprepared_by\x18\x05 \x01(\tR\n" +
+	"preparedBy\x12;\n" +
+	"\vprepared_at\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"preparedAt\x127\n" +
+	"\tclosed_at\x18\a \x01(\v2\x1a.google.protobuf.TimestampR\bclosedAt\x12\x1b\n" +
+	"\tclosed_by\x18\b \x01(\tR\bclosedBy\x12!\n" +
+	"\fclose_reason\x18\t \x01(\tR\vcloseReason\x12!\n" +
+	"\fproof_sha256\x18\n" +
+	" \x01(\tR\vproofSha256\x121\n" +
+	"\x05items\x18\v \x03(\v2\x1b.goeland.v1.DispositionItemR\x05items\x12\x1d\n" +
+	"\n" +
+	"item_count\x18\f \x01(\x05R\titemCount\x12#\n" +
+	"\rpending_count\x18\r \x01(\x05R\fpendingCount\x12%\n" +
+	"\x0eapproved_count\x18\x0e \x01(\x05R\rapprovedCount\"\xd3\x01\n" +
+	"!CreateDispositionBordereauRequest\x12U\n" +
+	"\x11final_disposition\x18\x01 \x01(\x0e2\x1c.goeland.v1.FinalDispositionB\n" +
+	"\xbaH\a\x82\x01\x04\x18\x01\x18\x02R\x10finalDisposition\x12&\n" +
+	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\x12/\n" +
+	"\bcase_ids\x18\x03 \x03(\tB\x14\xbaH\x11\x92\x01\x0e\b\x01\x10\xf4\x03\x18\x01\"\x05r\x03\xb0\x01\x01R\acaseIds\"d\n" +
+	"\"CreateDispositionBordereauResponse\x12>\n" +
+	"\tbordereau\x18\x01 \x01(\v2 .goeland.v1.DispositionBordereauR\tbordereau\"a\n" +
+	"\x1fGetDispositionBordereauResponse\x12>\n" +
+	"\tbordereau\x18\x01 \x01(\v2 .goeland.v1.DispositionBordereauR\tbordereau\"e\n" +
+	"#ExecuteDispositionBordereauResponse\x12>\n" +
+	"\tbordereau\x18\x01 \x01(\v2 .goeland.v1.DispositionBordereauR\tbordereau\"d\n" +
+	"\"CancelDispositionBordereauResponse\x12>\n" +
+	"\tbordereau\x18\x01 \x01(\v2 .goeland.v1.DispositionBordereauR\tbordereau\":\n" +
+	"\x1eGetDispositionBordereauRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\xb3\x01\n" +
+	" ListDispositionBordereauxRequest\x12=\n" +
+	"\x06status\x18\x01 \x01(\x0e2\x1b.goeland.v1.BordereauStatusB\b\xbaH\x05\x82\x01\x02\x10\x01R\x06status\x12'\n" +
+	"\tpage_size\x18\x02 \x01(\x05B\n" +
+	"\xbaH\a\x1a\x05\x18\xc8\x01(\x00R\bpageSize\x12'\n" +
+	"\n" +
+	"page_token\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\x80\bR\tpageToken\"\xac\x01\n" +
+	"!ListDispositionBordereauxResponse\x12@\n" +
+	"\n" +
+	"bordereaux\x18\x01 \x03(\v2 .goeland.v1.DispositionBordereauR\n" +
+	"bordereaux\x12&\n" +
+	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
+	"\n" +
+	"total_size\x18\x03 \x01(\x05R\ttotalSize\"#\n" +
+	"!ListMyDispositionApprovalsRequest\"\x9c\x02\n" +
+	"\"ListMyDispositionApprovalsResponse\x121\n" +
+	"\x05items\x18\x01 \x03(\v2\x1b.goeland.v1.DispositionItemR\x05items\x12d\n" +
+	"\fdispositions\x18\x02 \x03(\v2@.goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntryR\fdispositions\x1a]\n" +
+	"\x11DispositionsEntry\x12\x10\n" +
+	"\x03key\x18\x01 \x01(\tR\x03key\x122\n" +
+	"\x05value\x18\x02 \x01(\x0e2\x1c.goeland.v1.FinalDispositionR\x05value:\x028\x01\"z\n" +
+	"\x1cDecideDispositionItemRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12\x18\n" +
+	"\aapprove\x18\x02 \x01(\bR\aapprove\x12&\n" +
+	"\x06reason\x18\x03 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason\"P\n" +
+	"\x1dDecideDispositionItemResponse\x12/\n" +
+	"\x04item\x18\x01 \x01(\v2\x1b.goeland.v1.DispositionItemR\x04item\">\n" +
+	"\"ExecuteDispositionBordereauRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"e\n" +
+	"!CancelDispositionBordereauRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12&\n" +
+	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason*\x91\x01\n" +
 	"\x10FinalDisposition\x12!\n" +
 	"\x1dFINAL_DISPOSITION_UNSPECIFIED\x10\x00\x12\x1d\n" +
 	"\x19FINAL_DISPOSITION_ARCHIVE\x10\x01\x12\x1d\n" +
 	"\x19FINAL_DISPOSITION_DESTROY\x10\x02\x12\x1c\n" +
-	"\x18FINAL_DISPOSITION_REVIEW\x10\x032\xbf\t\n" +
+	"\x18FINAL_DISPOSITION_REVIEW\x10\x03*y\n" +
+	"\x11DispositionStatus\x12\"\n" +
+	"\x1eDISPOSITION_STATUS_UNSPECIFIED\x10\x00\x12\x1f\n" +
+	"\x1bDISPOSITION_STATUS_ARCHIVED\x10\x01\x12\x1f\n" +
+	"\x1bDISPOSITION_STATUS_DISPOSED\x10\x02*\x8d\x01\n" +
+	"\x0fBordereauStatus\x12 \n" +
+	"\x1cBORDEREAU_STATUS_UNSPECIFIED\x10\x00\x12\x19\n" +
+	"\x15BORDEREAU_STATUS_OPEN\x10\x01\x12\x1d\n" +
+	"\x19BORDEREAU_STATUS_EXECUTED\x10\x02\x12\x1e\n" +
+	"\x1aBORDEREAU_STATUS_CANCELLED\x10\x03*\xa3\x01\n" +
+	"\x13DispositionDecision\x12$\n" +
+	" DISPOSITION_DECISION_UNSPECIFIED\x10\x00\x12 \n" +
+	"\x1cDISPOSITION_DECISION_PENDING\x10\x01\x12!\n" +
+	"\x1dDISPOSITION_DECISION_APPROVED\x10\x02\x12!\n" +
+	"\x1dDISPOSITION_DECISION_REJECTED\x10\x032\xcd\x12\n" +
 	"\x10RetentionService\x12\x8d\x01\n" +
 	"\x15ListRetentionPolicies\x12(.goeland.v1.ListRetentionPoliciesRequest\x1a).goeland.v1.ListRetentionPoliciesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/retention-policies\x12\x90\x01\n" +
 	"\x15CreateRetentionPolicy\x12(.goeland.v1.CreateRetentionPolicyRequest\x1a).goeland.v1.CreateRetentionPolicyResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/retention-policies\x12\x97\x01\n" +
@@ -1732,7 +3102,14 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\x12PlaceRetentionHold\x12%.goeland.v1.PlaceRetentionHoldRequest\x1a&.goeland.v1.PlaceRetentionHoldResponse\".\x82\xd3\xe4\x93\x02(:\x01*\"#/api/cases/{case_id}/retention-hold\x12\xa1\x01\n" +
 	"\x14ReleaseRetentionHold\x12'.goeland.v1.ReleaseRetentionHoldRequest\x1a(.goeland.v1.ReleaseRetentionHoldResponse\"6\x82\xd3\xe4\x93\x020:\x01*\"+/api/cases/{case_id}/retention-hold/release\x12}\n" +
 	"\x11ListDueRetentions\x12$.goeland.v1.ListDueRetentionsRequest\x1a%.goeland.v1.ListDueRetentionsResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/retentions/due\x12\xac\x01\n" +
-	"\x16ApplyCaseTypeRetention\x12).goeland.v1.ApplyCaseTypeRetentionRequest\x1a*.goeland.v1.ApplyCaseTypeRetentionResponse\";\x82\xd3\xe4\x93\x025:\x01*\"0/api/case-types/{case_type_code}/apply-retentionB\xb6\x01\n" +
+	"\x16ApplyCaseTypeRetention\x12).goeland.v1.ApplyCaseTypeRetentionRequest\x1a*.goeland.v1.ApplyCaseTypeRetentionResponse\";\x82\xd3\xe4\x93\x025:\x01*\"0/api/case-types/{case_type_code}/apply-retention\x12\xa3\x01\n" +
+	"\x1aCreateDispositionBordereau\x12-.goeland.v1.CreateDispositionBordereauRequest\x1a..goeland.v1.CreateDispositionBordereauResponse\"&\x82\xd3\xe4\x93\x02 :\x01*\"\x1b/api/disposition-bordereaux\x12\x9d\x01\n" +
+	"\x19ListDispositionBordereaux\x12,.goeland.v1.ListDispositionBordereauxRequest\x1a-.goeland.v1.ListDispositionBordereauxResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/disposition-bordereaux\x12\x9c\x01\n" +
+	"\x17GetDispositionBordereau\x12*.goeland.v1.GetDispositionBordereauRequest\x1a+.goeland.v1.GetDispositionBordereauResponse\"(\x82\xd3\xe4\x93\x02\"\x12 /api/disposition-bordereaux/{id}\x12\xa0\x01\n" +
+	"\x1aListMyDispositionApprovals\x12-.goeland.v1.ListMyDispositionApprovalsRequest\x1a..goeland.v1.ListMyDispositionApprovalsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/disposition-items/mine\x12\x9b\x01\n" +
+	"\x15DecideDispositionItem\x12(.goeland.v1.DecideDispositionItemRequest\x1a).goeland.v1.DecideDispositionItemResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/disposition-items/{id}/decide\x12\xb3\x01\n" +
+	"\x1bExecuteDispositionBordereau\x12..goeland.v1.ExecuteDispositionBordereauRequest\x1a/.goeland.v1.ExecuteDispositionBordereauResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/disposition-bordereaux/{id}/execute\x12\xaf\x01\n" +
+	"\x1aCancelDispositionBordereau\x12-.goeland.v1.CancelDispositionBordereauRequest\x1a..goeland.v1.CancelDispositionBordereauResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/disposition-bordereaux/{id}/cancelB\xb6\x01\n" +
 	"\x0ecom.goeland.v1B\x0eRetentionProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
 	"Goeland\\V1\xe2\x02\x16Goeland\\V1\\GPBMetadata\xea\x02\vGoeland::V1b\x06proto3"
@@ -1749,81 +3126,135 @@ func file_goeland_v1_retention_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_retention_proto_rawDescData
 }
 
-var file_goeland_v1_retention_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_goeland_v1_retention_proto_msgTypes = make([]protoimpl.MessageInfo, 20)
+var file_goeland_v1_retention_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
+var file_goeland_v1_retention_proto_msgTypes = make([]protoimpl.MessageInfo, 37)
 var file_goeland_v1_retention_proto_goTypes = []any{
-	(FinalDisposition)(0),                  // 0: goeland.v1.FinalDisposition
-	(*RetentionPolicy)(nil),                // 1: goeland.v1.RetentionPolicy
-	(*ListRetentionPoliciesRequest)(nil),   // 2: goeland.v1.ListRetentionPoliciesRequest
-	(*ListRetentionPoliciesResponse)(nil),  // 3: goeland.v1.ListRetentionPoliciesResponse
-	(*CreateRetentionPolicyRequest)(nil),   // 4: goeland.v1.CreateRetentionPolicyRequest
-	(*CreateRetentionPolicyResponse)(nil),  // 5: goeland.v1.CreateRetentionPolicyResponse
-	(*UpdateRetentionPolicyRequest)(nil),   // 6: goeland.v1.UpdateRetentionPolicyRequest
-	(*UpdateRetentionPolicyResponse)(nil),  // 7: goeland.v1.UpdateRetentionPolicyResponse
-	(*SubjectRetention)(nil),               // 8: goeland.v1.SubjectRetention
-	(*RetentionHold)(nil),                  // 9: goeland.v1.RetentionHold
-	(*GetCaseRetentionRequest)(nil),        // 10: goeland.v1.GetCaseRetentionRequest
-	(*GetCaseRetentionResponse)(nil),       // 11: goeland.v1.GetCaseRetentionResponse
-	(*PlaceRetentionHoldRequest)(nil),      // 12: goeland.v1.PlaceRetentionHoldRequest
-	(*PlaceRetentionHoldResponse)(nil),     // 13: goeland.v1.PlaceRetentionHoldResponse
-	(*ReleaseRetentionHoldRequest)(nil),    // 14: goeland.v1.ReleaseRetentionHoldRequest
-	(*ReleaseRetentionHoldResponse)(nil),   // 15: goeland.v1.ReleaseRetentionHoldResponse
-	(*DueRetention)(nil),                   // 16: goeland.v1.DueRetention
-	(*ListDueRetentionsRequest)(nil),       // 17: goeland.v1.ListDueRetentionsRequest
-	(*ListDueRetentionsResponse)(nil),      // 18: goeland.v1.ListDueRetentionsResponse
-	(*ApplyCaseTypeRetentionRequest)(nil),  // 19: goeland.v1.ApplyCaseTypeRetentionRequest
-	(*ApplyCaseTypeRetentionResponse)(nil), // 20: goeland.v1.ApplyCaseTypeRetentionResponse
-	(*ReferenceChange)(nil),                // 21: goeland.v1.ReferenceChange
-	(*timestamppb.Timestamp)(nil),          // 22: google.protobuf.Timestamp
-	(*AuditEvent)(nil),                     // 23: goeland.v1.AuditEvent
+	(FinalDisposition)(0),                       // 0: goeland.v1.FinalDisposition
+	(DispositionStatus)(0),                      // 1: goeland.v1.DispositionStatus
+	(BordereauStatus)(0),                        // 2: goeland.v1.BordereauStatus
+	(DispositionDecision)(0),                    // 3: goeland.v1.DispositionDecision
+	(*RetentionPolicy)(nil),                     // 4: goeland.v1.RetentionPolicy
+	(*ListRetentionPoliciesRequest)(nil),        // 5: goeland.v1.ListRetentionPoliciesRequest
+	(*ListRetentionPoliciesResponse)(nil),       // 6: goeland.v1.ListRetentionPoliciesResponse
+	(*CreateRetentionPolicyRequest)(nil),        // 7: goeland.v1.CreateRetentionPolicyRequest
+	(*CreateRetentionPolicyResponse)(nil),       // 8: goeland.v1.CreateRetentionPolicyResponse
+	(*UpdateRetentionPolicyRequest)(nil),        // 9: goeland.v1.UpdateRetentionPolicyRequest
+	(*UpdateRetentionPolicyResponse)(nil),       // 10: goeland.v1.UpdateRetentionPolicyResponse
+	(*SubjectRetention)(nil),                    // 11: goeland.v1.SubjectRetention
+	(*RetentionHold)(nil),                       // 12: goeland.v1.RetentionHold
+	(*GetCaseRetentionRequest)(nil),             // 13: goeland.v1.GetCaseRetentionRequest
+	(*GetCaseRetentionResponse)(nil),            // 14: goeland.v1.GetCaseRetentionResponse
+	(*PlaceRetentionHoldRequest)(nil),           // 15: goeland.v1.PlaceRetentionHoldRequest
+	(*PlaceRetentionHoldResponse)(nil),          // 16: goeland.v1.PlaceRetentionHoldResponse
+	(*ReleaseRetentionHoldRequest)(nil),         // 17: goeland.v1.ReleaseRetentionHoldRequest
+	(*ReleaseRetentionHoldResponse)(nil),        // 18: goeland.v1.ReleaseRetentionHoldResponse
+	(*DueRetention)(nil),                        // 19: goeland.v1.DueRetention
+	(*ListDueRetentionsRequest)(nil),            // 20: goeland.v1.ListDueRetentionsRequest
+	(*ListDueRetentionsResponse)(nil),           // 21: goeland.v1.ListDueRetentionsResponse
+	(*ApplyCaseTypeRetentionRequest)(nil),       // 22: goeland.v1.ApplyCaseTypeRetentionRequest
+	(*ApplyCaseTypeRetentionResponse)(nil),      // 23: goeland.v1.ApplyCaseTypeRetentionResponse
+	(*DispositionItem)(nil),                     // 24: goeland.v1.DispositionItem
+	(*DispositionBordereau)(nil),                // 25: goeland.v1.DispositionBordereau
+	(*CreateDispositionBordereauRequest)(nil),   // 26: goeland.v1.CreateDispositionBordereauRequest
+	(*CreateDispositionBordereauResponse)(nil),  // 27: goeland.v1.CreateDispositionBordereauResponse
+	(*GetDispositionBordereauResponse)(nil),     // 28: goeland.v1.GetDispositionBordereauResponse
+	(*ExecuteDispositionBordereauResponse)(nil), // 29: goeland.v1.ExecuteDispositionBordereauResponse
+	(*CancelDispositionBordereauResponse)(nil),  // 30: goeland.v1.CancelDispositionBordereauResponse
+	(*GetDispositionBordereauRequest)(nil),      // 31: goeland.v1.GetDispositionBordereauRequest
+	(*ListDispositionBordereauxRequest)(nil),    // 32: goeland.v1.ListDispositionBordereauxRequest
+	(*ListDispositionBordereauxResponse)(nil),   // 33: goeland.v1.ListDispositionBordereauxResponse
+	(*ListMyDispositionApprovalsRequest)(nil),   // 34: goeland.v1.ListMyDispositionApprovalsRequest
+	(*ListMyDispositionApprovalsResponse)(nil),  // 35: goeland.v1.ListMyDispositionApprovalsResponse
+	(*DecideDispositionItemRequest)(nil),        // 36: goeland.v1.DecideDispositionItemRequest
+	(*DecideDispositionItemResponse)(nil),       // 37: goeland.v1.DecideDispositionItemResponse
+	(*ExecuteDispositionBordereauRequest)(nil),  // 38: goeland.v1.ExecuteDispositionBordereauRequest
+	(*CancelDispositionBordereauRequest)(nil),   // 39: goeland.v1.CancelDispositionBordereauRequest
+	nil,                           // 40: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
+	(*ReferenceChange)(nil),       // 41: goeland.v1.ReferenceChange
+	(*timestamppb.Timestamp)(nil), // 42: google.protobuf.Timestamp
+	(*AuditEvent)(nil),            // 43: goeland.v1.AuditEvent
 }
 var file_goeland_v1_retention_proto_depIdxs = []int32{
 	0,  // 0: goeland.v1.RetentionPolicy.final_disposition:type_name -> goeland.v1.FinalDisposition
-	1,  // 1: goeland.v1.ListRetentionPoliciesResponse.retention_policies:type_name -> goeland.v1.RetentionPolicy
+	4,  // 1: goeland.v1.ListRetentionPoliciesResponse.retention_policies:type_name -> goeland.v1.RetentionPolicy
 	0,  // 2: goeland.v1.CreateRetentionPolicyRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
-	1,  // 3: goeland.v1.CreateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
-	21, // 4: goeland.v1.CreateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 3: goeland.v1.CreateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
+	41, // 4: goeland.v1.CreateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
 	0,  // 5: goeland.v1.UpdateRetentionPolicyRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
-	1,  // 6: goeland.v1.UpdateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
-	21, // 7: goeland.v1.UpdateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 6: goeland.v1.UpdateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
+	41, // 7: goeland.v1.UpdateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
 	0,  // 8: goeland.v1.SubjectRetention.final_disposition:type_name -> goeland.v1.FinalDisposition
-	22, // 9: goeland.v1.SubjectRetention.created_at:type_name -> google.protobuf.Timestamp
-	22, // 10: goeland.v1.SubjectRetention.ended_at:type_name -> google.protobuf.Timestamp
-	22, // 11: goeland.v1.RetentionHold.placed_at:type_name -> google.protobuf.Timestamp
-	22, // 12: goeland.v1.RetentionHold.released_at:type_name -> google.protobuf.Timestamp
-	8,  // 13: goeland.v1.GetCaseRetentionResponse.current:type_name -> goeland.v1.SubjectRetention
-	9,  // 14: goeland.v1.GetCaseRetentionResponse.hold:type_name -> goeland.v1.RetentionHold
-	8,  // 15: goeland.v1.GetCaseRetentionResponse.retentions:type_name -> goeland.v1.SubjectRetention
-	9,  // 16: goeland.v1.GetCaseRetentionResponse.holds:type_name -> goeland.v1.RetentionHold
-	1,  // 17: goeland.v1.GetCaseRetentionResponse.default_policy:type_name -> goeland.v1.RetentionPolicy
-	9,  // 18: goeland.v1.PlaceRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
-	23, // 19: goeland.v1.PlaceRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	9,  // 20: goeland.v1.ReleaseRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
-	23, // 21: goeland.v1.ReleaseRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	8,  // 22: goeland.v1.DueRetention.retention:type_name -> goeland.v1.SubjectRetention
-	0,  // 23: goeland.v1.ListDueRetentionsRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
-	16, // 24: goeland.v1.ListDueRetentionsResponse.retentions:type_name -> goeland.v1.DueRetention
-	2,  // 25: goeland.v1.RetentionService.ListRetentionPolicies:input_type -> goeland.v1.ListRetentionPoliciesRequest
-	4,  // 26: goeland.v1.RetentionService.CreateRetentionPolicy:input_type -> goeland.v1.CreateRetentionPolicyRequest
-	6,  // 27: goeland.v1.RetentionService.UpdateRetentionPolicy:input_type -> goeland.v1.UpdateRetentionPolicyRequest
-	10, // 28: goeland.v1.RetentionService.GetCaseRetention:input_type -> goeland.v1.GetCaseRetentionRequest
-	12, // 29: goeland.v1.RetentionService.PlaceRetentionHold:input_type -> goeland.v1.PlaceRetentionHoldRequest
-	14, // 30: goeland.v1.RetentionService.ReleaseRetentionHold:input_type -> goeland.v1.ReleaseRetentionHoldRequest
-	17, // 31: goeland.v1.RetentionService.ListDueRetentions:input_type -> goeland.v1.ListDueRetentionsRequest
-	19, // 32: goeland.v1.RetentionService.ApplyCaseTypeRetention:input_type -> goeland.v1.ApplyCaseTypeRetentionRequest
-	3,  // 33: goeland.v1.RetentionService.ListRetentionPolicies:output_type -> goeland.v1.ListRetentionPoliciesResponse
-	5,  // 34: goeland.v1.RetentionService.CreateRetentionPolicy:output_type -> goeland.v1.CreateRetentionPolicyResponse
-	7,  // 35: goeland.v1.RetentionService.UpdateRetentionPolicy:output_type -> goeland.v1.UpdateRetentionPolicyResponse
-	11, // 36: goeland.v1.RetentionService.GetCaseRetention:output_type -> goeland.v1.GetCaseRetentionResponse
-	13, // 37: goeland.v1.RetentionService.PlaceRetentionHold:output_type -> goeland.v1.PlaceRetentionHoldResponse
-	15, // 38: goeland.v1.RetentionService.ReleaseRetentionHold:output_type -> goeland.v1.ReleaseRetentionHoldResponse
-	18, // 39: goeland.v1.RetentionService.ListDueRetentions:output_type -> goeland.v1.ListDueRetentionsResponse
-	20, // 40: goeland.v1.RetentionService.ApplyCaseTypeRetention:output_type -> goeland.v1.ApplyCaseTypeRetentionResponse
-	33, // [33:41] is the sub-list for method output_type
-	25, // [25:33] is the sub-list for method input_type
-	25, // [25:25] is the sub-list for extension type_name
-	25, // [25:25] is the sub-list for extension extendee
-	0,  // [0:25] is the sub-list for field type_name
+	42, // 9: goeland.v1.SubjectRetention.created_at:type_name -> google.protobuf.Timestamp
+	42, // 10: goeland.v1.SubjectRetention.ended_at:type_name -> google.protobuf.Timestamp
+	1,  // 11: goeland.v1.SubjectRetention.disposition_status:type_name -> goeland.v1.DispositionStatus
+	42, // 12: goeland.v1.SubjectRetention.disposed_at:type_name -> google.protobuf.Timestamp
+	42, // 13: goeland.v1.RetentionHold.placed_at:type_name -> google.protobuf.Timestamp
+	42, // 14: goeland.v1.RetentionHold.released_at:type_name -> google.protobuf.Timestamp
+	11, // 15: goeland.v1.GetCaseRetentionResponse.current:type_name -> goeland.v1.SubjectRetention
+	12, // 16: goeland.v1.GetCaseRetentionResponse.hold:type_name -> goeland.v1.RetentionHold
+	11, // 17: goeland.v1.GetCaseRetentionResponse.retentions:type_name -> goeland.v1.SubjectRetention
+	12, // 18: goeland.v1.GetCaseRetentionResponse.holds:type_name -> goeland.v1.RetentionHold
+	4,  // 19: goeland.v1.GetCaseRetentionResponse.default_policy:type_name -> goeland.v1.RetentionPolicy
+	12, // 20: goeland.v1.PlaceRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
+	43, // 21: goeland.v1.PlaceRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	12, // 22: goeland.v1.ReleaseRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
+	43, // 23: goeland.v1.ReleaseRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	11, // 24: goeland.v1.DueRetention.retention:type_name -> goeland.v1.SubjectRetention
+	0,  // 25: goeland.v1.ListDueRetentionsRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
+	19, // 26: goeland.v1.ListDueRetentionsResponse.retentions:type_name -> goeland.v1.DueRetention
+	3,  // 27: goeland.v1.DispositionItem.decision:type_name -> goeland.v1.DispositionDecision
+	42, // 28: goeland.v1.DispositionItem.decided_at:type_name -> google.protobuf.Timestamp
+	0,  // 29: goeland.v1.DispositionBordereau.final_disposition:type_name -> goeland.v1.FinalDisposition
+	2,  // 30: goeland.v1.DispositionBordereau.status:type_name -> goeland.v1.BordereauStatus
+	42, // 31: goeland.v1.DispositionBordereau.prepared_at:type_name -> google.protobuf.Timestamp
+	42, // 32: goeland.v1.DispositionBordereau.closed_at:type_name -> google.protobuf.Timestamp
+	24, // 33: goeland.v1.DispositionBordereau.items:type_name -> goeland.v1.DispositionItem
+	0,  // 34: goeland.v1.CreateDispositionBordereauRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
+	25, // 35: goeland.v1.CreateDispositionBordereauResponse.bordereau:type_name -> goeland.v1.DispositionBordereau
+	25, // 36: goeland.v1.GetDispositionBordereauResponse.bordereau:type_name -> goeland.v1.DispositionBordereau
+	25, // 37: goeland.v1.ExecuteDispositionBordereauResponse.bordereau:type_name -> goeland.v1.DispositionBordereau
+	25, // 38: goeland.v1.CancelDispositionBordereauResponse.bordereau:type_name -> goeland.v1.DispositionBordereau
+	2,  // 39: goeland.v1.ListDispositionBordereauxRequest.status:type_name -> goeland.v1.BordereauStatus
+	25, // 40: goeland.v1.ListDispositionBordereauxResponse.bordereaux:type_name -> goeland.v1.DispositionBordereau
+	24, // 41: goeland.v1.ListMyDispositionApprovalsResponse.items:type_name -> goeland.v1.DispositionItem
+	40, // 42: goeland.v1.ListMyDispositionApprovalsResponse.dispositions:type_name -> goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
+	24, // 43: goeland.v1.DecideDispositionItemResponse.item:type_name -> goeland.v1.DispositionItem
+	0,  // 44: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry.value:type_name -> goeland.v1.FinalDisposition
+	5,  // 45: goeland.v1.RetentionService.ListRetentionPolicies:input_type -> goeland.v1.ListRetentionPoliciesRequest
+	7,  // 46: goeland.v1.RetentionService.CreateRetentionPolicy:input_type -> goeland.v1.CreateRetentionPolicyRequest
+	9,  // 47: goeland.v1.RetentionService.UpdateRetentionPolicy:input_type -> goeland.v1.UpdateRetentionPolicyRequest
+	13, // 48: goeland.v1.RetentionService.GetCaseRetention:input_type -> goeland.v1.GetCaseRetentionRequest
+	15, // 49: goeland.v1.RetentionService.PlaceRetentionHold:input_type -> goeland.v1.PlaceRetentionHoldRequest
+	17, // 50: goeland.v1.RetentionService.ReleaseRetentionHold:input_type -> goeland.v1.ReleaseRetentionHoldRequest
+	20, // 51: goeland.v1.RetentionService.ListDueRetentions:input_type -> goeland.v1.ListDueRetentionsRequest
+	22, // 52: goeland.v1.RetentionService.ApplyCaseTypeRetention:input_type -> goeland.v1.ApplyCaseTypeRetentionRequest
+	26, // 53: goeland.v1.RetentionService.CreateDispositionBordereau:input_type -> goeland.v1.CreateDispositionBordereauRequest
+	32, // 54: goeland.v1.RetentionService.ListDispositionBordereaux:input_type -> goeland.v1.ListDispositionBordereauxRequest
+	31, // 55: goeland.v1.RetentionService.GetDispositionBordereau:input_type -> goeland.v1.GetDispositionBordereauRequest
+	34, // 56: goeland.v1.RetentionService.ListMyDispositionApprovals:input_type -> goeland.v1.ListMyDispositionApprovalsRequest
+	36, // 57: goeland.v1.RetentionService.DecideDispositionItem:input_type -> goeland.v1.DecideDispositionItemRequest
+	38, // 58: goeland.v1.RetentionService.ExecuteDispositionBordereau:input_type -> goeland.v1.ExecuteDispositionBordereauRequest
+	39, // 59: goeland.v1.RetentionService.CancelDispositionBordereau:input_type -> goeland.v1.CancelDispositionBordereauRequest
+	6,  // 60: goeland.v1.RetentionService.ListRetentionPolicies:output_type -> goeland.v1.ListRetentionPoliciesResponse
+	8,  // 61: goeland.v1.RetentionService.CreateRetentionPolicy:output_type -> goeland.v1.CreateRetentionPolicyResponse
+	10, // 62: goeland.v1.RetentionService.UpdateRetentionPolicy:output_type -> goeland.v1.UpdateRetentionPolicyResponse
+	14, // 63: goeland.v1.RetentionService.GetCaseRetention:output_type -> goeland.v1.GetCaseRetentionResponse
+	16, // 64: goeland.v1.RetentionService.PlaceRetentionHold:output_type -> goeland.v1.PlaceRetentionHoldResponse
+	18, // 65: goeland.v1.RetentionService.ReleaseRetentionHold:output_type -> goeland.v1.ReleaseRetentionHoldResponse
+	21, // 66: goeland.v1.RetentionService.ListDueRetentions:output_type -> goeland.v1.ListDueRetentionsResponse
+	23, // 67: goeland.v1.RetentionService.ApplyCaseTypeRetention:output_type -> goeland.v1.ApplyCaseTypeRetentionResponse
+	27, // 68: goeland.v1.RetentionService.CreateDispositionBordereau:output_type -> goeland.v1.CreateDispositionBordereauResponse
+	33, // 69: goeland.v1.RetentionService.ListDispositionBordereaux:output_type -> goeland.v1.ListDispositionBordereauxResponse
+	28, // 70: goeland.v1.RetentionService.GetDispositionBordereau:output_type -> goeland.v1.GetDispositionBordereauResponse
+	35, // 71: goeland.v1.RetentionService.ListMyDispositionApprovals:output_type -> goeland.v1.ListMyDispositionApprovalsResponse
+	37, // 72: goeland.v1.RetentionService.DecideDispositionItem:output_type -> goeland.v1.DecideDispositionItemResponse
+	29, // 73: goeland.v1.RetentionService.ExecuteDispositionBordereau:output_type -> goeland.v1.ExecuteDispositionBordereauResponse
+	30, // 74: goeland.v1.RetentionService.CancelDispositionBordereau:output_type -> goeland.v1.CancelDispositionBordereauResponse
+	60, // [60:75] is the sub-list for method output_type
+	45, // [45:60] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_retention_proto_init() }
@@ -1838,8 +3269,8 @@ func file_goeland_v1_retention_proto_init() {
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_retention_proto_rawDesc), len(file_goeland_v1_retention_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   20,
+			NumEnums:      4,
+			NumMessages:   37,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

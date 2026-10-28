@@ -36,7 +36,7 @@ func caseDocument(t *testing.T, env *testEnv, caseID uuid.UUID, content string, 
 // readArchive downloads an export as its requester and returns its files.
 func readArchive(t *testing.T, env *testEnv, id uuid.UUID, requester string) map[string][]byte {
 	t.Helper()
-	archive, err := env.exportSvc.OpenArchive(env.ctx, id, requester)
+	archive, err := env.exportSvc.OpenArchive(env.ctx, id, requester, false)
 	if err != nil {
 		t.Fatalf("open archive: %v", err)
 	}
@@ -132,7 +132,7 @@ func TestCaseExport(t *testing.T) {
 		t.Fatalf("a confidential document placed in an archive is recorded: %v", got)
 	}
 
-	if _, err := env.exportSvc.OpenArchive(env.ctx, exp.ID, reader.UserID); !errors.Is(err, core.ErrNotFound) {
+	if _, err := env.exportSvc.OpenArchive(env.ctx, exp.ID, reader.UserID, false); !errors.Is(err, core.ErrNotFound) {
 		t.Fatalf("only the requester downloads: %v", err)
 	}
 	if _, err := env.pool.Exec(env.ctx, `UPDATE case_export SET expires_at = now() - interval '1 second' WHERE id = $1`, exp.ID); err != nil {
@@ -141,7 +141,7 @@ func TestCaseExport(t *testing.T) {
 	if n, err := env.exportSvc.ExpireArchives(env.ctx); err != nil || n != 1 {
 		t.Fatalf("the expired archive is removed: %d (%v)", n, err)
 	}
-	if _, err := env.exportSvc.OpenArchive(env.ctx, exp.ID, manager.UserID); !errors.Is(err, core.ErrInvalidState) {
+	if _, err := env.exportSvc.OpenArchive(env.ctx, exp.ID, manager.UserID, false); !errors.Is(err, core.ErrInvalidState) {
 		t.Fatalf("an expired export cannot be downloaded: %v", err)
 	}
 

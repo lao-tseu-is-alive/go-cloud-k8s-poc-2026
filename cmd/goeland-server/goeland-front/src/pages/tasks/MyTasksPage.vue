@@ -4,6 +4,7 @@
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { listMyTasks } from '@/api/taskClient'
+  import DispositionApprovalsCard from '@/components/retention/DispositionApprovalsCard.vue'
   import TaskDialogs from '@/components/task/TaskDialogs.vue'
   import { TASK_STATUSES } from '@/components/task/taskForm'
   import TaskTable from '@/components/task/TaskTable.vue'
@@ -59,6 +60,8 @@
       <v-chip size="small">{{ t('tasks.mine.count', { n: total }) }}</v-chip>
       <v-chip v-if="overdue > 0" color="error" prepend-icon="mdi-alarm" size="small">{{ t('tasks.mine.overdue', { n: overdue }) }}</v-chip>
     </div>
+
+    <DispositionApprovalsCard />
 
     <v-card>
       <v-card-text>

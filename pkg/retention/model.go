@@ -133,6 +133,12 @@ type Retention struct {
 	EndedBy *string `db:"ended_by"`
 	// EndReason explains the end.
 	EndReason string `db:"end_reason"`
+	// DispositionStatus is the executed outcome (OutcomeArchived, OutcomeDisposed); nil while waiting.
+	DispositionStatus *string `db:"disposition_status"`
+	// DisposedAt is when the outcome was executed.
+	DisposedAt *time.Time `db:"disposed_at"`
+	// BordereauID is the bordereau that executed it.
+	BordereauID *uuid.UUID `db:"bordereau_id"`
 }
 
 // State is the audited state of a retention.

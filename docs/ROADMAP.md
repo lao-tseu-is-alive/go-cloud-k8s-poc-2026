@@ -413,7 +413,15 @@ covered by an integration test.
   owning unit; ARCHIVE produces the transfer package (the GLD-029 export) and freezes the case
   (ARCHIVED); DESTROY really deletes the document bytes no longer referenced elsewhere and keeps a
   minimal notice plus a permanent proof (bordereau, approvers, SHA-256 of the manifest).
-  `retention_until` / `sort_final` stay as read-only V1 preparation fields.
+  `retention_until` / `sort_final` stay as read-only V1 preparation fields. Step B decided 2026-10-28: an
+  elimination deletes the document bytes no longer referenced elsewhere, blanks the case's texts
+  (title, description, timeline bodies, task texts, document titles and metadata) and replaces the
+  business data of its audit states by a marker, through controlled exceptions to the immutability
+  triggers, keeping a minimal notice (reference, type, dates, policy) and the permanent proof; the
+  transfer package is a complete system export (GLD-029 format, no read filter, downloadable by
+  records managers only, recorded as EXPORT) and the case is then frozen (ARCHIVED); a case without
+  owning unit is approved by a holder of MANAGE on the case; the preparer never approves. Delivered
+  in two parts: B1 bordereaux, approval and transfer; B2 elimination.
 
 ## Phase 8 — AI proposal and MCP readiness (v2 §39-41)
 

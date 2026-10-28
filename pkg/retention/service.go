@@ -23,6 +23,13 @@ type Repository interface {
 	ReleaseHold(ctx context.Context, in HoldInput) (*Hold, *core.AuditEvent, error)
 	ListDue(ctx context.Context, filter DueFilter) (DueResult, error)
 	ApplyCaseType(ctx context.Context, in ApplyInput) (ApplyResult, error)
+	CreateBordereau(ctx context.Context, in BordereauInput) (*Bordereau, error)
+	GetBordereau(ctx context.Context, id uuid.UUID) (*Bordereau, error)
+	ListBordereaux(ctx context.Context, filter BordereauFilter) (BordereauList, error)
+	MyApprovals(ctx context.Context, operatorID string) ([]Approval, error)
+	Decide(ctx context.Context, in DecisionInput) (*Item, error)
+	Execute(ctx context.Context, id uuid.UUID, operatorID string) (*Bordereau, error)
+	Cancel(ctx context.Context, id uuid.UUID, reason, operatorID string) (*Bordereau, error)
 }
 
 // Service validates and runs the retention use cases.

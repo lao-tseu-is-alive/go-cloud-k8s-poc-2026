@@ -812,7 +812,46 @@
     "history": "History",
     "ended": "ended on {at}: {reason}",
     "released": "released on {at}: {reason}",
+    "archived": "Transferred on {at}",
+    "bordereau": {
+      "tab": "Bordereaux",
+      "title": "Disposition bordereau",
+      "create": "Prepare a bordereau",
+      "createN": "Prepare a bordereau ({n})",
+      "createHint": "{n} due case(s). Each will be approved by a manager of its owning unit (or of the case without one), never by you.",
+      "prepare": "Prepare",
+      "select": "Select the case",
+      "reason": "Reason",
+      "empty": "No bordereau.",
+      "preparedAt": "Prepared on",
+      "cases": "Cases",
+      "counts": "{total} ({pending} pending, {approved} approved)",
+      "status": "State",
+      "preparedBy": "Prepared on {at} by",
+      "closedBy": "Closed on {at} by",
+      "proof": "Proof (SHA-256 of the manifest):",
+      "approvalHint": "Each case waits for a decision of a manager of its owning unit. Execution is possible once all are decided; only the approved cases are handled.",
+      "execute": "Execute",
+      "executed": "Bordereau executed.",
+      "cancel": "Cancel the bordereau",
+      "cancelReason": "Reason for the cancellation",
+      "cancelled": "Bordereau cancelled.",
+      "approver": "Approved by",
+      "decision": "Decision",
+      "package": "Transfer package",
+      "download": "Download"
+    },
+    "approvals": {
+      "title": "Final dispositions to approve ({n})",
+      "hint": "The records manager proposes these due cases for transfer or destruction; you are responsible for them through their owning unit or the case.",
+      "approve": "Approve",
+      "reject": "Reject",
+      "approveReason": "Reason for the approval",
+      "rejectReason": "Reason for the rejection",
+      "done": "Decision recorded."
+    },
     "page": {
+      "dueTab": "Deadlines",
       "title": "Retention deadlines",
       "hint": "Cases whose retention ends on or before the chosen day, oldest deadline first. The final disposition (transfer, destruction) will come with the bordereaux.",
       "forbidden": "This page is for records managers (Records manager role) and administrators.",
@@ -1020,6 +1059,18 @@
       "ROLE_END_UNSPECIFIED": "—",
       "ROLE_END_TARGET": "the target",
       "ROLE_END_SOURCE": "the source"
+    },
+    "BordereauStatus": {
+      "BORDEREAU_STATUS_UNSPECIFIED": "—",
+      "BORDEREAU_STATUS_OPEN": "Open",
+      "BORDEREAU_STATUS_EXECUTED": "Executed",
+      "BORDEREAU_STATUS_CANCELLED": "Cancelled"
+    },
+    "DispositionDecision": {
+      "DISPOSITION_DECISION_UNSPECIFIED": "—",
+      "DISPOSITION_DECISION_PENDING": "Pending",
+      "DISPOSITION_DECISION_APPROVED": "Approved",
+      "DISPOSITION_DECISION_REJECTED": "Rejected"
     },
     "FinalDisposition": {
       "FINAL_DISPOSITION_UNSPECIFIED": "—",

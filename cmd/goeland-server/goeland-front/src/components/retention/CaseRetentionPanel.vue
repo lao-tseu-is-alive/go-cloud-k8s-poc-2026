@@ -83,7 +83,18 @@
       <div class="d-flex flex-wrap align-center ga-2">
         <strong>{{ t('retention.running', { until: formatDate(current.untilOn) }) }}</strong>
         <v-chip :color="dispositionColor(current.finalDisposition)" label size="small">{{ enumLabel('FinalDisposition', current.finalDisposition) }}</v-chip>
-        <v-chip v-if="due" color="warning" label size="small">{{ t('retention.due') }}</v-chip>
+
+        <v-chip
+          v-if="current.dispositionStatus === 'DISPOSITION_STATUS_ARCHIVED'"
+          color="primary"
+          label
+          prepend-icon="mdi-archive-check"
+          size="small"
+        >
+          {{ t('retention.archived', { at: formatDate(current.disposedAt) }) }}
+        </v-chip>
+
+        <v-chip v-else-if="due" color="warning" label size="small">{{ t('retention.due') }}</v-chip>
       </div>
 
       <div class="text-caption text-medium-emphasis">

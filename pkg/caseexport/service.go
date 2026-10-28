@@ -139,17 +139,24 @@ type Archive struct {
 }
 
 // OpenArchive opens a built archive for its requester, who must still hold
-// MANAGE on the case. A missing, foreign, unfinished or expired export is not found.
-func (s *Service) OpenArchive(ctx context.Context, id uuid.UUID, operatorID string) (*Archive, error) {
-	exp, err := s.Get(ctx, id, operatorID, false)
+// MANAGE on the case, or a transfer package for a records manager (records).
+// A missing, foreign, unfinished or expired export is not found.
+func (s *Service) OpenArchive(ctx context.Context, id uuid.UUID, operatorID string, records bool) (*Archive, error) {
+	exp, err := collectOne(s.pool.Query(ctx, getExportSQL, pgx.NamedArgs{"id": id}))
 	if err != nil {
 		return nil, err
+	}
+	transfer := exp.Purpose == PurposeTransfer
+	if (transfer && !records) || (!transfer && exp.RequestedBy != operatorID) {
+		return nil, core.ErrNotFound // another user's export is not disclosed
 	}
 	if exp.Status != StatusDone || exp.StorageRef == "" {
 		return nil, fmt.Errorf("%w: the export is %s", core.ErrInvalidState, strings.ToLower(string(exp.Status)))
 	}
-	if err := core.EnsureAccessTx(ctx, s.pool, operatorID, exp.CaseID, core.LevelManage); err != nil {
-		return nil, err
+	if !transfer {
+		if err := core.EnsureAccessTx(ctx, s.pool, operatorID, exp.CaseID, core.LevelManage); err != nil {
+			return nil, err
+		}
 	}
 	obj, err := s.store.Get(ctx, exp.StorageRef)
 	if err != nil {

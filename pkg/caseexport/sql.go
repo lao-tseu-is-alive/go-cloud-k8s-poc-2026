@@ -4,7 +4,7 @@ package caseexport
 
 const exportColumns = `
 x.id, x.case_id, x.requested_by, x.reason, x.status, x.requested_at, x.started_at, x.finished_at,
-x.expires_at, x.attempts, x.storage_ref, x.sha256, x.size_bytes, x.error`
+x.expires_at, x.attempts, x.storage_ref, x.sha256, x.size_bytes, x.error, x.purpose`
 
 const insertExportSQL = `
 INSERT INTO case_export AS x (case_id, requested_by, reason, request_id)
@@ -18,7 +18,7 @@ const getExportSQL = `SELECT ` + exportColumns + ` FROM case_export x WHERE x.id
 const listExportsSQL = `
 SELECT ` + exportColumns + `
 FROM case_export x
-WHERE x.case_id = @case_id AND (@requested_by = '' OR x.requested_by = @requested_by)
+WHERE x.case_id = @case_id AND x.purpose = 'COPY' AND (@requested_by = '' OR x.requested_by = @requested_by)
 ORDER BY x.requested_at DESC, x.id DESC
 LIMIT @limit;`
 

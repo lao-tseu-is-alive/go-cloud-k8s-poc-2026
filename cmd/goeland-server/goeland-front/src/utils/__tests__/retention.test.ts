@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { dispositionColor, isDue, zurichToday } from '../retention'
+import { bordereauStatusColor, decisionColor, dispositionColor, isDue, zurichToday } from '../retention'
 
 describe('retention', () => {
   it('takes today in Zurich, not in UTC', () => {
@@ -17,5 +17,7 @@ describe('retention', () => {
   it('colours the dispositions', () => {
     expect(dispositionColor('FINAL_DISPOSITION_DESTROY')).toBe('error')
     expect(dispositionColor(undefined)).toBe('default')
+    expect(bordereauStatusColor('BORDEREAU_STATUS_EXECUTED')).toBe('success')
+    expect(decisionColor('DISPOSITION_DECISION_PENDING')).toBe('warning')
   })
 })

@@ -6,8 +6,8 @@
 // default_retention_policy_code). Closing a case computes its retention in the
 // same transaction, as a snapshot of the policy; reopening ends it. A legal
 // hold blocks any disposal while it lasts. The case is the unit: its documents
-// follow it. Nothing here disposes of anything (step B: disposition
-// bordereaux).
+// follow it. Due cases are then handled through disposition bordereaux
+// (step B): approved per case, executed by the records manager.
 //
 // The policy catalogue is administered with goeland:admin and logged in the
 // reference change log; holds and the due list belong to the records manager
@@ -73,6 +73,27 @@ const (
 	// RetentionServiceApplyCaseTypeRetentionProcedure is the fully-qualified name of the
 	// RetentionService's ApplyCaseTypeRetention RPC.
 	RetentionServiceApplyCaseTypeRetentionProcedure = "/goeland.v1.RetentionService/ApplyCaseTypeRetention"
+	// RetentionServiceCreateDispositionBordereauProcedure is the fully-qualified name of the
+	// RetentionService's CreateDispositionBordereau RPC.
+	RetentionServiceCreateDispositionBordereauProcedure = "/goeland.v1.RetentionService/CreateDispositionBordereau"
+	// RetentionServiceListDispositionBordereauxProcedure is the fully-qualified name of the
+	// RetentionService's ListDispositionBordereaux RPC.
+	RetentionServiceListDispositionBordereauxProcedure = "/goeland.v1.RetentionService/ListDispositionBordereaux"
+	// RetentionServiceGetDispositionBordereauProcedure is the fully-qualified name of the
+	// RetentionService's GetDispositionBordereau RPC.
+	RetentionServiceGetDispositionBordereauProcedure = "/goeland.v1.RetentionService/GetDispositionBordereau"
+	// RetentionServiceListMyDispositionApprovalsProcedure is the fully-qualified name of the
+	// RetentionService's ListMyDispositionApprovals RPC.
+	RetentionServiceListMyDispositionApprovalsProcedure = "/goeland.v1.RetentionService/ListMyDispositionApprovals"
+	// RetentionServiceDecideDispositionItemProcedure is the fully-qualified name of the
+	// RetentionService's DecideDispositionItem RPC.
+	RetentionServiceDecideDispositionItemProcedure = "/goeland.v1.RetentionService/DecideDispositionItem"
+	// RetentionServiceExecuteDispositionBordereauProcedure is the fully-qualified name of the
+	// RetentionService's ExecuteDispositionBordereau RPC.
+	RetentionServiceExecuteDispositionBordereauProcedure = "/goeland.v1.RetentionService/ExecuteDispositionBordereau"
+	// RetentionServiceCancelDispositionBordereauProcedure is the fully-qualified name of the
+	// RetentionService's CancelDispositionBordereau RPC.
+	RetentionServiceCancelDispositionBordereauProcedure = "/goeland.v1.RetentionService/CancelDispositionBordereau"
 )
 
 // RetentionServiceClient is a client for the goeland.v1.RetentionService service.
@@ -93,6 +114,21 @@ type RetentionServiceClient interface {
 	ListDueRetentions(context.Context, *connect.Request[v1.ListDueRetentionsRequest]) (*connect.Response[v1.ListDueRetentionsResponse], error)
 	// Give a case type's policy to its closed cases without retention. Requires goeland:admin.
 	ApplyCaseTypeRetention(context.Context, *connect.Request[v1.ApplyCaseTypeRetentionRequest]) (*connect.Response[v1.ApplyCaseTypeRetentionResponse], error)
+	// Prepare a disposition bordereau. Requires goeland:records.
+	CreateDispositionBordereau(context.Context, *connect.Request[v1.CreateDispositionBordereauRequest]) (*connect.Response[v1.CreateDispositionBordereauResponse], error)
+	// List the bordereaux. Requires goeland:records.
+	ListDispositionBordereaux(context.Context, *connect.Request[v1.ListDispositionBordereauxRequest]) (*connect.Response[v1.ListDispositionBordereauxResponse], error)
+	// Read a bordereau with its cases. Requires goeland:records.
+	GetDispositionBordereau(context.Context, *connect.Request[v1.GetDispositionBordereauRequest]) (*connect.Response[v1.GetDispositionBordereauResponse], error)
+	// List the cases waiting for the caller's approval. Requires goeland:read.
+	ListMyDispositionApprovals(context.Context, *connect.Request[v1.ListMyDispositionApprovalsRequest]) (*connect.Response[v1.ListMyDispositionApprovalsResponse], error)
+	// Approve or reject a case of a bordereau. Requires goeland:write and MANAGE
+	// on the approver subject; the preparer never decides.
+	DecideDispositionItem(context.Context, *connect.Request[v1.DecideDispositionItemRequest]) (*connect.Response[v1.DecideDispositionItemResponse], error)
+	// Execute a bordereau whose cases are all decided. Requires goeland:records.
+	ExecuteDispositionBordereau(context.Context, *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error)
+	// Abandon an open bordereau. Requires goeland:records.
+	CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error)
 }
 
 // NewRetentionServiceClient constructs a client for the goeland.v1.RetentionService service. By
@@ -154,19 +190,68 @@ func NewRetentionServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(retentionServiceMethods.ByName("ApplyCaseTypeRetention")),
 			connect.WithClientOptions(opts...),
 		),
+		createDispositionBordereau: connect.NewClient[v1.CreateDispositionBordereauRequest, v1.CreateDispositionBordereauResponse](
+			httpClient,
+			baseURL+RetentionServiceCreateDispositionBordereauProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("CreateDispositionBordereau")),
+			connect.WithClientOptions(opts...),
+		),
+		listDispositionBordereaux: connect.NewClient[v1.ListDispositionBordereauxRequest, v1.ListDispositionBordereauxResponse](
+			httpClient,
+			baseURL+RetentionServiceListDispositionBordereauxProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("ListDispositionBordereaux")),
+			connect.WithClientOptions(opts...),
+		),
+		getDispositionBordereau: connect.NewClient[v1.GetDispositionBordereauRequest, v1.GetDispositionBordereauResponse](
+			httpClient,
+			baseURL+RetentionServiceGetDispositionBordereauProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("GetDispositionBordereau")),
+			connect.WithClientOptions(opts...),
+		),
+		listMyDispositionApprovals: connect.NewClient[v1.ListMyDispositionApprovalsRequest, v1.ListMyDispositionApprovalsResponse](
+			httpClient,
+			baseURL+RetentionServiceListMyDispositionApprovalsProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("ListMyDispositionApprovals")),
+			connect.WithClientOptions(opts...),
+		),
+		decideDispositionItem: connect.NewClient[v1.DecideDispositionItemRequest, v1.DecideDispositionItemResponse](
+			httpClient,
+			baseURL+RetentionServiceDecideDispositionItemProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("DecideDispositionItem")),
+			connect.WithClientOptions(opts...),
+		),
+		executeDispositionBordereau: connect.NewClient[v1.ExecuteDispositionBordereauRequest, v1.ExecuteDispositionBordereauResponse](
+			httpClient,
+			baseURL+RetentionServiceExecuteDispositionBordereauProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("ExecuteDispositionBordereau")),
+			connect.WithClientOptions(opts...),
+		),
+		cancelDispositionBordereau: connect.NewClient[v1.CancelDispositionBordereauRequest, v1.CancelDispositionBordereauResponse](
+			httpClient,
+			baseURL+RetentionServiceCancelDispositionBordereauProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("CancelDispositionBordereau")),
+			connect.WithClientOptions(opts...),
+		),
 	}
 }
 
 // retentionServiceClient implements RetentionServiceClient.
 type retentionServiceClient struct {
-	listRetentionPolicies  *connect.Client[v1.ListRetentionPoliciesRequest, v1.ListRetentionPoliciesResponse]
-	createRetentionPolicy  *connect.Client[v1.CreateRetentionPolicyRequest, v1.CreateRetentionPolicyResponse]
-	updateRetentionPolicy  *connect.Client[v1.UpdateRetentionPolicyRequest, v1.UpdateRetentionPolicyResponse]
-	getCaseRetention       *connect.Client[v1.GetCaseRetentionRequest, v1.GetCaseRetentionResponse]
-	placeRetentionHold     *connect.Client[v1.PlaceRetentionHoldRequest, v1.PlaceRetentionHoldResponse]
-	releaseRetentionHold   *connect.Client[v1.ReleaseRetentionHoldRequest, v1.ReleaseRetentionHoldResponse]
-	listDueRetentions      *connect.Client[v1.ListDueRetentionsRequest, v1.ListDueRetentionsResponse]
-	applyCaseTypeRetention *connect.Client[v1.ApplyCaseTypeRetentionRequest, v1.ApplyCaseTypeRetentionResponse]
+	listRetentionPolicies       *connect.Client[v1.ListRetentionPoliciesRequest, v1.ListRetentionPoliciesResponse]
+	createRetentionPolicy       *connect.Client[v1.CreateRetentionPolicyRequest, v1.CreateRetentionPolicyResponse]
+	updateRetentionPolicy       *connect.Client[v1.UpdateRetentionPolicyRequest, v1.UpdateRetentionPolicyResponse]
+	getCaseRetention            *connect.Client[v1.GetCaseRetentionRequest, v1.GetCaseRetentionResponse]
+	placeRetentionHold          *connect.Client[v1.PlaceRetentionHoldRequest, v1.PlaceRetentionHoldResponse]
+	releaseRetentionHold        *connect.Client[v1.ReleaseRetentionHoldRequest, v1.ReleaseRetentionHoldResponse]
+	listDueRetentions           *connect.Client[v1.ListDueRetentionsRequest, v1.ListDueRetentionsResponse]
+	applyCaseTypeRetention      *connect.Client[v1.ApplyCaseTypeRetentionRequest, v1.ApplyCaseTypeRetentionResponse]
+	createDispositionBordereau  *connect.Client[v1.CreateDispositionBordereauRequest, v1.CreateDispositionBordereauResponse]
+	listDispositionBordereaux   *connect.Client[v1.ListDispositionBordereauxRequest, v1.ListDispositionBordereauxResponse]
+	getDispositionBordereau     *connect.Client[v1.GetDispositionBordereauRequest, v1.GetDispositionBordereauResponse]
+	listMyDispositionApprovals  *connect.Client[v1.ListMyDispositionApprovalsRequest, v1.ListMyDispositionApprovalsResponse]
+	decideDispositionItem       *connect.Client[v1.DecideDispositionItemRequest, v1.DecideDispositionItemResponse]
+	executeDispositionBordereau *connect.Client[v1.ExecuteDispositionBordereauRequest, v1.ExecuteDispositionBordereauResponse]
+	cancelDispositionBordereau  *connect.Client[v1.CancelDispositionBordereauRequest, v1.CancelDispositionBordereauResponse]
 }
 
 // ListRetentionPolicies calls goeland.v1.RetentionService.ListRetentionPolicies.
@@ -209,6 +294,41 @@ func (c *retentionServiceClient) ApplyCaseTypeRetention(ctx context.Context, req
 	return c.applyCaseTypeRetention.CallUnary(ctx, req)
 }
 
+// CreateDispositionBordereau calls goeland.v1.RetentionService.CreateDispositionBordereau.
+func (c *retentionServiceClient) CreateDispositionBordereau(ctx context.Context, req *connect.Request[v1.CreateDispositionBordereauRequest]) (*connect.Response[v1.CreateDispositionBordereauResponse], error) {
+	return c.createDispositionBordereau.CallUnary(ctx, req)
+}
+
+// ListDispositionBordereaux calls goeland.v1.RetentionService.ListDispositionBordereaux.
+func (c *retentionServiceClient) ListDispositionBordereaux(ctx context.Context, req *connect.Request[v1.ListDispositionBordereauxRequest]) (*connect.Response[v1.ListDispositionBordereauxResponse], error) {
+	return c.listDispositionBordereaux.CallUnary(ctx, req)
+}
+
+// GetDispositionBordereau calls goeland.v1.RetentionService.GetDispositionBordereau.
+func (c *retentionServiceClient) GetDispositionBordereau(ctx context.Context, req *connect.Request[v1.GetDispositionBordereauRequest]) (*connect.Response[v1.GetDispositionBordereauResponse], error) {
+	return c.getDispositionBordereau.CallUnary(ctx, req)
+}
+
+// ListMyDispositionApprovals calls goeland.v1.RetentionService.ListMyDispositionApprovals.
+func (c *retentionServiceClient) ListMyDispositionApprovals(ctx context.Context, req *connect.Request[v1.ListMyDispositionApprovalsRequest]) (*connect.Response[v1.ListMyDispositionApprovalsResponse], error) {
+	return c.listMyDispositionApprovals.CallUnary(ctx, req)
+}
+
+// DecideDispositionItem calls goeland.v1.RetentionService.DecideDispositionItem.
+func (c *retentionServiceClient) DecideDispositionItem(ctx context.Context, req *connect.Request[v1.DecideDispositionItemRequest]) (*connect.Response[v1.DecideDispositionItemResponse], error) {
+	return c.decideDispositionItem.CallUnary(ctx, req)
+}
+
+// ExecuteDispositionBordereau calls goeland.v1.RetentionService.ExecuteDispositionBordereau.
+func (c *retentionServiceClient) ExecuteDispositionBordereau(ctx context.Context, req *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error) {
+	return c.executeDispositionBordereau.CallUnary(ctx, req)
+}
+
+// CancelDispositionBordereau calls goeland.v1.RetentionService.CancelDispositionBordereau.
+func (c *retentionServiceClient) CancelDispositionBordereau(ctx context.Context, req *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error) {
+	return c.cancelDispositionBordereau.CallUnary(ctx, req)
+}
+
 // RetentionServiceHandler is an implementation of the goeland.v1.RetentionService service.
 type RetentionServiceHandler interface {
 	// List the retention policies. Requires goeland:read.
@@ -227,6 +347,21 @@ type RetentionServiceHandler interface {
 	ListDueRetentions(context.Context, *connect.Request[v1.ListDueRetentionsRequest]) (*connect.Response[v1.ListDueRetentionsResponse], error)
 	// Give a case type's policy to its closed cases without retention. Requires goeland:admin.
 	ApplyCaseTypeRetention(context.Context, *connect.Request[v1.ApplyCaseTypeRetentionRequest]) (*connect.Response[v1.ApplyCaseTypeRetentionResponse], error)
+	// Prepare a disposition bordereau. Requires goeland:records.
+	CreateDispositionBordereau(context.Context, *connect.Request[v1.CreateDispositionBordereauRequest]) (*connect.Response[v1.CreateDispositionBordereauResponse], error)
+	// List the bordereaux. Requires goeland:records.
+	ListDispositionBordereaux(context.Context, *connect.Request[v1.ListDispositionBordereauxRequest]) (*connect.Response[v1.ListDispositionBordereauxResponse], error)
+	// Read a bordereau with its cases. Requires goeland:records.
+	GetDispositionBordereau(context.Context, *connect.Request[v1.GetDispositionBordereauRequest]) (*connect.Response[v1.GetDispositionBordereauResponse], error)
+	// List the cases waiting for the caller's approval. Requires goeland:read.
+	ListMyDispositionApprovals(context.Context, *connect.Request[v1.ListMyDispositionApprovalsRequest]) (*connect.Response[v1.ListMyDispositionApprovalsResponse], error)
+	// Approve or reject a case of a bordereau. Requires goeland:write and MANAGE
+	// on the approver subject; the preparer never decides.
+	DecideDispositionItem(context.Context, *connect.Request[v1.DecideDispositionItemRequest]) (*connect.Response[v1.DecideDispositionItemResponse], error)
+	// Execute a bordereau whose cases are all decided. Requires goeland:records.
+	ExecuteDispositionBordereau(context.Context, *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error)
+	// Abandon an open bordereau. Requires goeland:records.
+	CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error)
 }
 
 // NewRetentionServiceHandler builds an HTTP handler from the service implementation. It returns the
@@ -284,6 +419,48 @@ func NewRetentionServiceHandler(svc RetentionServiceHandler, opts ...connect.Han
 		connect.WithSchema(retentionServiceMethods.ByName("ApplyCaseTypeRetention")),
 		connect.WithHandlerOptions(opts...),
 	)
+	retentionServiceCreateDispositionBordereauHandler := connect.NewUnaryHandler(
+		RetentionServiceCreateDispositionBordereauProcedure,
+		svc.CreateDispositionBordereau,
+		connect.WithSchema(retentionServiceMethods.ByName("CreateDispositionBordereau")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceListDispositionBordereauxHandler := connect.NewUnaryHandler(
+		RetentionServiceListDispositionBordereauxProcedure,
+		svc.ListDispositionBordereaux,
+		connect.WithSchema(retentionServiceMethods.ByName("ListDispositionBordereaux")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceGetDispositionBordereauHandler := connect.NewUnaryHandler(
+		RetentionServiceGetDispositionBordereauProcedure,
+		svc.GetDispositionBordereau,
+		connect.WithSchema(retentionServiceMethods.ByName("GetDispositionBordereau")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceListMyDispositionApprovalsHandler := connect.NewUnaryHandler(
+		RetentionServiceListMyDispositionApprovalsProcedure,
+		svc.ListMyDispositionApprovals,
+		connect.WithSchema(retentionServiceMethods.ByName("ListMyDispositionApprovals")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceDecideDispositionItemHandler := connect.NewUnaryHandler(
+		RetentionServiceDecideDispositionItemProcedure,
+		svc.DecideDispositionItem,
+		connect.WithSchema(retentionServiceMethods.ByName("DecideDispositionItem")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceExecuteDispositionBordereauHandler := connect.NewUnaryHandler(
+		RetentionServiceExecuteDispositionBordereauProcedure,
+		svc.ExecuteDispositionBordereau,
+		connect.WithSchema(retentionServiceMethods.ByName("ExecuteDispositionBordereau")),
+		connect.WithHandlerOptions(opts...),
+	)
+	retentionServiceCancelDispositionBordereauHandler := connect.NewUnaryHandler(
+		RetentionServiceCancelDispositionBordereauProcedure,
+		svc.CancelDispositionBordereau,
+		connect.WithSchema(retentionServiceMethods.ByName("CancelDispositionBordereau")),
+		connect.WithHandlerOptions(opts...),
+	)
 	return "/goeland.v1.RetentionService/", http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		switch r.URL.Path {
 		case RetentionServiceListRetentionPoliciesProcedure:
@@ -302,6 +479,20 @@ func NewRetentionServiceHandler(svc RetentionServiceHandler, opts ...connect.Han
 			retentionServiceListDueRetentionsHandler.ServeHTTP(w, r)
 		case RetentionServiceApplyCaseTypeRetentionProcedure:
 			retentionServiceApplyCaseTypeRetentionHandler.ServeHTTP(w, r)
+		case RetentionServiceCreateDispositionBordereauProcedure:
+			retentionServiceCreateDispositionBordereauHandler.ServeHTTP(w, r)
+		case RetentionServiceListDispositionBordereauxProcedure:
+			retentionServiceListDispositionBordereauxHandler.ServeHTTP(w, r)
+		case RetentionServiceGetDispositionBordereauProcedure:
+			retentionServiceGetDispositionBordereauHandler.ServeHTTP(w, r)
+		case RetentionServiceListMyDispositionApprovalsProcedure:
+			retentionServiceListMyDispositionApprovalsHandler.ServeHTTP(w, r)
+		case RetentionServiceDecideDispositionItemProcedure:
+			retentionServiceDecideDispositionItemHandler.ServeHTTP(w, r)
+		case RetentionServiceExecuteDispositionBordereauProcedure:
+			retentionServiceExecuteDispositionBordereauHandler.ServeHTTP(w, r)
+		case RetentionServiceCancelDispositionBordereauProcedure:
+			retentionServiceCancelDispositionBordereauHandler.ServeHTTP(w, r)
 		default:
 			http.NotFound(w, r)
 		}
@@ -341,4 +532,32 @@ func (UnimplementedRetentionServiceHandler) ListDueRetentions(context.Context, *
 
 func (UnimplementedRetentionServiceHandler) ApplyCaseTypeRetention(context.Context, *connect.Request[v1.ApplyCaseTypeRetentionRequest]) (*connect.Response[v1.ApplyCaseTypeRetentionResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.ApplyCaseTypeRetention is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) CreateDispositionBordereau(context.Context, *connect.Request[v1.CreateDispositionBordereauRequest]) (*connect.Response[v1.CreateDispositionBordereauResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.CreateDispositionBordereau is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) ListDispositionBordereaux(context.Context, *connect.Request[v1.ListDispositionBordereauxRequest]) (*connect.Response[v1.ListDispositionBordereauxResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.ListDispositionBordereaux is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) GetDispositionBordereau(context.Context, *connect.Request[v1.GetDispositionBordereauRequest]) (*connect.Response[v1.GetDispositionBordereauResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.GetDispositionBordereau is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) ListMyDispositionApprovals(context.Context, *connect.Request[v1.ListMyDispositionApprovalsRequest]) (*connect.Response[v1.ListMyDispositionApprovalsResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.ListMyDispositionApprovals is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) DecideDispositionItem(context.Context, *connect.Request[v1.DecideDispositionItemRequest]) (*connect.Response[v1.DecideDispositionItemResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.DecideDispositionItem is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) ExecuteDispositionBordereau(context.Context, *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.ExecuteDispositionBordereau is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.CancelDispositionBordereau is not implemented"))
 }

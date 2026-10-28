@@ -21,7 +21,8 @@ import (
 const exportDownloadDeadline = 30 * time.Minute
 
 // exportContentHandler streams a built case export archive (GLD-029) to its
-// requester, who must still hold MANAGE on the case. Like the document content
+// requester, who must still hold MANAGE on the case, or a transfer package
+// (GLD-032) to a records manager. Like the document content
 // download it is out of proto, behind httpAuthMiddleware.
 func exportContentHandler(exports *caseexport.Service, log *slog.Logger) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
@@ -31,7 +32,7 @@ func exportContentHandler(exports *caseexport.Service, log *slog.Logger) http.Ha
 			return
 		}
 		user, _ := authadapter.UserFromContext(r.Context())
-		archive, err := exports.OpenArchive(r.Context(), id, core.OperatorID(user))
+		archive, err := exports.OpenArchive(r.Context(), id, core.OperatorID(user), user.HasScope(core.ScopeRecords))
 		if err != nil {
 			writeExportError(w, log, err)
 			return
