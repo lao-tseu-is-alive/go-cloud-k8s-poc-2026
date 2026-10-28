@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.18.1**.
+Tracked version: **v0.19.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -44,7 +44,9 @@ the City's map (GLD-069) followed the same model in v0.16.0; the labels of unrea
 (GLD-070), the typed-routes warning (GLD-071) and Go 1.27.3 with the dependency updates shipped in
 v0.16.1; Echo 4.16.2 (security patch) in v0.16.2; the global search (GLD-064) and the list filters by
 period and creator (GLD-074) in v0.17.0; the document page on the same model (GLD-075) in
-v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and quick fixes in v0.18.1.
+v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and quick fixes in v0.18.1; the SPA icons by import (GLD-073), the SPA types
+checked against the protos (GLD-072) and observability — Prometheus metrics and OpenTelemetry
+traces (GLD-010) — in v0.19.0.
 
 ## Cross-cutting quality
 
@@ -89,7 +91,7 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
 - [~] **GLD-009 — Frontend tests**: add unit/component tests to the SPA. Started with
   GLD-042: Vitest on the pure `utils/` modules in `make front-check`, the contact rules checked
   against the server's own cases (shared fixture); component tests remain.
-- [~] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces. The pool
+- [x] **GLD-010 — Observability**: Prometheus metrics and OpenTelemetry traces. The pool
   statistics now shown by the public `/health` move to the metrics endpoint. Decided 2026-10-28,
   in two steps: (1) Prometheus metrics on their own listener (`GOELAND_METRICS_ADDRESS`, off when
   empty, never on the public port): requests and durations per RPC or route pattern (bounded
@@ -154,7 +156,7 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
 - [x] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
   typed routes (review `reports/report_20261014_gpt-5.md`). Done 2026-10-20: the SPA declares its
   routes by hand, so the vue-router Volar plugins for file-based routing were removed instead.
-- [~] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
+- [x] **GLD-072 — SPA types checked against the proto**: `src/api/types.ts` is written by hand, so
   type-checking proves the SPA consistent with itself, not with the contract. Generate TypeScript
   types from the protos for a CI comparison only (no connect-es at runtime), so a field renamed or
   added in a proto fails `make check` until the SPA follows (review `reports/report_20261014_gpt-5.md`). Done
@@ -164,7 +166,7 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
   missing enum value were each shown to fail. "Added" applies to enum values: the hand types
   keep covering only the fields the SPA uses. It found the `Struct` fields typed too loosely and
   the group, membership and "my tasks" answers sharing a shape the server never sends.
-- [~] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
+- [x] **GLD-073 — Icons by import**: the SPA loads the whole Material Design Icons font and its
   ~690 KB stylesheet for the few dozen icons it uses; switch to `@mdi/js` SVG icons (Vuetify's
   `mdi-svg` set) so only the icons used are bundled (review `reports/report_20261014_gpt-5.md`). Done
   2026-10-28: a registry (`plugins/icons.ts`) maps the 102 `mdi-*` names to `@mdi/js` paths for

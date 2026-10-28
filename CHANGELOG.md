@@ -8,6 +8,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.19.0] - 2026-10-28
+
+Observability and front-end quality: Prometheus metrics on a separate listener and OpenTelemetry
+traces (both off by default), the SPA's API types checked against the protos, the icons bundled
+one by one, and a dependency security update. `/health` no longer shows the database pool
+statistics. No migration, no API change.
+
 ### Security
 
 - `golang.org/x/net` 0.62.0 fixes GO-2026-6866 and GO-2026-6860 (govulncheck found them in a
