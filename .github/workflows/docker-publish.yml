@@ -64,7 +64,7 @@ jobs:
       - name: Log into registry ${{ env.REGISTRY }}
         # v4.6.0 - pinned to commit SHA to prevent supply chain attacks,
         # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        uses: docker/login-action@81c6f93d4bc991e510b342a00b419b3bb4efc5c6
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
