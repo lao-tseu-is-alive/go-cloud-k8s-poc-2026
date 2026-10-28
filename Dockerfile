@@ -3,7 +3,7 @@
 # checkout (dist/ is git-ignored). Mirrors the `make front-build` step.
 # Base images are pinned by digest (GLD-059): a moved tag cannot change the build;
 # Dependabot proposes the updates and `make build-inputs-check` refuses a bare tag.
-FROM oven/bun:1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS frontend
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS frontend
 WORKDIR /app/cmd/goeland-server/goeland-front
 # Install deps first (cached until the manifest/lockfile change).
 COPY cmd/goeland-server/goeland-front/package.json cmd/goeland-server/goeland-front/bun.lock ./
