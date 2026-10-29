@@ -8,6 +8,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.22.0] - 2026-10-29
+
+Migrations separated from the runtime (GLD-046): the schema owner runs `goeland-server migrate`,
+which also grants the server's role row privileges only; with `GOELAND_DB_MIGRATE=verify` the
+server never migrates, so it can neither alter the schema nor drop the audit triggers. The default
+(`auto`) is unchanged for local work. Deployment change: the k8s manifests add a `migrate` init
+container and a runtime role `goeland_app` (Secret key `DB_APP_PASSWORD`); read
+`docs/PRODUCTION_READINESS.md` §2.
+
 ### Security
 
 - Migrations separated from the runtime (GLD-046): `goeland-server migrate` applies the

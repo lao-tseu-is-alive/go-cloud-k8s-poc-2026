@@ -70,7 +70,7 @@ spec:
       initContainers:
         # Applies the migrations as the schema owner, grants goeland_app, exits.
         - name: migrate
-          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.21.1
+          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.22.0
           imagePullPolicy: IfNotPresent
           command: ["./goeland-server", "migrate"]
           envFrom:
@@ -88,7 +88,7 @@ spec:
             limits: { cpu: 500m, memory: 128Mi }
       containers:
         - name: goeland
-          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.21.1
+          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.22.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
