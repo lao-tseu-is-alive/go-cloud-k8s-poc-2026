@@ -16,17 +16,20 @@ var configEnv = []string{
 	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
 	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DISPOSAL_ENABLED", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
-	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "LOG_LEVEL",
+	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "JWT_ISSUER_ID", "JWT_SECRET", "LOG_LEVEL",
 }
 
 // setConfigEnv blanks the configuration environment, then sets values; a
-// database password placeholder is always present unless overridden.
+// database password and the jwt mode secret and issuer placeholders are always
+// present unless overridden.
 func setConfigEnv(t *testing.T, values map[string]string) {
 	t.Helper()
 	for _, name := range configEnv {
 		t.Setenv(name, "")
 	}
 	t.Setenv("DB_PASSWORD", "<db-password>")
+	t.Setenv("JWT_SECRET", "<jwt-secret-placeholder>")
+	t.Setenv("JWT_ISSUER_ID", "<jwt-issuer-placeholder>")
 	for name, value := range values {
 		t.Setenv(name, value)
 	}
@@ -42,7 +45,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.MaxConnections != defaultMaxConnections || cfg.RequestTimeout != defaultRequestTimeout ||
 		cfg.ShutdownPeriod != defaultShutdownPeriod || cfg.DBConnectTimeout != defaultDBConnectTimeout ||
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
-		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled {
+		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled ||
+		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -100,6 +104,8 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"plain http auth url", map[string]string{"AUTH_SERVER_URL": "http://auth.example.ch"}, "must use https outside loopback"},
 		{"disposal not exactly true", map[string]string{"GOELAND_DISPOSAL_ENABLED": "1"}, "GOELAND_DISPOSAL_ENABLED must be exactly true or false"},
 		{"disposal capitalized", map[string]string{"GOELAND_DISPOSAL_ENABLED": "True"}, "GOELAND_DISPOSAL_ENABLED must be exactly true or false"},
+		{"jwt without secret", map[string]string{"JWT_SECRET": ""}, "JWT_SECRET is required in jwt mode"},
+		{"jwt issuer too short", map[string]string{"JWT_ISSUER_ID": "short"}, "JWT_ISSUER_ID is required in jwt mode (at least 16 characters)"},
 		{"too many bootstrap admins", map[string]string{"GOELAND_BOOTSTRAP_ADMINS": strings.Repeat("1,", maxBootstrapAdmins+1)}, "more than 20 user ids"},
 	}
 	for _, c := range cases {

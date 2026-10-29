@@ -5,12 +5,3 @@
 
 # Every entry carries an exp: date so it lapses and must be re-reviewed instead
 # of silently hiding a future advisory.
-
-# GO-2026-5932: golang.org/x/crypto/openpgp is unmaintained / unsafe by design.
-# Re-verified 2026-10-28 with x/crypto v0.58.0, still the latest (first seen 2026-09-24, v0.5.0 image):
-#   - `go list -deps ./cmd/goeland-server` reports zero openpgp packages;
-#   - `make vuln-check` (govulncheck, symbol level) reports the code is not affected;
-#   - x/crypto only arrives via go-cloud-k8s-common-libs -> Echo -> x/crypto/acme.
-# Trivy flags this module-level advisory from the x/crypto version in the binary's
-# build metadata, not from reachable code. UNKNOWN severity, no fix available.
-GO-2026-5932 exp:2026-12-31

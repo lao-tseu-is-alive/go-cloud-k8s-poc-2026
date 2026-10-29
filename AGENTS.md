@@ -314,8 +314,10 @@ bash, `set -euo pipefail` where practical, and never echo secret values.
 
 Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
 
-- `jwt` (default): non-`pat_` bearer tokens verified locally (needs `JWT_SECRET`,
-  `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`); `pat_` tokens introspected against
+- `jwt` (default): non-`pat_` bearer tokens verified locally by `authadapter.JWTVerifier` (HS512,
+  expiry required, issuer checked; needs `JWT_SECRET` and `JWT_ISSUER_ID`, at least 16 characters,
+  the same values as the auth service; GLD-078 removed the Echo-based checker of
+  `go-cloud-k8s-common-libs`); `pat_` tokens introspected against
   `<AUTH_SERVER_URL>/goapi/v1/auth/introspect` (cached ~60s).
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
   (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` bootstraps it as

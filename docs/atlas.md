@@ -156,10 +156,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/authadapter/doc.go` — Package documentation for the shared token verification adapter.
 - `pkg/authadapter/interceptor.go` — `TokenVerifier` interface and the Connect authentication interceptor.
 - `pkg/authadapter/interceptor_test.go` — Tests the interceptor, admin scope wildcard and composite nil handling.
+- `pkg/authadapter/jwt_verifier.go` — JWT verifier for the go-cloud-k8s-auth tokens: HS512 signature, required expiry, issuer, user claims mapped to scopes (GLD-078).
+- `pkg/authadapter/jwt_verifier_test.go` — Tests JWT claim mapping, the auth service payload format and every refusal (secret, algorithm, expiry, issuer, user).
 - `pkg/authadapter/pat_verifier.go` — Personal access token verification by cached introspection against the auth server.
 - `pkg/authadapter/pat_verifier_test.go` — Tests PAT introspection, server failure, prefix routing and the bounded cache.
-- `pkg/authadapter/verifiers.go` — Local JWT verifier (signature, issuer, scopes) and the single-user dev token verifier.
-- `pkg/authadapter/verifiers_test.go` — Tests dev token and JWT claim mapping.
+- `pkg/authadapter/verifiers.go` — `ErrInvalidToken` and the single-user dev token verifier.
+- `pkg/authadapter/verifiers_test.go` — Tests the dev token verifier.
 - `pkg/legacyimport/actors.go` — Import stages of the actors (person minimal identity, organization), their typed contacts checked by the API rules, and their correspondence address.
 - `pkg/legacyimport/cases.go` — Import stages of the case types (default confidentiality), cases (status, confidentiality, legacy number as business reference) and case grants (level mapping).
 - `pkg/legacyimport/doc.go` — Package documentation of the legacy data import: one transaction, set-based loading, deterministic ids, provenance and one batch marker.

@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- JWT verification without Echo (GLD-078): Goéland verifies the go-cloud-k8s-auth tokens itself
+  (`pkg/authadapter/jwt_verifier.go`) instead of through `go-cloud-k8s-common-libs/pkg/goHttpEcho`,
+  which linked the Echo framework flagged by CVE-2026-118651 and CVE-2026-118653 (unreachable here:
+  no Echo server, proxy or rate limiter ran). The check is stricter: the issuer must be
+  `JWT_ISSUER_ID` and an expiry is required; token content is never logged. `JWT_CONTEXT_KEY` and
+  `JWT_DURATION_MINUTES` are no longer read. Echo, `golang.org/x/crypto` and the GO-2026-5932
+  suppression are gone.
+
 ## [0.21.0] - 2026-10-29
 
 Elimination of cases (GLD-077): an approved elimination bordereau keeps each case as a notice and

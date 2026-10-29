@@ -100,8 +100,10 @@ roadmap item — see [IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_S
 `GOELAND_AUTH_MODE` selects the verifier:
 
 - `jwt` (default, production): validates short-lived JWTs from `go-cloud-k8s-auth` and
-  accepts PATs introspected against `AUTH_SERVER_URL`. Requires the JWT settings:
-  `JWT_SECRET`, `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY`, `JWT_DURATION_MINUTES`.
+  accepts PATs introspected against `AUTH_SERVER_URL`. Requires `JWT_SECRET` and `JWT_ISSUER_ID`
+  (at least 16 characters, the same values as the auth service; startup fails otherwise): a token
+  is accepted only if signed in HS512 with that secret, issued by that issuer, unexpired and naming
+  a user.
 - `dev` (local only): accepts one static token. Requires `GOELAND_DEV_TOKEN` (startup
   fails without it) and the `GOELAND_DEV_USER_*` identity fields (`GOELAND_DEV_USER_ADMIN=true`
   bootstraps the dev user as administrator). **Never enable in production.**

@@ -254,7 +254,7 @@ JWTs from `<AUTH_SERVER_URL>/auth/token` (cookie sent with `credentials: include
      (a prefix match on a path boundary; otherwise it logs `login: redirect_uri not in allowlist`);
    - `ALLOWED_ORIGINS` (CORS) must contain the same origin, for the token and logout calls.
 2. Configure this server (`.env`): `GOELAND_AUTH_MODE=jwt`, `AUTH_SERVER_URL=http://localhost:9090`,
-   and `JWT_SECRET`, `JWT_ISSUER_ID`, `JWT_CONTEXT_KEY` with **the same values as the auth
+   and `JWT_SECRET`, `JWT_ISSUER_ID` with **the same values as the auth
    service**, so the tokens it signs verify here (placeholders only in examples: `<jwt-secret>`).
 3. Open the SPA on **`http://localhost:8080`**, not `http://127.0.0.1:8080`, even though the server
    listens on `127.0.0.1:8080` by default: `localhost` and `127.0.0.1` are different origins for the

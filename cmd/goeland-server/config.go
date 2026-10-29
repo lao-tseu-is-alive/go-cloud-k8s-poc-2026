@@ -11,7 +11,9 @@ import (
 	"strconv"
 	"strings"
 	"time"
+	"unicode/utf8"
 
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
 
@@ -50,6 +52,9 @@ type serverConfig struct {
 	// introspection and advertised to the SPA (AUTH_SERVER_URL), without a
 	// trailing slash.
 	AuthServerURL string
+	// JWT is the secret and issuer shared with go-cloud-k8s-auth (JWT_SECRET,
+	// JWT_ISSUER_ID), read in jwt mode only; the secret must never be logged.
+	JWT authadapter.JWTConfig
 	// DevToken is the static bearer token accepted in dev mode
 	// (GOELAND_DEV_TOKEN, required then); a secret that must never be logged.
 	DevToken string
@@ -200,10 +205,40 @@ func loadConfig() (serverConfig, error) {
 	if err := config.readLimits(); err != nil {
 		return serverConfig{}, err
 	}
-	if config.AuthMode == "dev" && config.DevToken == "" {
-		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
+	if err := config.readAuthSecrets(); err != nil {
+		return serverConfig{}, err
 	}
 	return config, nil
+}
+
+// readAuthSecrets requires the secrets of the auth mode: the static token in
+// dev mode, the JWT secret and issuer in jwt mode.
+func (c *serverConfig) readAuthSecrets() error {
+	if c.AuthMode == "dev" {
+		if c.DevToken == "" {
+			return fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
+		}
+		return nil
+	}
+	var err error
+	c.JWT, err = jwtConfigFromEnv()
+	return err
+}
+
+// minJWTValueLength is the minimum length of JWT_SECRET and JWT_ISSUER_ID, as
+// go-cloud-k8s-auth requires.
+const minJWTValueLength = 16
+
+// jwtConfigFromEnv reads the secret and issuer shared with go-cloud-k8s-auth;
+// both are required and at least minJWTValueLength characters long.
+func jwtConfigFromEnv() (authadapter.JWTConfig, error) {
+	cfg := authadapter.JWTConfig{Secret: os.Getenv("JWT_SECRET"), Issuer: os.Getenv("JWT_ISSUER_ID")}
+	for name, value := range map[string]string{"JWT_SECRET": cfg.Secret, "JWT_ISSUER_ID": cfg.Issuer} {
+		if utf8.RuneCountInString(value) < minJWTValueLength {
+			return authadapter.JWTConfig{}, fmt.Errorf("%s is required in jwt mode (at least %d characters)", name, minJWTValueLength)
+		}
+	}
+	return cfg, nil
 }
 
 // disposalEnabledFromEnv reads GOELAND_DISPOSAL_ENABLED. Destroying records

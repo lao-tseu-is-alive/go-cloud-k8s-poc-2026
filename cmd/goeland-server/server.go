@@ -19,7 +19,6 @@ import (
 	"connectrpc.com/vanguard"
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-common-libs/pkg/goHttpEcho"
 	accessmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/access/module"
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
@@ -363,7 +362,7 @@ func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDep
 // names; wrapping the verifier covers the Connect interceptors and the
 // out-of-proto HTTP endpoints alike.
 func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.Logger) (*core.RecordingVerifier, error) {
-	base, err := buildTokenVerifier(config, log)
+	base, err := buildTokenVerifier(config)
 	if err != nil {
 		return nil, err
 	}
@@ -379,7 +378,7 @@ func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.L
 }
 
 // buildTokenVerifier selects the verifier for the configured auth mode.
-func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.TokenVerifier, error) {
+func buildTokenVerifier(config serverConfig) (authadapter.TokenVerifier, error) {
 	if config.AuthMode == "dev" {
 		return authadapter.NewDevTokenVerifier(config.DevToken, authadapter.AuthenticatedUser{
 			AppUserID:   config.DevUserID,
@@ -388,13 +387,9 @@ func buildTokenVerifier(config serverConfig, log *slog.Logger) (authadapter.Toke
 			Scopes:      slices.Clone(authScopes),
 		})
 	}
-	checker, err := goHttpEcho.GetNewJwtCheckerFromConfig(version.AppName, 60, log)
+	jwtVerifier, err := authadapter.NewJWTVerifier(config.JWT, authScopes)
 	if err != nil {
 		return nil, fmt.Errorf("configure JWT verifier: %w", err)
-	}
-	jwtVerifier, err := authadapter.NewJWTVerifier(checker, authScopes)
-	if err != nil {
-		return nil, err
 	}
 	patVerifier, err := authadapter.NewPatVerifier(config.AuthServerURL)
 	if err != nil {

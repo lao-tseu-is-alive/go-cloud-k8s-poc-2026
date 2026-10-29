@@ -155,6 +155,13 @@ v0.21.0.
   Move the handlers, interceptors and codecs to Connect v2 together once v2 has settled (released
   2026-10-07), with the §50 scenario and API surface tests as the safety net. Dependabot ignores
   those two modules' minors until then.
+- [x] **GLD-078 — JWT verification without Echo**: Trivy flagged two Echo advisories
+  (CVE-2026-118651 reverse proxy, CVE-2026-118653 rate limiter; MEDIUM, no fix) in v0.21.0, while
+  Goéland only used the JWT checker of `go-cloud-k8s-common-libs/pkg/goHttpEcho` and never ran an
+  Echo server. Done 2026-10-29: `pkg/authadapter/jwt_verifier.go` verifies the go-cloud-k8s-auth
+  tokens itself (HS512, expiry required, issuer checked, no token content logged), the server reads
+  `JWT_SECRET` / `JWT_ISSUER_ID` in its config; the module, Echo and `golang.org/x/crypto` left the
+  build, and with them the GO-2026-5932 suppression.
 - [x] **GLD-071 — Typed routes warning**: `vue-tsc` warns that vue-router has no `rootDir` for its
   typed routes (review `reports/report_20261014_gpt-5.md`). Done 2026-10-20: the SPA declares its
   routes by hand, so the vue-router Volar plugins for file-based routing were removed instead.
