@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.20.0**.
+Tracked version: **v0.21.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -47,7 +47,8 @@ period and creator (GLD-074) in v0.17.0; the document page on the same model (GL
 v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and quick fixes in v0.18.1; the SPA icons by import (GLD-073), the SPA types
 checked against the protos (GLD-072) and observability — Prometheus metrics and OpenTelemetry
 traces (GLD-010) — in v0.19.0; retention, legal holds and the transfer to the archives (GLD-076)
-in v0.20.0. Next: the elimination of cases (GLD-077).
+in v0.20.0; the elimination of cases, off by default and simulated until enabled (GLD-077), in
+v0.21.0.
 
 ## Cross-cutting quality
 
@@ -417,7 +418,7 @@ covered by an integration test.
   view without read filter, records managers only, every download logged, 90 days), records
   EXPORT, freezes the case (ARCHIVED) and keeps the manifest and its SHA-256 as proof.
   `retention_until` / `sort_final` stay as read-only V1 fields. Reference: `docs/RETENTION.md`.
-- [~] **GLD-077 — Elimination of cases** (decided 2026-10-28): executing a DESTROY bordereau
+- [x] **GLD-077 — Elimination of cases** (decided 2026-10-28): executing a DESTROY bordereau
   deletes the document bytes no longer referenced elsewhere, blanks the case's texts (title,
   description, timeline bodies, task texts, document titles and metadata) and replaces the
   business data of its audit states by a marker, through controlled exceptions to the immutability

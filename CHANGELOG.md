@@ -8,6 +8,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.21.0] - 2026-10-29
+
+Elimination of cases (GLD-077): an approved elimination bordereau keeps each case as a notice and
+erases the rest, destroying the files only it held; a failed transfer package can be rebuilt. The
+elimination is **off by default**: until operations set `GOELAND_DISPOSAL_ENABLED=true`, it can only
+be simulated (what it would erase, nothing written). Migration `0037`. Read `docs/RETENTION.md`
+§5b-5c before enabling it.
+
 ### Added
 
 - Elimination of cases (GLD-077, migration `0037`): executing an approved elimination bordereau

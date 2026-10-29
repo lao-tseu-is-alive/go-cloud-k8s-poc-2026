@@ -64,7 +64,7 @@ spec:
       terminationGracePeriodSeconds: 20
       containers:
         - name: goeland
-          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.20.0
+          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.21.0
           imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
