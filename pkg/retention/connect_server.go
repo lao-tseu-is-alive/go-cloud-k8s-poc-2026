@@ -335,6 +335,20 @@ func (s *ConnectServer) ExecuteDispositionBordereau(ctx context.Context, req *co
 	return connect.NewResponse(&goelandv1.ExecuteDispositionBordereauResponse{Bordereau: out}), nil
 }
 
+// SimulateElimination reports what executing an elimination bordereau would do (records manager).
+func (s *ConnectServer) SimulateElimination(ctx context.Context, req *connect.Request[goelandv1.SimulateEliminationRequest]) (*connect.Response[goelandv1.SimulateEliminationResponse], error) {
+	id, err := s.bordereauID(ctx, req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	user, _ := core.RequireCaller(ctx, core.ScopeRecords)
+	out, err := s.service.SimulateElimination(ctx, id, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.SimulateEliminationResponse{Cases: eliminationsToProto(out)}), nil
+}
+
 // CancelDispositionBordereau abandons an open bordereau (records manager).
 func (s *ConnectServer) CancelDispositionBordereau(ctx context.Context, req *connect.Request[goelandv1.CancelDispositionBordereauRequest]) (*connect.Response[goelandv1.CancelDispositionBordereauResponse], error) {
 	id, err := s.bordereauID(ctx, req.Msg.Id)

@@ -84,6 +84,17 @@ func (s *Service) Execute(ctx context.Context, id uuid.UUID, operatorID string) 
 	return b, nil
 }
 
+// SimulateElimination reports what executing an elimination bordereau would
+// do, without writing or destroying anything.
+func (s *Service) SimulateElimination(ctx context.Context, id uuid.UUID, operatorID string) ([]Elimination, error) {
+	out, err := s.repo.SimulateElimination(ctx, id, operatorID)
+	if err != nil {
+		return nil, err
+	}
+	s.log.Info("elimination simulated", "bordereau_id", id, "cases", len(out), "operator", operatorID)
+	return out, nil
+}
+
 // RebuildTransfer queues again a failed or expired transfer package.
 func (s *Service) RebuildTransfer(ctx context.Context, itemID uuid.UUID, operatorID string) (*Item, error) {
 	item, err := s.repo.RebuildTransfer(ctx, itemID, operatorID)

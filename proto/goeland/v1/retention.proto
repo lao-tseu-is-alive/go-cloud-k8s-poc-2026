@@ -594,6 +594,33 @@ message RebuildTransferPackageResponse {
   DispositionItem item = 1;
 }
 
+// SimulateEliminationRequest runs the execution of an elimination bordereau
+// and rolls it back: nothing is written nor destroyed (records manager).
+message SimulateEliminationRequest {
+  // id is the bordereau, of final disposition DESTROY, whose cases are all decided.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+}
+
+// EliminationPreview is what the elimination of one approved case would do.
+message EliminationPreview {
+  // case_id is the approved case.
+  string case_id = 1;
+  // documents_eliminated counts the documents only this case holds: they would be blanked and deleted.
+  int32 documents_eliminated = 2;
+  // documents_kept counts the documents still linked to a thing or to a case that stays: they stay untouched.
+  int32 documents_kept = 3;
+  // files_destroyed counts the files no other document version references: their bytes would be destroyed.
+  int32 files_destroyed = 4;
+  // exports_purged counts the ordinary exports of the case that would be removed.
+  int32 exports_purged = 5;
+}
+
+// SimulateEliminationResponse returns what the execution would do, case by case.
+message SimulateEliminationResponse {
+  // cases are the approved cases of the bordereau.
+  repeated EliminationPreview cases = 1;
+}
+
 // CancelDispositionBordereauRequest abandons an open bordereau (records manager).
 message CancelDispositionBordereauRequest {
   // id is the bordereau.
@@ -711,6 +738,15 @@ service RetentionService {
   rpc RebuildTransferPackage(RebuildTransferPackageRequest) returns (RebuildTransferPackageResponse) {
     option (google.api.http) = {
       post: "/api/disposition-items/{id}/rebuild-transfer"
+      body: "*"
+    };
+  }
+
+  // Simulate the execution of an elimination bordereau: run it, report what it
+  // would do, roll it back. Requires goeland:records.
+  rpc SimulateElimination(SimulateEliminationRequest) returns (SimulateEliminationResponse) {
+    option (google.api.http) = {
+      post: "/api/disposition-bordereaux/{id}/simulate"
       body: "*"
     };
   }

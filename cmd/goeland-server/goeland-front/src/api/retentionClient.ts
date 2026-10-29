@@ -5,8 +5,8 @@
  */
 import type {
   ApplyCaseTypeRetentionResponse, BordereauStatus, DecideDispositionItemResponse, DispositionBordereau, DispositionBordereauResponse,
-  DispositionItem, FinalDisposition, GetCaseRetentionResponse, ListDispositionBordereauxResponse, ListDueRetentionsResponse, ListMyDispositionApprovalsResponse,
-  ListRetentionPoliciesResponse, RebuildTransferPackageResponse, RetentionHold, RetentionHoldResponse, RetentionPolicy,
+  DispositionItem, EliminationPreview, FinalDisposition, GetCaseRetentionResponse, ListDispositionBordereauxResponse, ListDueRetentionsResponse, ListMyDispositionApprovalsResponse,
+  ListRetentionPoliciesResponse, RebuildTransferPackageResponse, RetentionHold, RetentionHoldResponse, RetentionPolicy, SimulateEliminationResponse,
 } from './types'
 import { apiFetch, downloadAs } from './client'
 
@@ -92,6 +92,11 @@ export async function decideDispositionItem (id: string, approve: boolean, reaso
 /** Saves a built transfer package (records manager). */
 export function downloadTransferPackage (exportId: string): Promise<void> {
   return downloadAs(`/api/case-exports/${encodeURIComponent(exportId)}/content`, `transfer-${exportId}.zip`)
+}
+
+/** Runs the execution of an elimination bordereau and rolls it back: what each case would lose. */
+export async function simulateElimination (id: string): Promise<EliminationPreview[]> {
+  return (await apiFetch<SimulateEliminationResponse>(`/api/disposition-bordereaux/${encodeURIComponent(id)}/simulate`, { method: 'POST', body: {} })).cases ?? []
 }
 
 /** Queues again the failed or expired transfer package of a transferred case (records manager). */

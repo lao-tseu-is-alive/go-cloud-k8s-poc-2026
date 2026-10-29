@@ -213,4 +213,6 @@ export type TypesContract = [
   Ok<Conforms<T.ListMyDispositionApprovalsResponse, retentionPb.ListMyDispositionApprovalsResponseJson>>,
   Ok<Conforms<T.DecideDispositionItemResponse, retentionPb.DecideDispositionItemResponseJson>>,
   Ok<Conforms<T.RebuildTransferPackageResponse, retentionPb.RebuildTransferPackageResponseJson>>,
+  Ok<Conforms<T.EliminationPreview, retentionPb.EliminationPreviewJson>>,
+  Ok<Conforms<T.SimulateEliminationResponse, retentionPb.SimulateEliminationResponseJson>>,
 ]

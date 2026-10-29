@@ -27,6 +27,9 @@ data:
   DB_SSL_MODE: "disable"
   GOELAND_DB_MAX_CONNECTIONS: "10"
   GOELAND_DOCUMENT_PATH: "/data/documents"
+  # Eliminations only simulated: set "true" only after the archives validated the
+  # schedule and the simulations (docs/RETENTION.md §5c). Destroying is irreversible.
+  GOELAND_DISPOSAL_ENABLED: "false"
   LOG_LEVEL: "info"
 ---
 apiVersion: apps/v1

@@ -47,6 +47,10 @@ type Deps struct {
 	// BlobStore holds the document bytes an elimination destroys (GLD-077);
 	// nil refuses the execution of elimination bordereaux.
 	BlobStore blobstore.Store
+	// DisposalEnabled lets elimination bordereaux be executed; false (the
+	// default) only lets them be simulated, so destroying records is an
+	// explicit decision of the deployment (GOELAND_DISPOSAL_ENABLED).
+	DisposalEnabled bool
 }
 
 // Module encapsulates the retention domain: repository, service and Connect handler.
@@ -73,7 +77,7 @@ func New(_ context.Context, cfg Config, deps Deps) (*Module, error) {
 	if err != nil {
 		return nil, fmt.Errorf("retention module: storage init: %w", err)
 	}
-	repo.WithBlobStore(deps.BlobStore)
+	repo.WithBlobStore(deps.BlobStore).EnableDisposal(deps.DisposalEnabled)
 	svc, err := retention.NewService(repo, deps.Logger)
 	if err != nil {
 		return nil, fmt.Errorf("retention module: service init: %w", err)

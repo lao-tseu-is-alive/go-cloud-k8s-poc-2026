@@ -100,6 +100,21 @@ type Bordereau struct {
 	Items []*Item `db:"-"`
 }
 
+// Elimination is what the elimination of one approved case did, or would do
+// when simulated (GLD-077).
+type Elimination struct {
+	// CaseID is the eliminated case.
+	CaseID uuid.UUID
+	// DocumentsEliminated counts the documents only the case held, blanked and deleted.
+	DocumentsEliminated int
+	// DocumentsKept counts the documents still linked to a thing or to a case that stays.
+	DocumentsKept int
+	// FilesDestroyed counts the files no other document version referenced.
+	FilesDestroyed int
+	// ExportsPurged counts the ordinary exports of the case removed.
+	ExportsPurged int
+}
+
 // Item is one case of a bordereau with its approval.
 type Item struct {
 	// ID identifies the item.

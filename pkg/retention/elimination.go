@@ -15,43 +15,44 @@ import (
 
 // eliminateItemTx eliminates one approved case in the bordereau transaction
 // (enableDisposalSQL already run). eliminated are all the cases of the
-// bordereau being eliminated. It returns the storage references whose bytes
-// must be deleted once the transaction is committed.
-func eliminateItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, eliminated []uuid.UUID, operatorID string) ([]string, error) {
+// bordereau being eliminated. It returns what the case lost and the storage
+// references whose bytes must be deleted once the transaction is committed.
+func eliminateItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, eliminated []uuid.UUID, operatorID string) (Elimination, []string, error) {
+	e := Elimination{CaseID: item.CaseID}
 	if err := lockUnheldCaseTx(ctx, tx, item.CaseID); err != nil {
-		return nil, err
+		return e, nil, err
 	}
-	docs, err := doomedDocumentsTx(ctx, tx, item.CaseID, eliminated)
+	docs, kept, err := doomedDocumentsTx(ctx, tx, item.CaseID, eliminated)
 	if err != nil {
-		return nil, err
+		return e, nil, err
 	}
 	if err := blankCaseTx(ctx, tx, item.CaseID); err != nil {
-		return nil, err
+		return e, nil, err
 	}
 	refs, err := eliminateDocumentsTx(ctx, tx, docs, operatorID)
 	if err != nil {
-		return nil, err
+		return e, nil, err
 	}
 	subjects := append([]uuid.UUID{item.CaseID}, docs...)
 	if _, err := tx.Exec(ctx, blankEdgesSQL, pgx.NamedArgs{"ids": subjects}); err != nil {
-		return nil, fmt.Errorf("blank relationships: %w", err)
+		return e, nil, fmt.Errorf("blank relationships: %w", err)
 	}
 	if _, err := tx.Exec(ctx, blankAuditSQL, pgx.NamedArgs{"ids": subjects}); err != nil {
-		return nil, fmt.Errorf("blank audit: %w", err)
+		return e, nil, fmt.Errorf("blank audit: %w", err)
 	}
 	exports, err := collectRefs(tx.Query(ctx, purgeExportsSQL, pgx.NamedArgs{"id": item.CaseID}))
 	if err != nil {
-		return nil, fmt.Errorf("purge exports: %w", err)
+		return e, nil, fmt.Errorf("purge exports: %w", err)
 	}
-	refs = append(refs, exports...)
+	e.DocumentsEliminated, e.DocumentsKept, e.FilesDestroyed, e.ExportsPurged = len(docs), kept, len(refs), len(exports)
 	if err := recordOutcomeTx(ctx, tx, b, item, OutcomeDisposed, operatorID); err != nil {
-		return nil, err
+		return e, nil, err
 	}
 	_, err = core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
 		SubjectID: item.CaseID, EventType: EventDisposed, ActorUserID: operatorID,
-		AfterState: map[string]any{"bordereau_id": b.ID, "documents_eliminated": len(docs), "files_destroyed": len(refs) - len(exports)},
+		AfterState: map[string]any{"bordereau_id": b.ID, "documents_eliminated": e.DocumentsEliminated, "files_destroyed": e.FilesDestroyed},
 	})
-	return refs, err
+	return e, append(refs, exports...), err
 }
 
 // lockUnheldCaseTx locks a case and refuses it while a legal hold, placed
@@ -70,12 +71,12 @@ func lockUnheldCaseTx(ctx context.Context, tx pgx.Tx, caseID uuid.UUID) error {
 	return nil
 }
 
-// doomedDocumentsTx returns the documents of a case that go with it: those
-// not linked to a thing nor to a case that stays.
-func doomedDocumentsTx(ctx context.Context, tx pgx.Tx, caseID uuid.UUID, eliminated []uuid.UUID) ([]uuid.UUID, error) {
+// doomedDocumentsTx returns the documents of a case that go with it (those
+// not linked to a thing nor to a case that stays) and how many stay.
+func doomedDocumentsTx(ctx context.Context, tx pgx.Tx, caseID uuid.UUID, eliminated []uuid.UUID) ([]uuid.UUID, int, error) {
 	rows, err := tx.Query(ctx, caseDocumentsSQL, pgx.NamedArgs{"case_id": caseID, "eliminated": eliminated})
 	if err != nil {
-		return nil, fmt.Errorf("list case documents: %w", err)
+		return nil, 0, fmt.Errorf("list case documents: %w", err)
 	}
 	type candidate struct {
 		ID   uuid.UUID `db:"id"`
@@ -83,7 +84,7 @@ func doomedDocumentsTx(ctx context.Context, tx pgx.Tx, caseID uuid.UUID, elimina
 	}
 	all, err := pgx.CollectRows(rows, pgx.RowToStructByName[candidate])
 	if err != nil {
-		return nil, fmt.Errorf("list case documents: %w", err)
+		return nil, 0, fmt.Errorf("list case documents: %w", err)
 	}
 	var doomed []uuid.UUID
 	for _, c := range all {
@@ -91,7 +92,7 @@ func doomedDocumentsTx(ctx context.Context, tx pgx.Tx, caseID uuid.UUID, elimina
 			doomed = append(doomed, c.ID)
 		}
 	}
-	return doomed, nil
+	return doomed, len(all) - len(doomed), nil
 }
 
 // blankCaseTx turns the case into its notice and blanks its content.

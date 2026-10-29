@@ -156,7 +156,10 @@ whenever a task starts, completes, changes scope or order.
   case becomes a notice, its texts and audit states are erased, the documents only it held are
   blanked and logically deleted, and files no other version references are destroyed after the
   commit (`content_blob.disposed_at`; an identical upload stores them again). Never set that
-  setting anywhere else. A failed or expired transfer package is rebuilt. The reference for this
+  setting anywhere else. The execution of an elimination is refused unless the deployment set
+  `GOELAND_DISPOSAL_ENABLED=true` (exactly; another value stops the server; `Deps.DisposalEnabled`,
+  `PostgresRepository.EnableDisposal`); `SimulateElimination` runs it in a rolled-back transaction
+  and reports the counts, whatever the flag. A failed or expired transfer package is rebuilt. The reference for this
   domain is `docs/RETENTION.md`: keep it true when the retention rules change. `record_metadata.retention_until` /
   `sort_final` are V1 fields, no longer written.
 - **frontend** (`cmd/goeland-server/goeland-front`) — Vue 3 + Vuetify 4 SPA, vertical
@@ -519,7 +522,7 @@ CaseExportService: `/api/cases/{case_id}/exports` (request, list), `/api/case-ex
 RetentionService: `/api/retention-policies` (+ `/{code}`), `/api/cases/{case_id}/retention`,
 `/api/cases/{case_id}/retention-hold` (+ `/release`), `/api/retentions/due`,
 `/api/case-types/{case_type_code}/apply-retention`, `/api/disposition-bordereaux` (+ `/{id}`, `/execute`,
-`/cancel`), `/api/disposition-items/mine`, `/api/disposition-items/{id}/decide`;
+`/simulate`, `/cancel`), `/api/disposition-items/mine`, `/api/disposition-items/{id}/decide`;
 TimelineService: `/api/cases/{case_id}/timeline`, `/api/timeline-entries/{id}` with
 `/validate`, `/lock`, `/withdraw` and `/documents[/{document_id}]`).
 

@@ -227,61 +227,94 @@ func checkDeciderTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, op
 
 // Execute handles the approved cases of a fully decided bordereau and keeps
 // its proof. ARCHIVE queues each case's transfer package, records the EXPORT,
-// freezes the case and marks its retention ARCHIVED; DESTROY is step B2.
+// freezes the case and marks its retention ARCHIVED; DESTROY eliminates each
+// case (GLD-077) and destroys its files once committed.
 func (r *PostgresRepository) Execute(ctx context.Context, id uuid.UUID, operatorID string) (*Bordereau, error) {
-	var refs []string
+	var run execution
 	err := core.InTx(ctx, r.pool, "execute bordereau", func(tx pgx.Tx) error {
 		var err error
-		refs, err = r.executeTx(ctx, tx, id, operatorID)
+		run, err = r.executeTx(ctx, tx, id, operatorID, false)
 		return err
 	})
 	if err != nil {
 		return nil, err
 	}
-	r.destroyFiles(ctx, refs)
+	r.destroyFiles(ctx, run.refs)
 	return r.GetBordereau(ctx, id)
 }
 
-// executeTx runs Execute in tx and returns the storage references of the
-// files an elimination destroyed, to delete after the commit.
-func (r *PostgresRepository) executeTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, operatorID string) ([]string, error) {
-	b, err := lockOpenBordereauTx(ctx, tx, id)
-	if err != nil {
+// errSimulated rolls back the transaction of a simulated elimination.
+var errSimulated = errors.New("simulated elimination rolled back")
+
+// SimulateElimination runs the execution of a DESTROY bordereau in a
+// transaction it rolls back, and reports what each case would lose. Nothing is
+// written and no file is touched: bytes are only deleted after a commit.
+func (r *PostgresRepository) SimulateElimination(ctx context.Context, id uuid.UUID, operatorID string) ([]Elimination, error) {
+	var run execution
+	err := core.InTx(ctx, r.pool, "simulate elimination", func(tx pgx.Tx) error {
+		var err error
+		if run, err = r.executeTx(ctx, tx, id, operatorID, true); err != nil {
+			return err
+		}
+		return errSimulated
+	})
+	if !errors.Is(err, errSimulated) {
 		return nil, err
 	}
-	if err := r.executable(b); err != nil {
-		return nil, err
+	return run.eliminations, nil
+}
+
+// execution is what executeTx did: the storage references to delete after the
+// commit and, for an elimination, what each case lost.
+type execution struct {
+	refs         []string
+	eliminations []Elimination
+}
+
+// executeTx runs Execute in tx; simulate only checks what a simulation needs.
+func (r *PostgresRepository) executeTx(ctx context.Context, tx pgx.Tx, id uuid.UUID, operatorID string, simulate bool) (execution, error) {
+	var run execution
+	b, err := lockOpenBordereauTx(ctx, tx, id)
+	if err != nil {
+		return run, err
+	}
+	if err := r.executable(b, simulate); err != nil {
+		return run, err
 	}
 	items, err := listItems(ctx, tx, id)
 	if err != nil {
-		return nil, err
+		return run, err
 	}
-	approved := approvedCases(items)
 	if b.FinalDisposition == DispositionDestroy {
 		if _, err := tx.Exec(ctx, enableDisposalSQL); err != nil {
-			return nil, fmt.Errorf("declare elimination: %w", err)
+			return run, fmt.Errorf("declare elimination: %w", err)
 		}
 	}
-	var refs []string
+	approved := approvedCases(items)
 	for _, item := range items {
 		if item.Decision != DecisionApproved {
 			continue
 		}
-		destroyed, err := handleItemTx(ctx, tx, b, item, approved, operatorID)
-		if err != nil {
-			return nil, err
+		if err := run.handleItemTx(ctx, tx, b, item, approved, operatorID); err != nil {
+			return run, err
 		}
-		refs = append(refs, destroyed...)
 	}
-	return refs, closeWithProofTx(ctx, tx, b, items, operatorID)
+	return run, closeWithProofTx(ctx, tx, b, items, operatorID)
 }
 
-// handleItemTx transfers or eliminates one approved case.
-func handleItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, approved []uuid.UUID, operatorID string) ([]string, error) {
-	if b.FinalDisposition == DispositionDestroy {
-		return eliminateItemTx(ctx, tx, b, item, approved, operatorID)
+// handleItemTx transfers or eliminates one approved case and keeps what an
+// elimination did.
+func (run *execution) handleItemTx(ctx context.Context, tx pgx.Tx, b *Bordereau, item *Item, approved []uuid.UUID, operatorID string) error {
+	if b.FinalDisposition != DispositionDestroy {
+		return archiveItemTx(ctx, tx, b, item, operatorID)
 	}
-	return nil, archiveItemTx(ctx, tx, b, item, operatorID)
+	e, refs, err := eliminateItemTx(ctx, tx, b, item, approved, operatorID)
+	if err != nil {
+		return err
+	}
+	run.refs = append(run.refs, refs...)
+	run.eliminations = append(run.eliminations, e)
+	return nil
 }
 
 // approvedCases lists the cases of the approved items.
@@ -295,13 +328,22 @@ func approvedCases(items []*Item) []uuid.UUID {
 	return ids
 }
 
-// executable refuses a bordereau with undecided cases, or an elimination
-// without the store holding the bytes to destroy.
-func (r *PostgresRepository) executable(b *Bordereau) error {
+// executable refuses a bordereau with undecided cases. An elimination runs
+// only when the deployment enabled it and a store holds the bytes to destroy;
+// a simulation needs neither, but only an elimination is simulated.
+func (r *PostgresRepository) executable(b *Bordereau, simulate bool) error {
 	if b.PendingCount > 0 {
 		return fmt.Errorf("%w: %d case(s) still wait for a decision", core.ErrInvalidState, b.PendingCount)
 	}
-	if b.FinalDisposition == DispositionDestroy && r.store == nil {
+	destroy := b.FinalDisposition == DispositionDestroy
+	switch {
+	case simulate && !destroy:
+		return fmt.Errorf("%w: only an elimination bordereau is simulated", core.ErrInvalidState)
+	case simulate || !destroy:
+		return nil
+	case !r.disposalEnabled:
+		return fmt.Errorf("%w: elimination is disabled on this server; simulate it instead", core.ErrInvalidState)
+	case r.store == nil:
 		return fmt.Errorf("%w: no content store is configured to destroy the files", core.ErrInvalidState)
 	}
 	return nil

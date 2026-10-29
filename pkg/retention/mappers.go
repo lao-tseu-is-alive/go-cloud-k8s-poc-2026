@@ -128,6 +128,21 @@ func BordereauToProto(b *Bordereau) *goelandv1.DispositionBordereau {
 	return out
 }
 
+// eliminationsToProto converts what eliminations did or would do.
+func eliminationsToProto(in []Elimination) []*goelandv1.EliminationPreview {
+	out := make([]*goelandv1.EliminationPreview, 0, len(in))
+	for _, e := range in {
+		out = append(out, &goelandv1.EliminationPreview{
+			CaseId:              e.CaseID.String(),
+			DocumentsEliminated: int32(e.DocumentsEliminated),
+			DocumentsKept:       int32(e.DocumentsKept),
+			FilesDestroyed:      int32(e.FilesDestroyed),
+			ExportsPurged:       int32(e.ExportsPurged),
+		})
+	}
+	return out
+}
+
 // HoldToProto converts a hold (nil for nil).
 func HoldToProto(h *Hold) *goelandv1.RetentionHold {
 	if h == nil {

@@ -162,6 +162,7 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
 | `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
 | `GOELAND_METRICS_ADDRESS`           | — (off)          | `host:port` of the Prometheus metrics listener (`GET /metrics`, GLD-010); never the public port. |
+| `GOELAND_DISPOSAL_ENABLED`          | `false`          | Only the exact value `true` lets an approved elimination bordereau erase cases and destroy files (§11, GLD-077); otherwise eliminations are only simulated. Any other value stops the server. |
 
 ## 7. Secrets
 
@@ -237,7 +238,10 @@ its policy, apply it to the already closed cases, and grant the role. Transfer p
 whole case (confidential content included), are downloadable by records managers only, logged at
 every download, and kept 90 days in the blob store. Executing an approved elimination is
 irreversible: it erases the content of the cases and deletes from the blob store the files only
-they held. Full reference: [RETENTION.md](RETENTION.md).
+they held. It is therefore **disabled by default**: until `GOELAND_DISPOSAL_ENABLED=true` is set
+(§6), an elimination is only simulated (what it would erase, nothing written). Enable it only after
+the archives have validated the schedule and the simulations. Full reference:
+[RETENTION.md](RETENTION.md) §5c.
 
 ## Known limitations
 

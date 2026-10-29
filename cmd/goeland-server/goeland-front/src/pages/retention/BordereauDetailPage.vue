@@ -1,10 +1,10 @@
 <script setup lang="ts">
-  import type { DispositionBordereau, DispositionItem } from '@/api/types'
+  import type { DispositionBordereau, DispositionItem, EliminationPreview } from '@/api/types'
   import { storeToRefs } from 'pinia'
   import { computed, onBeforeUnmount, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute } from 'vue-router'
-  import { cancelDispositionBordereau, downloadTransferPackage, executeDispositionBordereau, getDispositionBordereau, rebuildTransferPackage } from '@/api/retentionClient'
+  import { cancelDispositionBordereau, downloadTransferPackage, executeDispositionBordereau, getDispositionBordereau, rebuildTransferPackage, simulateElimination } from '@/api/retentionClient'
   import UserLabel from '@/components/core/UserLabel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useI18nEnum } from '@/composables/useI18nEnum'
@@ -22,7 +22,7 @@
   const { enumLabel } = useI18nEnum()
   const { report } = useApiErrors()
   const ui = useUiStore()
-  const { isRecordsManager } = storeToRefs(useAuthStore())
+  const { disposalEnabled, isRecordsManager } = storeToRefs(useAuthStore())
   const POLL_MS = 3000
 
   const id = computed(() => String(route.params.id))
@@ -41,6 +41,10 @@
   const destroying = computed(() => b.value?.finalDisposition === 'FINAL_DISPOSITION_DESTROY')
   const confirmOpen = ref(false)
   const confirmed = ref(false)
+  // Off on this server (GOELAND_DISPOSAL_ENABLED), an elimination is only simulated.
+  const canExecute = computed(() => !destroying.value || disposalEnabled.value)
+  const simulating = ref(false)
+  const preview = ref<EliminationPreview[] | null>(null)
   const rebuilding = ref('')
   const building = computed(() => (b.value?.items ?? []).some(it => it.exportStatus === 'QUEUED' || it.exportStatus === 'RUNNING'))
 
@@ -66,6 +70,22 @@
       return
     }
     void execute()
+  }
+
+  // Runs the elimination and rolls it back: what each approved case would lose.
+  async function simulate () {
+    simulating.value = true
+    try {
+      preview.value = await simulateElimination(id.value)
+    } catch (error) {
+      report(error)
+    } finally {
+      simulating.value = false
+    }
+  }
+
+  function itemOf (caseId?: string): DispositionItem | undefined {
+    return b.value?.items?.find(it => it.caseId === caseId)
   }
 
   // A failed or expired transfer package is queued again.
@@ -176,8 +196,26 @@
 
           <p v-if="open" class="text-caption text-medium-emphasis mt-2">{{ t('retention.bordereau.approvalHint') }}</p>
 
+          <v-alert
+            v-if="open && !canExecute"
+            class="mt-3"
+            density="compact"
+            type="info"
+            variant="tonal"
+          >{{ t('retention.bordereau.disposalDisabled') }}</v-alert>
+
           <div v-if="open" class="d-flex flex-wrap ga-2 mt-3">
             <v-btn
+              v-if="destroying"
+              :disabled="!executable"
+              :loading="simulating"
+              prepend-icon="mdi-play-outline"
+              variant="tonal"
+              @click="simulate"
+            >{{ t('retention.bordereau.simulate') }}</v-btn>
+
+            <v-btn
+              v-if="canExecute"
               :color="destroying ? 'error' : 'primary'"
               :disabled="!executable"
               :loading="busy"
@@ -194,6 +232,37 @@
             <v-btn color="error" :loading="busy" type="submit">{{ t('retention.bordereau.cancel') }}</v-btn>
           </v-form>
         </v-card-text>
+      </v-card>
+
+      <v-card v-if="preview" class="mb-4">
+        <v-card-title class="text-subtitle-1">{{ t('retention.bordereau.previewTitle') }}</v-card-title>
+        <v-card-subtitle class="text-wrap">{{ t('retention.bordereau.previewHint') }}</v-card-subtitle>
+
+        <v-table density="compact">
+          <thead>
+            <tr>
+              <th scope="col">{{ t('retention.page.case') }}</th>
+              <th scope="col">{{ t('retention.bordereau.documentsEliminated') }}</th>
+              <th scope="col">{{ t('retention.bordereau.documentsKept') }}</th>
+              <th scope="col">{{ t('retention.bordereau.filesDestroyed') }}</th>
+              <th scope="col">{{ t('retention.bordereau.exportsPurged') }}</th>
+            </tr>
+          </thead>
+
+          <tbody>
+            <tr v-for="p in preview" :key="p.caseId">
+              <td>
+                <span v-if="itemOf(p.caseId)?.businessRef" class="text-medium-emphasis mr-1">{{ itemOf(p.caseId)?.businessRef }}</span>
+                {{ itemOf(p.caseId)?.caseLabel || t('retention.page.hidden') }}
+              </td>
+
+              <td>{{ p.documentsEliminated ?? 0 }}</td>
+              <td>{{ p.documentsKept ?? 0 }}</td>
+              <td>{{ p.filesDestroyed ?? 0 }}</td>
+              <td>{{ p.exportsPurged ?? 0 }}</td>
+            </tr>
+          </tbody>
+        </v-table>
       </v-card>
 
       <v-card>

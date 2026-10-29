@@ -571,6 +571,9 @@ func (s *surface) bordereaux() {
 		s.t.Fatalf("the case's manager sees the approval: %v", mine)
 	}
 	s.writerDo("POST", "/api/disposition-items/"+item+"/decide", map[string]any{"approve": true, "reason": "d'accord"})
+	// Only an elimination is simulated (GLD-077).
+	s.fails(codeFailedPrecondition, "POST", "/api/disposition-bordereaux/"+bid+"/simulate", map[string]any{})
+	s.fails(codeNotFound, "POST", missing("/api/disposition-bordereaux")+"/simulate", map[string]any{})
 	done := s.ok("POST", "/api/disposition-bordereaux/"+bid+"/execute", map[string]any{})
 	if str(done, "bordereau", "status") != "BORDEREAU_STATUS_EXECUTED" || len(str(done, "bordereau", "proofSha256")) != 64 {
 		s.t.Fatalf("execute: %v", done)

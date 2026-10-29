@@ -19,6 +19,8 @@ import { useUsersStore } from '@/stores/users'
 export const useAuthStore = defineStore('auth', () => {
   const mode = ref<'dev' | 'jwt'>('jwt')
   const authBaseUrl = ref('')
+  // Whether this server lets an elimination run (GOELAND_DISPOSAL_ENABLED); off, it is only simulated.
+  const disposalEnabled = ref(false)
   const token = ref('')
   const user = ref<TokenUser | null>(null)
   const ready = ref(false)
@@ -118,6 +120,7 @@ export const useAuthStore = defineStore('auth', () => {
         const cfg = await res.json() as FrontendConfig
         mode.value = cfg.authMode === 'dev' ? 'dev' : 'jwt'
         authBaseUrl.value = cfg.authBaseUrl ?? ''
+        disposalEnabled.value = cfg.disposalEnabled === true
       }
     } catch {
       // assume jwt mode if /config is unreachable
@@ -164,7 +167,7 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    mode, authBaseUrl, token, user, me, scopes, ready, error,
+    mode, authBaseUrl, disposalEnabled, token, user, me, scopes, ready, error,
     isAuthenticated, displayName, isAdmin, isRecordsManager, loadMe,
     bootstrap, applyDevToken, mintToken, signIn, signOut, clear,
   }

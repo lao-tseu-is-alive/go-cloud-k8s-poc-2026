@@ -222,12 +222,14 @@ func writeContentError(w http.ResponseWriter, log *slog.Logger, err error) {
 }
 
 // frontendConfigHandler tells the SPA how to authenticate: "dev" mode expects a
-// manually entered static token, "jwt" mode mints tokens from authBaseUrl.
+// manually entered static token, "jwt" mode mints tokens from authBaseUrl. It
+// also says whether an elimination destroys records or is only simulated.
 func frontendConfigHandler(config serverConfig) http.HandlerFunc {
 	return func(w http.ResponseWriter, _ *http.Request) {
-		writeJSON(w, http.StatusOK, map[string]string{
-			"authMode":    config.AuthMode,
-			"authBaseUrl": config.AuthServerURL,
+		writeJSON(w, http.StatusOK, map[string]any{
+			"authMode":        config.AuthMode,
+			"authBaseUrl":     config.AuthServerURL,
+			"disposalEnabled": config.DisposalEnabled,
 		})
 	}
 }

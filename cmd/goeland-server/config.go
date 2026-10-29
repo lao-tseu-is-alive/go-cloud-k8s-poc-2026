@@ -100,6 +100,10 @@ type serverConfig struct {
 	// request (GOELAND_BOOTSTRAP_ADMINS, comma-separated); the recovery path
 	// when no administrator is left.
 	BootstrapAdmins []string
+	// DisposalEnabled lets elimination bordereaux destroy records
+	// (GOELAND_DISPOSAL_ENABLED=true, GLD-077); off by default, an elimination
+	// is only simulated.
+	DisposalEnabled bool
 }
 
 // maxBootstrapAdmins bounds GOELAND_BOOTSTRAP_ADMINS.
@@ -172,6 +176,10 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+	disposalEnabled, err := disposalEnabledFromEnv()
+	if err != nil {
+		return serverConfig{}, err
+	}
 
 	config := serverConfig{
 		ListenAddress:   listenAddress,
@@ -187,6 +195,7 @@ func loadConfig() (serverConfig, error) {
 		LogLevel:        logLevel,
 		DocumentPath:    envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
 		BootstrapAdmins: bootstrapAdmins,
+		DisposalEnabled: disposalEnabled,
 	}
 	if err := config.readLimits(); err != nil {
 		return serverConfig{}, err
@@ -195,6 +204,21 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, fmt.Errorf("GOELAND_DEV_TOKEN is required when GOELAND_AUTH_MODE=dev")
 	}
 	return config, nil
+}
+
+// disposalEnabledFromEnv reads GOELAND_DISPOSAL_ENABLED. Destroying records
+// is irreversible, so it is stricter than envBool: only the exact value "true"
+// enables it, unset, empty or "false" leave it off, and any other value (1,
+// yes, True, a typo) stops the server rather than being guessed.
+func disposalEnabledFromEnv() (bool, error) {
+	switch raw := os.Getenv("GOELAND_DISPOSAL_ENABLED"); raw {
+	case "true":
+		return true, nil
+	case "", "false":
+		return false, nil
+	default:
+		return false, fmt.Errorf("GOELAND_DISPOSAL_ENABLED must be exactly true or false (got %q)", raw)
+	}
 }
 
 // metricsAddressFromEnv reads GOELAND_METRICS_ADDRESS: empty (metrics off) or

@@ -15,7 +15,7 @@ var configEnv = []string{
 	"AUTH_SERVER_URL", "DATABASE_URL", "GOELAND_BOOTSTRAP_ADMINS", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
 	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
-	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
+	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DISPOSAL_ENABLED", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
 	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "LOG_LEVEL",
 }
 
@@ -42,7 +42,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.MaxConnections != defaultMaxConnections || cfg.RequestTimeout != defaultRequestTimeout ||
 		cfg.ShutdownPeriod != defaultShutdownPeriod || cfg.DBConnectTimeout != defaultDBConnectTimeout ||
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
-		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" {
+		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -63,6 +63,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 		"GOELAND_REQUEST_TIMEOUT_SECONDS":    "30",
 		"LOG_LEVEL":                          "debug",
 		"AUTH_SERVER_URL":                    "https://auth.example.ch/",
+		"GOELAND_DISPOSAL_ENABLED":           "true",
 	})
 	cfg, err := loadConfig()
 	if err != nil {
@@ -70,7 +71,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 	}
 	if cfg.AuthMode != "dev" || cfg.DevUserID != 42 || !cfg.DevUserAdmin || cfg.DBConnectTimeout != 0 ||
 		cfg.RequestTimeout != 30*time.Second || cfg.LogLevel != slog.LevelDebug || cfg.MetricsAddress != "0.0.0.0:9464" ||
-		cfg.AuthServerURL != "https://auth.example.ch" || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
+		cfg.AuthServerURL != "https://auth.example.ch" || !cfg.DisposalEnabled || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
 		t.Fatalf("settings not applied: %+v", cfg)
 	}
 }
@@ -97,6 +98,8 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"not a boolean", map[string]string{"GOELAND_DEV_USER_ADMIN": "yes please"}, "must be a boolean"},
 		{"auth url scheme", map[string]string{"AUTH_SERVER_URL": "ftp://auth.example.ch"}, "valid http(s) URL"},
 		{"plain http auth url", map[string]string{"AUTH_SERVER_URL": "http://auth.example.ch"}, "must use https outside loopback"},
+		{"disposal not exactly true", map[string]string{"GOELAND_DISPOSAL_ENABLED": "1"}, "GOELAND_DISPOSAL_ENABLED must be exactly true or false"},
+		{"disposal capitalized", map[string]string{"GOELAND_DISPOSAL_ENABLED": "True"}, "GOELAND_DISPOSAL_ENABLED must be exactly true or false"},
 		{"too many bootstrap admins", map[string]string{"GOELAND_BOOTSTRAP_ADMINS": strings.Repeat("1,", maxBootstrapAdmins+1)}, "more than 20 user ids"},
 	}
 	for _, c := range cases {

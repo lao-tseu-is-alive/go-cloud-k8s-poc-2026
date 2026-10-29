@@ -1364,6 +1364,34 @@ paths:
             $ref: '#/definitions/RetentionServiceExecuteDispositionBordereauBody'
       tags:
         - RetentionService
+  /api/disposition-bordereaux/{id}/simulate:
+    post:
+      summary: |-
+        Simulate the execution of an elimination bordereau: run it, report what it
+        would do, roll it back. Requires goeland:records.
+      operationId: SimulateElimination
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1SimulateEliminationResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the bordereau, of final disposition DESTROY, whose cases are all decided.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/RetentionServiceSimulateEliminationBody'
+      tags:
+        - RetentionService
   /api/disposition-items/mine:
     get:
       summary: List the cases waiting for the caller's approval. Requires goeland:read.
@@ -4763,6 +4791,11 @@ definitions:
     description: ReleaseRetentionHoldRequest releases the active legal hold of a case (records manager).
     required:
       - reason
+  RetentionServiceSimulateEliminationBody:
+    type: object
+    description: |-
+      SimulateEliminationRequest runs the execution of an elimination bordereau
+      and rolls it back: nothing is written nor destroyed (records manager).
   RetentionServiceUpdateRetentionPolicyBody:
     type: object
     properties:
@@ -7216,6 +7249,29 @@ definitions:
         type: boolean
         description: on_hold reports an active legal hold.
     description: DueRetention is a running retention in the due list, with its case.
+  v1EliminationPreview:
+    type: object
+    properties:
+      caseId:
+        type: string
+        description: case_id is the approved case.
+      documentsEliminated:
+        type: integer
+        format: int32
+        description: 'documents_eliminated counts the documents only this case holds: they would be blanked and deleted.'
+      documentsKept:
+        type: integer
+        format: int32
+        description: 'documents_kept counts the documents still linked to a thing or to a case that stays: they stay untouched.'
+      filesDestroyed:
+        type: integer
+        format: int32
+        description: 'files_destroyed counts the files no other document version references: their bytes would be destroyed.'
+      exportsPurged:
+        type: integer
+        format: int32
+        description: exports_purged counts the ordinary exports of the case that would be removed.
+    description: EliminationPreview is what the elimination of one approved case would do.
   v1EndRelationshipResponse:
     type: object
     properties:
@@ -8886,6 +8942,16 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: audit_event is the ACCESS_GRANTED or ACCESS_CHANGED event on the subject.
     description: SetGrantResponse returns the current grant and its audit event.
+  v1SimulateEliminationResponse:
+    type: object
+    properties:
+      cases:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1EliminationPreview'
+        description: cases are the approved cases of the bordereau.
+    description: SimulateEliminationResponse returns what the execution would do, case by case.
   v1StartTaskResponse:
     type: object
     properties:

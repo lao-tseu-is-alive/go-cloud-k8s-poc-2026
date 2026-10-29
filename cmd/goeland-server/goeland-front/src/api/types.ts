@@ -466,6 +466,8 @@ export interface UploadResult {
 export interface FrontendConfig {
   authMode: 'dev' | 'jwt'
   authBaseUrl: string
+  /** Whether executing an elimination destroys records; otherwise it is only simulated (GLD-077). */
+  disposalEnabled?: boolean
 }
 
 /** Authenticated user shape from the auth server's silent token mint. */
@@ -1524,4 +1526,17 @@ export interface DecideDispositionItemResponse {
 
 export interface RebuildTransferPackageResponse {
   item?: DispositionItem
+}
+
+/** What the elimination of one approved case would do (GLD-077). */
+export interface EliminationPreview {
+  caseId?: string
+  documentsEliminated?: number
+  documentsKept?: number
+  filesDestroyed?: number
+  exportsPurged?: number
+}
+
+export interface SimulateEliminationResponse {
+  cases?: EliminationPreview[]
 }

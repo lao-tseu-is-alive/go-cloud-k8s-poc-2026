@@ -422,7 +422,9 @@ covered by an integration test.
   description, timeline bodies, task texts, document titles and metadata) and replaces the
   business data of its audit states by a marker, through controlled exceptions to the immutability
   triggers, keeping a minimal notice (reference, type, dates, policy) and the permanent proof
-  (DISPOSED). Also: rebuilding a failed or expired transfer package of an ARCHIVED case.
+  (DISPOSED). Also: rebuilding a failed or expired transfer package of an ARCHIVED case. Decided
+  2026-10-29: the elimination is off unless the deployment sets `GOELAND_DISPOSAL_ENABLED=true`;
+  otherwise it is only simulated (a rolled-back run reporting what each case would lose).
 - [ ] **GLD-030 — AI proposals with human validation**: `ai_action` trace
   (model, prompt template, inputs, output, PROPOSED / validated / rejected) and
   proposal flows for timeline entries, tasks and relationships; no free SQL,

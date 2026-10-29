@@ -197,7 +197,7 @@ func newTestEnv(t *testing.T) *testEnv {
 	if err != nil {
 		t.Fatalf("retention repository: %v", err)
 	}
-	retentionSvc, err := retention.NewService(retentionRepo.WithBlobStore(store), log)
+	retentionSvc, err := retention.NewService(retentionRepo.WithBlobStore(store).EnableDisposal(true), log)
 	if err != nil {
 		t.Fatalf("retention service: %v", err)
 	}

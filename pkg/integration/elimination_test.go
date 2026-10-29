@@ -54,6 +54,7 @@ func TestEliminationErasesTheCase(t *testing.T) {
 	if _, err := env.retentionSvc.Decide(ctx, retention.DecisionInput{ItemID: b.Items[0].ID, Approve: true, Reason: "ok", OperatorID: testOperator}); err != nil {
 		t.Fatal(err)
 	}
+	assertDisabledEliminationSimulates(t, env, b.ID, archivist.UserID, doomed)
 	done, err := env.retentionSvc.Execute(ctx, b.ID, archivist.UserID)
 	if err != nil || done.Status != retention.BordereauExecuted || len(done.ProofSHA256) != 64 {
 		t.Fatalf("execute elimination: %+v (%v)", done, err)
@@ -88,6 +89,38 @@ func TestEliminationErasesTheCase(t *testing.T) {
 	}
 	if _, _, err := env.caseSvc.Transition(ctx, doomed.ID, casefile.TransitionInput{Target: casefile.StatusOpen, Reason: "x", OperatorID: testOperator}); !errors.Is(err, core.ErrLocked) {
 		t.Fatalf("an eliminated case is frozen: %v", err)
+	}
+}
+
+// assertDisabledEliminationSimulates covers a server where elimination is
+// off (GOELAND_DISPOSAL_ENABLED unset): executing is refused, simulating
+// reports what the case would lose (its own document and file, the shared
+// document kept) and leaves everything as it was.
+func assertDisabledEliminationSimulates(t *testing.T, env *testEnv, bordereauID uuid.UUID, operatorID string, c *casefile.Case) {
+	t.Helper()
+	repo, err := retention.NewPostgresRepository(env.pool, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	disabled, err := retention.NewService(repo.WithBlobStore(env.store), nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := disabled.Execute(env.ctx, bordereauID, operatorID); !errors.Is(err, core.ErrInvalidState) {
+		t.Fatalf("elimination disabled: execution refused, got %v", err)
+	}
+	got, err := disabled.SimulateElimination(env.ctx, bordereauID, operatorID)
+	want := retention.Elimination{CaseID: c.ID, DocumentsEliminated: 1, DocumentsKept: 1, FilesDestroyed: 1}
+	if err != nil || len(got) != 1 || got[0] != want {
+		t.Fatalf("simulation: want [%+v], got %+v (%v)", want, got, err)
+	}
+	same, err := env.caseSvc.Get(env.ctx, c.ID)
+	if err != nil || same.Title != c.Title || same.Description != c.Description {
+		t.Fatalf("a simulation changes nothing: %+v (%v)", same, err)
+	}
+	b, err := env.retentionSvc.GetBordereau(env.ctx, bordereauID)
+	if err != nil || b.Status != retention.BordereauOpen {
+		t.Fatalf("a simulated bordereau stays open: %+v (%v)", b, err)
 	}
 }
 

@@ -7,9 +7,10 @@ GLD-077 (elimination, rebuilding a transfer package). Spec: v2 §35-36.
 
 > **Status.** Retention, legal holds, disposition bordereaux, the transfer to the archives and
 > the **elimination** are built. An elimination is **irreversible**: it erases the content of the
-> approved cases and destroys the files only they hold (§5b). The three retention policies shipped
-> are **examples**: the real schedule must come from the City archives before any use on real
-> cases.
+> approved cases and destroys the files only they hold (§5b). It is **off by default**: a server
+> only simulates eliminations until its operators set `GOELAND_DISPOSAL_ENABLED=true` (§5c). The
+> three retention policies shipped are **examples**: the real schedule must come from the City
+> archives before any use on real cases.
 
 ## 1. Vocabulary
 
@@ -85,9 +86,10 @@ approved cases are handled. For a transfer (ARCHIVE), for each approved case:
 3. the case is **frozen** (locked: it can no longer change nor be reopened);
 4. its retention is marked ARCHIVED.
 
-For an elimination (DESTROY), see §5b. The bordereau is then closed with its proof (§4). An open
-bordereau can be cancelled with a reason; its cases become due again. The execution page asks for
-an explicit confirmation before an elimination.
+For an elimination (DESTROY), see §5b; it runs only on a server where it is enabled (§5c). The
+bordereau is then closed with its proof (§4). An open bordereau can be cancelled with a reason;
+its cases become due again. The execution page asks for an explicit confirmation before an
+elimination.
 
 ## 4. Proof
 
@@ -154,6 +156,31 @@ reference, type and the approvers' reasons, as proof), the transfer packages alr
 backups of the database and of the blob store (their retention is an operations matter), the
 access log (`access_audit_event`, references only), and the outbox (references only).
 
+## 5c. Enabling the elimination; simulation
+
+Destroying records is a decision of the deployment, not a default. The server reads
+`GOELAND_DISPOSAL_ENABLED`:
+
+| Value | Effect |
+|---|---|
+| unset, empty or `false` (default) | Elimination **disabled**: executing a DESTROY bordereau is refused (`FAILED_PRECONDITION`); it can only be simulated. Transfers (ARCHIVE) are not affected. |
+| `true` (exactly) | Elimination **enabled**: an approved DESTROY bordereau is executed as in §5b. |
+| anything else (`1`, `yes`, `True`, a typo) | The server **does not start**: a misconfiguration is never guessed. |
+
+The server logs its mode at startup (a warning when the elimination is enabled), and the bordereau
+page says when it is disabled.
+
+**Simulation.** On a fully decided DESTROY bordereau, « Simuler l'élimination » (`POST
+/api/disposition-bordereaux/{id}/simulate`, records managers) runs the whole execution in a
+transaction that is rolled back, and reports for each approved case the documents that would be
+eliminated and kept, the files that would be destroyed and the exports that would be removed.
+Nothing is written (neither the data nor the audit) and no file is touched: bytes are only deleted
+after a commit. The simulation is available whether the elimination is enabled or not; it fails
+for the same reasons as the execution would (a legal hold placed since the approval, for example).
+
+Recommended procedure: run the first bordereaux on the production data with the elimination
+disabled, check their simulations with the archives, then enable it.
+
 ## 6. Roles and rights
 
 | Who | May |
@@ -172,6 +199,8 @@ out; its reference stays visible.
 - Before use on real cases: replace the example policies (`EXAMPLE_ARCHIVE_10`,
   `EXAMPLE_DESTROY_5`, `EXAMPLE_REVIEW_10`) with the archives' schedule and give each case type its
   policy; then apply it to the already closed cases.
+- Leave `GOELAND_DISPOSAL_ENABLED` unset until the archives have validated the schedule and the
+  simulations of the first bordereaux (§5c); then set it to `true` explicitly.
 - Grant `RECORDS_MANAGER` to the archivists; make sure each case has an owning unit whose
   managers can approve (otherwise the case's own managers approve).
 - Transfer packages are written to the blob store (`GOELAND_DOCUMENT_PATH`) like exports; size the

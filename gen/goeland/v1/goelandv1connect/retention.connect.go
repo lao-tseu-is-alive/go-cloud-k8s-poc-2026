@@ -94,6 +94,9 @@ const (
 	// RetentionServiceRebuildTransferPackageProcedure is the fully-qualified name of the
 	// RetentionService's RebuildTransferPackage RPC.
 	RetentionServiceRebuildTransferPackageProcedure = "/goeland.v1.RetentionService/RebuildTransferPackage"
+	// RetentionServiceSimulateEliminationProcedure is the fully-qualified name of the
+	// RetentionService's SimulateElimination RPC.
+	RetentionServiceSimulateEliminationProcedure = "/goeland.v1.RetentionService/SimulateElimination"
 	// RetentionServiceCancelDispositionBordereauProcedure is the fully-qualified name of the
 	// RetentionService's CancelDispositionBordereau RPC.
 	RetentionServiceCancelDispositionBordereauProcedure = "/goeland.v1.RetentionService/CancelDispositionBordereau"
@@ -132,6 +135,9 @@ type RetentionServiceClient interface {
 	ExecuteDispositionBordereau(context.Context, *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error)
 	// Queue again the failed or expired transfer package of a transferred case. Requires goeland:records.
 	RebuildTransferPackage(context.Context, *connect.Request[v1.RebuildTransferPackageRequest]) (*connect.Response[v1.RebuildTransferPackageResponse], error)
+	// Simulate the execution of an elimination bordereau: run it, report what it
+	// would do, roll it back. Requires goeland:records.
+	SimulateElimination(context.Context, *connect.Request[v1.SimulateEliminationRequest]) (*connect.Response[v1.SimulateEliminationResponse], error)
 	// Abandon an open bordereau. Requires goeland:records.
 	CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error)
 }
@@ -237,6 +243,12 @@ func NewRetentionServiceClient(httpClient connect.HTTPClient, baseURL string, op
 			connect.WithSchema(retentionServiceMethods.ByName("RebuildTransferPackage")),
 			connect.WithClientOptions(opts...),
 		),
+		simulateElimination: connect.NewClient[v1.SimulateEliminationRequest, v1.SimulateEliminationResponse](
+			httpClient,
+			baseURL+RetentionServiceSimulateEliminationProcedure,
+			connect.WithSchema(retentionServiceMethods.ByName("SimulateElimination")),
+			connect.WithClientOptions(opts...),
+		),
 		cancelDispositionBordereau: connect.NewClient[v1.CancelDispositionBordereauRequest, v1.CancelDispositionBordereauResponse](
 			httpClient,
 			baseURL+RetentionServiceCancelDispositionBordereauProcedure,
@@ -263,6 +275,7 @@ type retentionServiceClient struct {
 	decideDispositionItem       *connect.Client[v1.DecideDispositionItemRequest, v1.DecideDispositionItemResponse]
 	executeDispositionBordereau *connect.Client[v1.ExecuteDispositionBordereauRequest, v1.ExecuteDispositionBordereauResponse]
 	rebuildTransferPackage      *connect.Client[v1.RebuildTransferPackageRequest, v1.RebuildTransferPackageResponse]
+	simulateElimination         *connect.Client[v1.SimulateEliminationRequest, v1.SimulateEliminationResponse]
 	cancelDispositionBordereau  *connect.Client[v1.CancelDispositionBordereauRequest, v1.CancelDispositionBordereauResponse]
 }
 
@@ -341,6 +354,11 @@ func (c *retentionServiceClient) RebuildTransferPackage(ctx context.Context, req
 	return c.rebuildTransferPackage.CallUnary(ctx, req)
 }
 
+// SimulateElimination calls goeland.v1.RetentionService.SimulateElimination.
+func (c *retentionServiceClient) SimulateElimination(ctx context.Context, req *connect.Request[v1.SimulateEliminationRequest]) (*connect.Response[v1.SimulateEliminationResponse], error) {
+	return c.simulateElimination.CallUnary(ctx, req)
+}
+
 // CancelDispositionBordereau calls goeland.v1.RetentionService.CancelDispositionBordereau.
 func (c *retentionServiceClient) CancelDispositionBordereau(ctx context.Context, req *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error) {
 	return c.cancelDispositionBordereau.CallUnary(ctx, req)
@@ -379,6 +397,9 @@ type RetentionServiceHandler interface {
 	ExecuteDispositionBordereau(context.Context, *connect.Request[v1.ExecuteDispositionBordereauRequest]) (*connect.Response[v1.ExecuteDispositionBordereauResponse], error)
 	// Queue again the failed or expired transfer package of a transferred case. Requires goeland:records.
 	RebuildTransferPackage(context.Context, *connect.Request[v1.RebuildTransferPackageRequest]) (*connect.Response[v1.RebuildTransferPackageResponse], error)
+	// Simulate the execution of an elimination bordereau: run it, report what it
+	// would do, roll it back. Requires goeland:records.
+	SimulateElimination(context.Context, *connect.Request[v1.SimulateEliminationRequest]) (*connect.Response[v1.SimulateEliminationResponse], error)
 	// Abandon an open bordereau. Requires goeland:records.
 	CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error)
 }
@@ -480,6 +501,12 @@ func NewRetentionServiceHandler(svc RetentionServiceHandler, opts ...connect.Han
 		connect.WithSchema(retentionServiceMethods.ByName("RebuildTransferPackage")),
 		connect.WithHandlerOptions(opts...),
 	)
+	retentionServiceSimulateEliminationHandler := connect.NewUnaryHandler(
+		RetentionServiceSimulateEliminationProcedure,
+		svc.SimulateElimination,
+		connect.WithSchema(retentionServiceMethods.ByName("SimulateElimination")),
+		connect.WithHandlerOptions(opts...),
+	)
 	retentionServiceCancelDispositionBordereauHandler := connect.NewUnaryHandler(
 		RetentionServiceCancelDispositionBordereauProcedure,
 		svc.CancelDispositionBordereau,
@@ -518,6 +545,8 @@ func NewRetentionServiceHandler(svc RetentionServiceHandler, opts ...connect.Han
 			retentionServiceExecuteDispositionBordereauHandler.ServeHTTP(w, r)
 		case RetentionServiceRebuildTransferPackageProcedure:
 			retentionServiceRebuildTransferPackageHandler.ServeHTTP(w, r)
+		case RetentionServiceSimulateEliminationProcedure:
+			retentionServiceSimulateEliminationHandler.ServeHTTP(w, r)
 		case RetentionServiceCancelDispositionBordereauProcedure:
 			retentionServiceCancelDispositionBordereauHandler.ServeHTTP(w, r)
 		default:
@@ -587,6 +616,10 @@ func (UnimplementedRetentionServiceHandler) ExecuteDispositionBordereau(context.
 
 func (UnimplementedRetentionServiceHandler) RebuildTransferPackage(context.Context, *connect.Request[v1.RebuildTransferPackageRequest]) (*connect.Response[v1.RebuildTransferPackageResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.RebuildTransferPackage is not implemented"))
+}
+
+func (UnimplementedRetentionServiceHandler) SimulateElimination(context.Context, *connect.Request[v1.SimulateEliminationRequest]) (*connect.Response[v1.SimulateEliminationResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.RetentionService.SimulateElimination is not implemented"))
 }
 
 func (UnimplementedRetentionServiceHandler) CancelDispositionBordereau(context.Context, *connect.Request[v1.CancelDispositionBordereauRequest]) (*connect.Response[v1.CancelDispositionBordereauResponse], error) {

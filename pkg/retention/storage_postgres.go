@@ -20,11 +20,21 @@ type PostgresRepository struct {
 	log  *slog.Logger
 	// store holds the document bytes an elimination destroys; nil refuses eliminations.
 	store blobstore.Store
+	// disposalEnabled lets an elimination run; off, it is only simulated.
+	disposalEnabled bool
 }
 
 // WithBlobStore sets the store whose bytes an elimination destroys (GLD-077).
 func (r *PostgresRepository) WithBlobStore(store blobstore.Store) *PostgresRepository {
 	r.store = store
+	return r
+}
+
+// EnableDisposal lets the execution of elimination bordereaux run. It is off
+// by default: an elimination is then only simulated (SimulateElimination), so
+// destroying records is an explicit decision of the deployment.
+func (r *PostgresRepository) EnableDisposal(enabled bool) *PostgresRepository {
+	r.disposalEnabled = enabled
 	return r
 }
 

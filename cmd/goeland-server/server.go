@@ -109,6 +109,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, fmt.Errorf("document blob store: %w", err)
 	}
 	log.Info("document blob store ready", "path", blobStore.Root(), "max_upload_bytes", config.MaxUploadBytes)
+	logDisposalMode(log, config.DisposalEnabled)
 
 	coreMod, outbox, err := buildCoreModule(ctx, config, pool, verifier, log)
 	if err != nil {
@@ -270,6 +271,16 @@ func spaHandler(fileServer http.Handler, frontendFS fs.FS) http.HandlerFunc {
 	}
 }
 
+// logDisposalMode states at startup whether executing an elimination
+// bordereau destroys records (GLD-077) or is only simulated.
+func logDisposalMode(log *slog.Logger, enabled bool) {
+	if enabled {
+		log.Warn("elimination ENABLED: executing an approved elimination bordereau irreversibly erases cases and destroys files (GOELAND_DISPOSAL_ENABLED=true)")
+		return
+	}
+	log.Info("elimination disabled: elimination bordereaux can only be simulated (set GOELAND_DISPOSAL_ENABLED=true to enable)")
+}
+
 // bundledModule is what the server needs from a domain module to mount it on
 // the shared transcoder.
 type bundledModule interface {
@@ -319,7 +330,7 @@ func buildDomainModules(ctx context.Context, config serverConfig, deps moduleDep
 	if err != nil {
 		return nil, nil, fmt.Errorf("task module: %w", err)
 	}
-	retentionMod, err := retentionmodule.New(ctx, retentionmodule.Config{RequestTimeout: timeout}, retentionmodule.Deps{Pool: pool, Verifier: verifier, Logger: log, BlobStore: deps.store})
+	retentionMod, err := retentionmodule.New(ctx, retentionmodule.Config{RequestTimeout: timeout}, retentionmodule.Deps{Pool: pool, Verifier: verifier, Logger: log, BlobStore: deps.store, DisposalEnabled: config.DisposalEnabled})
 	if err != nil {
 		return nil, nil, fmt.Errorf("retention module: %w", err)
 	}

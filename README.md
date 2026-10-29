@@ -239,7 +239,8 @@ Add `GOELAND_METRICS_ADDRESS=127.0.0.1:9464` to serve Prometheus metrics on
 `OTEL_EXPORTER_OTLP_ENDPOINT=http://127.0.0.1:4318` to send OpenTelemetry traces to a collector.
 Add `GOELAND_DEV_USER_NAME='Jane Doe' GOELAND_DEV_USER_ADMIN=true` to sign in as a named
 administrator (the dev user is bootstrapped with the ADMIN role); governance and audit then show
-that name (users are recorded from their token).
+that name (users are recorded from their token). Eliminations of cases are only simulated unless
+`GOELAND_DISPOSAL_ENABLED=true` is set (see [docs/RETENTION.md](docs/RETENTION.md) §5c).
 
 ## Running locally with SSO (jwt auth)
 

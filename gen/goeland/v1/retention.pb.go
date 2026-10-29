@@ -2890,6 +2890,181 @@ func (x *RebuildTransferPackageResponse) GetItem() *DispositionItem {
 	return nil
 }
 
+// SimulateEliminationRequest runs the execution of an elimination bordereau
+// and rolls it back: nothing is written nor destroyed (records manager).
+type SimulateEliminationRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the bordereau, of final disposition DESTROY, whose cases are all decided.
+	Id            string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimulateEliminationRequest) Reset() {
+	*x = SimulateEliminationRequest{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[37]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimulateEliminationRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimulateEliminationRequest) ProtoMessage() {}
+
+func (x *SimulateEliminationRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[37]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimulateEliminationRequest.ProtoReflect.Descriptor instead.
+func (*SimulateEliminationRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{37}
+}
+
+func (x *SimulateEliminationRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+// EliminationPreview is what the elimination of one approved case would do.
+type EliminationPreview struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// case_id is the approved case.
+	CaseId string `protobuf:"bytes,1,opt,name=case_id,json=caseId,proto3" json:"case_id,omitempty"`
+	// documents_eliminated counts the documents only this case holds: they would be blanked and deleted.
+	DocumentsEliminated int32 `protobuf:"varint,2,opt,name=documents_eliminated,json=documentsEliminated,proto3" json:"documents_eliminated,omitempty"`
+	// documents_kept counts the documents still linked to a thing or to a case that stays: they stay untouched.
+	DocumentsKept int32 `protobuf:"varint,3,opt,name=documents_kept,json=documentsKept,proto3" json:"documents_kept,omitempty"`
+	// files_destroyed counts the files no other document version references: their bytes would be destroyed.
+	FilesDestroyed int32 `protobuf:"varint,4,opt,name=files_destroyed,json=filesDestroyed,proto3" json:"files_destroyed,omitempty"`
+	// exports_purged counts the ordinary exports of the case that would be removed.
+	ExportsPurged int32 `protobuf:"varint,5,opt,name=exports_purged,json=exportsPurged,proto3" json:"exports_purged,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *EliminationPreview) Reset() {
+	*x = EliminationPreview{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[38]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *EliminationPreview) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*EliminationPreview) ProtoMessage() {}
+
+func (x *EliminationPreview) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[38]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use EliminationPreview.ProtoReflect.Descriptor instead.
+func (*EliminationPreview) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{38}
+}
+
+func (x *EliminationPreview) GetCaseId() string {
+	if x != nil {
+		return x.CaseId
+	}
+	return ""
+}
+
+func (x *EliminationPreview) GetDocumentsEliminated() int32 {
+	if x != nil {
+		return x.DocumentsEliminated
+	}
+	return 0
+}
+
+func (x *EliminationPreview) GetDocumentsKept() int32 {
+	if x != nil {
+		return x.DocumentsKept
+	}
+	return 0
+}
+
+func (x *EliminationPreview) GetFilesDestroyed() int32 {
+	if x != nil {
+		return x.FilesDestroyed
+	}
+	return 0
+}
+
+func (x *EliminationPreview) GetExportsPurged() int32 {
+	if x != nil {
+		return x.ExportsPurged
+	}
+	return 0
+}
+
+// SimulateEliminationResponse returns what the execution would do, case by case.
+type SimulateEliminationResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// cases are the approved cases of the bordereau.
+	Cases         []*EliminationPreview `protobuf:"bytes,1,rep,name=cases,proto3" json:"cases,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *SimulateEliminationResponse) Reset() {
+	*x = SimulateEliminationResponse{}
+	mi := &file_goeland_v1_retention_proto_msgTypes[39]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *SimulateEliminationResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*SimulateEliminationResponse) ProtoMessage() {}
+
+func (x *SimulateEliminationResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_retention_proto_msgTypes[39]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use SimulateEliminationResponse.ProtoReflect.Descriptor instead.
+func (*SimulateEliminationResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{39}
+}
+
+func (x *SimulateEliminationResponse) GetCases() []*EliminationPreview {
+	if x != nil {
+		return x.Cases
+	}
+	return nil
+}
+
 // CancelDispositionBordereauRequest abandons an open bordereau (records manager).
 type CancelDispositionBordereauRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2903,7 +3078,7 @@ type CancelDispositionBordereauRequest struct {
 
 func (x *CancelDispositionBordereauRequest) Reset() {
 	*x = CancelDispositionBordereauRequest{}
-	mi := &file_goeland_v1_retention_proto_msgTypes[37]
+	mi := &file_goeland_v1_retention_proto_msgTypes[40]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2915,7 +3090,7 @@ func (x *CancelDispositionBordereauRequest) String() string {
 func (*CancelDispositionBordereauRequest) ProtoMessage() {}
 
 func (x *CancelDispositionBordereauRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_retention_proto_msgTypes[37]
+	mi := &file_goeland_v1_retention_proto_msgTypes[40]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2928,7 +3103,7 @@ func (x *CancelDispositionBordereauRequest) ProtoReflect() protoreflect.Message 
 
 // Deprecated: Use CancelDispositionBordereauRequest.ProtoReflect.Descriptor instead.
 func (*CancelDispositionBordereauRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{37}
+	return file_goeland_v1_retention_proto_rawDescGZIP(), []int{40}
 }
 
 func (x *CancelDispositionBordereauRequest) GetId() string {
@@ -3179,7 +3354,17 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\x1dRebuildTransferPackageRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"Q\n" +
 	"\x1eRebuildTransferPackageResponse\x12/\n" +
-	"\x04item\x18\x01 \x01(\v2\x1b.goeland.v1.DispositionItemR\x04item\"e\n" +
+	"\x04item\x18\x01 \x01(\v2\x1b.goeland.v1.DispositionItemR\x04item\"6\n" +
+	"\x1aSimulateEliminationRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\"\xd7\x01\n" +
+	"\x12EliminationPreview\x12\x17\n" +
+	"\acase_id\x18\x01 \x01(\tR\x06caseId\x121\n" +
+	"\x14documents_eliminated\x18\x02 \x01(\x05R\x13documentsEliminated\x12%\n" +
+	"\x0edocuments_kept\x18\x03 \x01(\x05R\rdocumentsKept\x12'\n" +
+	"\x0ffiles_destroyed\x18\x04 \x01(\x05R\x0efilesDestroyed\x12%\n" +
+	"\x0eexports_purged\x18\x05 \x01(\x05R\rexportsPurged\"S\n" +
+	"\x1bSimulateEliminationResponse\x124\n" +
+	"\x05cases\x18\x01 \x03(\v2\x1e.goeland.v1.EliminationPreviewR\x05cases\"e\n" +
 	"!CancelDispositionBordereauRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12&\n" +
 	"\x06reason\x18\x02 \x01(\tB\x0e\xe2A\x01\x02\xbaH\ar\x05\x10\x01\x18\xd0\x0fR\x06reason*\x91\x01\n" +
@@ -3201,7 +3386,7 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	" DISPOSITION_DECISION_UNSPECIFIED\x10\x00\x12 \n" +
 	"\x1cDISPOSITION_DECISION_PENDING\x10\x01\x12!\n" +
 	"\x1dDISPOSITION_DECISION_APPROVED\x10\x02\x12!\n" +
-	"\x1dDISPOSITION_DECISION_REJECTED\x10\x032\xf8\x13\n" +
+	"\x1dDISPOSITION_DECISION_REJECTED\x10\x032\x97\x15\n" +
 	"\x10RetentionService\x12\x8d\x01\n" +
 	"\x15ListRetentionPolicies\x12(.goeland.v1.ListRetentionPoliciesRequest\x1a).goeland.v1.ListRetentionPoliciesResponse\"\x1f\x82\xd3\xe4\x93\x02\x19\x12\x17/api/retention-policies\x12\x90\x01\n" +
 	"\x15CreateRetentionPolicy\x12(.goeland.v1.CreateRetentionPolicyRequest\x1a).goeland.v1.CreateRetentionPolicyResponse\"\"\x82\xd3\xe4\x93\x02\x1c:\x01*\"\x17/api/retention-policies\x12\x97\x01\n" +
@@ -3217,7 +3402,8 @@ const file_goeland_v1_retention_proto_rawDesc = "" +
 	"\x1aListMyDispositionApprovals\x12-.goeland.v1.ListMyDispositionApprovalsRequest\x1a..goeland.v1.ListMyDispositionApprovalsResponse\"#\x82\xd3\xe4\x93\x02\x1d\x12\x1b/api/disposition-items/mine\x12\x9b\x01\n" +
 	"\x15DecideDispositionItem\x12(.goeland.v1.DecideDispositionItemRequest\x1a).goeland.v1.DecideDispositionItemResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/disposition-items/{id}/decide\x12\xb3\x01\n" +
 	"\x1bExecuteDispositionBordereau\x12..goeland.v1.ExecuteDispositionBordereauRequest\x1a/.goeland.v1.ExecuteDispositionBordereauResponse\"3\x82\xd3\xe4\x93\x02-:\x01*\"(/api/disposition-bordereaux/{id}/execute\x12\xa8\x01\n" +
-	"\x16RebuildTransferPackage\x12).goeland.v1.RebuildTransferPackageRequest\x1a*.goeland.v1.RebuildTransferPackageResponse\"7\x82\xd3\xe4\x93\x021:\x01*\",/api/disposition-items/{id}/rebuild-transfer\x12\xaf\x01\n" +
+	"\x16RebuildTransferPackage\x12).goeland.v1.RebuildTransferPackageRequest\x1a*.goeland.v1.RebuildTransferPackageResponse\"7\x82\xd3\xe4\x93\x021:\x01*\",/api/disposition-items/{id}/rebuild-transfer\x12\x9c\x01\n" +
+	"\x13SimulateElimination\x12&.goeland.v1.SimulateEliminationRequest\x1a'.goeland.v1.SimulateEliminationResponse\"4\x82\xd3\xe4\x93\x02.:\x01*\")/api/disposition-bordereaux/{id}/simulate\x12\xaf\x01\n" +
 	"\x1aCancelDispositionBordereau\x12-.goeland.v1.CancelDispositionBordereauRequest\x1a..goeland.v1.CancelDispositionBordereauResponse\"2\x82\xd3\xe4\x93\x02,:\x01*\"'/api/disposition-bordereaux/{id}/cancelB\xb6\x01\n" +
 	"\x0ecom.goeland.v1B\x0eRetentionProtoP\x01ZKgithub.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1;goelandv1\xa2\x02\x03GXX\xaa\x02\n" +
 	"Goeland.V1\xca\x02\n" +
@@ -3236,7 +3422,7 @@ func file_goeland_v1_retention_proto_rawDescGZIP() []byte {
 }
 
 var file_goeland_v1_retention_proto_enumTypes = make([]protoimpl.EnumInfo, 4)
-var file_goeland_v1_retention_proto_msgTypes = make([]protoimpl.MessageInfo, 39)
+var file_goeland_v1_retention_proto_msgTypes = make([]protoimpl.MessageInfo, 42)
 var file_goeland_v1_retention_proto_goTypes = []any{
 	(FinalDisposition)(0),                       // 0: goeland.v1.FinalDisposition
 	(DispositionStatus)(0),                      // 1: goeland.v1.DispositionStatus
@@ -3279,46 +3465,49 @@ var file_goeland_v1_retention_proto_goTypes = []any{
 	(*ExecuteDispositionBordereauRequest)(nil),  // 38: goeland.v1.ExecuteDispositionBordereauRequest
 	(*RebuildTransferPackageRequest)(nil),       // 39: goeland.v1.RebuildTransferPackageRequest
 	(*RebuildTransferPackageResponse)(nil),      // 40: goeland.v1.RebuildTransferPackageResponse
-	(*CancelDispositionBordereauRequest)(nil),   // 41: goeland.v1.CancelDispositionBordereauRequest
-	nil,                           // 42: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
-	(*ReferenceChange)(nil),       // 43: goeland.v1.ReferenceChange
-	(*timestamppb.Timestamp)(nil), // 44: google.protobuf.Timestamp
-	(*AuditEvent)(nil),            // 45: goeland.v1.AuditEvent
+	(*SimulateEliminationRequest)(nil),          // 41: goeland.v1.SimulateEliminationRequest
+	(*EliminationPreview)(nil),                  // 42: goeland.v1.EliminationPreview
+	(*SimulateEliminationResponse)(nil),         // 43: goeland.v1.SimulateEliminationResponse
+	(*CancelDispositionBordereauRequest)(nil),   // 44: goeland.v1.CancelDispositionBordereauRequest
+	nil,                           // 45: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
+	(*ReferenceChange)(nil),       // 46: goeland.v1.ReferenceChange
+	(*timestamppb.Timestamp)(nil), // 47: google.protobuf.Timestamp
+	(*AuditEvent)(nil),            // 48: goeland.v1.AuditEvent
 }
 var file_goeland_v1_retention_proto_depIdxs = []int32{
 	0,  // 0: goeland.v1.RetentionPolicy.final_disposition:type_name -> goeland.v1.FinalDisposition
 	4,  // 1: goeland.v1.ListRetentionPoliciesResponse.retention_policies:type_name -> goeland.v1.RetentionPolicy
 	0,  // 2: goeland.v1.CreateRetentionPolicyRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
 	4,  // 3: goeland.v1.CreateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
-	43, // 4: goeland.v1.CreateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
+	46, // 4: goeland.v1.CreateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
 	0,  // 5: goeland.v1.UpdateRetentionPolicyRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
 	4,  // 6: goeland.v1.UpdateRetentionPolicyResponse.retention_policy:type_name -> goeland.v1.RetentionPolicy
-	43, // 7: goeland.v1.UpdateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
+	46, // 7: goeland.v1.UpdateRetentionPolicyResponse.change:type_name -> goeland.v1.ReferenceChange
 	0,  // 8: goeland.v1.SubjectRetention.final_disposition:type_name -> goeland.v1.FinalDisposition
-	44, // 9: goeland.v1.SubjectRetention.created_at:type_name -> google.protobuf.Timestamp
-	44, // 10: goeland.v1.SubjectRetention.ended_at:type_name -> google.protobuf.Timestamp
+	47, // 9: goeland.v1.SubjectRetention.created_at:type_name -> google.protobuf.Timestamp
+	47, // 10: goeland.v1.SubjectRetention.ended_at:type_name -> google.protobuf.Timestamp
 	1,  // 11: goeland.v1.SubjectRetention.disposition_status:type_name -> goeland.v1.DispositionStatus
-	44, // 12: goeland.v1.SubjectRetention.disposed_at:type_name -> google.protobuf.Timestamp
-	44, // 13: goeland.v1.RetentionHold.placed_at:type_name -> google.protobuf.Timestamp
-	44, // 14: goeland.v1.RetentionHold.released_at:type_name -> google.protobuf.Timestamp
+	47, // 12: goeland.v1.SubjectRetention.disposed_at:type_name -> google.protobuf.Timestamp
+	47, // 13: goeland.v1.RetentionHold.placed_at:type_name -> google.protobuf.Timestamp
+	47, // 14: goeland.v1.RetentionHold.released_at:type_name -> google.protobuf.Timestamp
 	11, // 15: goeland.v1.GetCaseRetentionResponse.current:type_name -> goeland.v1.SubjectRetention
 	12, // 16: goeland.v1.GetCaseRetentionResponse.hold:type_name -> goeland.v1.RetentionHold
 	11, // 17: goeland.v1.GetCaseRetentionResponse.retentions:type_name -> goeland.v1.SubjectRetention
 	12, // 18: goeland.v1.GetCaseRetentionResponse.holds:type_name -> goeland.v1.RetentionHold
 	4,  // 19: goeland.v1.GetCaseRetentionResponse.default_policy:type_name -> goeland.v1.RetentionPolicy
 	12, // 20: goeland.v1.PlaceRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
-	45, // 21: goeland.v1.PlaceRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	48, // 21: goeland.v1.PlaceRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	12, // 22: goeland.v1.ReleaseRetentionHoldResponse.hold:type_name -> goeland.v1.RetentionHold
-	45, // 23: goeland.v1.ReleaseRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	48, // 23: goeland.v1.ReleaseRetentionHoldResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	11, // 24: goeland.v1.DueRetention.retention:type_name -> goeland.v1.SubjectRetention
 	0,  // 25: goeland.v1.ListDueRetentionsRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
 	19, // 26: goeland.v1.ListDueRetentionsResponse.retentions:type_name -> goeland.v1.DueRetention
 	3,  // 27: goeland.v1.DispositionItem.decision:type_name -> goeland.v1.DispositionDecision
-	44, // 28: goeland.v1.DispositionItem.decided_at:type_name -> google.protobuf.Timestamp
+	47, // 28: goeland.v1.DispositionItem.decided_at:type_name -> google.protobuf.Timestamp
 	0,  // 29: goeland.v1.DispositionBordereau.final_disposition:type_name -> goeland.v1.FinalDisposition
 	2,  // 30: goeland.v1.DispositionBordereau.status:type_name -> goeland.v1.BordereauStatus
-	44, // 31: goeland.v1.DispositionBordereau.prepared_at:type_name -> google.protobuf.Timestamp
-	44, // 32: goeland.v1.DispositionBordereau.closed_at:type_name -> google.protobuf.Timestamp
+	47, // 31: goeland.v1.DispositionBordereau.prepared_at:type_name -> google.protobuf.Timestamp
+	47, // 32: goeland.v1.DispositionBordereau.closed_at:type_name -> google.protobuf.Timestamp
 	24, // 33: goeland.v1.DispositionBordereau.items:type_name -> goeland.v1.DispositionItem
 	0,  // 34: goeland.v1.CreateDispositionBordereauRequest.final_disposition:type_name -> goeland.v1.FinalDisposition
 	25, // 35: goeland.v1.CreateDispositionBordereauResponse.bordereau:type_name -> goeland.v1.DispositionBordereau
@@ -3328,47 +3517,50 @@ var file_goeland_v1_retention_proto_depIdxs = []int32{
 	2,  // 39: goeland.v1.ListDispositionBordereauxRequest.status:type_name -> goeland.v1.BordereauStatus
 	25, // 40: goeland.v1.ListDispositionBordereauxResponse.bordereaux:type_name -> goeland.v1.DispositionBordereau
 	24, // 41: goeland.v1.ListMyDispositionApprovalsResponse.items:type_name -> goeland.v1.DispositionItem
-	42, // 42: goeland.v1.ListMyDispositionApprovalsResponse.dispositions:type_name -> goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
+	45, // 42: goeland.v1.ListMyDispositionApprovalsResponse.dispositions:type_name -> goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry
 	24, // 43: goeland.v1.DecideDispositionItemResponse.item:type_name -> goeland.v1.DispositionItem
 	24, // 44: goeland.v1.RebuildTransferPackageResponse.item:type_name -> goeland.v1.DispositionItem
-	0,  // 45: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry.value:type_name -> goeland.v1.FinalDisposition
-	5,  // 46: goeland.v1.RetentionService.ListRetentionPolicies:input_type -> goeland.v1.ListRetentionPoliciesRequest
-	7,  // 47: goeland.v1.RetentionService.CreateRetentionPolicy:input_type -> goeland.v1.CreateRetentionPolicyRequest
-	9,  // 48: goeland.v1.RetentionService.UpdateRetentionPolicy:input_type -> goeland.v1.UpdateRetentionPolicyRequest
-	13, // 49: goeland.v1.RetentionService.GetCaseRetention:input_type -> goeland.v1.GetCaseRetentionRequest
-	15, // 50: goeland.v1.RetentionService.PlaceRetentionHold:input_type -> goeland.v1.PlaceRetentionHoldRequest
-	17, // 51: goeland.v1.RetentionService.ReleaseRetentionHold:input_type -> goeland.v1.ReleaseRetentionHoldRequest
-	20, // 52: goeland.v1.RetentionService.ListDueRetentions:input_type -> goeland.v1.ListDueRetentionsRequest
-	22, // 53: goeland.v1.RetentionService.ApplyCaseTypeRetention:input_type -> goeland.v1.ApplyCaseTypeRetentionRequest
-	26, // 54: goeland.v1.RetentionService.CreateDispositionBordereau:input_type -> goeland.v1.CreateDispositionBordereauRequest
-	32, // 55: goeland.v1.RetentionService.ListDispositionBordereaux:input_type -> goeland.v1.ListDispositionBordereauxRequest
-	31, // 56: goeland.v1.RetentionService.GetDispositionBordereau:input_type -> goeland.v1.GetDispositionBordereauRequest
-	34, // 57: goeland.v1.RetentionService.ListMyDispositionApprovals:input_type -> goeland.v1.ListMyDispositionApprovalsRequest
-	36, // 58: goeland.v1.RetentionService.DecideDispositionItem:input_type -> goeland.v1.DecideDispositionItemRequest
-	38, // 59: goeland.v1.RetentionService.ExecuteDispositionBordereau:input_type -> goeland.v1.ExecuteDispositionBordereauRequest
-	39, // 60: goeland.v1.RetentionService.RebuildTransferPackage:input_type -> goeland.v1.RebuildTransferPackageRequest
-	41, // 61: goeland.v1.RetentionService.CancelDispositionBordereau:input_type -> goeland.v1.CancelDispositionBordereauRequest
-	6,  // 62: goeland.v1.RetentionService.ListRetentionPolicies:output_type -> goeland.v1.ListRetentionPoliciesResponse
-	8,  // 63: goeland.v1.RetentionService.CreateRetentionPolicy:output_type -> goeland.v1.CreateRetentionPolicyResponse
-	10, // 64: goeland.v1.RetentionService.UpdateRetentionPolicy:output_type -> goeland.v1.UpdateRetentionPolicyResponse
-	14, // 65: goeland.v1.RetentionService.GetCaseRetention:output_type -> goeland.v1.GetCaseRetentionResponse
-	16, // 66: goeland.v1.RetentionService.PlaceRetentionHold:output_type -> goeland.v1.PlaceRetentionHoldResponse
-	18, // 67: goeland.v1.RetentionService.ReleaseRetentionHold:output_type -> goeland.v1.ReleaseRetentionHoldResponse
-	21, // 68: goeland.v1.RetentionService.ListDueRetentions:output_type -> goeland.v1.ListDueRetentionsResponse
-	23, // 69: goeland.v1.RetentionService.ApplyCaseTypeRetention:output_type -> goeland.v1.ApplyCaseTypeRetentionResponse
-	27, // 70: goeland.v1.RetentionService.CreateDispositionBordereau:output_type -> goeland.v1.CreateDispositionBordereauResponse
-	33, // 71: goeland.v1.RetentionService.ListDispositionBordereaux:output_type -> goeland.v1.ListDispositionBordereauxResponse
-	28, // 72: goeland.v1.RetentionService.GetDispositionBordereau:output_type -> goeland.v1.GetDispositionBordereauResponse
-	35, // 73: goeland.v1.RetentionService.ListMyDispositionApprovals:output_type -> goeland.v1.ListMyDispositionApprovalsResponse
-	37, // 74: goeland.v1.RetentionService.DecideDispositionItem:output_type -> goeland.v1.DecideDispositionItemResponse
-	29, // 75: goeland.v1.RetentionService.ExecuteDispositionBordereau:output_type -> goeland.v1.ExecuteDispositionBordereauResponse
-	40, // 76: goeland.v1.RetentionService.RebuildTransferPackage:output_type -> goeland.v1.RebuildTransferPackageResponse
-	30, // 77: goeland.v1.RetentionService.CancelDispositionBordereau:output_type -> goeland.v1.CancelDispositionBordereauResponse
-	62, // [62:78] is the sub-list for method output_type
-	46, // [46:62] is the sub-list for method input_type
-	46, // [46:46] is the sub-list for extension type_name
-	46, // [46:46] is the sub-list for extension extendee
-	0,  // [0:46] is the sub-list for field type_name
+	42, // 45: goeland.v1.SimulateEliminationResponse.cases:type_name -> goeland.v1.EliminationPreview
+	0,  // 46: goeland.v1.ListMyDispositionApprovalsResponse.DispositionsEntry.value:type_name -> goeland.v1.FinalDisposition
+	5,  // 47: goeland.v1.RetentionService.ListRetentionPolicies:input_type -> goeland.v1.ListRetentionPoliciesRequest
+	7,  // 48: goeland.v1.RetentionService.CreateRetentionPolicy:input_type -> goeland.v1.CreateRetentionPolicyRequest
+	9,  // 49: goeland.v1.RetentionService.UpdateRetentionPolicy:input_type -> goeland.v1.UpdateRetentionPolicyRequest
+	13, // 50: goeland.v1.RetentionService.GetCaseRetention:input_type -> goeland.v1.GetCaseRetentionRequest
+	15, // 51: goeland.v1.RetentionService.PlaceRetentionHold:input_type -> goeland.v1.PlaceRetentionHoldRequest
+	17, // 52: goeland.v1.RetentionService.ReleaseRetentionHold:input_type -> goeland.v1.ReleaseRetentionHoldRequest
+	20, // 53: goeland.v1.RetentionService.ListDueRetentions:input_type -> goeland.v1.ListDueRetentionsRequest
+	22, // 54: goeland.v1.RetentionService.ApplyCaseTypeRetention:input_type -> goeland.v1.ApplyCaseTypeRetentionRequest
+	26, // 55: goeland.v1.RetentionService.CreateDispositionBordereau:input_type -> goeland.v1.CreateDispositionBordereauRequest
+	32, // 56: goeland.v1.RetentionService.ListDispositionBordereaux:input_type -> goeland.v1.ListDispositionBordereauxRequest
+	31, // 57: goeland.v1.RetentionService.GetDispositionBordereau:input_type -> goeland.v1.GetDispositionBordereauRequest
+	34, // 58: goeland.v1.RetentionService.ListMyDispositionApprovals:input_type -> goeland.v1.ListMyDispositionApprovalsRequest
+	36, // 59: goeland.v1.RetentionService.DecideDispositionItem:input_type -> goeland.v1.DecideDispositionItemRequest
+	38, // 60: goeland.v1.RetentionService.ExecuteDispositionBordereau:input_type -> goeland.v1.ExecuteDispositionBordereauRequest
+	39, // 61: goeland.v1.RetentionService.RebuildTransferPackage:input_type -> goeland.v1.RebuildTransferPackageRequest
+	41, // 62: goeland.v1.RetentionService.SimulateElimination:input_type -> goeland.v1.SimulateEliminationRequest
+	44, // 63: goeland.v1.RetentionService.CancelDispositionBordereau:input_type -> goeland.v1.CancelDispositionBordereauRequest
+	6,  // 64: goeland.v1.RetentionService.ListRetentionPolicies:output_type -> goeland.v1.ListRetentionPoliciesResponse
+	8,  // 65: goeland.v1.RetentionService.CreateRetentionPolicy:output_type -> goeland.v1.CreateRetentionPolicyResponse
+	10, // 66: goeland.v1.RetentionService.UpdateRetentionPolicy:output_type -> goeland.v1.UpdateRetentionPolicyResponse
+	14, // 67: goeland.v1.RetentionService.GetCaseRetention:output_type -> goeland.v1.GetCaseRetentionResponse
+	16, // 68: goeland.v1.RetentionService.PlaceRetentionHold:output_type -> goeland.v1.PlaceRetentionHoldResponse
+	18, // 69: goeland.v1.RetentionService.ReleaseRetentionHold:output_type -> goeland.v1.ReleaseRetentionHoldResponse
+	21, // 70: goeland.v1.RetentionService.ListDueRetentions:output_type -> goeland.v1.ListDueRetentionsResponse
+	23, // 71: goeland.v1.RetentionService.ApplyCaseTypeRetention:output_type -> goeland.v1.ApplyCaseTypeRetentionResponse
+	27, // 72: goeland.v1.RetentionService.CreateDispositionBordereau:output_type -> goeland.v1.CreateDispositionBordereauResponse
+	33, // 73: goeland.v1.RetentionService.ListDispositionBordereaux:output_type -> goeland.v1.ListDispositionBordereauxResponse
+	28, // 74: goeland.v1.RetentionService.GetDispositionBordereau:output_type -> goeland.v1.GetDispositionBordereauResponse
+	35, // 75: goeland.v1.RetentionService.ListMyDispositionApprovals:output_type -> goeland.v1.ListMyDispositionApprovalsResponse
+	37, // 76: goeland.v1.RetentionService.DecideDispositionItem:output_type -> goeland.v1.DecideDispositionItemResponse
+	29, // 77: goeland.v1.RetentionService.ExecuteDispositionBordereau:output_type -> goeland.v1.ExecuteDispositionBordereauResponse
+	40, // 78: goeland.v1.RetentionService.RebuildTransferPackage:output_type -> goeland.v1.RebuildTransferPackageResponse
+	43, // 79: goeland.v1.RetentionService.SimulateElimination:output_type -> goeland.v1.SimulateEliminationResponse
+	30, // 80: goeland.v1.RetentionService.CancelDispositionBordereau:output_type -> goeland.v1.CancelDispositionBordereauResponse
+	64, // [64:81] is the sub-list for method output_type
+	47, // [47:64] is the sub-list for method input_type
+	47, // [47:47] is the sub-list for extension type_name
+	47, // [47:47] is the sub-list for extension extendee
+	0,  // [0:47] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_retention_proto_init() }
@@ -3384,7 +3576,7 @@ func file_goeland_v1_retention_proto_init() {
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_retention_proto_rawDesc), len(file_goeland_v1_retention_proto_rawDesc)),
 			NumEnums:      4,
-			NumMessages:   39,
+			NumMessages:   42,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

@@ -18,6 +18,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   references them. The audit, timeline and document version guards accept this erasure only inside
   the elimination transaction. The page asks for an explicit confirmation. A failed or expired
   transfer package is rebuilt from the bordereau page. See `docs/RETENTION.md` §5b.
+- Elimination is off by default (GLD-077): only `GOELAND_DISPOSAL_ENABLED=true` (exactly) lets an
+  elimination bordereau be executed; any other non-empty value except `false` stops the server,
+  which logs its mode at startup. Otherwise an elimination can only be simulated: « Simuler
+  l'élimination » (`SimulateElimination`, `POST /api/disposition-bordereaux/{id}/simulate`) runs it
+  in a rolled-back transaction and lists, per case, the documents eliminated and kept, the files
+  destroyed and the exports removed. `GET /config` exposes `disposalEnabled`. See
+  `docs/RETENTION.md` §5c.
 
 ## [0.20.0] - 2026-10-28
 
