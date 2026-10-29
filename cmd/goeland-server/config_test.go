@@ -13,7 +13,7 @@ import (
 // exported .env never leaks into these tests.
 var configEnv = []string{
 	"AUTH_SERVER_URL", "DATABASE_URL", "GOELAND_BOOTSTRAP_ADMINS", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
-	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
+	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_APP_ROLE", "GOELAND_DB_MIGRATE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
 	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DISPOSAL_ENABLED", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
 	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "JWT_ISSUER_ID", "JWT_SECRET", "LOG_LEVEL",
@@ -46,7 +46,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.ShutdownPeriod != defaultShutdownPeriod || cfg.DBConnectTimeout != defaultDBConnectTimeout ||
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
 		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled ||
-		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" {
+		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" || cfg.DBMigrate != "auto" {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -68,6 +68,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 		"LOG_LEVEL":                          "debug",
 		"AUTH_SERVER_URL":                    "https://auth.example.ch/",
 		"GOELAND_DISPOSAL_ENABLED":           "true",
+		"GOELAND_DB_MIGRATE":                 "Verify",
 	})
 	cfg, err := loadConfig()
 	if err != nil {
@@ -75,7 +76,7 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 	}
 	if cfg.AuthMode != "dev" || cfg.DevUserID != 42 || !cfg.DevUserAdmin || cfg.DBConnectTimeout != 0 ||
 		cfg.RequestTimeout != 30*time.Second || cfg.LogLevel != slog.LevelDebug || cfg.MetricsAddress != "0.0.0.0:9464" ||
-		cfg.AuthServerURL != "https://auth.example.ch" || !cfg.DisposalEnabled || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
+		cfg.AuthServerURL != "https://auth.example.ch" || !cfg.DisposalEnabled || cfg.DBMigrate != "verify" || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
 		t.Fatalf("settings not applied: %+v", cfg)
 	}
 }
@@ -106,6 +107,7 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"disposal capitalized", map[string]string{"GOELAND_DISPOSAL_ENABLED": "True"}, "GOELAND_DISPOSAL_ENABLED must be exactly true or false"},
 		{"jwt without secret", map[string]string{"JWT_SECRET": ""}, "JWT_SECRET is required in jwt mode"},
 		{"jwt issuer too short", map[string]string{"JWT_ISSUER_ID": "short"}, "JWT_ISSUER_ID is required in jwt mode (at least 16 characters)"},
+		{"unknown migrate mode", map[string]string{"GOELAND_DB_MIGRATE": "never"}, "GOELAND_DB_MIGRATE must be auto or verify"},
 		{"too many bootstrap admins", map[string]string{"GOELAND_BOOTSTRAP_ADMINS": strings.Repeat("1,", maxBootstrapAdmins+1)}, "more than 20 user ids"},
 	}
 	for _, c := range cases {
@@ -153,5 +155,17 @@ func TestBootstrapAdmins(t *testing.T) {
 	setConfigEnv(t, map[string]string{"GOELAND_DEV_USER_ID": "9", "GOELAND_DEV_USER_ADMIN": "true"})
 	if cfg, _ := loadConfig(); len(cfg.bootstrapAdmins()) != 0 {
 		t.Fatal("GOELAND_DEV_USER_ADMIN has no effect outside dev mode")
+	}
+}
+
+func TestLoadMigrateConfig(t *testing.T) {
+	setConfigEnv(t, map[string]string{"GOELAND_DB_APP_ROLE": "goeland_app", "GOELAND_AUTH_MODE": "dev"})
+	cfg, err := loadMigrateConfig()
+	if err != nil || cfg.AppRole != "goeland_app" || cfg.DatabaseURL == "" || cfg.limits.DBConnectTimeout != defaultDBConnectTimeout {
+		t.Fatalf("migrate config: %+v (%v)", cfg.AppRole, err)
+	}
+	setConfigEnv(t, map[string]string{"GOELAND_DB_APP_ROLE": "App-Role"})
+	if _, err := loadMigrateConfig(); err == nil || !strings.Contains(err.Error(), "GOELAND_DB_APP_ROLE") {
+		t.Fatalf("an invalid role name is refused, got %v", err)
 	}
 }

@@ -611,7 +611,11 @@ categories with their counts. Mockup with the decisions:
   `CreateDocument` / `AddDocumentVersion` stay forever (blob row and file); give
   unattached blobs an age limit and a cautious collector that never removes a
   referenced blob (review 2026-09-30).
-- [ ] **GLD-046 — Separate migrations from the runtime**: a migration job (or
+- [x] **GLD-046 — Separate migrations from the runtime**: a migration job (or
   init container) with the DDL role, and an application role limited to DML, so
   a faulty migration does not block every new pod and the runtime cannot alter
-  the schema or drop the audit triggers (review 2026-09-30).
+  the schema or drop the audit triggers (review 2026-09-30). Done 2026-10-29: `goeland-server
+  migrate` (migrations, then the grants of `GOELAND_DB_APP_ROLE`: rows only, `DELETE` on two
+  listed tables), `GOELAND_DB_MIGRATE=verify` (the server refuses a pending migration and warns
+  when its role owns the schema); the k8s manifests run an init container as the owner and the
+  server as `goeland_app`; the end-to-end tests run their servers as such a role.

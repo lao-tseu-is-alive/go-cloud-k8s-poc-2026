@@ -2,6 +2,8 @@
 # docs/PRODUCTION_READINESS.md: non-secret settings in a ConfigMap, secrets in
 # the goeland-secrets Secret (created by scripts/k8s_smoke_test.sh), probes on
 # /health and /readiness, one replica because blob storage is node-local.
+# Migrations run in an init container as the schema owner (goeland); the server
+# runs as goeland_app, limited to rows, and only checks the schema (GLD-046).
 # Dev auth mode: a smoke test only, never production.
 apiVersion: v1
 kind: ConfigMap
@@ -26,6 +28,9 @@ data:
   DB_USER: "goeland"
   DB_SSL_MODE: "disable"
   GOELAND_DB_MAX_CONNECTIONS: "10"
+  # The server never migrates; the migrate init container grants this role (GLD-046).
+  GOELAND_DB_MIGRATE: "verify"
+  GOELAND_DB_APP_ROLE: "goeland_app"
   GOELAND_DOCUMENT_PATH: "/data/documents"
   # Eliminations only simulated: set "true" only after the archives validated the
   # schedule and the simulations (docs/RETENTION.md §5c). Destroying is irreversible.
@@ -62,6 +67,25 @@ spec:
         seccompProfile:
           type: RuntimeDefault
       terminationGracePeriodSeconds: 20
+      initContainers:
+        # Applies the migrations as the schema owner, grants goeland_app, exits.
+        - name: migrate
+          image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.21.1
+          imagePullPolicy: IfNotPresent
+          command: ["./goeland-server", "migrate"]
+          envFrom:
+            - configMapRef:
+                name: goeland-config
+            - secretRef:
+                name: goeland-secrets
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop: ["ALL"]
+          resources:
+            requests: { cpu: 50m, memory: 32Mi }
+            limits: { cpu: 500m, memory: 128Mi }
       containers:
         - name: goeland
           image: ghcr.io/lao-tseu-is-alive/go-cloud-k8s-poc-2026:0.21.1
@@ -76,12 +100,21 @@ spec:
                 name: goeland-config
             - secretRef:
                 name: goeland-secrets
+          env:
+            # The runtime role, not the schema owner of the ConfigMap and Secret.
+            - name: DB_USER
+              value: goeland_app
+            - name: DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: goeland-secrets
+                  key: DB_APP_PASSWORD
           securityContext:
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
             capabilities:
               drop: ["ALL"]
-          # Migrations run before the listener binds: allow time on first boot.
+          # The schema check runs before the listener binds.
           readinessProbe:
             httpGet: { path: /readiness, port: http }
             periodSeconds: 5

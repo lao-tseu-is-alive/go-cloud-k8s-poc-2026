@@ -7,13 +7,13 @@ configured, which probes to wire, and which values are secrets.
 > **Status: POC.** The server basics are production-shaped (timeouts, graceful shutdown,
 > health/readiness, structured logs, request IDs, non-root scratch image) and access is
 > enforced per subject, filtered in every search and list. What is **not** production-grade
-> yet is called out explicitly below — chiefly **migrations
-> run by the runtime role** and **node-local blob storage**. Read
+> yet is called out explicitly below — chiefly **node-local blob storage**. Read
 > [Known limitations](#known-limitations) before exposing this to real data.
 
 ## 1. Database
 
-PostgreSQL is required. The schema is created by embedded migrations at startup (see §2).
+PostgreSQL is required. The schema is created by embedded migrations, applied by the schema
+owner (see §2).
 
 ### Required extensions
 
@@ -29,8 +29,7 @@ Migration `0001_subject_core.sql` runs `CREATE EXTENSION IF NOT EXISTS` for:
 `CREATE EXTENSION` requires a role with sufficient privileges (superuser for PostGIS), so
 **the extensions must be installable on the target instance** — use a PostGIS-enabled image
 (e.g. `postgis/postgis`), not plain `postgres`. A managed instance must have these
-extensions allow-listed. Once created, the application role only needs DML + DDL on the
-application schema.
+extensions allow-listed. Once created, the schema owner needs no superuser privilege.
 
 ### Connection
 
@@ -55,8 +54,37 @@ is a table where the caller can read very few rows (it must scan far to fill a p
 
 ## 2. Migrations
 
-Migrations are embedded (`pkg/core/module/db/migrations`) and applied automatically on
-startup by `coremodule.Migrate`:
+Migrations are embedded (`pkg/core/module/db/migrations`) and applied by `coremodule.Migrate`.
+
+### Two roles (GLD-046)
+
+In production the schema owner and the server's role are separate:
+
+| Role | Does | Configured by |
+|---|---|---|
+| Schema owner (e.g. `goeland`) | Owns the tables; runs `goeland-server migrate` (a Kubernetes init container or job), which applies the pending migrations and grants the runtime role, then exits. | `DATABASE_URL` / `DB_*` of the migrate job, `GOELAND_DB_APP_ROLE` |
+| Runtime role (e.g. `goeland_app`) | Runs the server: reads, inserts and updates rows; deletes only from `case_type_default_grant` and `outbox_event` (`coremodule.RuntimeDeletableTables`); reads `schema_migrations`. | `DATABASE_URL` / `DB_*` of the server, `GOELAND_DB_MIGRATE=verify` |
+
+Not owning the tables, the runtime role cannot alter the schema, nor drop or disable the
+triggers that keep the audit, the validated timeline entries and the document versions
+immutable, nor truncate a table, nor record a migration. The database administrator creates it
+once, with nothing but `LOGIN`:
+
+```sql
+CREATE ROLE goeland_app LOGIN PASSWORD '<db-app-password>';
+```
+
+`goeland-server migrate` then grants it on every run (tables added by a new migration need the
+grant again): `GRANT SELECT, INSERT, UPDATE` on every table, `DELETE` on the two tables above,
+`USAGE, SELECT` on the sequences. It refuses a role that does not exist or that is the owner
+itself. With `GOELAND_DB_MIGRATE=verify` the server never migrates: it refuses to start while a
+migration is pending (« database schema is behind this binary … run `goeland-server migrate` »),
+and warns when its role owns the schema or is a superuser. `deployments/k8s/` shows the setup.
+
+`GOELAND_DB_MIGRATE=auto` (the default) migrates at startup with the server's own role, which
+must then own the schema: convenient on a workstation, not for production.
+
+### Behaviour
 
 - Applied under a **PostgreSQL advisory lock**, so rolling deployments and multiple
   replicas starting concurrently are safe — only one instance migrates at a time.
@@ -142,8 +170,9 @@ terminator (ingress); set it there.
 
 The scratch image has no shell, so there is no container `HEALTHCHECK` — configure the
 probes at the orchestration layer against the endpoints above. There is no separate
-startup probe; because migrations run before the listener binds, size the readiness
-`initialDelay`/`failureThreshold` to allow for migration time on first boot. At startup the
+startup probe. With `GOELAND_DB_MIGRATE=auto` migrations run before the listener binds: size
+the readiness `initialDelay`/`failureThreshold` to allow for migration time on first boot (with
+`verify` the migrate init container takes that time, before the server starts). At startup the
 server waits for the database (`GOELAND_DB_CONNECT_TIMEOUT_SECONDS`, §6) instead of exiting,
 so a pod started before its database does not crash-loop.
 
@@ -163,6 +192,8 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_OUTBOX_RETENTION_DAYS`     | `7`              | How long delivered outbox events are kept before the purge (1–365, GLD-028). |
 | `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
 | `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
+| `GOELAND_DB_MIGRATE`                | `auto`           | `auto` migrates at startup (the server's role owns the schema); `verify` only checks that no migration is pending: run `goeland-server migrate` as the schema owner first (§2, GLD-046). |
+| `GOELAND_DB_APP_ROLE`               | —                | Read by `goeland-server migrate` only: the runtime role granted after the migrations (§2). |
 | `GOELAND_METRICS_ADDRESS`           | — (off)          | `host:port` of the Prometheus metrics listener (`GET /metrics`, GLD-010); never the public port. |
 | `GOELAND_DISPOSAL_ENABLED`          | `false`          | Only the exact value `true` lets an approved elimination bordereau erase cases and destroy files (§11, GLD-077); otherwise eliminations are only simulated. Any other value stops the server. |
 
@@ -261,9 +292,8 @@ These are the gaps that make this a POC rather than a production service:
   retention period (and partitioning to purge it) must be decided with the data protection
   officer and the archivist before production. Ordinary reads and list results are not logged.
   Every authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
-- **Migrations run with the runtime role** (§2): the application role owns the DDL, so it could
-  alter the schema or drop the append-only triggers, and a faulty migration blocks every new pod
-  (GLD-046: a migration job with its own role).
+- **The immutability guards stop at the schema owner** (§2): the runtime role cannot touch them,
+  but the schema owner (and any superuser) still can; keep its credentials to the migrate job.
 - **Integrity verification is not probative.** `VerifyDocumentIntegrity` compares a digest with
   the recorded one without rereading the stored bytes (GLD-021).
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments

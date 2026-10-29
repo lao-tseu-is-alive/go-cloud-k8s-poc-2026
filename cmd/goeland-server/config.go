@@ -105,6 +105,10 @@ type serverConfig struct {
 	// request (GOELAND_BOOTSTRAP_ADMINS, comma-separated); the recovery path
 	// when no administrator is left.
 	BootstrapAdmins []string
+	// DBMigrate is "auto" (migrate at startup, default) or "verify" (only check
+	// that no migration is pending: the schema owner runs `goeland-server
+	// migrate`, GLD-046) (GOELAND_DB_MIGRATE).
+	DBMigrate string
 	// DisposalEnabled lets elimination bordereaux destroy records
 	// (GOELAND_DISPOSAL_ENABLED=true, GLD-077); off by default, an elimination
 	// is only simulated.
@@ -185,6 +189,10 @@ func loadConfig() (serverConfig, error) {
 	if err != nil {
 		return serverConfig{}, err
 	}
+	dbMigrate, err := dbMigrateFromEnv()
+	if err != nil {
+		return serverConfig{}, err
+	}
 
 	config := serverConfig{
 		ListenAddress:   listenAddress,
@@ -201,6 +209,7 @@ func loadConfig() (serverConfig, error) {
 		DocumentPath:    envOrDefault("GOELAND_DOCUMENT_PATH", defaultDocumentPath),
 		BootstrapAdmins: bootstrapAdmins,
 		DisposalEnabled: disposalEnabled,
+		DBMigrate:       dbMigrate,
 	}
 	if err := config.readLimits(); err != nil {
 		return serverConfig{}, err

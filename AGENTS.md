@@ -659,6 +659,13 @@ only the struct + SQL projection.
   will fail if documents still reference a `document_type`, so a clean rollback
   assumes no domain data — expected for a reset, not a bug.
 - Requires PostGIS, pgcrypto, pg_trgm, unaccent available on the server.
+- **Two roles (GLD-046):** in production the schema owner runs `goeland-server migrate`
+  (migrations, then `coremodule.GrantRuntimeRole` for `GOELAND_DB_APP_ROLE`) and the server runs
+  with `GOELAND_DB_MIGRATE=verify` as a role limited to rows: `SELECT, INSERT, UPDATE` everywhere,
+  `DELETE` only on `coremodule.RuntimeDeletableTables`. A new `DELETE FROM` in the application
+  code must be added to that list (`TestRuntimeDeletesAreGranted` scans the sources); the
+  end-to-end tests run their servers as such a role (`coretest.RuntimeRoleURL`), so a statement
+  the runtime role may not run fails there. `auto` (default) migrates at startup for local work.
 - **Never** run migrations or a migrating server startup against an unknown,
   shared, staging, or production database without explicit approval and verified
   config.

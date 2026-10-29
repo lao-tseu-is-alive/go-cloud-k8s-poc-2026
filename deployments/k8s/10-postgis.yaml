@@ -1,6 +1,26 @@
 # Disposable PostGIS for the smoke deployment: data lives in an emptyDir and is
-# lost with the pod. Its password comes from the goeland-secrets Secret, created
-# by scripts/k8s_smoke_test.sh (never committed).
+# lost with the pod. Its passwords come from the goeland-secrets Secret, created
+# by scripts/k8s_smoke_test.sh (never committed). Two roles (GLD-046): goeland
+# owns the schema and runs the migrations (the goeland init container);
+# goeland_app, created by the init script below, is the server's runtime role,
+# granted only row privileges by `goeland-server migrate`.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgis-init
+  namespace: goeland-poc
+  labels:
+    app.kubernetes.io/name: postgis
+    app.kubernetes.io/part-of: goeland-poc
+data:
+  10-goeland-app-role.sh: |
+    #!/bin/sh
+    # Runs once at database initialization: the runtime login role, no other privilege.
+    set -eu
+    psql -v ON_ERROR_STOP=1 -v pw="$APP_DB_PASSWORD" --username "$POSTGRES_USER" --dbname "$POSTGRES_DB" <<'EOSQL'
+    CREATE ROLE goeland_app LOGIN PASSWORD :'pw';
+    EOSQL
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -38,6 +58,11 @@ spec:
                 secretKeyRef:
                   name: goeland-secrets
                   key: DB_PASSWORD
+            - name: APP_DB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: goeland-secrets
+                  key: DB_APP_PASSWORD
             - name: PGDATA
               value: /var/lib/postgresql/data/pgdata
           readinessProbe:
@@ -51,9 +76,15 @@ spec:
           volumeMounts:
             - name: data
               mountPath: /var/lib/postgresql/data
+            - name: init
+              mountPath: /docker-entrypoint-initdb.d
+              readOnly: true
       volumes:
         - name: data
           emptyDir: {}
+        - name: init
+          configMap:
+            name: postgis-init
 ---
 apiVersion: v1
 kind: Service

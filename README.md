@@ -189,7 +189,7 @@ pkg/retention/           retention of closed cases: policies, snapshot at closin
   └── module/            bundleable module (schema owned by core)
 pkg/legacyimport/        one-shot legacy data import (set-based, deterministic ids, provenance)
 pkg/integration/         env-gated PostgreSQL integration tests (migrations, every domain, rights and read filter)
-cmd/goeland-server/      server: pool, migrate, wire modules onto one shared transcoder
+cmd/goeland-server/      server: pool, migrate or verify the schema, wire modules onto one shared transcoder
   ├── upload.go          out-of-proto POST /upload + GET /{id}/content endpoints
   ├── export.go          out-of-proto GET /api/case-exports/{id}/content (archive download)
   └── goeland-front/     Vue 3 + Vuetify 4 SPA (Vite/bun); dist/ is //go:embed'd (gitignored)
@@ -221,9 +221,11 @@ make run                     # buf generate + build the embedded frontend + go r
 build`), which produces the `goeland-front/dist/` bundle embedded via `//go:embed`.
 Once the server is up, open <http://127.0.0.1:8088/> for the web UI.
 
-The server **migrates on startup** (embedded migrations, guarded by a PG advisory
+The server **migrates on startup** by default (embedded migrations, guarded by a PG advisory
 lock), so `make db-up` is optional. Both paths share the same `schema_migrations`
-version keys (`0001`…), so they are interchangeable.
+version keys (`0001`…), so they are interchangeable. In production the schema owner runs
+`goeland-server migrate` and the server, with `GOELAND_DB_MIGRATE=verify`, runs as a role limited
+to rows (GLD-046, [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) §2).
 
 ## Running locally (dev auth)
 

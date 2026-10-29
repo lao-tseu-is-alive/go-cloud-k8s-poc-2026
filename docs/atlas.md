@@ -133,6 +133,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/queryparams.go` — REST bindings read from the proto descriptors and a middleware answering 400 for a query parameter that names no request field (GLD-043).
 - `cmd/goeland-server/queryparams_test.go` — Tests the most specific binding match and the unknown query parameter middleware.
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
+- `cmd/goeland-server/schema.go` — Schema preparation (`GOELAND_DB_MIGRATE` auto or verify), the shared pool opening and the `migrate` command (GLD-046).
 - `cmd/goeland-server/server.go` — Pool, migrations and module wiring onto one Vanguard transcoder; probes, app info, embedded SPA.
 - `cmd/goeland-server/server_test.go` — Tests the bounded database wait at startup (retries, zero timeout, cancellation).
 - `cmd/goeland-server/metrics.go` — Prometheus metrics on their own listener: requests per RPC or route pattern, database pool, outbox and export backlogs (GLD-010).
@@ -244,6 +245,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/authctx.go` — Scope constants, caller requirement, server-side operator identity, timeout interceptor, error mapping.
 - `pkg/core/authctx_test.go` — Tests operator identity, error mapping and request-ID context.
 - `pkg/core/coretest/database.go` — `TestDatabaseURL`: the test database DSN, skipping without one or failing when `GOELAND_REQUIRE_DB_TESTS=true` (CI).
+- `pkg/core/coretest/runtime_role.go` — `RuntimeRoleURL`: a throwaway runtime role granted like production, for the tests that must run without owner rights (GLD-046).
 - `pkg/core/coretest/coretest.go` — Test helpers: a no-op `core.Repository` stub and a core service built on it for sibling-domain unit tests.
 - `pkg/core/connect_server.go` — `CoreService` ConnectRPC adapter over the core service.
 - `pkg/core/database.go` — Shared database helpers: `InTx` (begin, commit, rollback), SQLSTATE constants, `PgErrorWithCode` and the `MapDBError` base each domain's error translation builds on.
@@ -277,6 +279,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/migrate_test.go` — Tests migration parsing, PL/pgSQL block handling and version keys.
 - `pkg/core/module/module.go` — Bundleable core module: dependency validation, service construction, lifecycle.
 - `pkg/core/module/routes.go` — Core interceptor chain, Vanguard services and standalone route registration.
+- `pkg/core/module/runtime_role.go` — The runtime role (GLD-046): its grants (`GrantRuntimeRole`, `RuntimeDeletableTables`), the pending-migration check and the schema-owner detection.
+- `pkg/core/module/runtime_role_test.go` — Tests pending versions, role names, and that every `DELETE FROM` of the server's sources is granted.
 - `pkg/core/module/db/migrations/0001_subject_core.sql` — Schema migration: extensions, `subject_kind`, `subject_ref`, `record_metadata`, `audit_event`.
 - `pkg/core/module/db/migrations/0002_relationships.sql` — Schema migration: `relationship_type` and `subject_relationship` with active-edge uniqueness.
 - `pkg/core/module/db/migrations/0003_document.sql` — Schema migration: `document_type` and `document` with generated search vector.
@@ -466,6 +470,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/relationship_summary_test.go` — DB test of the relationship groups: counts filtered by the viewer, open cases, families, roles from migration 0031, list filters and details.
 - `pkg/integration/outbox_test.go` — DB test: one outbox event per audit event, none on rollback, delivery and publication, retries, give-up, status, replay, two concurrent workers, purge (GLD-028).
 - `pkg/integration/subject_search_test.go` — DB test: global search by start of word, accents, exact reference, readable counts, deleted and renamed subjects, limit (GLD-064).
+- `pkg/integration/runtime_role_test.go` — The runtime role reads and writes rows but cannot delete elsewhere, truncate, alter the schema, touch the triggers or record a migration.
 - `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
 - `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.

@@ -18,7 +18,9 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
+	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 )
 
 // The end-to-end scenario of spec v2 §50, played over HTTP against the real
@@ -52,11 +54,11 @@ type e2e struct {
 // administrator, one whose dev user only reads and writes.
 func newE2E(t *testing.T) *e2e {
 	t.Helper()
-	dsn := coretest.TestDatabaseURL(t, "end-to-end tests")
+	dsn := runtimeDatabaseURL(t, coretest.TestDatabaseURL(t, "end-to-end tests"))
 	var adminApp *application
 	start := func(token string, userID int64, name string, admin bool) *httptest.Server {
 		cfg := serverConfig{
-			DatabaseURL: dsn, AuthMode: "dev", DevToken: token, DevUserID: userID, DevUserEmail: name + "@e2e.test",
+			DatabaseURL: dsn, DBMigrate: migrateVerify, AuthMode: "dev", DevToken: token, DevUserID: userID, DevUserEmail: name + "@e2e.test",
 			DevDisplayName: name, DevUserAdmin: admin, MaxConnections: 4, RequestTimeout: 10 * time.Second,
 			DocumentPath: t.TempDir(), MaxUploadBytes: 1 << 20, ShutdownPeriod: time.Second,
 		}
@@ -78,8 +80,27 @@ func newE2E(t *testing.T) *e2e {
 		writer: start(writerToken, base+1, "Writer E2E", false),
 	}
 	e.adminApp = adminApp
+	if can, err := coremodule.CanAlterSchema(context.Background(), adminApp.pool); err != nil || can {
+		t.Fatalf("the servers must run as the runtime role, not the schema owner: %v (%v)", can, err)
+	}
 	e.operators = []string{strconv.FormatInt(base, 10), strconv.FormatInt(base+1, 10)}
 	return e
+}
+
+// runtimeDatabaseURL migrates the test database as its owner, as
+// `goeland-server migrate` does, and returns the DSN of a fresh runtime role
+// (GLD-046): the servers run with only the privileges production gives them.
+func runtimeDatabaseURL(t *testing.T, ownerDSN string) string {
+	t.Helper()
+	owner, err := pgxpool.New(context.Background(), ownerDSN)
+	if err != nil {
+		t.Fatalf("connect as owner: %v", err)
+	}
+	t.Cleanup(owner.Close)
+	if err := coremodule.Migrate(context.Background(), owner); err != nil {
+		t.Fatalf("migrate: %v", err)
+	}
+	return coretest.RuntimeRoleURL(t, owner, ownerDSN)
 }
 
 // reply is a decoded JSON response.

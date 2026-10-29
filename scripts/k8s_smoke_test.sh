@@ -25,17 +25,26 @@ fail() {
   exit 1
 }
 
-# create_secret stores freshly generated secrets in the cluster only. An existing
-# Secret is kept: PostGIS keeps the password of its first initialization.
+# create_secret stores freshly generated secrets in the cluster only: the schema
+# owner's and the runtime role's database passwords (GLD-046) and the dev token.
+# An existing Secret is kept (PostGIS keeps the passwords of its first
+# initialization); one from before GLD-046 only gets the missing runtime password.
 create_secret() {
-  local db_password dev_token
+  local db_password app_password dev_token
+  app_password="$(openssl rand -hex 24)"
   if kc -n "${NAMESPACE}" get secret goeland-secrets >/dev/null 2>&1; then
+    if [[ -z "$(kc -n "${NAMESPACE}" get secret goeland-secrets -o jsonpath='{.data.DB_APP_PASSWORD}')" ]]; then
+      kc -n "${NAMESPACE}" patch secret goeland-secrets --type merge \
+        -p "{\"stringData\":{\"DB_APP_PASSWORD\":\"${app_password}\"}}" >/dev/null
+      kc -n "${NAMESPACE}" rollout restart deployment/postgis >/dev/null 2>&1 || true
+    fi
     return 0
   fi
   db_password="$(openssl rand -hex 24)"
   dev_token="$(openssl rand -hex 24)"
   kc -n "${NAMESPACE}" create secret generic goeland-secrets \
     --from-literal=DB_PASSWORD="${db_password}" \
+    --from-literal=DB_APP_PASSWORD="${app_password}" \
     --from-literal=GOELAND_DEV_TOKEN="${dev_token}" \
     --dry-run=client -o yaml | kc apply -f - >/dev/null
 }
@@ -99,6 +108,9 @@ main() {
   check "migrations seeded the catalogues" GET "/api/org-unit-types?onlyActive=true"
   check "create a case" POST /api/cases '{"caseTypeCode":"GENERIC_REQUEST","title":"Smoke test k8s"}'
   check "search cases" GET "/api/cases/search?query=smoke"
+  kc -n "${NAMESPACE}" logs deployment/goeland -c migrate | grep -q '"runtime role granted"' ||
+    fail "the migrate init container did not grant the runtime role"
+  echo "## ✓ migrations by the schema owner, server running as goeland_app (GLD-046)"
   echo "## ✓ app version: $(curl -s "${BASE_URL}/goAppInfo")"
   echo "## ✓ restarts: $(kc -n "${NAMESPACE}" get pods -l app.kubernetes.io/name=goeland -o jsonpath='{.items[0].status.containerStatuses[0].restartCount}')"
 

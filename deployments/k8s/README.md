@@ -34,16 +34,22 @@ with the running version and the pod restart count (expected: `0`).
 ## Secrets and the dev token
 
 Secrets are never committed. On the first run the script creates the Secret
-`goeland-secrets` in namespace `goeland-poc` with two random values
+`goeland-secrets` in namespace `goeland-poc` with three random values
 (`openssl rand -hex 24`):
 
 | Key | Used by |
 |-----|---------|
-| `DB_PASSWORD` | PostGIS (`POSTGRES_PASSWORD`) and the Goéland server |
+| `DB_PASSWORD` | PostGIS (`POSTGRES_PASSWORD`, the schema owner `goeland`) and the `migrate` init container |
+| `DB_APP_PASSWORD` | the runtime role `goeland_app` (created by PostGIS's init script) and the Goéland server |
 | `GOELAND_DEV_TOKEN` | the bearer token accepted by the server in `dev` auth mode |
 
 The values are stored only in the cluster and never printed. Later runs **keep** the
-existing Secret, because PostGIS keeps the password of its first initialization.
+existing Secret, because PostGIS keeps the password of its first initialization; a Secret from
+before GLD-046 only gets the missing `DB_APP_PASSWORD` (and PostGIS restarts to create the role).
+
+Two database roles (GLD-046): the `migrate` init container applies the migrations as `goeland`
+and grants `goeland_app`; the server runs as `goeland_app` with `GOELAND_DB_MIGRATE=verify`, so it
+can neither change the schema nor drop the audit triggers. The script checks that the grant ran.
 
 Read the dev token when you need it (prefer the clipboard to your terminal history):
 
@@ -60,6 +66,7 @@ keeps it):
 kubectl --context rancher-desktop apply -f deployments/k8s/00-namespace.yaml
 kubectl --context rancher-desktop -n goeland-poc create secret generic goeland-secrets \
   --from-literal=DB_PASSWORD="$(openssl rand -hex 24)" \
+  --from-literal=DB_APP_PASSWORD="$(openssl rand -hex 24)" \
   --from-literal=GOELAND_DEV_TOKEN='<your-dev-token>'
 scripts/k8s_smoke_test.sh
 ```
@@ -97,5 +104,7 @@ with the pods.
 |---------|-------|
 | `goeland` pod restarting | `kubectl -n goeland-poc logs deploy/goeland` — the server waits for the database up to `GOELAND_DB_CONNECT_TIMEOUT_SECONDS` (60 s) before giving up |
 | `password authentication failed` in the logs | the Secret changed after PostGIS was initialized: reset (above) |
+| `Init:Error` / `Init:CrashLoopBackOff` | `kubectl -n goeland-poc logs deploy/goeland -c migrate` — the migrations or the grant of `goeland_app` failed |
+| `database schema is behind this binary` | the server started without the `migrate` init container having run: check the init container |
 | `401` from the API or the SPA | wrong token: read it again from the Secret |
 | image pull errors | network access to `ghcr.io`, and that the tag in `20-goeland.yaml` is published |

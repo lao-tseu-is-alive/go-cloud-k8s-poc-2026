@@ -1,6 +1,7 @@
 // Command goeland-server runs the Goéland POC as a single binary: it loads the
 // configuration from the environment, connects to PostgreSQL, applies the
-// embedded migrations under an advisory lock, wires the core, document, actor, case,
+// embedded migrations under an advisory lock (or, with GOELAND_DB_MIGRATE=verify,
+// only checks that none is pending), wires the core, document, actor, case,
 // thing, org unit, timeline, task and circulation modules onto one shared Vanguard transcoder (REST under /api/ plus Connect,
 // gRPC and gRPC-Web), and serves the embedded Vue SPA at /. SIGINT and SIGTERM
 // trigger a graceful shutdown bounded by GOELAND_SHUTDOWN_TIMEOUT_SECONDS.
@@ -8,6 +9,8 @@
 // Usage:
 //
 //	goeland-server            run the server (configured by environment variables)
+//	goeland-server migrate    apply the migrations as the schema owner, grant the
+//	                          runtime role GOELAND_DB_APP_ROLE, and exit (GLD-046)
 //	goeland-server --version  print "<app> v<Version> (revision <rev>, built <stamp>)" and exit
 package main
 
@@ -19,6 +22,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 	"syscall"
 	"time"
 
@@ -38,6 +42,13 @@ func main() {
 	if *showVersion {
 		fmt.Println(versionLine())
 		return
+	}
+	switch args := flag.Args(); {
+	case len(args) == 1 && args[0] == "migrate":
+		os.Exit(migrateMain())
+	case len(args) > 0:
+		fmt.Fprintf(os.Stderr, "goeland-server: unknown command %q (usage: goeland-server [migrate] [--version])\n", strings.Join(args, " "))
+		os.Exit(2)
 	}
 
 	config, err := loadConfig()
@@ -95,6 +106,24 @@ func main() {
 		os.Exit(1)
 	}
 	log.Info("goeland server stopped")
+}
+
+// migrateMain runs `goeland-server migrate` and returns the exit code.
+func migrateMain() int {
+	cfg, err := loadMigrateConfig()
+	if err != nil {
+		fmt.Fprintln(os.Stderr, "goeland-server migrate configuration error:", err)
+		return 1
+	}
+	log := slog.New(slog.NewJSONHandler(os.Stderr, &slog.HandlerOptions{Level: cfg.LogLevel}))
+	log.Info("goeland migrate", "app", version.AppName, "version", version.Version, "revision", version.Revision)
+	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
+	defer stop()
+	if err := runMigrate(ctx, cfg, log); err != nil {
+		log.Error("migration failed", "error", err)
+		return 1
+	}
+	return 0
 }
 
 // versionLine renders the build identity checked by make release-check.

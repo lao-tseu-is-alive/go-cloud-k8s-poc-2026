@@ -8,6 +8,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- Migrations separated from the runtime (GLD-046): `goeland-server migrate` applies the
+  migrations as the schema owner, then grants the runtime role named by `GOELAND_DB_APP_ROLE`
+  only row privileges (`SELECT, INSERT, UPDATE`; `DELETE` on `case_type_default_grant` and
+  `outbox_event` only). With `GOELAND_DB_MIGRATE=verify` the server never migrates, refuses to
+  start while a migration is pending, and warns when its role owns the schema; `auto` (default)
+  keeps migrating at startup for local work. The runtime role can no longer alter the schema nor
+  drop or disable the immutability triggers. The k8s manifests run the migrations in an init
+  container as `goeland` and the server as `goeland_app` (new Secret key `DB_APP_PASSWORD`); the
+  end-to-end tests run their servers as such a role.
+
 ## [0.21.1] - 2026-10-29
 
 Security patch: the JWT tokens are verified by Goéland itself (GLD-078), so the Echo framework,
