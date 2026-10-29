@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.21.0**.
+Tracked version: **v0.21.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -48,7 +48,7 @@ v0.17.1; the transactional outbox (GLD-028) in v0.18.0; the mobile app bar and q
 checked against the protos (GLD-072) and observability — Prometheus metrics and OpenTelemetry
 traces (GLD-010) — in v0.19.0; retention, legal holds and the transfer to the archives (GLD-076)
 in v0.20.0; the elimination of cases, off by default and simulated until enabled (GLD-077), in
-v0.21.0.
+v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1.
 
 ## Cross-cutting quality
 

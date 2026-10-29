@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.21.1] - 2026-10-29
+
+Security patch: the JWT tokens are verified by Goéland itself (GLD-078), so the Echo framework,
+flagged by two MEDIUM advisories without a fix, and `golang.org/x/crypto` leave the image. The
+issuer of a token is now checked: `JWT_ISSUER_ID` must equal the auth service's.
+
 ### Security
 
 - JWT verification without Echo (GLD-078): Goéland verifies the go-cloud-k8s-auth tokens itself
