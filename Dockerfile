@@ -3,7 +3,7 @@
 # checkout (dist/ is git-ignored). Mirrors the `make front-build` step.
 # Base images are pinned by digest (GLD-059): a moved tag cannot change the build;
 # Dependabot proposes the updates and `make build-inputs-check` refuses a bare tag.
-FROM oven/bun:1.4.3-alpine@sha256:629e17411f1f129dbec3af78d5af9c9f2a937435c80349437206c6b0b7422373 AS frontend
+FROM oven/bun:1.4.4-alpine@sha256:4cf82f5686b196504fe119db3fcd9185b191f82ece82c40680e597228ec6070a AS frontend
 WORKDIR /app/cmd/goeland-server/goeland-front
 # Install deps first (cached until the manifest/lockfile change).
 COPY cmd/goeland-server/goeland-front/package.json cmd/goeland-server/goeland-front/bun.lock ./
@@ -18,7 +18,7 @@ RUN bun run build-only
 # Mirrors the go build step from `make build`, without the test step (which needs a live DB).
 # The builder's Go version must be at least go.mod's (GOTOOLCHAIN=local in the
 # image refuses an older one); `make build-inputs-check` verifies it.
-FROM golang:1.27.3-alpine@sha256:f2c872bcee949b7be9c490efd02b48a8a2fbf947cdf533f1c58525ec9d8170fd AS builder
+FROM golang:1.27.3-alpine@sha256:d200d2dd76b03a99b52651fd1325aff7dcd35422c35c01bac56571b0507f3deb AS builder
 LABEL maintainer="cgil"
 # git: for module VCS metadata; ca-certificates: copied into the scratch runtime.
 RUN apk add --no-cache git ca-certificates
