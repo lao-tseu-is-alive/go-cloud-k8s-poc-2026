@@ -44,7 +44,7 @@ jobs:
       - name: Setup Buf
         # v1.6.0 - pinned to commit SHA; the downloaded buf binary is verified
         # against its published sha256 (lock-file equivalent, Sonar S8545).
-        uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7
+        uses: bufbuild/buf-action@37ac33d8960807670a6e9719080e885197b09cc6
         with:
           version: 1.70.0
           checksum: e2bbcdd324da09c16a15963dc2dae0525c955c05dc118223cf732f4f7509c5e6
@@ -94,7 +94,7 @@ jobs:
       - name: Upload Release Asset for Linux
         # v3.0.3 - pinned to commit SHA to prevent supply chain attacks,
         # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64
+        uses: softprops/action-gh-release@8a0cd651e5b2365bd640854a3fa5dfc70e4875f3
         with:
           body_path: release-notes.md
           files: |
