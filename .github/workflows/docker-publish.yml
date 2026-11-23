@@ -44,7 +44,7 @@ jobs:
       - name: Setup Buf
         # v1.6.0 - pinned to commit SHA; the downloaded buf binary is verified
         # against its published sha256 (lock-file equivalent, Sonar S8545).
-        uses: bufbuild/buf-action@85aebf73123b5c15fd5528aaecbf9129cddf7fa7
+        uses: bufbuild/buf-action@37ac33d8960807670a6e9719080e885197b09cc6
         with:
           version: 1.70.0
           checksum: e2bbcdd324da09c16a15963dc2dae0525c955c05dc118223cf732f4f7509c5e6
@@ -64,7 +64,7 @@ jobs:
       - name: Log into registry ${{ env.REGISTRY }}
         # v4.6.0 - pinned to commit SHA to prevent supply chain attacks,
         # see: https://docs.github.com/en/actions/reference/security/secure-use#using-third-party-actions
-        uses: docker/login-action@dbcb813823bdd20940b903addbd779551569679f
+        uses: docker/login-action@8aa5831fb8d48d8f76594c7ddde61ae58019f550
         with:
           registry: ${{ env.REGISTRY }}
           username: ${{ github.actor }}
@@ -103,7 +103,7 @@ jobs:
       # 3. Run Trivy vulnerability scanner on the built image
       - name: Run Trivy vulnerability scanner
         # pinned to commit SHA to prevent supply chain attacks
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec
         with:
           image-ref: 'goeland-server:test'
           severity: 'MEDIUM,CRITICAL,HIGH'
@@ -124,7 +124,7 @@ jobs:
       # Trivy's DB cached by the scan above (skip-db-update) so it is fast.
       # pinned to commit SHA to prevent supply chain attacks
       - name: Fail on HIGH/CRITICAL vulnerabilities
-        uses: aquasecurity/trivy-action@8f28faec26515256b6d22074d1d2a8986f4cbd87
+        uses: aquasecurity/trivy-action@38b337fff0a2f984d5be173c99e3f633438167ec
         with:
           image-ref: 'goeland-server:test'
           severity: 'CRITICAL,HIGH'
