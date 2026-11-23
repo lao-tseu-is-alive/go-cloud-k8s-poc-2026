@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.22.0**.
+Tracked version: **v0.22.1**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -49,7 +49,8 @@ checked against the protos (GLD-072) and observability — Prometheus metrics an
 traces (GLD-010) — in v0.19.0; retention, legal holds and the transfer to the archives (GLD-076)
 in v0.20.0; the elimination of cases, off by default and simulated until enabled (GLD-077), in
 v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1; the migrations separated from
-the runtime role (GLD-046) in v0.22.0.
+the runtime role (GLD-046) in v0.22.0; Go 1.27.4, pgx 5.12.0 and the SPA updates (security patch)
+in v0.22.1.
 
 ## Cross-cutting quality
 

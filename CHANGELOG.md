@@ -8,6 +8,10 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.22.1] - 2026-11-23
+
+Security patch: Go, pgx and SPA dependency updates. No migration, no API change.
+
 ### Security
 
 - Go 1.27.4 (`go.mod`, builder image), fixing GO-2026-6859 (HTTP/1 server crash through a
@@ -16,6 +20,17 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   protocol; Goéland uses the extended protocol) and GHSA-95fj-3fxw-g62g (an impersonating server
   skipping authentication without `sslmode=verify-full`).
 - Bun 1.4.4 for the frontend build stage of the image.
+- SPA: vue-i18n 11.4.20 (security fixes of 11.4.18 and 11.4.19, shipped to the browser) with
+  vue 3.5.45, vuetify 4.3.3 and vite 8.3.8; `bun audit fix` upgrades the build-time packages
+  within their ranges (the critical `shell-quote` advisory among them), leaving one moderate
+  `minimatch` advisory in the ESLint tree.
+
+### Changed
+
+- The SPA contract types are generated with protobuf-es 2.17.0, equal to `@bufbuild/protobuf`
+  (GLD-072).
+- CI actions: bufbuild/buf-action 1.7.0, trivy-action, docker/login-action 4.8.0 and
+  softprops/action-gh-release 3.0.4 (third-party ones still pinned by commit SHA).
 
 ## [0.22.0] - 2026-10-29
 
