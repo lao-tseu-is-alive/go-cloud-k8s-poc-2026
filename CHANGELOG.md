@@ -8,6 +8,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Security
+
+- Go 1.27.4 (`go.mod`, builder image), fixing GO-2026-6859 (HTTP/1 server crash through a
+  `MaxBytesReader` header race in `net/http`), reachable from the server.
+- pgx 5.12.0, fixing GHSA-j38q-h3ph-jjpq (SQL injection through `SendBatch` in the simple
+  protocol; Goéland uses the extended protocol) and GHSA-95fj-3fxw-g62g (an impersonating server
+  skipping authentication without `sslmode=verify-full`).
+- Bun 1.4.4 for the frontend build stage of the image.
+
 ## [0.22.0] - 2026-10-29
 
 Migrations separated from the runtime (GLD-046): the schema owner runs `goeland-server migrate`,
