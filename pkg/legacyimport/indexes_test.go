@@ -36,11 +36,11 @@ func migratedTx(t *testing.T) (context.Context, pgx.Tx) {
 	return ctx, tx
 }
 
-// indexDefinitions lists every index definition of the bulk tables.
-func indexDefinitions(t *testing.T, ctx context.Context, tx pgx.Tx) []string {
+// indexDefinitions lists every index definition of tables.
+func indexDefinitions(t *testing.T, ctx context.Context, tx pgx.Tx, tables []string) []string {
 	t.Helper()
 	rows, err := tx.Query(ctx, `SELECT pg_get_indexdef(indexrelid) FROM pg_index
-		WHERE indrelid = ANY ($1::text[]::regclass[]) ORDER BY 1`, bulkTables)
+		WHERE indrelid = ANY ($1::text[]::regclass[]) ORDER BY 1`, tables)
 	if err != nil {
 		t.Fatalf("list indexes: %v", err)
 	}
@@ -51,22 +51,40 @@ func indexDefinitions(t *testing.T, ctx context.Context, tx pgx.Tx) []string {
 	return defs
 }
 
+// TestBulkTablesExist keeps bulkTables in step with the schema: a renamed or
+// dropped table would otherwise keep its indexes during the load unnoticed.
+func TestBulkTablesExist(t *testing.T) {
+	ctx, tx := migratedTx(t)
+	if _, err := tx.Exec(ctx, `SELECT $1::text[]::regclass[]`, bulkTables); err != nil {
+		t.Fatalf("a bulk table is missing from the schema: %v", err)
+	}
+}
+
 // TestSecondaryIndexesAreRebuiltIdentical checks that the indexes set aside
-// during the load come back exactly as the migrations created them, and that
-// the unique ones are never dropped.
+// during the load come back exactly as they were and that the unique ones are
+// never dropped. It works on temporary copies of three bulk tables with their
+// real indexes (the full-text GIN ones included): DDL on the shared tables
+// would lock out the other database tests running at the same time.
 func TestSecondaryIndexesAreRebuiltIdentical(t *testing.T) {
 	ctx, tx := migratedTx(t)
+	copies := []string{"bulk_subject_ref", "bulk_subject_relationship", "bulk_document"}
+	for i, source := range []string{"subject_ref", "subject_relationship", "document"} {
+		sql := "CREATE TEMP TABLE " + copies[i] + " (LIKE " + source + " INCLUDING INDEXES) ON COMMIT DROP"
+		if _, err := tx.Exec(ctx, sql); err != nil {
+			t.Fatalf("%s: %v", sql, err)
+		}
+	}
 	imp := &Importer{tx: tx, progress: newProgress(nil)}
-	before := indexDefinitions(t, ctx, tx)
+	before := indexDefinitions(t, ctx, tx, copies)
 
-	indexes, err := imp.dropSecondaryIndexes(ctx)
+	indexes, err := imp.dropSecondaryIndexes(ctx, copies)
 	if err != nil {
 		t.Fatalf("drop: %v", err)
 	}
 	if len(indexes) == 0 {
 		t.Fatal("the bulk tables have secondary indexes to set aside")
 	}
-	during := indexDefinitions(t, ctx, tx)
+	during := indexDefinitions(t, ctx, tx, copies)
 	for _, def := range during {
 		for _, ix := range indexes {
 			if def == ix.definition {
@@ -81,7 +99,7 @@ func TestSecondaryIndexesAreRebuiltIdentical(t *testing.T) {
 	if err := imp.createIndexes(ctx, indexes); err != nil {
 		t.Fatalf("create: %v", err)
 	}
-	if after := indexDefinitions(t, ctx, tx); !slices.Equal(before, after) {
+	if after := indexDefinitions(t, ctx, tx, copies); !slices.Equal(before, after) {
 		t.Fatalf("indexes differ after the rebuild:\nbefore %v\nafter  %v", before, after)
 	}
 }
@@ -107,11 +125,11 @@ func execAll(t *testing.T, ctx context.Context, tx pgx.Tx, statements []statemen
 
 // TestCurrentVersionReferenceCanBeDeferred checks migration 0038 as the
 // documents stage uses it: a document written with its current version before
-// the version, the reference checked once the version is in, then the indexes
-// of document built again (pending checks would forbid it).
+// the version, then the reference checked once the version is in. The stage
+// must check before the indexes of document are built again: PostgreSQL
+// refuses CREATE INDEX on a table with pending checks (SQLSTATE 55006).
 func TestCurrentVersionReferenceCanBeDeferred(t *testing.T) {
 	ctx, tx := migratedTx(t)
-	imp := &Importer{tx: tx, progress: newProgress(nil)}
 	var deferrable, deferred bool
 	err := tx.QueryRow(ctx, `SELECT condeferrable, condeferred FROM pg_constraint
 		WHERE conname = 'document_current_version_id_fkey'`).Scan(&deferrable, &deferred)
@@ -120,10 +138,6 @@ func TestCurrentVersionReferenceCanBeDeferred(t *testing.T) {
 	}
 	if !deferrable || deferred {
 		t.Fatalf("want deferrable and initially immediate, got deferrable=%v deferred=%v", deferrable, deferred)
-	}
-	indexes, err := imp.dropSecondaryIndexes(ctx)
-	if err != nil {
-		t.Fatalf("drop: %v", err)
 	}
 
 	doc, version := uuid.New(), uuid.New()
@@ -135,9 +149,6 @@ func TestCurrentVersionReferenceCanBeDeferred(t *testing.T) {
 		{`INSERT INTO document_version (id, document_id, version_no) VALUES ($1, $2, 1)`, []any{version, doc}},
 		{checkCurrentVersionSQL, nil},
 	})
-	if err := imp.createIndexes(ctx, indexes); err != nil {
-		t.Fatalf("create the indexes after the check: %v", err)
-	}
 }
 
 // TestDanglingCurrentVersionIsRefused checks that the deferred reference is

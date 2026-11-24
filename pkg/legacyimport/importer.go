@@ -133,7 +133,7 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 // runStages runs every stage in order with the secondary indexes of the bulk
 // tables set aside, builds them again, then records the counts on the batch.
 func (imp *Importer) runStages(ctx context.Context) error {
-	indexes, err := imp.dropSecondaryIndexes(ctx)
+	indexes, err := imp.dropSecondaryIndexes(ctx, bulkTables)
 	if err != nil {
 		return err
 	}

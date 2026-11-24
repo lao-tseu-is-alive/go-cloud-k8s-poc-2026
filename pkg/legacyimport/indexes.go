@@ -39,12 +39,12 @@ type secondaryIndex struct {
 	definition string
 }
 
-// dropSecondaryIndexes drops the secondary indexes of the bulk tables inside
-// the import transaction (a dry run rolls the drop back with the rest) and
-// returns them to be created again by createIndexes.
-func (imp *Importer) dropSecondaryIndexes(ctx context.Context) ([]secondaryIndex, error) {
+// dropSecondaryIndexes drops the secondary indexes of tables (the import
+// passes bulkTables) inside the import transaction (a dry run rolls the drop
+// back with the rest) and returns them to be created again by createIndexes.
+func (imp *Importer) dropSecondaryIndexes(ctx context.Context, tables []string) ([]secondaryIndex, error) {
 	done := imp.progress.step("drop secondary indexes")
-	rows, err := imp.tx.Query(ctx, secondaryIndexesSQL, bulkTables)
+	rows, err := imp.tx.Query(ctx, secondaryIndexesSQL, tables)
 	if err != nil {
 		return nil, fmt.Errorf("list secondary indexes: %w", err)
 	}
