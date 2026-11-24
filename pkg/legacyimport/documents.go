@@ -103,13 +103,18 @@ type documentPass struct {
 
 // importDocuments writes the documents as metadata with a version known by
 // its digest only (the bytes stay in the legacy store): the subjects, the
-// documents, the content blobs (one per digest), the versions, then the
-// current version of each document. The source is streamed once per table so
-// the 2.3M documents never sit in memory.
+// documents already pointing at their current version, the content blobs (one
+// per digest), then the versions. The current version reference is deferred
+// until the versions are written (updating 2.3M documents afterwards rewrote
+// the table), then checked.
+// The source is streamed once per table so the documents never sit in memory.
 func (imp *Importer) importDocuments(ctx context.Context, c *StageCounts) error {
 	typeID, err := imp.ensureLegacyDocumentType(ctx)
 	if err != nil {
 		return err
+	}
+	if _, err := imp.tx.Exec(ctx, deferCurrentVersionSQL); err != nil {
+		return fmt.Errorf("defer the current version reference: %w", err)
 	}
 	blobs := map[string]bool{}
 	passes := []documentPass{
@@ -140,7 +145,9 @@ func (imp *Importer) importDocuments(ctx context.Context, c *StageCounts) error 
 			c.Written = n
 		}
 	}
-	return imp.exec(ctx, "set current versions", setCurrentVersionsSQL, pgx.NamedArgs{"batch_id": imp.batchID})
+	// Every version is in: check the references now rather than at the
+	// commit, since pending checks forbid building an index on document.
+	return imp.exec(ctx, "check current versions", checkCurrentVersionSQL)
 }
 
 // sourceDocumentFamily is a legacy document family.
@@ -245,7 +252,7 @@ func documentTitle(d *sourceDocument) string {
 var (
 	documentColumns = []string{
 		"id", "document_type_id", "title", "description", "official_date", "external_system", "external_id",
-		"status", "metadata", "created_at", "created_by",
+		"status", "metadata", "created_at", "created_by", "current_version_id",
 	}
 	blobColumns    = []string{"id", "sha256", "storage_ref", "mime_type", "file_size_bytes", "created_at", "created_by"}
 	versionColumns = []string{
@@ -273,7 +280,12 @@ func (imp *Importer) documentRow(d *sourceDocument, typeID uuid.UUID) []any {
 		official = d.OfficialDate.Format(time.DateOnly)
 	}
 	return []any{s.id, typeID, s.label, d.Description, official, SourceSystem, strconv.FormatInt(d.ID, 10),
-		int16(status), metadata, firstTime(d.CreatedAt, &imp.now), s.createdBy}
+		int16(status), metadata, firstTime(d.CreatedAt, &imp.now), s.createdBy, versionID(d)}
+}
+
+// versionID is the id of the single imported version of a legacy document.
+func versionID(d *sourceDocument) uuid.UUID {
+	return ID(keyDocumentVersion, d.ID)
 }
 
 // blobRow is the content blob of a digest seen for the first time, or nil:
@@ -304,7 +316,7 @@ func (imp *Importer) versionRow(d *sourceDocument) []any {
 	if d.Definitive {
 		validatedAt, validatedBy = firstTime(d.UpdatedAt, d.CreatedAt, &imp.now), imp.operator(d.PosterID)
 	}
-	return []any{ID(keyDocumentVersion, d.ID), ID(string(core.SubjectKindDocument), d.ID), int32(1), blob, max(d.Pages, 0), d.Definitive,
+	return []any{versionID(d), ID(string(core.SubjectKindDocument), d.ID), int32(1), blob, max(d.Pages, 0), d.Definitive,
 		validatedAt, validatedBy, map[string]any{"legacy_version": d.Version}, firstTime(d.CreatedAt, &imp.now), imp.operator(d.PosterID)}
 }
 

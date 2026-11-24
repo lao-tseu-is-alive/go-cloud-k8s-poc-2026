@@ -172,6 +172,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/legacyimport/importer.go` — Import run: target checks, import batch, stage order, transaction (rolled back in a dry run), statistics, COPY helpers.
 - `pkg/legacyimport/legacyimport_test.go` — Unit tests of the import rules: ids, role codes, unit tree, case status, grants, contacts and addresses.
 - `pkg/legacyimport/orgunits.go` — Legacy org unit mapping shared with `cmd/goeland-import-orgunits` and the set-based unit stage (tree order, live units, sibling labels).
+- `pkg/legacyimport/indexes.go` — The secondary indexes of the bulk-loaded tables, dropped during the load and built again from their catalogue definition before the commit (unique indexes and primary keys stay).
+- `pkg/legacyimport/indexes_test.go` — Database tests (gated on `GOELAND_TEST_DATABASE_URL`): the set-aside indexes come back identical, the current version reference can be deferred.
 - `pkg/legacyimport/progress.go` — Progress of an import run as slog records: each step's start and end with its duration, each COPY's rows and rate, a heartbeat every 250,000 rows (names and counts only, never values); silent without a logger.
 - `pkg/legacyimport/progress_test.go` — Unit tests of the progress records on a fixed clock: step records, COPY heartbeat and rate, silent mode.
 - `pkg/legacyimport/report.go` — Counts of an import by stage: rows read, written, left out and adjusted, by reason; printed, and stored on the batch.
@@ -310,6 +312,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0035_retention.sql` — Schema migration: `retention_policy` (example policies), the case type default policy, `subject_retention`, `retention_hold`, the RECORDS_MANAGER role (GLD-032).
 - `pkg/core/module/db/migrations/0036_disposition.sql` — Schema migration: `disposition_bordereau` and `disposition_item` (approval per case), the retention outcome (ARCHIVED / DISPOSED), the TRANSFER purpose of `case_export` (GLD-032 step B1).
 - `pkg/core/module/db/migrations/0037_elimination.sql` — Schema migration: the controlled exception of the audit, timeline and document version guards during an elimination (`goeland.disposal`), destroyed files (`content_blob.disposed_at`) (GLD-077).
+- `pkg/core/module/db/migrations/0038_deferrable_current_version.sql` — Schema migration: `document.current_version_id` deferrable (initially immediate), so the legacy import writes a document with its current version before the version.
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).

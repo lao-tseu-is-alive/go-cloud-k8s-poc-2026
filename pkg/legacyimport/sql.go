@@ -34,12 +34,13 @@ INSERT INTO document_type (code, label, description, category)
 VALUES (@code, 'Document Goéland', 'Documents importés de Goéland sans famille connue', 'Goéland')
 RETURNING id;`
 
-// setCurrentVersionsSQL points each imported document at its single version.
-const setCurrentVersionsSQL = `
-UPDATE document d SET current_version_id = v.id
-FROM document_version v
-WHERE v.document_id = d.id AND v.version_no = 1 AND d.current_version_id IS NULL
-  AND d.id IN (SELECT subject_id FROM subject_provenance WHERE import_batch_id = @batch_id);`
+// deferCurrentVersionSQL lets a document be written with its current version
+// before the version itself (migration 0038); checkCurrentVersionSQL checks
+// the pending references once the versions are written.
+const (
+	deferCurrentVersionSQL = `SET CONSTRAINTS document_current_version_id_fkey DEFERRED;`
+	checkCurrentVersionSQL = `SET CONSTRAINTS document_current_version_id_fkey IMMEDIATE;`
+)
 
 // createDocumentGrantStagingSQL collects the computed and listed document
 // grants before they are written once per grantee.

@@ -8,6 +8,21 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- The legacy import logs its progress on stderr as `slog` records: each stage and set-based step
+  with its duration, each COPY with its rows and rate, and a heartbeat every 250,000 rows.
+- `cmd/goeland-import/tables2replicate.yaml`: the legacy tables and columns the import reads,
+  for the tool that replicates them from MSSQL.
+
+### Changed
+
+- Faster legacy import: the 52 secondary indexes of the bulk-loaded tables are dropped during the
+  load and built again from their catalogue definition before the commit (unique indexes and
+  primary keys stay), and the documents are written with their current version, whose reference
+  is now deferrable (migration `0038`) and checked once the versions are written, instead of updating 2.37M
+  documents afterwards (6 minutes of the 34-minute run).
+
 ## [0.22.1] - 2026-11-23
 
 Security patch: Go, pgx and SPA dependency updates. No migration, no API change.

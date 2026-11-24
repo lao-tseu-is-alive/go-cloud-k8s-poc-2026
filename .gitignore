@@ -48,3 +48,5 @@ reports/
 /goeland-client
 /goeland-mcp
 cmd/goeland-server/goeland-front/dist
+# Local logs of the legacy import (scripts/import_rebuild.sh ... | tee import-*.log)
+/import-*.log

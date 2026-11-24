@@ -47,10 +47,17 @@ can never be dropped by mistake), and the import refuses a target that already h
 data. The import ends with `ANALYZE`: right after a bulk load the planner has no statistics and the
 first requests get very poor plans (a 10 s timeout was seen before it was added).
 
-A full run (both waves, dry run or not) takes about 30 minutes on a workstation (peak memory
-about 1.5 GB); the first wave alone took 3.5 minutes. While it runs, stderr carries `slog` records:
+A full run (both waves) takes about 18 minutes (measured 2026-11-24 with PostgreSQL sized for a
+4 vCPU / 8 GB VM, below; peak memory of the import about 1.6 GB): 34 minutes with the default
+PostgreSQL configuration and before the index and current version changes, 25 with that
+configuration alone. While it runs, stderr carries `slog` records:
 each stage and set-based SQL step with its duration, each COPY with its rows and rate, and a
-heartbeat every 250,000 rows inside a long COPY, so a slow step is visible at once. At the end it
+heartbeat every 250,000 rows inside a long COPY, so a slow step is visible at once. The secondary
+indexes of the bulk tables are dropped during the load and built again before the commit (one
+build is far cheaper than millions of random insertions), and the documents are written with their
+current version (a deferred reference, checked once the versions are in). For PostgreSQL itself, size
+`shared_buffers` and above all `max_wal_size` (8GB on a 4 vCPU / 8 GB VM): with the 1GB default
+the load forces a checkpoint every gigabyte of WAL. At the end it
 prints, per stage, the rows read, written, left out by reason and adjusted (renamed, defaulted,
 ended, ...); the same counts are stored on the `import_batch` row. Progress and counts carry names
 and numbers only, never values.

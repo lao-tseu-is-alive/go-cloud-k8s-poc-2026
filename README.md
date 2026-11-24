@@ -162,7 +162,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0037 (dbmate format)
+      └── db/migrations/  0001..0038 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
@@ -464,6 +464,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0035_retention.sql           retention_policy, subject_retention, retention_hold, RECORDS_MANAGER role (GLD-032)
 0036_disposition.sql         disposition bordereaux and items, retention outcome, transfer exports (GLD-076)
 0037_elimination.sql         controlled erasure during an elimination, destroyed files (GLD-077)
+0038_deferrable_current_version.sql  deferrable current version reference, for the legacy import
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

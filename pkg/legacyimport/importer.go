@@ -130,8 +130,13 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 	return imp.report, nil
 }
 
-// runStages runs every stage in order, then records the counts on the batch.
+// runStages runs every stage in order with the secondary indexes of the bulk
+// tables set aside, builds them again, then records the counts on the batch.
 func (imp *Importer) runStages(ctx context.Context) error {
+	indexes, err := imp.dropSecondaryIndexes(ctx)
+	if err != nil {
+		return err
+	}
 	stages := imp.stages()
 	for i, s := range stages {
 		counts := imp.report.stage(s.name)
@@ -140,6 +145,9 @@ func (imp *Importer) runStages(ctx context.Context) error {
 			return fmt.Errorf("stage %s: %w", s.name, err)
 		}
 		done("read", counts.Read, "written", counts.Written)
+	}
+	if err := imp.createIndexes(ctx, indexes); err != nil {
+		return err
 	}
 	done := imp.progress.step("record batch counts")
 	if err := imp.finish(ctx); err != nil {
