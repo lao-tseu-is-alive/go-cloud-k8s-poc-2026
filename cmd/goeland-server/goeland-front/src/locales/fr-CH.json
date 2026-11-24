@@ -423,7 +423,10 @@
     "devTokenRejected": "Le serveur a refusé ce jeton.",
     "admin": "Administrateur",
     "modeLabel": "Mode de connexion : {mode}",
-    "scopes": "Droits"
+    "scopes": "Droits",
+    "userId": "Identifiant utilisateur : {id}",
+    "roles": "Rôles Goéland",
+    "noRole": "aucun"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }

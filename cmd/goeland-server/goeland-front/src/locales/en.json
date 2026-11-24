@@ -423,7 +423,10 @@
     "devTokenRejected": "The server rejected this token.",
     "admin": "Administrator",
     "modeLabel": "Sign-in mode: {mode}",
-    "scopes": "Rights"
+    "scopes": "Rights",
+    "userId": "User id: {id}",
+    "roles": "Goéland roles",
+    "noRole": "none"
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }

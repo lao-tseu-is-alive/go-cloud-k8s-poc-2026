@@ -17,6 +17,8 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Changed
 
+- The user menu shows the Goéland user id (the one grants, roles and `GOELAND_BOOTSTRAP_ADMINS`
+  name) on its own line, and the Goéland roles held.
 - Faster legacy import: the 52 secondary indexes of the bulk-loaded tables are dropped during the
   load and built again from their catalogue definition before the commit (unique indexes and
   primary keys stay), and the documents are written with their current version, whose reference

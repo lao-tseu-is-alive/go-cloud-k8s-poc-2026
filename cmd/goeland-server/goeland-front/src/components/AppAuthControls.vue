@@ -39,9 +39,12 @@
           </template>
         </v-list-item>
 
+        <!-- The Goéland user id is the one grants, roles and GOELAND_BOOTSTRAP_ADMINS name. -->
+        <v-list-item v-if="me?.id" prepend-icon="mdi-identifier" :title="t('auth.userId', { id: me.id })" />
+
         <v-list-item class="text-caption text-medium-emphasis">
           {{ t('auth.modeLabel', { mode: mode.toUpperCase() }) }}
-          <span v-if="me?.id"> · #{{ me.id }}</span>
+          <div>{{ t('auth.roles') }} : {{ me?.roles?.length ? me.roles.join(', ') : t('auth.noRole') }}</div>
           <div v-if="scopes.length > 0">{{ t('auth.scopes') }} : {{ scopes.join(', ') }}</div>
         </v-list-item>
 
