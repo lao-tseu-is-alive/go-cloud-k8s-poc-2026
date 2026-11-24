@@ -237,8 +237,5 @@ func (imp *Importer) copyThings(ctx context.Context, rows [][]any) error {
 	if err := imp.copyRows(ctx, "import_thing", thingColumns, rows); err != nil {
 		return err
 	}
-	if _, err := imp.tx.Exec(ctx, insertThingsFromStagingSQL); err != nil {
-		return fmt.Errorf("insert things: %w", err)
-	}
-	return nil
+	return imp.exec(ctx, "insert things", insertThingsFromStagingSQL)
 }

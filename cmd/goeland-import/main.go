@@ -2,9 +2,11 @@
 // read-only replica of production (GLD-051, GLD-052; docs/IMPORT_MAPPING.md).
 //
 // The target must be a brand-new database: the command migrates it, then
-// imports every wave 1 stage in one transaction (pkg/legacyimport). Without
-// -apply it is a dry run: everything is written, checked and rolled back. It
-// prints counts only, never values. Use scripts/import_rebuild.sh, which
+// imports every stage in one transaction (pkg/legacyimport). Without -apply it
+// is a dry run: everything is written, checked and rolled back. Progress goes to
+// stderr as slog records (each stage, SQL step and COPY with its duration and
+// rate, a heartbeat inside long COPYs), the counts report to stdout; both carry
+// names and counts only, never values. Use scripts/import_rebuild.sh, which
 // recreates the target first:
 //
 //	GOELAND_IMPORT_SOURCE_URL='postgres://goeland_read:<password>@localhost/goeland' \
@@ -17,6 +19,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"log/slog"
 	"os"
 	"os/user"
 	"strings"
@@ -53,11 +56,16 @@ func run(apply bool) error {
 		return err
 	}
 	defer target.Close()
+	// Progress goes to stderr as slog records, the counts report to stdout.
+	log := slog.New(slog.NewTextHandler(os.Stderr, nil))
+	started := time.Now()
+	log.Info("step started", "step", "migrate target")
 	if err := coremodule.Migrate(ctx, target); err != nil {
 		return fmt.Errorf("migrate the target: %w", err)
 	}
-	started := time.Now()
-	report, err := legacyimport.Run(ctx, source, target, legacyimport.Options{Apply: apply, StartedBy: startedBy()})
+	log.Info("step done", "step", "migrate target", "duration", time.Since(started).Round(time.Millisecond))
+	started = time.Now()
+	report, err := legacyimport.Run(ctx, source, target, legacyimport.Options{Apply: apply, StartedBy: startedBy(), Logger: log})
 	if report != nil {
 		report.Print(os.Stdout)
 	}

@@ -140,10 +140,7 @@ func (imp *Importer) importDocuments(ctx context.Context, c *StageCounts) error 
 			c.Written = n
 		}
 	}
-	if _, err := imp.tx.Exec(ctx, setCurrentVersionsSQL, pgx.NamedArgs{"batch_id": imp.batchID}); err != nil {
-		return fmt.Errorf("set current versions: %w", err)
-	}
-	return nil
+	return imp.exec(ctx, "set current versions", setCurrentVersionsSQL, pgx.NamedArgs{"batch_id": imp.batchID})
 }
 
 // sourceDocumentFamily is a legacy document family.
@@ -401,8 +398,5 @@ func (imp *Importer) importDocumentAccessLists(ctx context.Context, c *StageCoun
 	if err != nil {
 		return err
 	}
-	if _, err := imp.tx.Exec(ctx, insertDocumentGrantsFromStagingSQL); err != nil {
-		return fmt.Errorf("insert document grants: %w", err)
-	}
-	return nil
+	return imp.exec(ctx, "insert document grants", insertDocumentGrantsFromStagingSQL)
 }

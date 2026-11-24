@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strconv"
 	"time"
 
@@ -25,15 +26,20 @@ type Options struct {
 	Apply bool
 	// StartedBy names who ran the import, recorded on the import batch.
 	StartedBy string
+	// Logger, when set, receives the progress of the run: each stage and SQL
+	// step with its duration, each COPY with its rows and rate, and a heartbeat
+	// inside long COPYs (names and counts only, never values); nil is silent.
+	Logger *slog.Logger
 }
 
 // Importer runs the stages of one import inside one target transaction.
 type Importer struct {
-	source  *pgxpool.Pool
-	tx      pgx.Tx
-	batchID uuid.UUID
-	report  *Report
-	now     time.Time
+	source   *pgxpool.Pool
+	tx       pgx.Tx
+	batchID  uuid.UUID
+	report   *Report
+	progress *progress
+	now      time.Time
 	// subjects holds the ids written so far, so that grants and relationships
 	// never point at a subject left out.
 	subjects map[uuid.UUID]core.SubjectKind
@@ -87,7 +93,7 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 	defer func() { _ = tx.Rollback(ctx) }()
 
 	imp := &Importer{
-		source: source, tx: tx, report: &Report{}, now: time.Now(),
+		source: source, tx: tx, report: &Report{}, progress: newProgress(opts.Logger), now: time.Now(),
 		subjects: map[uuid.UUID]core.SubjectKind{}, employees: map[int64]bool{}, relTypes: map[string]uuid.UUID{},
 		activeEmployees: map[int64]bool{}, employeeUnits: map[int64]int64{}, liveUnits: map[uuid.UUID]bool{},
 		liveGroups: map[uuid.UUID]bool{}, caseTypes: map[int64]uuid.UUID{}, caseClosedAt: map[uuid.UUID]time.Time{}, thingTypes: map[int64]uuid.UUID{}, documentTypes: map[int64]uuid.UUID{},
@@ -98,29 +104,72 @@ func Run(ctx context.Context, source, target *pgxpool.Pool, opts Options) (*Repo
 	}).Scan(&imp.batchID); err != nil {
 		return nil, fmt.Errorf("insert import batch: %w", err)
 	}
+	imp.progress.info("import started", "apply", opts.Apply, "snapshot", snapshot)
 	if err := imp.loadRelationshipTypes(ctx); err != nil {
 		return nil, err
 	}
-	for _, s := range imp.stages() {
-		if err := s.run(ctx, imp.report.stage(s.name)); err != nil {
-			return imp.report, fmt.Errorf("stage %s: %w", s.name, err)
-		}
-	}
-	if err := imp.finish(ctx); err != nil {
+	if err := imp.runStages(ctx); err != nil {
 		return imp.report, err
 	}
 	if !opts.Apply {
+		imp.progress.info("dry run: rolling back")
 		return imp.report, nil // rolled back by the deferred Rollback
 	}
+	done := imp.progress.step("commit")
 	if err := tx.Commit(ctx); err != nil {
 		return imp.report, fmt.Errorf("commit import: %w", err)
 	}
+	done()
 	// A bulk load leaves the planner without statistics until autovacuum runs:
 	// the first requests then get very poor plans (a 10 s timeout was seen).
+	done = imp.progress.step("analyze")
 	if _, err := target.Exec(ctx, "ANALYZE"); err != nil {
 		return imp.report, fmt.Errorf("analyze the target: %w", err)
 	}
+	done()
 	return imp.report, nil
+}
+
+// runStages runs every stage in order, then records the counts on the batch.
+func (imp *Importer) runStages(ctx context.Context) error {
+	stages := imp.stages()
+	for i, s := range stages {
+		counts := imp.report.stage(s.name)
+		done := imp.progress.step(s.name, "stage", fmt.Sprintf("%d/%d", i+1, len(stages)))
+		if err := s.run(ctx, counts); err != nil {
+			return fmt.Errorf("stage %s: %w", s.name, err)
+		}
+		done("read", counts.Read, "written", counts.Written)
+	}
+	done := imp.progress.step("record batch counts")
+	if err := imp.finish(ctx); err != nil {
+		return err
+	}
+	done()
+	return nil
+}
+
+// exec runs one set-based statement of a stage inside the import
+// transaction and logs its duration and affected rows.
+func (imp *Importer) exec(ctx context.Context, step, sql string, args ...any) error {
+	done := imp.progress.step(step)
+	tag, err := imp.tx.Exec(ctx, sql, args...)
+	if err != nil {
+		return fmt.Errorf("%s: %w", step, err)
+	}
+	done("rows", tag.RowsAffected())
+	return nil
+}
+
+// copy runs one COPY into table from src, logging a heartbeat and its rate.
+func (imp *Importer) copy(ctx context.Context, table string, columns []string, src pgx.CopyFromSource) (int64, error) {
+	wrapped, done := imp.progress.copySource(table, src)
+	n, err := imp.tx.CopyFrom(ctx, pgx.Identifier{table}, columns, wrapped)
+	if err != nil {
+		return n, fmt.Errorf("copy %s: %w", table, err)
+	}
+	done(n)
+	return n, nil
 }
 
 // stages lists the stages of waves 1 and 2 in dependency order.
@@ -221,10 +270,8 @@ func (imp *Importer) copyRows(ctx context.Context, table string, columns []strin
 	if len(rows) == 0 {
 		return nil
 	}
-	if _, err := imp.tx.CopyFrom(ctx, pgx.Identifier{table}, columns, pgx.CopyFromRows(rows)); err != nil {
-		return fmt.Errorf("copy %s: %w", table, err)
-	}
-	return nil
+	_, err := imp.copy(ctx, table, columns, pgx.CopyFromRows(rows))
+	return err
 }
 
 // copyFromSource streams the rows of query on the source into table; convert
@@ -235,7 +282,7 @@ func (imp *Importer) copyFromSource(ctx context.Context, table string, columns [
 		return 0, fmt.Errorf("read source for %s: %w", table, err)
 	}
 	defer rows.Close()
-	n, err := imp.tx.CopyFrom(ctx, pgx.Identifier{table}, columns, pgx.CopyFromFunc(func() ([]any, error) {
+	n, err := imp.copy(ctx, table, columns, pgx.CopyFromFunc(func() ([]any, error) {
 		for rows.Next() {
 			values, err := convert(rows)
 			if err != nil || values != nil {
@@ -244,10 +291,7 @@ func (imp *Importer) copyFromSource(ctx context.Context, table string, columns [
 		}
 		return nil, rows.Err()
 	}))
-	if err != nil {
-		return int(n), fmt.Errorf("copy %s: %w", table, err)
-	}
-	return int(n), nil
+	return int(n), err
 }
 
 // querySource runs query on the source and collects its rows into T (by column name).
@@ -272,7 +316,7 @@ func (imp *Importer) copyFromSourceMulti(ctx context.Context, table string, colu
 	}
 	defer rows.Close()
 	var pending [][]any
-	n, err := imp.tx.CopyFrom(ctx, pgx.Identifier{table}, columns, pgx.CopyFromFunc(func() ([]any, error) {
+	n, err := imp.copy(ctx, table, columns, pgx.CopyFromFunc(func() ([]any, error) {
 		for len(pending) == 0 {
 			if !rows.Next() {
 				return nil, rows.Err()
@@ -287,8 +331,5 @@ func (imp *Importer) copyFromSourceMulti(ctx context.Context, table string, colu
 		pending = pending[1:]
 		return next, nil
 	}))
-	if err != nil {
-		return int(n), fmt.Errorf("copy %s: %w", table, err)
-	}
-	return int(n), nil
+	return int(n), err
 }

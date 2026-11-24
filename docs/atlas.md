@@ -127,6 +127,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/config_test.go` — Tests the configuration defaults, valid settings, every rejection and the auth server HTTP rules.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
 - `cmd/goeland-import/main.go` — Legacy data import command: migrates a brand-new target and runs `pkg/legacyimport` in one transaction; dry run unless `-apply`, counts only.
+- `cmd/goeland-import/tables2replicate.yaml` — The 44 legacy tables and columns the import reads on the source replica, by area, for the tool that replicates them from MSSQL; kept in sync with the source queries of `pkg/legacyimport`.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
@@ -171,6 +172,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/legacyimport/importer.go` — Import run: target checks, import batch, stage order, transaction (rolled back in a dry run), statistics, COPY helpers.
 - `pkg/legacyimport/legacyimport_test.go` — Unit tests of the import rules: ids, role codes, unit tree, case status, grants, contacts and addresses.
 - `pkg/legacyimport/orgunits.go` — Legacy org unit mapping shared with `cmd/goeland-import-orgunits` and the set-based unit stage (tree order, live units, sibling labels).
+- `pkg/legacyimport/progress.go` — Progress of an import run as slog records: each step's start and end with its duration, each COPY's rows and rate, a heartbeat every 250,000 rows (names and counts only, never values); silent without a logger.
+- `pkg/legacyimport/progress_test.go` — Unit tests of the progress records on a fixed clock: step records, COPY heartbeat and rate, silent mode.
 - `pkg/legacyimport/report.go` — Counts of an import by stage: rows read, written, left out and adjusted, by reason; printed, and stored on the batch.
 - `pkg/legacyimport/roles.go` — Import stages of the actor, employee and unit roles on cases: relationship types created from the legacy roles, periods, open-edge uniqueness.
 - `pkg/legacyimport/sql.go` — Target statements and the legacy source queries of wave 1 (structural and minimal columns only).

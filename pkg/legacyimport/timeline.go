@@ -121,8 +121,8 @@ func (imp *Importer) importTimelineFinalStatus(ctx context.Context, c *StageCoun
 	if err != nil {
 		return err
 	}
-	if _, err := imp.tx.Exec(ctx, applyEntryFinalStatusSQL); err != nil {
-		return fmt.Errorf("apply entry status: %w", err)
+	if err := imp.exec(ctx, "apply entry status", applyEntryFinalStatusSQL); err != nil {
+		return err
 	}
 	c.Written = n
 	return nil

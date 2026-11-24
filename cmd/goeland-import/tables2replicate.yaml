@@ -1,0 +1,131 @@
+# Legacy tables read by cmd/goeland-import (pkg/legacyimport) and
+# cmd/goeland-import-orgunits on the source database.
+#
+# The source is a read-only PostgreSQL replica of the production MSSQL database:
+# names below are the replica's (lower case); the MSSQL names differ in case only.
+# A replication tool feeding that replica must provide at least these tables with
+# these columns. Columns are the ones the import reads; replicating only them keeps
+# personal data the import never uses (birth dates, private addresses...) out of
+# the replica.
+#
+# Source of truth: the source queries in pkg/legacyimport/sql.go and
+# pkg/legacyimport/orgunits.go (UnitSourceSQL). Keep this file in sync when they
+# change. Row counts are orders of magnitude from docs/IMPORT_MAPPING.md.
+
+version: 1
+source: goeland-legacy-replica
+
+groups:
+  users_and_units:
+    - name: employe
+      columns: [idemploye, prenom, nom, email, isactive, datecreated]
+      note: "~10k rows; never birth date, private address or phones"
+    - name: employe__org_unit
+      columns: [idemploye, idorgunit, levelou]
+      note: "only levelou = 0 (direct unit) is read"
+    - name: org_unit
+      columns: [idorgunit, idparent, idtypeorgunit, name, abreviation, isactive, reasondeath]
+    - name: type_org_unit
+      columns: [idtypeorgunit, name]
+    - name: securite_groupe
+      columns: [idgroupe, groupname, commentaire, bactif]
+    - name: securite_groupe_liste_employe
+      columns: [idgroupe, idemploye]
+    - name: securite_groupe_liste_groupe
+      columns: []
+      note: "only counted (nested groups are reported, not imported); the table must exist"
+
+  cases:
+    - name: type_affaire
+      columns: [idtypeaffaire, name, description, isactive]
+    - name: affaire
+      columns: [idaffaire, idtypeaffaire, name, description, commentaire, datecreated, datelastmodif,
+                datebegin, dateend, issuspended, isterminated, idcreator, isconfidential]
+      note: "max(datecreated, datelastmodif) dates the import (instant T)"
+    - name: affaire_droit_emp_or_ou
+      columns: [idaffaire, emporou, idemporou, iddroit]
+    - name: affaire_employe
+      columns: [idaffaire, idemploye, idroleemp, datecreation, datebeginparticipate, dateendparticipate]
+    - name: affaire_org_unit
+      columns: [idaffaire, idorgunit, idroleou, datebeginparticipate, dateendparticipate]
+    - name: dico_employe_role
+      columns: [idrole, role]
+    - name: dico_org_unit_role
+      columns: [idrole, role]
+    - name: lien_affaire_affaire
+      columns: [idaffaire1, idaffaire2, idtypelien12]
+    - name: dico_type_lien_affaire_affaire
+      columns: [id, typelien]
+
+  actors:
+    - name: acteur
+      columns: [idacteur, isphysique, name, nameforsearch, isactive, codepublication, datecreated, idcreator]
+    - name: act_physique
+      columns: [idacteur, idtitre, lastname, firstname]
+    - name: act_moral
+      columns: [idacteur, raisonsociale, idcategory, complement]
+    - name: dico_act_moral_category
+      columns: [idcategory, category]
+    - name: act_phys_from_ch
+      columns: [idacteur, idch]
+    - name: acteur_complement
+      columns: [idacteur, idtypecomplement, complement]
+      note: "~165k rows"
+    - name: dico_acteur_type_complement
+      columns: [idtypecomplement, typecomplcomplet]
+    - name: acteur_adresse_corresp_denormalise
+      columns: [idacteur, rue, numero, casepostale, codepostal, ville, pays]
+      note: "check on MSSQL whether this is a table or a view"
+    - name: dico_pays
+      columns: [nomfrancais, codeiso]
+    - name: acteur_role
+      columns: [idobject, idacteur, idrole, objecttablename, datecreated]
+      note: "rows with objecttablename Affaire, Thing and Document are read"
+    - name: dico_acteur_role
+      columns: [idrole, role]
+
+  things:
+    - name: type_thing
+      columns: [idtypething, name, description, isactive]
+    - name: thing
+      columns: [idthing, idtypething, name, description, datecreated, idcreator]
+      note: "~180k rows"
+    - name: thing_position
+      columns: [idthing, mineo, maxeo, minsn, maxsn]
+    - name: parcelle
+      columns: [idthing, idcommune, numparcelle, egrid, surface]
+    - name: thi_building_egid
+      columns: [idthing, egid]
+    - name: lien_thing_affaire
+      columns: [idaffaire, idthing]
+    - name: lien_thing_document
+      columns: [iddocument, idthing]
+
+  documents:
+    - name: document
+      columns: [iddocument, doctitle, docdescription, docsubject, doccomment, docdateofficielle,
+                datecreated, datelastmodif, iduserpost, docisdefinitive, docisconfidential,
+                doclevelconfidential, sha256hash, docsizeinbyte, nbrpage, idtypedocument,
+                locfilename, locfileext, docnumver, iddocfamily]
+      note: "~2.3M rows; metadata and SHA-256 only, the file bytes are not imported"
+    - name: type_document
+      columns: [idtypedocument, mimetype]
+    - name: doc_family
+      columns: [iddocfamily, name, description]
+    - name: document_employe_acces
+      columns: [iddocument, idemploye]
+    - name: document_groupe_acces
+      columns: [iddocument, idgroupe]
+    - name: document_org_unit_acces
+      columns: [iddocument, idorgunit]
+    - name: lien_affaire_document
+      columns: [idaffaire, iddocument]
+
+  timeline:
+    - name: affaire_suivi
+      columns: [idaffairesuivi, idaffaire, idcreator, commentaire, dateofficielle, datecreated, color,
+                datevalidation, idvalideur]
+    - name: affaire_suivi_verrou
+      columns: [idaffairesuivi, dateverrou, idemploye]
+    - name: lien_affaire_suivi_document
+      columns: [idaffairesuivi, iddocument]
