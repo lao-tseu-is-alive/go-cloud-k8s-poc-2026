@@ -45,6 +45,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Changed
 
+- `.env_sample` lists every variable the server reads (storage, S3, exports, orphan uploads,
+  outbox, disposal, migration mode, metrics, traces), with its default and the section of
+  `docs/PRODUCTION_READINESS.md` that explains it; placeholders replace the sample secrets, no value
+  is quoted any more, and the JWT variables no longer read were removed. `make docs-assert` fails
+  when the server reads a variable the sample does not list.
+
 - The user menu shows the Goéland user id (the one grants, roles and `GOELAND_BOOTSTRAP_ADMINS`
   name) on its own line, and the Goéland roles held.
 - Faster legacy import: the 52 secondary indexes of the bulk-loaded tables are dropped during the

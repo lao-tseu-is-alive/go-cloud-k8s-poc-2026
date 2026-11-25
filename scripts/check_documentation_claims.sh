@@ -44,6 +44,14 @@ require_literal cmd/goeland-server/config.go 'defaultDocumentPath   = "./go_docu
 require_literal AGENTS.md 'default `./go_documents`, gitignored' 'blob directory agent contract'
 require_literal .gitignore 'go_documents/' 'blob directory is git-ignored'
 
+# Every environment variable the server reads is listed in .env_sample, the
+# operator's starting point (test-only GOELAND_TEST_* / GOELAND_REQUIRE_* aside).
+while read -r variable; do
+    require_literal .env_sample "${variable}" "server variable in .env_sample"
+done < <(find cmd/goeland-server pkg -name '*.go' ! -name '*_test.go' ! -path 'pkg/legacyimport/*' ! -path '*/node_modules/*' \
+    -exec grep -hoE '"(GOELAND|DB|JWT|AUTH|OTEL|DATABASE|LOG)_[A-Z0-9_]+"' {} + |
+    tr -d '"' | grep -vE '^GOELAND_(TEST|REQUIRE)_' | sort -u)
+
 # Authentication: jwt is the secure default and scopes are fixed identifiers.
 require_literal cmd/goeland-server/config.go 'defaultAuthMode       = "jwt"' 'default auth mode source'
 require_literal AGENTS.md '- `jwt` (default):' 'default auth mode agent contract'

@@ -11,7 +11,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Governance, documentation and automation
 
 - `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
-- `.env_sample` — Secret-free example of the supported `GOELAND_*`, `DB_*` and JWT environment variables.
+- `.env_sample` — Secret-free example of every environment variable the server reads, with defaults and pointers to `docs/PRODUCTION_READINESS.md` (`docs-assert` checks the list is complete).
 - `.env.import.sample` — Secret-free example of `.env.import`, the replica and superuser connections of the legacy import (kept out of `.env`).
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
 - `.sonarcloud.properties` — SonarCloud automatic-analysis settings: tests declared as tests; generated code and PostgreSQL migrations excluded.

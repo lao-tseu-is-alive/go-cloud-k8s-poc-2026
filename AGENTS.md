@@ -11,6 +11,8 @@ must stay in sync, and the non-obvious gotchas discovered while building the POC
   `<dev-token>`, `pat_<redacted>`.
 - Do not read or display secret-bearing environment files unless the task
   requires inspecting their structure, and redact all values.
+- `.env_sample` lists every variable the server reads (`make docs-assert` checks it): add a new
+  variable there with its default and a pointer to its documentation.
 - Values in `.env` must not be quoted: the Makefile includes and exports the
   file, so quotes become part of the value.
 - `.env` and coverage files are Git-ignored, but that does not make their
