@@ -112,6 +112,17 @@ replica (`GOELAND_EXPORT_POLL_SECONDS`, default 5, 1–3600), sharing the queue 
 database, so any replica may build an archive that another one serves: one more reason for a
 shared volume.
 
+An upload stores the bytes before `CreateDocument` or `AddDocumentVersion` attaches them, so a
+form abandoned after the upload leaves bytes no document uses. Every replica runs a collector
+(GLD-045) that destroys the bytes of a blob no version references once it has waited
+`GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24, 1–720) since its last upload, every
+`GOELAND_ORPHAN_SCAN_MINUTES` (default 60, 1–1440). The `content_blob` row stays, marked
+`disposed_at`: attaching it later is refused (upload the file again), and an identical upload
+stores the bytes again and restarts the delay. A blob being attached is locked, so it is never
+collected meanwhile; blobs whose bytes Goéland does not hold (the imported ones) are never
+candidates. Set the delay longer than the longest time someone may spend between choosing a file
+and saving the document.
+
 The transactional outbox (GLD-028) needs no volume: its events live in `outbox_event`, and the
 worker of every replica shares them through the database (`FOR UPDATE SKIP LOCKED` with a 5-minute
 lease, so a replica that dies mid-delivery leaves its events to the others). Each worker keeps one
@@ -189,6 +200,8 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_BOOTSTRAP_ADMINS`          | —                | User ids granted the ADMIN role on their next request (§4); at most 20. |
 | `GOELAND_EXPORT_TTL_HOURS`          | `24`             | How long a case export archive stays downloadable (1–720, §3). |
 | `GOELAND_EXPORT_POLL_SECONDS`       | `5`              | How often the export worker looks for queued exports and expired archives (1–3600). |
+| `GOELAND_ORPHAN_UPLOAD_TTL_HOURS`   | `24`             | How long uploaded bytes may wait to be attached to a document before they are destroyed (1–720, §3, GLD-045). |
+| `GOELAND_ORPHAN_SCAN_MINUTES`       | `60`             | How often the orphan upload collector runs (1–1440). |
 | `GOELAND_OUTBOX_RETENTION_DAYS`     | `7`              | How long delivered outbox events are kept before the purge (1–365, GLD-028). |
 | `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
 | `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
@@ -297,8 +310,7 @@ These are the gaps that make this a POC rather than a production service:
 - **Integrity verification is not probative.** `VerifyDocumentIntegrity` compares a digest with
   the recorded one without rereading the stored bytes (GLD-021).
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
-  without a shared/persistent volume, and bytes uploaded but never attached to a document are
-  not collected (GLD-020, GLD-045).
+  without a shared/persistent volume (GLD-020).
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),

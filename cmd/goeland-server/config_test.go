@@ -16,7 +16,7 @@ var configEnv = []string{
 	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_APP_ROLE", "GOELAND_DB_MIGRATE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
 	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DISPOSAL_ENABLED", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
-	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "JWT_ISSUER_ID", "JWT_SECRET", "LOG_LEVEL",
+	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_ORPHAN_SCAN_MINUTES", "GOELAND_ORPHAN_UPLOAD_TTL_HOURS", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "JWT_ISSUER_ID", "JWT_SECRET", "LOG_LEVEL",
 }
 
 // setConfigEnv blanks the configuration environment, then sets values; a
@@ -46,7 +46,8 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.ShutdownPeriod != defaultShutdownPeriod || cfg.DBConnectTimeout != defaultDBConnectTimeout ||
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
 		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled ||
-		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" || cfg.DBMigrate != "auto" {
+		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" || cfg.DBMigrate != "auto" ||
+		cfg.OrphanUploadTTL != 24*time.Hour || cfg.OrphanScanInterval != time.Hour {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -69,6 +70,8 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 		"AUTH_SERVER_URL":                    "https://auth.example.ch/",
 		"GOELAND_DISPOSAL_ENABLED":           "true",
 		"GOELAND_DB_MIGRATE":                 "Verify",
+		"GOELAND_ORPHAN_UPLOAD_TTL_HOURS":    "72",
+		"GOELAND_ORPHAN_SCAN_MINUTES":        "15",
 	})
 	cfg, err := loadConfig()
 	if err != nil {
@@ -76,7 +79,8 @@ func TestLoadConfigAcceptsValidSettings(t *testing.T) {
 	}
 	if cfg.AuthMode != "dev" || cfg.DevUserID != 42 || !cfg.DevUserAdmin || cfg.DBConnectTimeout != 0 ||
 		cfg.RequestTimeout != 30*time.Second || cfg.LogLevel != slog.LevelDebug || cfg.MetricsAddress != "0.0.0.0:9464" ||
-		cfg.AuthServerURL != "https://auth.example.ch" || !cfg.DisposalEnabled || cfg.DBMigrate != "verify" || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" {
+		cfg.AuthServerURL != "https://auth.example.ch" || !cfg.DisposalEnabled || cfg.DBMigrate != "verify" || cfg.DatabaseURL != "postgresql://app@db.internal:5433/goeland?sslmode=require" ||
+		cfg.OrphanUploadTTL != 72*time.Hour || cfg.OrphanScanInterval != 15*time.Minute {
 		t.Fatalf("settings not applied: %+v", cfg)
 	}
 }
@@ -99,6 +103,8 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"db wait too long", map[string]string{"GOELAND_DB_CONNECT_TIMEOUT_SECONDS": "601"}, "between 0 and 600"},
 		{"zero request timeout", map[string]string{"GOELAND_REQUEST_TIMEOUT_SECONDS": "0"}, "between 1 and 300"},
 		{"zero upload size", map[string]string{"GOELAND_MAX_UPLOAD_BYTES": "0"}, "at least 1"},
+		{"zero orphan delay", map[string]string{"GOELAND_ORPHAN_UPLOAD_TTL_HOURS": "0"}, "GOELAND_ORPHAN_UPLOAD_TTL_HOURS must be between 1 and 720"},
+		{"orphan scan too rare", map[string]string{"GOELAND_ORPHAN_SCAN_MINUTES": "1441"}, "GOELAND_ORPHAN_SCAN_MINUTES must be between 1 and 1440"},
 		{"unknown log level", map[string]string{"LOG_LEVEL": "loud"}, "LOG_LEVEL"},
 		{"not a boolean", map[string]string{"GOELAND_DEV_USER_ADMIN": "yes please"}, "must be a boolean"},
 		{"auth url scheme", map[string]string{"AUTH_SERVER_URL": "ftp://auth.example.ch"}, "valid http(s) URL"},

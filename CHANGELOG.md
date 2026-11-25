@@ -14,6 +14,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   with its duration, each COPY with its rows and rate, and a heartbeat every 250,000 rows.
 - `cmd/goeland-import/tables2replicate.yaml`: the legacy tables and columns the import reads,
   for the tool that replicates them from MSSQL.
+- Orphan upload collection (GLD-045): the bytes of an upload no document version references are
+  destroyed once they have waited `GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24, 1–720) since
+  their last upload; every replica checks every `GOELAND_ORPHAN_SCAN_MINUTES` (default 60,
+  1–1440). The blob row stays, marked destroyed (migration `0039`, `content_blob.uploaded_at`):
+  creating a document or a version on it is refused (upload the file again), and an identical
+  upload stores the bytes again. A blob being attached is never collected meanwhile, and the
+  imported blobs, whose bytes stay in the legacy store, are never candidates.
 
 ### Changed
 
@@ -24,6 +31,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   primary keys stay), and the documents are written with their current version, whose reference
   is now deferrable (migration `0038`) and checked once the versions are written, instead of updating 2.37M
   documents afterwards (6 minutes of the 34-minute run).
+- An upload identical to content Goéland knows only by its digest (an imported document) now keeps
+  its bytes for that content instead of discarding them; a repeated upload restarts the orphan
+  delay of the content.
 
 ## [0.22.1] - 2026-11-23
 

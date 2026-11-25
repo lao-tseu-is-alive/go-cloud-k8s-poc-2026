@@ -57,6 +57,8 @@ type application struct {
 	exports *caseexport.Service
 	// outbox delivers the outbox events to the consumers (GLD-028); serve runs it.
 	outbox *core.OutboxWorker
+	// orphans destroys the uploads never attached to a document (GLD-045); serve runs it.
+	orphans *document.OrphanCollector
 	// metrics is served by serve on the metrics listener (GLD-010).
 	metrics http.Handler
 }
@@ -108,6 +110,12 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	})
 	if err != nil {
 		return nil, fmt.Errorf("document module: %w", err)
+	}
+	orphans, err := document.NewOrphanCollector(pool, blobStore, document.OrphanConfig{
+		TTL: config.OrphanUploadTTL, ScanInterval: config.OrphanScanInterval,
+	}, log)
+	if err != nil {
+		return nil, fmt.Errorf("orphan upload collector: %w", err)
 	}
 	domainMods, exportMod, err := buildDomainModules(ctx, config, moduleDeps{
 		pool: pool, verifier: verifier, coreSvc: coreMod.Service(), docSvc: docMod.Service(), store: blobStore, log: log,
@@ -173,6 +181,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		log:     log,
 		exports: exportMod.Service(),
 		outbox:  outbox,
+		orphans: orphans,
 		metrics: metrics,
 	}, nil
 }
@@ -398,7 +407,7 @@ func (a *application) serve(ctx context.Context, listener, metricsListener net.L
 	}
 	errCh := make(chan error, 1)
 	go func() { errCh <- server.Serve(listener) }()
-	// The case export and outbox workers stop with serve; serve waits for them to
+	// The case export, outbox and orphan upload workers stop with serve; serve waits for them to
 	// return (deferred calls run last first: stop, then wait).
 	var workers sync.WaitGroup
 	defer workers.Wait()
@@ -406,6 +415,7 @@ func (a *application) serve(ctx context.Context, listener, metricsListener net.L
 	defer stopWorkers()
 	workers.Go(func() { a.exports.Run(workerCtx) })
 	workers.Go(func() { a.outbox.Run(workerCtx) })
+	workers.Go(func() { a.orphans.Run(workerCtx) })
 	if metricsListener != nil {
 		workers.Go(func() { a.serveMetrics(workerCtx, metricsListener) })
 	}

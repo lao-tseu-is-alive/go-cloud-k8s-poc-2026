@@ -211,7 +211,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0038 (dbmate format)
+  │   └── db/migrations/     0001..0039 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
@@ -560,7 +560,11 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   returns a `contentBlobId` that the SPA passes to `CreateDocument` / `AddDocumentVersion`
   (so validation/governance/audit still flow through the proto path). Never accept a
   client-supplied digest as content identity: automatic document reuse keys on the
-  server-registered blob. `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049).
+  server-registered blob. Bytes never attached are destroyed after
+  `GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24) by `document.OrphanCollector` (GLD-045, run by
+  `serve`); a new version locks its blob `FOR SHARE` (`lockBlobForVersion`) so the collector skips
+  it, and a destroyed blob is refused: keep that lock in any new code attaching a blob.
+  `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049).
 - **Document model (spec v2):** `document` (logical object) → `document_version`
   (append-only; `document.current_version_id` is explicit; final/record versions are
   immutable and versions are never deleted — DB trigger) → `content_blob` (unique SHA-256).

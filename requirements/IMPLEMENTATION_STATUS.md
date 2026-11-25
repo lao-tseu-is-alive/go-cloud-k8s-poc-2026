@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-11-23**, app version **0.22.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0038` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-11-23**, app version **0.22.1** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0039` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -389,7 +389,8 @@ Deferred: rate limiting (ingress, see PRODUCTION_READINESS) and the k8s smoke te
   GitHub's own on their major tag).
 
 Planned from the same review: governed downloads and a server-side confidentiality ceiling
-(GLD-017), orphan upload collection (GLD-045), migration/runtime separation (GLD-046).
+(GLD-017), orphan upload collection (GLD-045, done 2026-11-25: `document.OrphanCollector`, delay
+`GOELAND_ORPHAN_UPLOAD_TTL_HOURS`), migration/runtime separation (GLD-046).
 
 ### 3j. Authorization model (decided 2026-09-30, GLD-017, from the legacy rights profile)
 

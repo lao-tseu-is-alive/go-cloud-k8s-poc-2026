@@ -313,6 +313,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0036_disposition.sql` — Schema migration: `disposition_bordereau` and `disposition_item` (approval per case), the retention outcome (ARCHIVED / DISPOSED), the TRANSFER purpose of `case_export` (GLD-032 step B1).
 - `pkg/core/module/db/migrations/0037_elimination.sql` — Schema migration: the controlled exception of the audit, timeline and document version guards during an elimination (`goeland.disposal`), destroyed files (`content_blob.disposed_at`) (GLD-077).
 - `pkg/core/module/db/migrations/0038_deferrable_current_version.sql` — Schema migration: `document.current_version_id` deferrable (initially immediate), so the legacy import writes a document with its current version before the version.
+- `pkg/core/module/db/migrations/0039_orphan_uploads.sql` — Schema migration: `content_blob.uploaded_at` and the index of the held blobs by age, for the orphan upload collection (GLD-045).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -331,6 +332,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/document/doc.go` — Package documentation for the GED document domain.
 - `pkg/document/mappers.go` — Document domain ↔ proto mappers.
 - `pkg/document/model.go` — Document, Version and ContentBlob models with `db` tags, create/version/ingest inputs and results, search filter.
+- `pkg/document/orphans.go` — Orphan upload collector (GLD-045): destroys the bytes of blobs no version references after the delay, by locked batches, marking them `disposed_at`.
 - `pkg/document/reference_admin.go` — Document type administration (label, description, category, activation) over `core.MutateReference`.
 - `pkg/document/repository.go` — Document persistence interface and the `ContentStore` contract for content bytes.
 - `pkg/document/service.go` — Document business rules: content ingestion with deduplication, creation or reuse, versions, finalize, verify, link, soft delete.
@@ -480,6 +482,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/search_batch_test.go` — Counts the queries of the case, actor, document, thing and org unit searches: a page is hydrated in a fixed number of queries.
 - `pkg/integration/sorting_test.go` — DB test: a sorted case search in both directions, an unknown sort field refused, sorted tasks.
 - `pkg/integration/orgunit_test.go` — Org units: seeded types, tree path, sibling labels, external references, no cycle (service and trigger), dissolution rules, owning unit and case roles.
+- `pkg/integration/orphan_uploads_test.go` — DB test of the orphan upload collection: old orphan destroyed and refused, fresh, attached, imported and being-attached blobs kept, identical upload restoring the bytes and restarting the delay (GLD-045).
 - `pkg/integration/task_test.go` — Tasks: creation, reassignment history, assignee checks, state machine, SYSTEM timeline entries, "my tasks" with unit membership, closure rules.
 - `pkg/integration/retention_test.go` — Retention: snapshot at closing, end at reopening, policy change kept out of running retentions, holds, due list, application to closed cases, inactive policy refused.
 - `pkg/integration/elimination_test.go` — Elimination: notice, blanked timeline and audit, own document eliminated and file destroyed, shared document kept, guards outside an elimination, revived file; rebuilding a failed transfer package.

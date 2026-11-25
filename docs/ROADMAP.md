@@ -612,7 +612,12 @@ categories with their counts. Mockup with the decisions:
 - [ ] **GLD-045 — Orphan upload collection**: bytes uploaded but never attached by
   `CreateDocument` / `AddDocumentVersion` stay forever (blob row and file); give
   unattached blobs an age limit and a cautious collector that never removes a
-  referenced blob (review 2026-09-30).
+  referenced blob (review 2026-09-30). Implemented 2026-11-25, unreleased (tick it at the release):
+  `document.OrphanCollector`, run by every replica, destroys the bytes of a blob no version references after
+  `GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24) since its last upload (`content_blob.uploaded_at`,
+  migration `0039`) and marks it `disposed_at`; a blob being attached is locked `FOR SHARE`, a
+  destroyed one is refused, an identical upload stores the bytes again; blobs whose bytes Goéland
+  does not hold (the imported ones) are never candidates, and now take the bytes of an identical upload.
 - [x] **GLD-046 — Separate migrations from the runtime**: a migration job (or
   init container) with the DDL role, and an application role limited to DML, so
   a faulty migration does not block every new pod and the runtime cannot alter

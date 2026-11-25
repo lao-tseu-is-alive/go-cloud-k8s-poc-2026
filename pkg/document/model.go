@@ -65,6 +65,10 @@ type ContentBlob struct {
 	// VerifiedAt is reserved for probative re-verification of the stored bytes
 	// (roadmap GLD-021); nil until then.
 	VerifiedAt *time.Time `db:"verified_at"`
+	// DisposedAt is when the bytes were destroyed (an elimination, GLD-077, or
+	// an upload never attached, GLD-045); nil while they are held or were
+	// never held. An identical upload stores them again.
+	DisposedAt *time.Time `db:"disposed_at"`
 }
 
 // Version is a dated, append-only state of a document (spec v2 §18). A final

@@ -48,7 +48,7 @@ func (r *PostgresRepository) Create(ctx context.Context, in CreateInput) (Create
 	var blob *ContentBlob
 	var existing *Document
 	if in.ContentBlobID != nil {
-		if blob, err = getBlob(ctx, tx, *in.ContentBlobID); err != nil {
+		if blob, err = lockBlobForVersion(ctx, tx, *in.ContentBlobID); err != nil {
 			return CreateResult{}, fmt.Errorf("content blob: %w", err)
 		}
 		if existing, err = findReusableDocument(ctx, tx, blob.ID, in.OperatorID); err != nil {
@@ -293,7 +293,7 @@ func (r *PostgresRepository) AddVersion(ctx context.Context, documentID uuid.UUI
 	}
 	after := map[string]any{}
 	if in.ContentBlobID != nil {
-		blob, err := getBlob(ctx, tx, *in.ContentBlobID)
+		blob, err := lockBlobForVersion(ctx, tx, *in.ContentBlobID)
 		if err != nil {
 			return nil, nil, nil, fmt.Errorf("content blob: %w", err)
 		}
@@ -371,8 +371,9 @@ func (r *PostgresRepository) Content(ctx context.Context, operatorID string, doc
 }
 
 // RegisterBlob stores the metadata of freshly written content, or returns the
-// blob that already holds the digest (reused = true) when identical content is
-// known, including when a concurrent upload won the race.
+// blob that already holds the digest (reused = true: the new bytes are not
+// needed) when identical content is known, including when a concurrent upload
+// won the race. Either way the blob's upload time is refreshed (GLD-045).
 func (r *PostgresRepository) RegisterBlob(ctx context.Context, blob ContentBlob) (*ContentBlob, bool, error) {
 	rows, err := r.pool.Query(ctx, insertBlobSQL, pgx.NamedArgs{
 		"sha256":          blob.SHA256,
@@ -384,22 +385,19 @@ func (r *PostgresRepository) RegisterBlob(ctx context.Context, blob ContentBlob)
 	if err != nil {
 		return nil, false, mapDBError(err)
 	}
-	inserted, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[ContentBlob])
+	registered, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[ContentBlob])
 	if err == nil {
-		return inserted, false, nil
+		return registered, registered.StorageRef != blob.StorageRef, nil
 	}
 	if !errors.Is(err, pgx.ErrNoRows) {
 		return nil, false, mapDBError(err)
 	}
+	// Same SHA-256, different size: storage corruption or a hash collision.
 	existing, err := r.FindBlobBySHA256(ctx, blob.SHA256)
 	if err != nil {
 		return nil, false, err
 	}
-	if existing.FileSizeBytes != blob.FileSizeBytes {
-		// Same SHA-256, different size: storage corruption or a hash collision.
-		return nil, false, fmt.Errorf("content blob %s: size %d does not match registered size %d", existing.ID, blob.FileSizeBytes, existing.FileSizeBytes)
-	}
-	return existing, true, nil
+	return nil, false, fmt.Errorf("content blob %s: size %d does not match registered size %d", existing.ID, blob.FileSizeBytes, existing.FileSizeBytes)
 }
 
 // FindBlobBySHA256 returns the blob holding a digest, or core.ErrNotFound.
@@ -741,15 +739,21 @@ func hydrateVersions(ctx context.Context, q core.Querier, versions []*Version) e
 	return nil
 }
 
-// getBlob loads a content blob by id using q; core.ErrNotFound when unknown.
-func getBlob(ctx context.Context, q core.Querier, id uuid.UUID) (*ContentBlob, error) {
-	rows, err := q.Query(ctx, getBlobSQL, pgx.NamedArgs{"id": id})
+// lockBlobForVersion loads the blob a new version will reference and locks it
+// until the commit (see lockBlobForVersionSQL); core.ErrNotFound when unknown,
+// core.ErrInvalidState when its bytes were destroyed (an upload never attached
+// within the orphan delay, GLD-045, or an elimination): upload the file again.
+func lockBlobForVersion(ctx context.Context, q core.Querier, id uuid.UUID) (*ContentBlob, error) {
+	rows, err := q.Query(ctx, lockBlobForVersionSQL, pgx.NamedArgs{"id": id})
 	if err != nil {
 		return nil, err
 	}
 	blob, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[ContentBlob])
 	if err != nil {
 		return nil, mapDBError(err)
+	}
+	if blob.DisposedAt != nil {
+		return nil, fmt.Errorf("%w: content %s is no longer stored, upload the file again", core.ErrInvalidState, blob.ID)
 	}
 	return blob, nil
 }

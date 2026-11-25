@@ -117,16 +117,22 @@ RETURNING ` + versionColumns + `;`
 // --- content_blob ------------------------------------------------------------
 
 const blobColumns = `
-b.id, b.sha256, b.storage_ref, b.mime_type, b.file_size_bytes, b.created_at, b.created_by, b.verified_at`
+b.id, b.sha256, b.storage_ref, b.mime_type, b.file_size_bytes, b.created_at, b.created_by, b.verified_at, b.disposed_at`
 
-// insertBlobSQL registers content unless its digest is already known; zero rows
-// means another blob holds the digest (see getBlobBySHA256SQL). A blob whose
-// bytes were destroyed by an elimination (GLD-077) takes the new bytes back.
+// insertBlobSQL registers content, or refreshes the blob that already holds
+// the digest: its upload time restarts the orphan delay (GLD-045), and a blob
+// whose bytes Goéland does not hold (destroyed by an elimination or the orphan
+// collection, or imported without its bytes) takes the new bytes. The caller
+// keeps its bytes only when the returned storage_ref is theirs. Zero rows
+// means the digest is registered with another size (see RegisterBlob).
 const insertBlobSQL = `
-INSERT INTO content_blob AS b (sha256, storage_ref, mime_type, file_size_bytes, created_by)
-VALUES (@sha256, @storage_ref, @mime_type, @file_size_bytes, @created_by)
-ON CONFLICT (sha256) DO UPDATE SET storage_ref = EXCLUDED.storage_ref, disposed_at = NULL
-    WHERE b.disposed_at IS NOT NULL
+INSERT INTO content_blob AS b (sha256, storage_ref, mime_type, file_size_bytes, created_by, uploaded_at)
+VALUES (@sha256, @storage_ref, @mime_type, @file_size_bytes, @created_by, now())
+ON CONFLICT (sha256) DO UPDATE
+    SET storage_ref = CASE WHEN b.storage_ref = '' THEN EXCLUDED.storage_ref ELSE b.storage_ref END,
+        disposed_at = NULL,
+        uploaded_at = now()
+    WHERE b.file_size_bytes = EXCLUDED.file_size_bytes
 RETURNING ` + blobColumns + `;`
 
 const getBlobBySHA256SQL = `
@@ -134,10 +140,14 @@ SELECT ` + blobColumns + `
 FROM content_blob b
 WHERE b.sha256 = @sha256;`
 
-const getBlobSQL = `
+// lockBlobForVersionSQL loads the blob a new version will reference and holds
+// it FOR SHARE until the commit, so the orphan collection, which locks FOR
+// UPDATE, cannot destroy its bytes in between (GLD-045).
+const lockBlobForVersionSQL = `
 SELECT ` + blobColumns + `
 FROM content_blob b
-WHERE b.id = @id;`
+WHERE b.id = @id
+FOR SHARE;`
 
 const getBlobsByIDsSQL = `
 SELECT ` + blobColumns + `

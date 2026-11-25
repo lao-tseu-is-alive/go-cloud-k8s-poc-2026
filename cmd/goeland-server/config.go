@@ -15,6 +15,7 @@ import (
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 )
 
 const (
@@ -93,6 +94,13 @@ type serverConfig struct {
 	// ExportPollInterval is how often the export worker looks for work
 	// (GOELAND_EXPORT_POLL_SECONDS, default 5 s).
 	ExportPollInterval time.Duration
+	// OrphanUploadTTL is how long uploaded bytes may wait to be attached to a
+	// document version before the collector destroys them
+	// (GOELAND_ORPHAN_UPLOAD_TTL_HOURS, default 24 h, GLD-045).
+	OrphanUploadTTL time.Duration
+	// OrphanScanInterval is how often the orphan upload collector runs
+	// (GOELAND_ORPHAN_SCAN_MINUTES, default 60 min).
+	OrphanScanInterval time.Duration
 	// OutboxRetention is how long delivered outbox events are kept
 	// (GOELAND_OUTBOX_RETENTION_DAYS, default 7 days, GLD-028).
 	OutboxRetention time.Duration
@@ -313,6 +321,9 @@ func (c *serverConfig) readLimits() error {
 	if err := c.readExportLimits(); err != nil {
 		return err
 	}
+	if err := c.readOrphanUploadSettings(); err != nil {
+		return err
+	}
 	return c.readOutboxSettings()
 }
 
@@ -346,6 +357,21 @@ func (c *serverConfig) readExportLimits() error {
 	}
 	c.ExportTTL = time.Duration(ttlHours) * time.Hour
 	c.ExportPollInterval = time.Duration(pollSeconds) * time.Second
+	return nil
+}
+
+// readOrphanUploadSettings reads the orphan upload collection settings (GLD-045).
+func (c *serverConfig) readOrphanUploadSettings() error {
+	ttlHours, err := envInt64InRange("GOELAND_ORPHAN_UPLOAD_TTL_HOURS", int64(document.DefaultOrphanUploadTTL/time.Hour), 1, 720)
+	if err != nil {
+		return err
+	}
+	scanMinutes, err := envInt64InRange("GOELAND_ORPHAN_SCAN_MINUTES", int64(document.DefaultOrphanScanInterval/time.Minute), 1, 1440)
+	if err != nil {
+		return err
+	}
+	c.OrphanUploadTTL = time.Duration(ttlHours) * time.Hour
+	c.OrphanScanInterval = time.Duration(scanMinutes) * time.Minute
 	return nil
 }
 
