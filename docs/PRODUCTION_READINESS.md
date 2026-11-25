@@ -307,8 +307,9 @@ These are the gaps that make this a POC rather than a production service:
   Every authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
 - **The immutability guards stop at the schema owner** (§2): the runtime role cannot touch them,
   but the schema owner (and any superuser) still can; keep its credentials to the migrate job.
-- **Integrity verification is not probative.** `VerifyDocumentIntegrity` compares a digest with
-  the recorded one without rereading the stored bytes (GLD-021).
+- **Integrity is verified on demand only.** `VerifyDocumentContent` rereads the stored bytes of a
+  version and audits the result (GLD-021), but nothing rereads the whole store periodically yet,
+  and the imported documents, whose bytes stay in the legacy store, cannot be verified.
 - **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
   without a shared/persistent volume (GLD-020).
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable

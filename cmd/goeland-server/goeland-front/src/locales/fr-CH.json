@@ -783,7 +783,15 @@
     "verified": "Vérifié",
     "notVerified": "Non vérifié",
     "expected": "Empreinte attendue (optionnel)",
-    "check": "Vérifier"
+    "check": "Comparer l'empreinte",
+    "verifyContent": "Vérifier le contenu stocké",
+    "computed": "Lu : {sha256} ({size} octets)",
+    "outcome": {
+      "verified": "Contenu intact : les octets stockés ont l'empreinte et la taille enregistrées au dépôt. La vérification est inscrite au journal.",
+      "mismatch": "Contenu altéré : les octets stockés ne correspondent pas à l'empreinte enregistrée. L'échec est inscrit au journal.",
+      "missing": "Contenu introuvable : le fichier n'est plus dans le stockage. L'échec est inscrit au journal.",
+      "notHeld": "Goéland ne détient pas les octets de cette version (document importé ou contenu détruit) : rien à relire."
+    }
   },
   "states": {
     "draft": "Brouillon",

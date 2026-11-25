@@ -21,6 +21,15 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   creating a document or a version on it is refused (upload the file again), and an identical
   upload stores the bytes again. A blob being attached is never collected meanwhile, and the
   imported blobs, whose bytes stay in the legacy store, are never candidates.
+- Probative content verification (GLD-021, spec v2 §49): `VerifyDocumentContent`
+  (`POST /api/documents/{id}/verify-content`, `goeland:write` and READ on the document, current
+  version or `version_id`) streams the stored bytes, recomputes their SHA-256 and size and compares
+  them with the upload's. VERIFIED sets `content_blob.verified_at`; MISMATCH and MISSING clear it;
+  each is audited on the document (`DOCUMENT_CONTENT_VERIFIED`,
+  `DOCUMENT_CONTENT_VERIFICATION_FAILED`, with the computed digest on failure). NOT_HELD (no bytes
+  held by Goéland, such as an imported document) writes nothing. The document page has a
+  « Vérifier le contenu stocké » button showing the outcome; the former check is renamed
+  « Comparer l'empreinte ».
 
 ### Changed
 

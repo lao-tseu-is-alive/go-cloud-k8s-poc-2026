@@ -99,6 +99,15 @@ JOIN document d ON d.id = v.document_id
 WHERE v.document_id = @document_id
   AND v.id = COALESCE(@version_id::uuid, d.current_version_id);`
 
+// recordVerificationSQL sets (VERIFIED) or clears the last successful
+// verification of a blob, unless its bytes changed meanwhile (an identical
+// upload restoring destroyed bytes, an elimination); it returns verified_at.
+const recordVerificationSQL = `
+UPDATE content_blob
+SET verified_at = CASE WHEN @verified THEN now() END
+WHERE id = @id AND storage_ref = @storage_ref
+RETURNING verified_at;`
+
 const listVersionsSQL = `
 SELECT ` + versionColumns + `
 FROM document_version v

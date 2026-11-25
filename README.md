@@ -77,8 +77,9 @@ Document component (`pkg/document`), a first-class subject (`document.id` **is**
   immutable, enforced by a trigger), `content_blob` the bytes identified by a **unique SHA-256** —
   identical content is stored once, and creating a document for content already held by a live
   document **reuses that document** (the new context is a relationship);
-- cryptographic integrity metadata (server-computed SHA-256; `VerifyDocumentIntegrity` is a
-  non-mutating, non-probative stored-hash comparison — real streamed hashing is GLD-021);
+- cryptographic integrity (server-computed SHA-256): `VerifyDocumentContent` rereads the stored
+  bytes, recomputes their digest and size and audits the result (GLD-021);
+  `VerifyDocumentIntegrity` only compares a caller's digest with the registered one;
 - no-duplication external references (`external_system` / `external_id` / `external_url`);
 - records-management prep (per-version `is_final` / `is_record`, `status`, governance locking);
 - accent-insensitive full-text search via a generated `search_vector` (`tsvector`,
@@ -351,7 +352,7 @@ Services:
 - `goeland.v1.CoreService` — `CreateSubjectRef`, `GetSubjectRef`, `LinkSubjects`,
   `UnlinkSubjects`, `ListRelationships`, `ListRelationshipTypes`, `ListAuditEvents`
 - `goeland.v1.DocumentService` — `CreateDocument`, `GetDocument`,
-  `UpdateDocumentMetadata`, `FinalizeDocument`, `VerifyDocumentIntegrity`,
+  `UpdateDocumentMetadata`, `FinalizeDocument`, `VerifyDocumentIntegrity`, `VerifyDocumentContent`,
   `SearchDocuments`, `LinkDocument`, `DeleteDocument`, `ListDocumentTypes`
 - `goeland.v1.ActorService` — `CreateActor`, `GetActor`, `UpdateActor`,
   `SearchActors`, `DeleteActor`, `ListOrganizationCategories`
@@ -370,7 +371,8 @@ Every service is annotated (see `api/openapi/goeland.swagger.yaml` for the full 
 
 DocumentService: `GET /api/document-types` · `POST /api/documents` · `GET /api/documents/{id}` ·
 `PATCH /api/documents/{id}` · `POST /api/documents/{id}/finalize` ·
-`GET /api/documents/{id}/integrity` · `GET /api/documents/search` ·
+`GET /api/documents/{id}/integrity` · `POST /api/documents/{id}/verify-content` ·
+`GET /api/documents/search` ·
 `POST /api/documents/{id}/links` · `DELETE /api/documents/{id}` ·
 `POST /api/documents/{documentId}/versions` · `GET /api/documents/{documentId}/versions`. Plus two
 **out-of-proto** binary endpoints (see [Web UI](#web-ui)):

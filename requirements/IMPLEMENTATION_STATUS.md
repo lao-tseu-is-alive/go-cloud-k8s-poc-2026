@@ -39,7 +39,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §5.4 `record_metadata` (governance) | ✅ `0001` | ✅ via Core (create/lock/soft-delete helpers) | ✅ | ownership/confidentiality/locking/versioning; non-destructive |
 | §5.5 `audit_event` (append-only) | ✅ `0001` (+ `0021`) | ✅ `CoreService.ListAuditEvents` + written on every mutation | ✅ | every mutation writes an event in the same tx; the database refuses UPDATE, DELETE and TRUNCATE (`0021`, also on `reference_change`) |
 | §7 `relationship_type` + `subject_relationship` | ✅ `0002` (+ `0011`, `0029`, `0031`) | ✅ `CoreService.LinkSubjects/EndRelationship/UnlinkSubjects/ListRelationships/SummarizeRelationships/ListRelationshipTypes` | ✅ | kind-compat validated (service, and a trigger since GLD-060); one open edge per (source, target, type); ended edges kept as history (GLD-034); unlink = soft delete of a mistake; types name the role one end plays, groups counted per type and direction (GLD-063) |
-| §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (11 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
+| §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (12 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | ✅ | every domain as a full slice in the browser (documents, actors, cases with timeline, tasks and circulations, things with geometry preview, org units, my tasks, reference data administration); core panels read-only |
 | §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /api/documents/{id}/content` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
@@ -183,7 +183,8 @@ Hardened after the technical review (all verified end-to-end):
   (`core.OperatorID`); the forgeable request `actor_user_id` field was removed. Operator ≠
   domain ACTOR (see AGENTS.md).
 - 🔒 **Honest integrity** — `VerifyDocumentIntegrity` is now non-mutating and non-probative
-  (stored-hash comparison; blank expected ≠ verified; reads no bytes).
+  (stored-hash comparison; blank expected ≠ verified; reads no bytes). The probative check is
+  `VerifyDocumentContent` (GLD-021, 2026-11-25): it rereads the bytes and audits the result.
 - 🔒 **Lifecycle invariants** — update/finalize/delete/link reject locked/soft-deleted
   records atomically (`EnsureMutableTx`, `SELECT … FOR UPDATE`).
 - 🔎 **Audit correlation** — `X-Request-ID` is propagated into every `audit_event.request_id`;

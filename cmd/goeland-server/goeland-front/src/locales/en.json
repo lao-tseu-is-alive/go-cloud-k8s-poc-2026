@@ -783,7 +783,15 @@
     "verified": "Verified",
     "notVerified": "Not verified",
     "expected": "Expected fingerprint (optional)",
-    "check": "Verify"
+    "check": "Compare the fingerprint",
+    "verifyContent": "Verify the stored content",
+    "computed": "Read: {sha256} ({size} bytes)",
+    "outcome": {
+      "verified": "Content intact: the stored bytes have the fingerprint and size registered at upload. The verification is recorded in the audit.",
+      "mismatch": "Content altered: the stored bytes do not match the registered fingerprint. The failure is recorded in the audit.",
+      "missing": "Content not found: the file is no longer in the storage. The failure is recorded in the audit.",
+      "notHeld": "Goéland does not hold the bytes of this version (imported document or destroyed content): nothing to reread."
+    }
   },
   "states": {
     "draft": "Draft",

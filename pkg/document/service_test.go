@@ -6,6 +6,7 @@ import (
 	"io"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
@@ -22,6 +23,26 @@ type fakeRepo struct {
 	// registerReused / registerErr drive RegisterBlob.
 	registerReused bool
 	registerErr    error
+	// version is returned by VersionContent; recorded collects the
+	// verifications given to RecordContentVerification.
+	version  *Version
+	recorded []ContentVerification
+}
+
+func (f *fakeRepo) VersionContent(context.Context, uuid.UUID, *uuid.UUID) (*Version, error) {
+	if f.version == nil {
+		return nil, core.ErrNotFound
+	}
+	return f.version, nil
+}
+func (f *fakeRepo) RecordContentVerification(_ context.Context, _ uuid.UUID, res ContentVerification, _ string) (*time.Time, *core.AuditEvent, error) {
+	f.recorded = append(f.recorded, res)
+	var at *time.Time
+	if res.Outcome == OutcomeVerified {
+		now := time.Now()
+		at = &now
+	}
+	return at, &core.AuditEvent{EventType: verificationEventType(res.Outcome)}, nil
 }
 
 func (f *fakeRepo) Create(_ context.Context, in CreateInput) (CreateResult, error) {

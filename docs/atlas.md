@@ -339,6 +339,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/document/service_test.go` — Tests creation validation, operator governance, lock propagation, hash matching, ingestion cleanup and version validation.
 - `pkg/document/sql.go` — Raw SQL and alias-prefixed column projections for document tables.
 - `pkg/document/storage_postgres.go` — pgx implementation: atomic create-or-reuse, versions, blob registration and hydration over core transaction helpers.
+- `pkg/document/verification.go` — Probative content verification (GLD-021): streams a version's stored bytes through SHA-256, compares digest and size, records and audits the outcome.
+- `pkg/document/verification_test.go` — Tests the verification outcomes (verified, mismatch by digest or size, missing, not held) and their recording.
 - `pkg/document/module/module.go` — Bundleable document module: dependency validation and lifecycle.
 - `pkg/document/module/routes.go` — Document interceptor chain, Vanguard services and standalone routes.
 
@@ -489,6 +491,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/integration/disposition_test.go` — Bordereaux: approver unit or case, preparer refused, pending execution refused, approval and rejection, ARCHIVED and frozen case, transfer package built and downloaded by records managers only, eligibility rules, cancellation.
 - `pkg/integration/timeline_test.go` — Timeline lifecycle: cited documents and case link, validation with pinned version, DB-enforced immutability, corrections, drafts blocking closure, SYSTEM entries and case audit.
 - `pkg/integration/thing_lifecycle_test.go` — DB test: parcel and building with geometry, containment, case and owner links, search by number and extent, refused geometries, unique identifiers, update.
+- `pkg/integration/content_verification_test.go` — DB test of the content verification: verified_at set and audited, altered and missing bytes clearing it, imported content writing nothing (GLD-021).
 - `pkg/integration/case_lifecycle_test.go` — DB test: seeded case types, lifecycle with reference allocation and typed roles, closed-case freeze, explicit reference and deletion.
 - `pkg/integration/case_type_defaults_test.go` — DB test: a case type's minimum confidentiality and default grants applied once (creator units, highest level kept), template checks and changes.
 - `pkg/integration/doc.go` — Package documentation for the env-gated PostgreSQL integration tests.
@@ -621,7 +624,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/SearchFilterCard.vue` — Filter panel of a list: main filters, the others behind « Plus de filtres », Search and Reset (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectPicker.vue` — Server-side search of subjects of one kind (actors, cases, documents) binding the chosen id.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentFinalizeDialog.vue` — Confirmation dialog for finalizing (and optionally locking) a document.
-- `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity verification and download panel for the current version's content.
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentIntegrityPanel.vue` — Integrity panel of the current version's content: stored content verification (GLD-021), fingerprint comparison, download.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentMetadataForm.vue` — Mutable document metadata form shared by create and edit.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentSearchList.vue` — The document list with its filters (type, official date, creation, creator, options), shared by the document page and the search results (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.

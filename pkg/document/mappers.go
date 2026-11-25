@@ -112,3 +112,34 @@ func parseOfficialDate(s string) (*time.Time, error) {
 	}
 	return &t, nil
 }
+
+// verificationOutcomes maps the domain outcomes to their proto values.
+var verificationOutcomes = map[VerificationOutcome]goelandv1.ContentVerificationOutcome{
+	OutcomeVerified: goelandv1.ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_VERIFIED,
+	OutcomeMismatch: goelandv1.ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_MISMATCH,
+	OutcomeMissing:  goelandv1.ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_MISSING,
+	OutcomeNotHeld:  goelandv1.ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_NOT_HELD,
+}
+
+// VerificationToProto maps a content verification to its RPC response.
+func VerificationToProto(res ContentVerification) *goelandv1.VerifyDocumentContentResponse {
+	out := &goelandv1.VerifyDocumentContentResponse{
+		Outcome:           verificationOutcomes[res.Outcome],
+		ComputedSha256:    res.ComputedSHA256,
+		ComputedSizeBytes: res.ComputedSize,
+		StorageRefChecked: res.StorageRefChecked,
+		VerifiedAt:        core.TimestampPtrOrNil(res.VerifiedAt),
+		AuditEvent:        core.DomainAuditEventToProto(res.Event),
+	}
+	if res.Version != nil {
+		out.VersionId = res.Version.ID.String()
+		if blob := res.Version.Content; blob != nil {
+			out.RegisteredSha256 = blob.SHA256
+			out.RegisteredSizeBytes = blob.FileSizeBytes
+			if res.Outcome == OutcomeNotHeld {
+				out.VerifiedAt = core.TimestampPtrOrNil(blob.VerifiedAt)
+			}
+		}
+	}
+	return out
+}

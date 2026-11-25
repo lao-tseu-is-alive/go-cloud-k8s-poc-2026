@@ -10,6 +10,7 @@ import type {
   SearchDocumentsResponse,
   SubjectRelationship,
   UpdateDocumentMetadataRequest, UploadResult,
+  VerifyDocumentContentResponse,
 } from './types'
 /**
  * DocumentService REST calls + the (out-of-proto) multipart upload endpoint.
@@ -80,6 +81,14 @@ export interface IntegrityResult {
 export function verifyDocumentIntegrity (id: string, expectedSha256?: string): Promise<IntegrityResult> {
   return apiFetch<IntegrityResult>(`/api/documents/${encodeURIComponent(id)}/integrity`, {
     query: { expectedSha256 },
+  })
+}
+
+/** Rereads the stored bytes of a version (the current one by default) and records the result (GLD-021). */
+export function verifyDocumentContent (id: string, versionId?: string): Promise<VerifyDocumentContentResponse> {
+  return apiFetch<VerifyDocumentContentResponse>(`/api/documents/${encodeURIComponent(id)}/verify-content`, {
+    method: 'POST',
+    body: versionId ? { versionId } : {},
   })
 }
 

@@ -1885,7 +1885,7 @@ paths:
       summary: |-
         Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
         expected sha256 against the registered hash. It does NOT read storage bytes
-        and writes nothing (hence read-scoped). Real streamed verification is future work.
+        and writes nothing (hence read-scoped). VerifyDocumentContent is the probative check.
       operationId: VerifyDocumentIntegrity
       responses:
         "200":
@@ -1907,6 +1907,36 @@ paths:
           in: query
           required: false
           type: string
+      tags:
+        - DocumentService
+  /api/documents/{id}/verify-content:
+    post:
+      summary: |-
+        Probative verification (GLD-021, spec v2 §49): streams the stored bytes of a version,
+        recomputes their SHA-256 and size, sets the content's verified_at when they match
+        (clears it otherwise) and records the result on the document's audit. Requires
+        goeland:write and READ on the document; NOT_FOUND for an unknown document or version.
+      operationId: VerifyDocumentContent
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1VerifyDocumentContentResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: id
+          description: id is the document UUID.
+          in: path
+          required: true
+          type: string
+        - name: body
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/DocumentServiceVerifyDocumentContentBody'
       tags:
         - DocumentService
   /api/grants/{grantId}/revoke:
@@ -4671,6 +4701,13 @@ definitions:
     description: |-
       UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
       are kept. Entries are never deleted: deactivate them with is_active = false.
+  DocumentServiceVerifyDocumentContentBody:
+    type: object
+    properties:
+      versionId:
+        type: string
+        description: version_id selects one version of this document; empty means the current version.
+    description: VerifyDocumentContentRequest asks the server to reread the stored bytes of a version.
   OrgUnitServiceDissolveOrgUnitBody:
     type: object
     properties:
@@ -6161,11 +6198,32 @@ definitions:
       verifiedAt:
         type: string
         format: date-time
-        description: verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+        description: |-
+          verified_at is the last successful probative verification of the bytes
+          (VerifyDocumentContent, GLD-021); empty when never verified or after a failed one.
         readOnly: true
     description: |-
       ContentBlob is binary content identified by its SHA-256; identical bytes are
       stored once and may back several versions (spec v2 §17, §19).
+  v1ContentVerificationOutcome:
+    type: string
+    enum:
+      - CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED
+      - CONTENT_VERIFICATION_OUTCOME_VERIFIED
+      - CONTENT_VERIFICATION_OUTCOME_MISMATCH
+      - CONTENT_VERIFICATION_OUTCOME_MISSING
+      - CONTENT_VERIFICATION_OUTCOME_NOT_HELD
+    default: CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED
+    description: |-
+      ContentVerificationOutcome is the result of rereading a version's stored bytes (GLD-021).
+
+       - CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED: CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED is the zero value; never returned.
+       - CONTENT_VERIFICATION_OUTCOME_VERIFIED: CONTENT_VERIFICATION_OUTCOME_VERIFIED: the bytes have the registered SHA-256 and size.
+       - CONTENT_VERIFICATION_OUTCOME_MISMATCH: CONTENT_VERIFICATION_OUTCOME_MISMATCH: the bytes differ from the registered digest or size.
+       - CONTENT_VERIFICATION_OUTCOME_MISSING: CONTENT_VERIFICATION_OUTCOME_MISSING: Goéland should hold the bytes, but the store has none.
+       - CONTENT_VERIFICATION_OUTCOME_NOT_HELD: CONTENT_VERIFICATION_OUTCOME_NOT_HELD: Goéland holds no bytes for this version (no content,
+      content known only by its digest such as an imported document, or destroyed bytes);
+      nothing was read nor recorded.
   v1CreateActorRequest:
     type: object
     properties:
@@ -9944,6 +10002,44 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: validate_event is the TIMELINE_ENTRY_VALIDATED audit event.
     description: ValidateTimelineEntryResponse returns the validated entry.
+  v1VerifyDocumentContentResponse:
+    type: object
+    properties:
+      outcome:
+        $ref: '#/definitions/v1ContentVerificationOutcome'
+        description: outcome is the result of the verification.
+      versionId:
+        type: string
+        description: version_id is the version whose content was checked.
+      registeredSha256:
+        type: string
+        description: registered_sha256 is the digest recorded at the upload; empty without content.
+      computedSha256:
+        type: string
+        description: computed_sha256 is the digest of the bytes read; empty unless bytes were read.
+      registeredSizeBytes:
+        type: string
+        format: int64
+        description: registered_size_bytes is the size recorded at the upload.
+      computedSizeBytes:
+        type: string
+        format: int64
+        description: computed_size_bytes is the number of bytes read; 0 unless bytes were read.
+      storageRefChecked:
+        type: string
+        description: storage_ref_checked is the storage reference whose bytes were read; empty when NOT_HELD.
+      verifiedAt:
+        type: string
+        format: date-time
+        description: |-
+          verified_at is the content's last successful probative verification: now when VERIFIED,
+          cleared by a MISMATCH or a MISSING outcome.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: |-
+          audit_event is the DOCUMENT_CONTENT_VERIFIED or DOCUMENT_CONTENT_VERIFICATION_FAILED
+          event recorded on the document; absent when NOT_HELD.
+    description: VerifyDocumentContentResponse reports the probative verification of a version's bytes.
   v1VerifyDocumentIntegrityResponse:
     type: object
     properties:
@@ -9958,12 +10054,12 @@ definitions:
       verifiedAt:
         type: string
         format: date-time
-        description: verified_at is the content's last probative verification time; currently never set.
+        description: verified_at is the content's last probative verification time (VerifyDocumentContent).
       storageRefChecked:
         type: string
         description: |-
-          storage_ref_checked is the storage reference whose bytes were hashed;
-          always empty because no bytes are read yet.
+          storage_ref_checked is always empty: this comparison reads no storage bytes
+          (VerifyDocumentContent does).
     description: VerifyDocumentIntegrityResponse reports the non-probative hash comparison.
   v1WithdrawTimelineEntryResponse:
     type: object

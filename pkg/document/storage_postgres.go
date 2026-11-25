@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5"
@@ -368,6 +369,55 @@ func (r *PostgresRepository) Content(ctx context.Context, operatorID string, doc
 		return version, nil // no bytes to serve: nothing downloaded, nothing to record
 	}
 	return version, core.RecordGrantedAccessTx(ctx, r.pool, operatorID, access, core.AccessDownload, &version.ID)
+}
+
+// VersionContent loads a version of the document (the current one when
+// versionID is nil) with its content, without any access check or record:
+// the content verification reads the bytes for the server, not for the caller.
+func (r *PostgresRepository) VersionContent(ctx context.Context, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error) {
+	rows, err := r.pool.Query(ctx, contentVersionSQL, pgx.NamedArgs{"document_id": documentID, "version_id": versionID})
+	if err != nil {
+		return nil, fmt.Errorf("get version content: %w", err)
+	}
+	version, err := pgx.CollectExactlyOneRow(rows, pgx.RowToAddrOfStructByNameLax[Version])
+	if err != nil {
+		return nil, mapDBError(err)
+	}
+	return version, hydrateVersions(ctx, r.pool, []*Version{version})
+}
+
+// RecordContentVerification stores the outcome of a content verification on
+// the blob (verified_at) and audits it on the document, in one transaction.
+func (r *PostgresRepository) RecordContentVerification(ctx context.Context, documentID uuid.UUID, res ContentVerification, operatorID string) (*time.Time, *core.AuditEvent, error) {
+	tx, err := r.pool.Begin(ctx)
+	if err != nil {
+		return nil, nil, fmt.Errorf("begin record verification: %w", err)
+	}
+	defer func() { _ = tx.Rollback(ctx) }()
+	blob := res.Version.Content
+	var verifiedAt *time.Time
+	err = tx.QueryRow(ctx, recordVerificationSQL, pgx.NamedArgs{
+		"id": blob.ID, "storage_ref": res.StorageRefChecked, "verified": res.Outcome == OutcomeVerified,
+	}).Scan(&verifiedAt)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil, nil, fmt.Errorf("%w: the content of version %s changed during its verification, verify it again", core.ErrConflict, res.Version.ID)
+	}
+	if err != nil {
+		return nil, nil, fmt.Errorf("record verification: %w", err)
+	}
+	ev, err := core.InsertAuditEventTx(ctx, tx, core.AuditEvent{
+		SubjectID:   documentID,
+		EventType:   verificationEventType(res.Outcome),
+		ActorUserID: operatorID,
+		AfterState:  verificationAuditState(res),
+	})
+	if err != nil {
+		return nil, nil, fmt.Errorf("insert audit_event: %w", err)
+	}
+	if err := tx.Commit(ctx); err != nil {
+		return nil, nil, fmt.Errorf("commit record verification: %w", err)
+	}
+	return verifiedAt, ev, nil
 }
 
 // RegisterBlob stores the metadata of freshly written content, or returns the

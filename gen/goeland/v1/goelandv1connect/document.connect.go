@@ -9,9 +9,10 @@
 //     logical business object, a version a dated state of it, the blob the binary
 //     content identified by its SHA-256. Identical content is stored once; creating a
 //     document for content already held by a live document reuses that document.
-//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
-//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - Cryptographic integrity metadata (server-computed SHA-256). VerifyDocumentContent
+//     rereads the stored bytes, recomputes their digest and records the verification
+//     (GLD-021); VerifyDocumentIntegrity only compares a caller's digest with the
+//     registered one, without reading storage bytes.
 //   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
@@ -82,6 +83,9 @@ const (
 	// DocumentServiceVerifyDocumentIntegrityProcedure is the fully-qualified name of the
 	// DocumentService's VerifyDocumentIntegrity RPC.
 	DocumentServiceVerifyDocumentIntegrityProcedure = "/goeland.v1.DocumentService/VerifyDocumentIntegrity"
+	// DocumentServiceVerifyDocumentContentProcedure is the fully-qualified name of the
+	// DocumentService's VerifyDocumentContent RPC.
+	DocumentServiceVerifyDocumentContentProcedure = "/goeland.v1.DocumentService/VerifyDocumentContent"
 	// DocumentServiceSearchDocumentsProcedure is the fully-qualified name of the DocumentService's
 	// SearchDocuments RPC.
 	DocumentServiceSearchDocumentsProcedure = "/goeland.v1.DocumentService/SearchDocuments"
@@ -126,8 +130,13 @@ type DocumentServiceClient interface {
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
 	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
 	// expected sha256 against the registered hash. It does NOT read storage bytes
-	// and writes nothing (hence read-scoped). Real streamed verification is future work.
+	// and writes nothing (hence read-scoped). VerifyDocumentContent is the probative check.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
+	// Probative verification (GLD-021, spec v2 §49): streams the stored bytes of a version,
+	// recomputes their SHA-256 and size, sets the content's verified_at when they match
+	// (clears it otherwise) and records the result on the document's audit. Requires
+	// goeland:write and READ on the document; NOT_FOUND for an unknown document or version.
+	VerifyDocumentContent(context.Context, *connect.Request[v1.VerifyDocumentContentRequest]) (*connect.Response[v1.VerifyDocumentContentResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
 	// Requires goeland:read.
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)
@@ -202,6 +211,12 @@ func NewDocumentServiceClient(httpClient connect.HTTPClient, baseURL string, opt
 			connect.WithSchema(documentServiceMethods.ByName("VerifyDocumentIntegrity")),
 			connect.WithClientOptions(opts...),
 		),
+		verifyDocumentContent: connect.NewClient[v1.VerifyDocumentContentRequest, v1.VerifyDocumentContentResponse](
+			httpClient,
+			baseURL+DocumentServiceVerifyDocumentContentProcedure,
+			connect.WithSchema(documentServiceMethods.ByName("VerifyDocumentContent")),
+			connect.WithClientOptions(opts...),
+		),
 		searchDocuments: connect.NewClient[v1.SearchDocumentsRequest, v1.SearchDocumentsResponse](
 			httpClient,
 			baseURL+DocumentServiceSearchDocumentsProcedure,
@@ -250,6 +265,7 @@ type documentServiceClient struct {
 	updateDocumentMetadata  *connect.Client[v1.UpdateDocumentMetadataRequest, v1.UpdateDocumentMetadataResponse]
 	finalizeDocument        *connect.Client[v1.FinalizeDocumentRequest, v1.FinalizeDocumentResponse]
 	verifyDocumentIntegrity *connect.Client[v1.VerifyDocumentIntegrityRequest, v1.VerifyDocumentIntegrityResponse]
+	verifyDocumentContent   *connect.Client[v1.VerifyDocumentContentRequest, v1.VerifyDocumentContentResponse]
 	searchDocuments         *connect.Client[v1.SearchDocumentsRequest, v1.SearchDocumentsResponse]
 	linkDocument            *connect.Client[v1.LinkDocumentRequest, v1.LinkDocumentResponse]
 	deleteDocument          *connect.Client[v1.DeleteDocumentRequest, v1.DeleteDocumentResponse]
@@ -291,6 +307,11 @@ func (c *documentServiceClient) FinalizeDocument(ctx context.Context, req *conne
 // VerifyDocumentIntegrity calls goeland.v1.DocumentService.VerifyDocumentIntegrity.
 func (c *documentServiceClient) VerifyDocumentIntegrity(ctx context.Context, req *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error) {
 	return c.verifyDocumentIntegrity.CallUnary(ctx, req)
+}
+
+// VerifyDocumentContent calls goeland.v1.DocumentService.VerifyDocumentContent.
+func (c *documentServiceClient) VerifyDocumentContent(ctx context.Context, req *connect.Request[v1.VerifyDocumentContentRequest]) (*connect.Response[v1.VerifyDocumentContentResponse], error) {
+	return c.verifyDocumentContent.CallUnary(ctx, req)
 }
 
 // SearchDocuments calls goeland.v1.DocumentService.SearchDocuments.
@@ -347,8 +368,13 @@ type DocumentServiceHandler interface {
 	FinalizeDocument(context.Context, *connect.Request[v1.FinalizeDocumentRequest]) (*connect.Response[v1.FinalizeDocumentResponse], error)
 	// Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
 	// expected sha256 against the registered hash. It does NOT read storage bytes
-	// and writes nothing (hence read-scoped). Real streamed verification is future work.
+	// and writes nothing (hence read-scoped). VerifyDocumentContent is the probative check.
 	VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error)
+	// Probative verification (GLD-021, spec v2 §49): streams the stored bytes of a version,
+	// recomputes their SHA-256 and size, sets the content's verified_at when they match
+	// (clears it otherwise) and records the result on the document's audit. Requires
+	// goeland:write and READ on the document; NOT_FOUND for an unknown document or version.
+	VerifyDocumentContent(context.Context, *connect.Request[v1.VerifyDocumentContentRequest]) (*connect.Response[v1.VerifyDocumentContentResponse], error)
 	// Full-text + filtered search (leverages the generated tsvector + GIN index).
 	// Requires goeland:read.
 	SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error)
@@ -419,6 +445,12 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 		connect.WithSchema(documentServiceMethods.ByName("VerifyDocumentIntegrity")),
 		connect.WithHandlerOptions(opts...),
 	)
+	documentServiceVerifyDocumentContentHandler := connect.NewUnaryHandler(
+		DocumentServiceVerifyDocumentContentProcedure,
+		svc.VerifyDocumentContent,
+		connect.WithSchema(documentServiceMethods.ByName("VerifyDocumentContent")),
+		connect.WithHandlerOptions(opts...),
+	)
 	documentServiceSearchDocumentsHandler := connect.NewUnaryHandler(
 		DocumentServiceSearchDocumentsProcedure,
 		svc.SearchDocuments,
@@ -471,6 +503,8 @@ func NewDocumentServiceHandler(svc DocumentServiceHandler, opts ...connect.Handl
 			documentServiceFinalizeDocumentHandler.ServeHTTP(w, r)
 		case DocumentServiceVerifyDocumentIntegrityProcedure:
 			documentServiceVerifyDocumentIntegrityHandler.ServeHTTP(w, r)
+		case DocumentServiceVerifyDocumentContentProcedure:
+			documentServiceVerifyDocumentContentHandler.ServeHTTP(w, r)
 		case DocumentServiceSearchDocumentsProcedure:
 			documentServiceSearchDocumentsHandler.ServeHTTP(w, r)
 		case DocumentServiceLinkDocumentProcedure:
@@ -518,6 +552,10 @@ func (UnimplementedDocumentServiceHandler) FinalizeDocument(context.Context, *co
 
 func (UnimplementedDocumentServiceHandler) VerifyDocumentIntegrity(context.Context, *connect.Request[v1.VerifyDocumentIntegrityRequest]) (*connect.Response[v1.VerifyDocumentIntegrityResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.VerifyDocumentIntegrity is not implemented"))
+}
+
+func (UnimplementedDocumentServiceHandler) VerifyDocumentContent(context.Context, *connect.Request[v1.VerifyDocumentContentRequest]) (*connect.Response[v1.VerifyDocumentContentResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.DocumentService.VerifyDocumentContent is not implemented"))
 }
 
 func (UnimplementedDocumentServiceHandler) SearchDocuments(context.Context, *connect.Request[v1.SearchDocumentsRequest]) (*connect.Response[v1.SearchDocumentsResponse], error) {

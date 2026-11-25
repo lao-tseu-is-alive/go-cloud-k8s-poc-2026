@@ -9,9 +9,10 @@
 //     logical business object, a version a dated state of it, the blob the binary
 //     content identified by its SHA-256. Identical content is stored once; creating a
 //     document for content already held by a live document reuses that document.
-//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
-//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - Cryptographic integrity metadata (server-computed SHA-256). VerifyDocumentContent
+//     rereads the stored bytes, recomputes their digest and records the verification
+//     (GLD-021); VerifyDocumentIntegrity only compares a caller's digest with the
+//     registered one, without reading storage bytes.
 //   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
@@ -57,6 +58,22 @@ enum DocumentStatus {
   DOCUMENT_STATUS_ARCHIVED = 4;
 }
 
+// ContentVerificationOutcome is the result of rereading a version's stored bytes (GLD-021).
+enum ContentVerificationOutcome {
+  // CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED is the zero value; never returned.
+  CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED = 0;
+  // CONTENT_VERIFICATION_OUTCOME_VERIFIED: the bytes have the registered SHA-256 and size.
+  CONTENT_VERIFICATION_OUTCOME_VERIFIED = 1;
+  // CONTENT_VERIFICATION_OUTCOME_MISMATCH: the bytes differ from the registered digest or size.
+  CONTENT_VERIFICATION_OUTCOME_MISMATCH = 2;
+  // CONTENT_VERIFICATION_OUTCOME_MISSING: Goéland should hold the bytes, but the store has none.
+  CONTENT_VERIFICATION_OUTCOME_MISSING = 3;
+  // CONTENT_VERIFICATION_OUTCOME_NOT_HELD: Goéland holds no bytes for this version (no content,
+  // content known only by its digest such as an imported document, or destroyed bytes);
+  // nothing was read nor recorded.
+  CONTENT_VERIFICATION_OUTCOME_NOT_HELD = 4;
+}
+
 // DocumentType is a controlled classification (behavior + category).
 // Types are seeded reference data; a document's type is fixed at creation.
 message DocumentType {
@@ -98,7 +115,8 @@ message ContentBlob {
   google.protobuf.Timestamp created_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   // created_by is the operator whose upload first stored the content.
   string created_by = 7;
-  // verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+  // verified_at is the last successful probative verification of the bytes
+  // (VerifyDocumentContent, GLD-021); empty when never verified or after a failed one.
   google.protobuf.Timestamp verified_at = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
@@ -382,11 +400,46 @@ message VerifyDocumentIntegrityResponse {
   bool verified = 1;
   // actual_sha256 is the hash of the current version's content; empty without content.
   string actual_sha256 = 2;
-  // verified_at is the content's last probative verification time; currently never set.
+  // verified_at is the content's last probative verification time (VerifyDocumentContent).
   google.protobuf.Timestamp verified_at = 3;
-  // storage_ref_checked is the storage reference whose bytes were hashed;
-  // always empty because no bytes are read yet.
+  // storage_ref_checked is always empty: this comparison reads no storage bytes
+  // (VerifyDocumentContent does).
   string storage_ref_checked = 4;
+}
+
+// VerifyDocumentContentRequest asks the server to reread the stored bytes of a version.
+message VerifyDocumentContentRequest {
+  // id is the document UUID.
+  string id = 1 [(buf.validate.field).string.uuid = true];
+  // version_id selects one version of this document; empty means the current version.
+  string version_id = 2 [
+    (buf.validate.field).string.uuid = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+}
+
+// VerifyDocumentContentResponse reports the probative verification of a version's bytes.
+message VerifyDocumentContentResponse {
+  // outcome is the result of the verification.
+  ContentVerificationOutcome outcome = 1;
+  // version_id is the version whose content was checked.
+  string version_id = 2;
+  // registered_sha256 is the digest recorded at the upload; empty without content.
+  string registered_sha256 = 3;
+  // computed_sha256 is the digest of the bytes read; empty unless bytes were read.
+  string computed_sha256 = 4;
+  // registered_size_bytes is the size recorded at the upload.
+  int64 registered_size_bytes = 5;
+  // computed_size_bytes is the number of bytes read; 0 unless bytes were read.
+  int64 computed_size_bytes = 6;
+  // storage_ref_checked is the storage reference whose bytes were read; empty when NOT_HELD.
+  string storage_ref_checked = 7;
+  // verified_at is the content's last successful probative verification: now when VERIFIED,
+  // cleared by a MISMATCH or a MISSING outcome.
+  google.protobuf.Timestamp verified_at = 8;
+  // audit_event is the DOCUMENT_CONTENT_VERIFIED or DOCUMENT_CONTENT_VERIFICATION_FAILED
+  // event recorded on the document; absent when NOT_HELD.
+  AuditEvent audit_event = 9;
 }
 
 // SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
@@ -638,9 +691,20 @@ service DocumentService {
 
   // Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
   // expected sha256 against the registered hash. It does NOT read storage bytes
-  // and writes nothing (hence read-scoped). Real streamed verification is future work.
+  // and writes nothing (hence read-scoped). VerifyDocumentContent is the probative check.
   rpc VerifyDocumentIntegrity(VerifyDocumentIntegrityRequest) returns (VerifyDocumentIntegrityResponse) {
     option (google.api.http) = {get: "/api/documents/{id}/integrity"};
+  }
+
+  // Probative verification (GLD-021, spec v2 §49): streams the stored bytes of a version,
+  // recomputes their SHA-256 and size, sets the content's verified_at when they match
+  // (clears it otherwise) and records the result on the document's audit. Requires
+  // goeland:write and READ on the document; NOT_FOUND for an unknown document or version.
+  rpc VerifyDocumentContent(VerifyDocumentContentRequest) returns (VerifyDocumentContentResponse) {
+    option (google.api.http) = {
+      post: "/api/documents/{id}/verify-content"
+      body: "*"
+    };
   }
 
   // Full-text + filtered search (leverages the generated tsvector + GIN index).

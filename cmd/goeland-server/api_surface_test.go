@@ -299,7 +299,8 @@ func (s *surface) things() {
 	s.ok("DELETE", "/api/things/"+id+"?reason=test", nil)
 }
 
-// documents covers versions, metadata, finalization, integrity, search, links and deletion.
+// documents covers versions, metadata, finalization, integrity and content verification,
+// search, links and deletion.
 func (s *surface) documents() {
 	sc := &scenario{e2e: s.e2e}
 	blob, _ := sc.upload("%PDF surface v1 " + s.token)
@@ -332,6 +333,11 @@ func (s *surface) documents() {
 	if len(integrity) == 0 {
 		s.t.Fatalf("integrity report: %v", integrity)
 	}
+	verified := s.ok("POST", "/api/documents/"+id+"/verify-content", map[string]any{})
+	if verified["outcome"] != "CONTENT_VERIFICATION_OUTCOME_VERIFIED" || verified["verifiedAt"] == nil {
+		s.t.Fatalf("probative verification of the stored bytes: %v", verified)
+	}
+	s.fails(codeNotFound, "POST", missing("/api/documents")+"/verify-content", map[string]any{})
 	s.ok("DELETE", "/api/documents/"+id+"?reason=test", nil)
 }
 

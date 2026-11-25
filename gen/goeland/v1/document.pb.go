@@ -9,9 +9,10 @@
 //     logical business object, a version a dated state of it, the blob the binary
 //     content identified by its SHA-256. Identical content is stored once; creating a
 //     document for content already held by a live document reuses that document.
-//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
-//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - Cryptographic integrity metadata (server-computed SHA-256). VerifyDocumentContent
+//     rereads the stored bytes, recomputes their digest and records the verification
+//     (GLD-021); VerifyDocumentIntegrity only compares a caller's digest with the
+//     registered one, without reading storage bytes.
 //   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
@@ -112,6 +113,69 @@ func (x DocumentStatus) Number() protoreflect.EnumNumber {
 // Deprecated: Use DocumentStatus.Descriptor instead.
 func (DocumentStatus) EnumDescriptor() ([]byte, []int) {
 	return file_goeland_v1_document_proto_rawDescGZIP(), []int{0}
+}
+
+// ContentVerificationOutcome is the result of rereading a version's stored bytes (GLD-021).
+type ContentVerificationOutcome int32
+
+const (
+	// CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED is the zero value; never returned.
+	ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED ContentVerificationOutcome = 0
+	// CONTENT_VERIFICATION_OUTCOME_VERIFIED: the bytes have the registered SHA-256 and size.
+	ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_VERIFIED ContentVerificationOutcome = 1
+	// CONTENT_VERIFICATION_OUTCOME_MISMATCH: the bytes differ from the registered digest or size.
+	ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_MISMATCH ContentVerificationOutcome = 2
+	// CONTENT_VERIFICATION_OUTCOME_MISSING: Goéland should hold the bytes, but the store has none.
+	ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_MISSING ContentVerificationOutcome = 3
+	// CONTENT_VERIFICATION_OUTCOME_NOT_HELD: Goéland holds no bytes for this version (no content,
+	// content known only by its digest such as an imported document, or destroyed bytes);
+	// nothing was read nor recorded.
+	ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_NOT_HELD ContentVerificationOutcome = 4
+)
+
+// Enum value maps for ContentVerificationOutcome.
+var (
+	ContentVerificationOutcome_name = map[int32]string{
+		0: "CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED",
+		1: "CONTENT_VERIFICATION_OUTCOME_VERIFIED",
+		2: "CONTENT_VERIFICATION_OUTCOME_MISMATCH",
+		3: "CONTENT_VERIFICATION_OUTCOME_MISSING",
+		4: "CONTENT_VERIFICATION_OUTCOME_NOT_HELD",
+	}
+	ContentVerificationOutcome_value = map[string]int32{
+		"CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED": 0,
+		"CONTENT_VERIFICATION_OUTCOME_VERIFIED":    1,
+		"CONTENT_VERIFICATION_OUTCOME_MISMATCH":    2,
+		"CONTENT_VERIFICATION_OUTCOME_MISSING":     3,
+		"CONTENT_VERIFICATION_OUTCOME_NOT_HELD":    4,
+	}
+)
+
+func (x ContentVerificationOutcome) Enum() *ContentVerificationOutcome {
+	p := new(ContentVerificationOutcome)
+	*p = x
+	return p
+}
+
+func (x ContentVerificationOutcome) String() string {
+	return protoimpl.X.EnumStringOf(x.Descriptor(), protoreflect.EnumNumber(x))
+}
+
+func (ContentVerificationOutcome) Descriptor() protoreflect.EnumDescriptor {
+	return file_goeland_v1_document_proto_enumTypes[1].Descriptor()
+}
+
+func (ContentVerificationOutcome) Type() protoreflect.EnumType {
+	return &file_goeland_v1_document_proto_enumTypes[1]
+}
+
+func (x ContentVerificationOutcome) Number() protoreflect.EnumNumber {
+	return protoreflect.EnumNumber(x)
+}
+
+// Deprecated: Use ContentVerificationOutcome.Descriptor instead.
+func (ContentVerificationOutcome) EnumDescriptor() ([]byte, []int) {
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{1}
 }
 
 // DocumentType is a controlled classification (behavior + category).
@@ -227,7 +291,8 @@ type ContentBlob struct {
 	CreatedAt *timestamppb.Timestamp `protobuf:"bytes,6,opt,name=created_at,json=createdAt,proto3" json:"created_at,omitempty"`
 	// created_by is the operator whose upload first stored the content.
 	CreatedBy string `protobuf:"bytes,7,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
-	// verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+	// verified_at is the last successful probative verification of the bytes
+	// (VerifyDocumentContent, GLD-021); empty when never verified or after a failed one.
 	VerifiedAt    *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
@@ -1635,10 +1700,10 @@ type VerifyDocumentIntegrityResponse struct {
 	Verified bool `protobuf:"varint,1,opt,name=verified,proto3" json:"verified,omitempty"`
 	// actual_sha256 is the hash of the current version's content; empty without content.
 	ActualSha256 string `protobuf:"bytes,2,opt,name=actual_sha256,json=actualSha256,proto3" json:"actual_sha256,omitempty"`
-	// verified_at is the content's last probative verification time; currently never set.
+	// verified_at is the content's last probative verification time (VerifyDocumentContent).
 	VerifiedAt *timestamppb.Timestamp `protobuf:"bytes,3,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
-	// storage_ref_checked is the storage reference whose bytes were hashed;
-	// always empty because no bytes are read yet.
+	// storage_ref_checked is always empty: this comparison reads no storage bytes
+	// (VerifyDocumentContent does).
 	StorageRefChecked string `protobuf:"bytes,4,opt,name=storage_ref_checked,json=storageRefChecked,proto3" json:"storage_ref_checked,omitempty"`
 	unknownFields     protoimpl.UnknownFields
 	sizeCache         protoimpl.SizeCache
@@ -1702,6 +1767,181 @@ func (x *VerifyDocumentIntegrityResponse) GetStorageRefChecked() string {
 	return ""
 }
 
+// VerifyDocumentContentRequest asks the server to reread the stored bytes of a version.
+type VerifyDocumentContentRequest struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// id is the document UUID.
+	Id string `protobuf:"bytes,1,opt,name=id,proto3" json:"id,omitempty"`
+	// version_id selects one version of this document; empty means the current version.
+	VersionId     string `protobuf:"bytes,2,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyDocumentContentRequest) Reset() {
+	*x = VerifyDocumentContentRequest{}
+	mi := &file_goeland_v1_document_proto_msgTypes[18]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyDocumentContentRequest) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyDocumentContentRequest) ProtoMessage() {}
+
+func (x *VerifyDocumentContentRequest) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_document_proto_msgTypes[18]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyDocumentContentRequest.ProtoReflect.Descriptor instead.
+func (*VerifyDocumentContentRequest) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{18}
+}
+
+func (x *VerifyDocumentContentRequest) GetId() string {
+	if x != nil {
+		return x.Id
+	}
+	return ""
+}
+
+func (x *VerifyDocumentContentRequest) GetVersionId() string {
+	if x != nil {
+		return x.VersionId
+	}
+	return ""
+}
+
+// VerifyDocumentContentResponse reports the probative verification of a version's bytes.
+type VerifyDocumentContentResponse struct {
+	state protoimpl.MessageState `protogen:"open.v1"`
+	// outcome is the result of the verification.
+	Outcome ContentVerificationOutcome `protobuf:"varint,1,opt,name=outcome,proto3,enum=goeland.v1.ContentVerificationOutcome" json:"outcome,omitempty"`
+	// version_id is the version whose content was checked.
+	VersionId string `protobuf:"bytes,2,opt,name=version_id,json=versionId,proto3" json:"version_id,omitempty"`
+	// registered_sha256 is the digest recorded at the upload; empty without content.
+	RegisteredSha256 string `protobuf:"bytes,3,opt,name=registered_sha256,json=registeredSha256,proto3" json:"registered_sha256,omitempty"`
+	// computed_sha256 is the digest of the bytes read; empty unless bytes were read.
+	ComputedSha256 string `protobuf:"bytes,4,opt,name=computed_sha256,json=computedSha256,proto3" json:"computed_sha256,omitempty"`
+	// registered_size_bytes is the size recorded at the upload.
+	RegisteredSizeBytes int64 `protobuf:"varint,5,opt,name=registered_size_bytes,json=registeredSizeBytes,proto3" json:"registered_size_bytes,omitempty"`
+	// computed_size_bytes is the number of bytes read; 0 unless bytes were read.
+	ComputedSizeBytes int64 `protobuf:"varint,6,opt,name=computed_size_bytes,json=computedSizeBytes,proto3" json:"computed_size_bytes,omitempty"`
+	// storage_ref_checked is the storage reference whose bytes were read; empty when NOT_HELD.
+	StorageRefChecked string `protobuf:"bytes,7,opt,name=storage_ref_checked,json=storageRefChecked,proto3" json:"storage_ref_checked,omitempty"`
+	// verified_at is the content's last successful probative verification: now when VERIFIED,
+	// cleared by a MISMATCH or a MISSING outcome.
+	VerifiedAt *timestamppb.Timestamp `protobuf:"bytes,8,opt,name=verified_at,json=verifiedAt,proto3" json:"verified_at,omitempty"`
+	// audit_event is the DOCUMENT_CONTENT_VERIFIED or DOCUMENT_CONTENT_VERIFICATION_FAILED
+	// event recorded on the document; absent when NOT_HELD.
+	AuditEvent    *AuditEvent `protobuf:"bytes,9,opt,name=audit_event,json=auditEvent,proto3" json:"audit_event,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
+}
+
+func (x *VerifyDocumentContentResponse) Reset() {
+	*x = VerifyDocumentContentResponse{}
+	mi := &file_goeland_v1_document_proto_msgTypes[19]
+	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+	ms.StoreMessageInfo(mi)
+}
+
+func (x *VerifyDocumentContentResponse) String() string {
+	return protoimpl.X.MessageStringOf(x)
+}
+
+func (*VerifyDocumentContentResponse) ProtoMessage() {}
+
+func (x *VerifyDocumentContentResponse) ProtoReflect() protoreflect.Message {
+	mi := &file_goeland_v1_document_proto_msgTypes[19]
+	if x != nil {
+		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
+		if ms.LoadMessageInfo() == nil {
+			ms.StoreMessageInfo(mi)
+		}
+		return ms
+	}
+	return mi.MessageOf(x)
+}
+
+// Deprecated: Use VerifyDocumentContentResponse.ProtoReflect.Descriptor instead.
+func (*VerifyDocumentContentResponse) Descriptor() ([]byte, []int) {
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{19}
+}
+
+func (x *VerifyDocumentContentResponse) GetOutcome() ContentVerificationOutcome {
+	if x != nil {
+		return x.Outcome
+	}
+	return ContentVerificationOutcome_CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED
+}
+
+func (x *VerifyDocumentContentResponse) GetVersionId() string {
+	if x != nil {
+		return x.VersionId
+	}
+	return ""
+}
+
+func (x *VerifyDocumentContentResponse) GetRegisteredSha256() string {
+	if x != nil {
+		return x.RegisteredSha256
+	}
+	return ""
+}
+
+func (x *VerifyDocumentContentResponse) GetComputedSha256() string {
+	if x != nil {
+		return x.ComputedSha256
+	}
+	return ""
+}
+
+func (x *VerifyDocumentContentResponse) GetRegisteredSizeBytes() int64 {
+	if x != nil {
+		return x.RegisteredSizeBytes
+	}
+	return 0
+}
+
+func (x *VerifyDocumentContentResponse) GetComputedSizeBytes() int64 {
+	if x != nil {
+		return x.ComputedSizeBytes
+	}
+	return 0
+}
+
+func (x *VerifyDocumentContentResponse) GetStorageRefChecked() string {
+	if x != nil {
+		return x.StorageRefChecked
+	}
+	return ""
+}
+
+func (x *VerifyDocumentContentResponse) GetVerifiedAt() *timestamppb.Timestamp {
+	if x != nil {
+		return x.VerifiedAt
+	}
+	return nil
+}
+
+func (x *VerifyDocumentContentResponse) GetAuditEvent() *AuditEvent {
+	if x != nil {
+		return x.AuditEvent
+	}
+	return nil
+}
+
 // SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
 // Results are newest first.
 type SearchDocumentsRequest struct {
@@ -1753,7 +1993,7 @@ type SearchDocumentsRequest struct {
 
 func (x *SearchDocumentsRequest) Reset() {
 	*x = SearchDocumentsRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[18]
+	mi := &file_goeland_v1_document_proto_msgTypes[20]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1765,7 +2005,7 @@ func (x *SearchDocumentsRequest) String() string {
 func (*SearchDocumentsRequest) ProtoMessage() {}
 
 func (x *SearchDocumentsRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[18]
+	mi := &file_goeland_v1_document_proto_msgTypes[20]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1778,7 +2018,7 @@ func (x *SearchDocumentsRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchDocumentsRequest.ProtoReflect.Descriptor instead.
 func (*SearchDocumentsRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{18}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{20}
 }
 
 func (x *SearchDocumentsRequest) GetQuery() string {
@@ -1911,7 +2151,7 @@ type SearchDocumentsResponse struct {
 
 func (x *SearchDocumentsResponse) Reset() {
 	*x = SearchDocumentsResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[19]
+	mi := &file_goeland_v1_document_proto_msgTypes[21]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1923,7 +2163,7 @@ func (x *SearchDocumentsResponse) String() string {
 func (*SearchDocumentsResponse) ProtoMessage() {}
 
 func (x *SearchDocumentsResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[19]
+	mi := &file_goeland_v1_document_proto_msgTypes[21]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -1936,7 +2176,7 @@ func (x *SearchDocumentsResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use SearchDocumentsResponse.ProtoReflect.Descriptor instead.
 func (*SearchDocumentsResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{19}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{21}
 }
 
 func (x *SearchDocumentsResponse) GetDocuments() []*Document {
@@ -1986,7 +2226,7 @@ type LinkDocumentRequest struct {
 
 func (x *LinkDocumentRequest) Reset() {
 	*x = LinkDocumentRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[20]
+	mi := &file_goeland_v1_document_proto_msgTypes[22]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -1998,7 +2238,7 @@ func (x *LinkDocumentRequest) String() string {
 func (*LinkDocumentRequest) ProtoMessage() {}
 
 func (x *LinkDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[20]
+	mi := &file_goeland_v1_document_proto_msgTypes[22]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2011,7 +2251,7 @@ func (x *LinkDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkDocumentRequest.ProtoReflect.Descriptor instead.
 func (*LinkDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{20}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{22}
 }
 
 func (x *LinkDocumentRequest) GetDocumentId() string {
@@ -2055,7 +2295,7 @@ type LinkDocumentResponse struct {
 
 func (x *LinkDocumentResponse) Reset() {
 	*x = LinkDocumentResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[21]
+	mi := &file_goeland_v1_document_proto_msgTypes[23]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2067,7 +2307,7 @@ func (x *LinkDocumentResponse) String() string {
 func (*LinkDocumentResponse) ProtoMessage() {}
 
 func (x *LinkDocumentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[21]
+	mi := &file_goeland_v1_document_proto_msgTypes[23]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2080,7 +2320,7 @@ func (x *LinkDocumentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use LinkDocumentResponse.ProtoReflect.Descriptor instead.
 func (*LinkDocumentResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{21}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{23}
 }
 
 func (x *LinkDocumentResponse) GetRelationship() *SubjectRelationship {
@@ -2111,7 +2351,7 @@ type DeleteDocumentRequest struct {
 
 func (x *DeleteDocumentRequest) Reset() {
 	*x = DeleteDocumentRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[22]
+	mi := &file_goeland_v1_document_proto_msgTypes[24]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2123,7 +2363,7 @@ func (x *DeleteDocumentRequest) String() string {
 func (*DeleteDocumentRequest) ProtoMessage() {}
 
 func (x *DeleteDocumentRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[22]
+	mi := &file_goeland_v1_document_proto_msgTypes[24]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2136,7 +2376,7 @@ func (x *DeleteDocumentRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDocumentRequest.ProtoReflect.Descriptor instead.
 func (*DeleteDocumentRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{22}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{24}
 }
 
 func (x *DeleteDocumentRequest) GetId() string {
@@ -2166,7 +2406,7 @@ type DeleteDocumentResponse struct {
 
 func (x *DeleteDocumentResponse) Reset() {
 	*x = DeleteDocumentResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[23]
+	mi := &file_goeland_v1_document_proto_msgTypes[25]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2178,7 +2418,7 @@ func (x *DeleteDocumentResponse) String() string {
 func (*DeleteDocumentResponse) ProtoMessage() {}
 
 func (x *DeleteDocumentResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[23]
+	mi := &file_goeland_v1_document_proto_msgTypes[25]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2191,7 +2431,7 @@ func (x *DeleteDocumentResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use DeleteDocumentResponse.ProtoReflect.Descriptor instead.
 func (*DeleteDocumentResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{23}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{25}
 }
 
 func (x *DeleteDocumentResponse) GetDeletedDocumentId() string {
@@ -2219,7 +2459,7 @@ type ListDocumentTypesRequest struct {
 
 func (x *ListDocumentTypesRequest) Reset() {
 	*x = ListDocumentTypesRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[24]
+	mi := &file_goeland_v1_document_proto_msgTypes[26]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2231,7 +2471,7 @@ func (x *ListDocumentTypesRequest) String() string {
 func (*ListDocumentTypesRequest) ProtoMessage() {}
 
 func (x *ListDocumentTypesRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[24]
+	mi := &file_goeland_v1_document_proto_msgTypes[26]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2244,7 +2484,7 @@ func (x *ListDocumentTypesRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDocumentTypesRequest.ProtoReflect.Descriptor instead.
 func (*ListDocumentTypesRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{24}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{26}
 }
 
 func (x *ListDocumentTypesRequest) GetOnlyActive() bool {
@@ -2265,7 +2505,7 @@ type ListDocumentTypesResponse struct {
 
 func (x *ListDocumentTypesResponse) Reset() {
 	*x = ListDocumentTypesResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[25]
+	mi := &file_goeland_v1_document_proto_msgTypes[27]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2277,7 +2517,7 @@ func (x *ListDocumentTypesResponse) String() string {
 func (*ListDocumentTypesResponse) ProtoMessage() {}
 
 func (x *ListDocumentTypesResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[25]
+	mi := &file_goeland_v1_document_proto_msgTypes[27]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2290,7 +2530,7 @@ func (x *ListDocumentTypesResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use ListDocumentTypesResponse.ProtoReflect.Descriptor instead.
 func (*ListDocumentTypesResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{25}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{27}
 }
 
 func (x *ListDocumentTypesResponse) GetDocumentTypes() []*DocumentType {
@@ -2320,7 +2560,7 @@ type CreateDocumentTypeRequest struct {
 
 func (x *CreateDocumentTypeRequest) Reset() {
 	*x = CreateDocumentTypeRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[26]
+	mi := &file_goeland_v1_document_proto_msgTypes[28]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2332,7 +2572,7 @@ func (x *CreateDocumentTypeRequest) String() string {
 func (*CreateDocumentTypeRequest) ProtoMessage() {}
 
 func (x *CreateDocumentTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[26]
+	mi := &file_goeland_v1_document_proto_msgTypes[28]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2345,7 +2585,7 @@ func (x *CreateDocumentTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDocumentTypeRequest.ProtoReflect.Descriptor instead.
 func (*CreateDocumentTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{26}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{28}
 }
 
 func (x *CreateDocumentTypeRequest) GetCode() string {
@@ -2396,7 +2636,7 @@ type CreateDocumentTypeResponse struct {
 
 func (x *CreateDocumentTypeResponse) Reset() {
 	*x = CreateDocumentTypeResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[27]
+	mi := &file_goeland_v1_document_proto_msgTypes[29]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2408,7 +2648,7 @@ func (x *CreateDocumentTypeResponse) String() string {
 func (*CreateDocumentTypeResponse) ProtoMessage() {}
 
 func (x *CreateDocumentTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[27]
+	mi := &file_goeland_v1_document_proto_msgTypes[29]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2421,7 +2661,7 @@ func (x *CreateDocumentTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use CreateDocumentTypeResponse.ProtoReflect.Descriptor instead.
 func (*CreateDocumentTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{27}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{29}
 }
 
 func (x *CreateDocumentTypeResponse) GetDocumentType() *DocumentType {
@@ -2461,7 +2701,7 @@ type UpdateDocumentTypeRequest struct {
 
 func (x *UpdateDocumentTypeRequest) Reset() {
 	*x = UpdateDocumentTypeRequest{}
-	mi := &file_goeland_v1_document_proto_msgTypes[28]
+	mi := &file_goeland_v1_document_proto_msgTypes[30]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2473,7 +2713,7 @@ func (x *UpdateDocumentTypeRequest) String() string {
 func (*UpdateDocumentTypeRequest) ProtoMessage() {}
 
 func (x *UpdateDocumentTypeRequest) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[28]
+	mi := &file_goeland_v1_document_proto_msgTypes[30]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2486,7 +2726,7 @@ func (x *UpdateDocumentTypeRequest) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDocumentTypeRequest.ProtoReflect.Descriptor instead.
 func (*UpdateDocumentTypeRequest) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{28}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{30}
 }
 
 func (x *UpdateDocumentTypeRequest) GetCode() string {
@@ -2544,7 +2784,7 @@ type UpdateDocumentTypeResponse struct {
 
 func (x *UpdateDocumentTypeResponse) Reset() {
 	*x = UpdateDocumentTypeResponse{}
-	mi := &file_goeland_v1_document_proto_msgTypes[29]
+	mi := &file_goeland_v1_document_proto_msgTypes[31]
 	ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 	ms.StoreMessageInfo(mi)
 }
@@ -2556,7 +2796,7 @@ func (x *UpdateDocumentTypeResponse) String() string {
 func (*UpdateDocumentTypeResponse) ProtoMessage() {}
 
 func (x *UpdateDocumentTypeResponse) ProtoReflect() protoreflect.Message {
-	mi := &file_goeland_v1_document_proto_msgTypes[29]
+	mi := &file_goeland_v1_document_proto_msgTypes[31]
 	if x != nil {
 		ms := protoimpl.X.MessageStateOf(protoimpl.Pointer(x))
 		if ms.LoadMessageInfo() == nil {
@@ -2569,7 +2809,7 @@ func (x *UpdateDocumentTypeResponse) ProtoReflect() protoreflect.Message {
 
 // Deprecated: Use UpdateDocumentTypeResponse.ProtoReflect.Descriptor instead.
 func (*UpdateDocumentTypeResponse) Descriptor() ([]byte, []int) {
-	return file_goeland_v1_document_proto_rawDescGZIP(), []int{29}
+	return file_goeland_v1_document_proto_rawDescGZIP(), []int{31}
 }
 
 func (x *UpdateDocumentTypeResponse) GetDocumentType() *DocumentType {
@@ -2739,7 +2979,24 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\ractual_sha256\x18\x02 \x01(\tR\factualSha256\x12;\n" +
 	"\vverified_at\x18\x03 \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"verifiedAt\x12.\n" +
-	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"\xad\x06\n" +
+	"\x13storage_ref_checked\x18\x04 \x01(\tR\x11storageRefChecked\"d\n" +
+	"\x1cVerifyDocumentContentRequest\x12\x18\n" +
+	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12*\n" +
+	"\n" +
+	"version_id\x18\x02 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tversionId\"\xe0\x03\n" +
+	"\x1dVerifyDocumentContentResponse\x12@\n" +
+	"\aoutcome\x18\x01 \x01(\x0e2&.goeland.v1.ContentVerificationOutcomeR\aoutcome\x12\x1d\n" +
+	"\n" +
+	"version_id\x18\x02 \x01(\tR\tversionId\x12+\n" +
+	"\x11registered_sha256\x18\x03 \x01(\tR\x10registeredSha256\x12'\n" +
+	"\x0fcomputed_sha256\x18\x04 \x01(\tR\x0ecomputedSha256\x122\n" +
+	"\x15registered_size_bytes\x18\x05 \x01(\x03R\x13registeredSizeBytes\x12.\n" +
+	"\x13computed_size_bytes\x18\x06 \x01(\x03R\x11computedSizeBytes\x12.\n" +
+	"\x13storage_ref_checked\x18\a \x01(\tR\x11storageRefChecked\x12;\n" +
+	"\vverified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
+	"verifiedAt\x127\n" +
+	"\vaudit_event\x18\t \x01(\v2\x16.goeland.v1.AuditEventR\n" +
+	"auditEvent\"\xad\x06\n" +
 	"\x16SearchDocumentsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05query\x125\n" +
 	"\x12document_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x10documentTypeCode\x12\x17\n" +
@@ -2822,7 +3079,13 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\x15DOCUMENT_STATUS_DRAFT\x10\x01\x12\x19\n" +
 	"\x15DOCUMENT_STATUS_FINAL\x10\x02\x12\x1e\n" +
 	"\x1aDOCUMENT_STATUS_SUPERSEDED\x10\x03\x12\x1c\n" +
-	"\x18DOCUMENT_STATUS_ARCHIVED\x10\x042\xe2\r\n" +
+	"\x18DOCUMENT_STATUS_ARCHIVED\x10\x04*\xf5\x01\n" +
+	"\x1aContentVerificationOutcome\x12,\n" +
+	"(CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED\x10\x00\x12)\n" +
+	"%CONTENT_VERIFICATION_OUTCOME_VERIFIED\x10\x01\x12)\n" +
+	"%CONTENT_VERIFICATION_OUTCOME_MISMATCH\x10\x02\x12(\n" +
+	"$CONTENT_VERIFICATION_OUTCOME_MISSING\x10\x03\x12)\n" +
+	"%CONTENT_VERIFICATION_OUTCOME_NOT_HELD\x10\x042\x80\x0f\n" +
 	"\x0fDocumentService\x12r\n" +
 	"\x0eCreateDocument\x12!.goeland.v1.CreateDocumentRequest\x1a\".goeland.v1.CreateDocumentResponse\"\x19\x82\xd3\xe4\x93\x02\x13:\x01*\"\x0e/api/documents\x12\x95\x01\n" +
 	"\x12AddDocumentVersion\x12%.goeland.v1.AddDocumentVersionRequest\x1a&.goeland.v1.AddDocumentVersionResponse\"0\x82\xd3\xe4\x93\x02*:\x01*\"%/api/documents/{document_id}/versions\x12\x98\x01\n" +
@@ -2830,7 +3093,8 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\vGetDocument\x12\x1e.goeland.v1.GetDocumentRequest\x1a\x1f.goeland.v1.GetDocumentResponse\"\x1b\x82\xd3\xe4\x93\x02\x15\x12\x13/api/documents/{id}\x12\x8f\x01\n" +
 	"\x16UpdateDocumentMetadata\x12).goeland.v1.UpdateDocumentMetadataRequest\x1a*.goeland.v1.UpdateDocumentMetadataResponse\"\x1e\x82\xd3\xe4\x93\x02\x18:\x01*2\x13/api/documents/{id}\x12\x86\x01\n" +
 	"\x10FinalizeDocument\x12#.goeland.v1.FinalizeDocumentRequest\x1a$.goeland.v1.FinalizeDocumentResponse\"'\x82\xd3\xe4\x93\x02!:\x01*\"\x1c/api/documents/{id}/finalize\x12\x99\x01\n" +
-	"\x17VerifyDocumentIntegrity\x12*.goeland.v1.VerifyDocumentIntegrityRequest\x1a+.goeland.v1.VerifyDocumentIntegrityResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/documents/{id}/integrity\x12y\n" +
+	"\x17VerifyDocumentIntegrity\x12*.goeland.v1.VerifyDocumentIntegrityRequest\x1a+.goeland.v1.VerifyDocumentIntegrityResponse\"%\x82\xd3\xe4\x93\x02\x1f\x12\x1d/api/documents/{id}/integrity\x12\x9b\x01\n" +
+	"\x15VerifyDocumentContent\x12(.goeland.v1.VerifyDocumentContentRequest\x1a).goeland.v1.VerifyDocumentContentResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/documents/{id}/verify-content\x12y\n" +
 	"\x0fSearchDocuments\x12\".goeland.v1.SearchDocumentsRequest\x1a#.goeland.v1.SearchDocumentsResponse\"\x1d\x82\xd3\xe4\x93\x02\x17\x12\x15/api/documents/search\x12\x80\x01\n" +
 	"\fLinkDocument\x12\x1f.goeland.v1.LinkDocumentRequest\x1a .goeland.v1.LinkDocumentResponse\"-\x82\xd3\xe4\x93\x02':\x01*\"\"/api/documents/{document_id}/links\x12t\n" +
 	"\x0eDeleteDocument\x12!.goeland.v1.DeleteDocumentRequest\x1a\".goeland.v1.DeleteDocumentResponse\"\x1b\x82\xd3\xe4\x93\x02\x15*\x13/api/documents/{id}\x12}\n" +
@@ -2853,122 +3117,130 @@ func file_goeland_v1_document_proto_rawDescGZIP() []byte {
 	return file_goeland_v1_document_proto_rawDescData
 }
 
-var file_goeland_v1_document_proto_enumTypes = make([]protoimpl.EnumInfo, 1)
-var file_goeland_v1_document_proto_msgTypes = make([]protoimpl.MessageInfo, 30)
+var file_goeland_v1_document_proto_enumTypes = make([]protoimpl.EnumInfo, 2)
+var file_goeland_v1_document_proto_msgTypes = make([]protoimpl.MessageInfo, 32)
 var file_goeland_v1_document_proto_goTypes = []any{
 	(DocumentStatus)(0),                     // 0: goeland.v1.DocumentStatus
-	(*DocumentType)(nil),                    // 1: goeland.v1.DocumentType
-	(*ContentBlob)(nil),                     // 2: goeland.v1.ContentBlob
-	(*DocumentVersion)(nil),                 // 3: goeland.v1.DocumentVersion
-	(*Document)(nil),                        // 4: goeland.v1.Document
-	(*CreateDocumentRequest)(nil),           // 5: goeland.v1.CreateDocumentRequest
-	(*CreateDocumentResponse)(nil),          // 6: goeland.v1.CreateDocumentResponse
-	(*AddDocumentVersionRequest)(nil),       // 7: goeland.v1.AddDocumentVersionRequest
-	(*AddDocumentVersionResponse)(nil),      // 8: goeland.v1.AddDocumentVersionResponse
-	(*ListDocumentVersionsRequest)(nil),     // 9: goeland.v1.ListDocumentVersionsRequest
-	(*ListDocumentVersionsResponse)(nil),    // 10: goeland.v1.ListDocumentVersionsResponse
-	(*GetDocumentRequest)(nil),              // 11: goeland.v1.GetDocumentRequest
-	(*GetDocumentResponse)(nil),             // 12: goeland.v1.GetDocumentResponse
-	(*UpdateDocumentMetadataRequest)(nil),   // 13: goeland.v1.UpdateDocumentMetadataRequest
-	(*UpdateDocumentMetadataResponse)(nil),  // 14: goeland.v1.UpdateDocumentMetadataResponse
-	(*FinalizeDocumentRequest)(nil),         // 15: goeland.v1.FinalizeDocumentRequest
-	(*FinalizeDocumentResponse)(nil),        // 16: goeland.v1.FinalizeDocumentResponse
-	(*VerifyDocumentIntegrityRequest)(nil),  // 17: goeland.v1.VerifyDocumentIntegrityRequest
-	(*VerifyDocumentIntegrityResponse)(nil), // 18: goeland.v1.VerifyDocumentIntegrityResponse
-	(*SearchDocumentsRequest)(nil),          // 19: goeland.v1.SearchDocumentsRequest
-	(*SearchDocumentsResponse)(nil),         // 20: goeland.v1.SearchDocumentsResponse
-	(*LinkDocumentRequest)(nil),             // 21: goeland.v1.LinkDocumentRequest
-	(*LinkDocumentResponse)(nil),            // 22: goeland.v1.LinkDocumentResponse
-	(*DeleteDocumentRequest)(nil),           // 23: goeland.v1.DeleteDocumentRequest
-	(*DeleteDocumentResponse)(nil),          // 24: goeland.v1.DeleteDocumentResponse
-	(*ListDocumentTypesRequest)(nil),        // 25: goeland.v1.ListDocumentTypesRequest
-	(*ListDocumentTypesResponse)(nil),       // 26: goeland.v1.ListDocumentTypesResponse
-	(*CreateDocumentTypeRequest)(nil),       // 27: goeland.v1.CreateDocumentTypeRequest
-	(*CreateDocumentTypeResponse)(nil),      // 28: goeland.v1.CreateDocumentTypeResponse
-	(*UpdateDocumentTypeRequest)(nil),       // 29: goeland.v1.UpdateDocumentTypeRequest
-	(*UpdateDocumentTypeResponse)(nil),      // 30: goeland.v1.UpdateDocumentTypeResponse
-	(*timestamppb.Timestamp)(nil),           // 31: google.protobuf.Timestamp
-	(*structpb.Struct)(nil),                 // 32: google.protobuf.Struct
-	(*SubjectRef)(nil),                      // 33: goeland.v1.SubjectRef
-	(*RecordMetadata)(nil),                  // 34: goeland.v1.RecordMetadata
-	(*AuditEvent)(nil),                      // 35: goeland.v1.AuditEvent
-	(*SubjectRelationship)(nil),             // 36: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),                 // 37: goeland.v1.ReferenceChange
+	(ContentVerificationOutcome)(0),         // 1: goeland.v1.ContentVerificationOutcome
+	(*DocumentType)(nil),                    // 2: goeland.v1.DocumentType
+	(*ContentBlob)(nil),                     // 3: goeland.v1.ContentBlob
+	(*DocumentVersion)(nil),                 // 4: goeland.v1.DocumentVersion
+	(*Document)(nil),                        // 5: goeland.v1.Document
+	(*CreateDocumentRequest)(nil),           // 6: goeland.v1.CreateDocumentRequest
+	(*CreateDocumentResponse)(nil),          // 7: goeland.v1.CreateDocumentResponse
+	(*AddDocumentVersionRequest)(nil),       // 8: goeland.v1.AddDocumentVersionRequest
+	(*AddDocumentVersionResponse)(nil),      // 9: goeland.v1.AddDocumentVersionResponse
+	(*ListDocumentVersionsRequest)(nil),     // 10: goeland.v1.ListDocumentVersionsRequest
+	(*ListDocumentVersionsResponse)(nil),    // 11: goeland.v1.ListDocumentVersionsResponse
+	(*GetDocumentRequest)(nil),              // 12: goeland.v1.GetDocumentRequest
+	(*GetDocumentResponse)(nil),             // 13: goeland.v1.GetDocumentResponse
+	(*UpdateDocumentMetadataRequest)(nil),   // 14: goeland.v1.UpdateDocumentMetadataRequest
+	(*UpdateDocumentMetadataResponse)(nil),  // 15: goeland.v1.UpdateDocumentMetadataResponse
+	(*FinalizeDocumentRequest)(nil),         // 16: goeland.v1.FinalizeDocumentRequest
+	(*FinalizeDocumentResponse)(nil),        // 17: goeland.v1.FinalizeDocumentResponse
+	(*VerifyDocumentIntegrityRequest)(nil),  // 18: goeland.v1.VerifyDocumentIntegrityRequest
+	(*VerifyDocumentIntegrityResponse)(nil), // 19: goeland.v1.VerifyDocumentIntegrityResponse
+	(*VerifyDocumentContentRequest)(nil),    // 20: goeland.v1.VerifyDocumentContentRequest
+	(*VerifyDocumentContentResponse)(nil),   // 21: goeland.v1.VerifyDocumentContentResponse
+	(*SearchDocumentsRequest)(nil),          // 22: goeland.v1.SearchDocumentsRequest
+	(*SearchDocumentsResponse)(nil),         // 23: goeland.v1.SearchDocumentsResponse
+	(*LinkDocumentRequest)(nil),             // 24: goeland.v1.LinkDocumentRequest
+	(*LinkDocumentResponse)(nil),            // 25: goeland.v1.LinkDocumentResponse
+	(*DeleteDocumentRequest)(nil),           // 26: goeland.v1.DeleteDocumentRequest
+	(*DeleteDocumentResponse)(nil),          // 27: goeland.v1.DeleteDocumentResponse
+	(*ListDocumentTypesRequest)(nil),        // 28: goeland.v1.ListDocumentTypesRequest
+	(*ListDocumentTypesResponse)(nil),       // 29: goeland.v1.ListDocumentTypesResponse
+	(*CreateDocumentTypeRequest)(nil),       // 30: goeland.v1.CreateDocumentTypeRequest
+	(*CreateDocumentTypeResponse)(nil),      // 31: goeland.v1.CreateDocumentTypeResponse
+	(*UpdateDocumentTypeRequest)(nil),       // 32: goeland.v1.UpdateDocumentTypeRequest
+	(*UpdateDocumentTypeResponse)(nil),      // 33: goeland.v1.UpdateDocumentTypeResponse
+	(*timestamppb.Timestamp)(nil),           // 34: google.protobuf.Timestamp
+	(*structpb.Struct)(nil),                 // 35: google.protobuf.Struct
+	(*SubjectRef)(nil),                      // 36: goeland.v1.SubjectRef
+	(*RecordMetadata)(nil),                  // 37: goeland.v1.RecordMetadata
+	(*AuditEvent)(nil),                      // 38: goeland.v1.AuditEvent
+	(*SubjectRelationship)(nil),             // 39: goeland.v1.SubjectRelationship
+	(*ReferenceChange)(nil),                 // 40: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_document_proto_depIdxs = []int32{
-	31, // 0: goeland.v1.ContentBlob.created_at:type_name -> google.protobuf.Timestamp
-	31, // 1: goeland.v1.ContentBlob.verified_at:type_name -> google.protobuf.Timestamp
-	2,  // 2: goeland.v1.DocumentVersion.content:type_name -> goeland.v1.ContentBlob
-	31, // 3: goeland.v1.DocumentVersion.validated_at:type_name -> google.protobuf.Timestamp
-	32, // 4: goeland.v1.DocumentVersion.metadata:type_name -> google.protobuf.Struct
-	31, // 5: goeland.v1.DocumentVersion.created_at:type_name -> google.protobuf.Timestamp
-	33, // 6: goeland.v1.Document.subject_ref:type_name -> goeland.v1.SubjectRef
-	1,  // 7: goeland.v1.Document.document_type:type_name -> goeland.v1.DocumentType
+	34, // 0: goeland.v1.ContentBlob.created_at:type_name -> google.protobuf.Timestamp
+	34, // 1: goeland.v1.ContentBlob.verified_at:type_name -> google.protobuf.Timestamp
+	3,  // 2: goeland.v1.DocumentVersion.content:type_name -> goeland.v1.ContentBlob
+	34, // 3: goeland.v1.DocumentVersion.validated_at:type_name -> google.protobuf.Timestamp
+	35, // 4: goeland.v1.DocumentVersion.metadata:type_name -> google.protobuf.Struct
+	34, // 5: goeland.v1.DocumentVersion.created_at:type_name -> google.protobuf.Timestamp
+	36, // 6: goeland.v1.Document.subject_ref:type_name -> goeland.v1.SubjectRef
+	2,  // 7: goeland.v1.Document.document_type:type_name -> goeland.v1.DocumentType
 	0,  // 8: goeland.v1.Document.status:type_name -> goeland.v1.DocumentStatus
-	32, // 9: goeland.v1.Document.metadata:type_name -> google.protobuf.Struct
-	31, // 10: goeland.v1.Document.created_at:type_name -> google.protobuf.Timestamp
-	31, // 11: goeland.v1.Document.updated_at:type_name -> google.protobuf.Timestamp
-	34, // 12: goeland.v1.Document.record_metadata:type_name -> goeland.v1.RecordMetadata
-	3,  // 13: goeland.v1.Document.current_version:type_name -> goeland.v1.DocumentVersion
-	32, // 14: goeland.v1.CreateDocumentRequest.metadata:type_name -> google.protobuf.Struct
-	34, // 15: goeland.v1.CreateDocumentRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
-	4,  // 16: goeland.v1.CreateDocumentResponse.document:type_name -> goeland.v1.Document
-	35, // 17: goeland.v1.CreateDocumentResponse.created_event:type_name -> goeland.v1.AuditEvent
-	36, // 18: goeland.v1.CreateDocumentResponse.initial_relationship:type_name -> goeland.v1.SubjectRelationship
-	32, // 19: goeland.v1.AddDocumentVersionRequest.metadata:type_name -> google.protobuf.Struct
-	4,  // 20: goeland.v1.AddDocumentVersionResponse.document:type_name -> goeland.v1.Document
-	3,  // 21: goeland.v1.AddDocumentVersionResponse.version:type_name -> goeland.v1.DocumentVersion
-	35, // 22: goeland.v1.AddDocumentVersionResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	3,  // 23: goeland.v1.ListDocumentVersionsResponse.versions:type_name -> goeland.v1.DocumentVersion
-	4,  // 24: goeland.v1.GetDocumentResponse.document:type_name -> goeland.v1.Document
-	36, // 25: goeland.v1.GetDocumentResponse.relationships:type_name -> goeland.v1.SubjectRelationship
-	35, // 26: goeland.v1.GetDocumentResponse.recent_audit:type_name -> goeland.v1.AuditEvent
-	32, // 27: goeland.v1.UpdateDocumentMetadataRequest.metadata:type_name -> google.protobuf.Struct
-	4,  // 28: goeland.v1.UpdateDocumentMetadataResponse.document:type_name -> goeland.v1.Document
-	35, // 29: goeland.v1.UpdateDocumentMetadataResponse.update_event:type_name -> goeland.v1.AuditEvent
-	4,  // 30: goeland.v1.FinalizeDocumentResponse.document:type_name -> goeland.v1.Document
-	35, // 31: goeland.v1.FinalizeDocumentResponse.finalize_event:type_name -> goeland.v1.AuditEvent
-	31, // 32: goeland.v1.VerifyDocumentIntegrityResponse.verified_at:type_name -> google.protobuf.Timestamp
-	4,  // 33: goeland.v1.SearchDocumentsResponse.documents:type_name -> goeland.v1.Document
-	36, // 34: goeland.v1.LinkDocumentResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	35, // 35: goeland.v1.LinkDocumentResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	35, // 36: goeland.v1.DeleteDocumentResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	1,  // 37: goeland.v1.ListDocumentTypesResponse.document_types:type_name -> goeland.v1.DocumentType
-	1,  // 38: goeland.v1.CreateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
-	37, // 39: goeland.v1.CreateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	1,  // 40: goeland.v1.UpdateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
-	37, // 41: goeland.v1.UpdateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	5,  // 42: goeland.v1.DocumentService.CreateDocument:input_type -> goeland.v1.CreateDocumentRequest
-	7,  // 43: goeland.v1.DocumentService.AddDocumentVersion:input_type -> goeland.v1.AddDocumentVersionRequest
-	9,  // 44: goeland.v1.DocumentService.ListDocumentVersions:input_type -> goeland.v1.ListDocumentVersionsRequest
-	11, // 45: goeland.v1.DocumentService.GetDocument:input_type -> goeland.v1.GetDocumentRequest
-	13, // 46: goeland.v1.DocumentService.UpdateDocumentMetadata:input_type -> goeland.v1.UpdateDocumentMetadataRequest
-	15, // 47: goeland.v1.DocumentService.FinalizeDocument:input_type -> goeland.v1.FinalizeDocumentRequest
-	17, // 48: goeland.v1.DocumentService.VerifyDocumentIntegrity:input_type -> goeland.v1.VerifyDocumentIntegrityRequest
-	19, // 49: goeland.v1.DocumentService.SearchDocuments:input_type -> goeland.v1.SearchDocumentsRequest
-	21, // 50: goeland.v1.DocumentService.LinkDocument:input_type -> goeland.v1.LinkDocumentRequest
-	23, // 51: goeland.v1.DocumentService.DeleteDocument:input_type -> goeland.v1.DeleteDocumentRequest
-	25, // 52: goeland.v1.DocumentService.ListDocumentTypes:input_type -> goeland.v1.ListDocumentTypesRequest
-	27, // 53: goeland.v1.DocumentService.CreateDocumentType:input_type -> goeland.v1.CreateDocumentTypeRequest
-	29, // 54: goeland.v1.DocumentService.UpdateDocumentType:input_type -> goeland.v1.UpdateDocumentTypeRequest
-	6,  // 55: goeland.v1.DocumentService.CreateDocument:output_type -> goeland.v1.CreateDocumentResponse
-	8,  // 56: goeland.v1.DocumentService.AddDocumentVersion:output_type -> goeland.v1.AddDocumentVersionResponse
-	10, // 57: goeland.v1.DocumentService.ListDocumentVersions:output_type -> goeland.v1.ListDocumentVersionsResponse
-	12, // 58: goeland.v1.DocumentService.GetDocument:output_type -> goeland.v1.GetDocumentResponse
-	14, // 59: goeland.v1.DocumentService.UpdateDocumentMetadata:output_type -> goeland.v1.UpdateDocumentMetadataResponse
-	16, // 60: goeland.v1.DocumentService.FinalizeDocument:output_type -> goeland.v1.FinalizeDocumentResponse
-	18, // 61: goeland.v1.DocumentService.VerifyDocumentIntegrity:output_type -> goeland.v1.VerifyDocumentIntegrityResponse
-	20, // 62: goeland.v1.DocumentService.SearchDocuments:output_type -> goeland.v1.SearchDocumentsResponse
-	22, // 63: goeland.v1.DocumentService.LinkDocument:output_type -> goeland.v1.LinkDocumentResponse
-	24, // 64: goeland.v1.DocumentService.DeleteDocument:output_type -> goeland.v1.DeleteDocumentResponse
-	26, // 65: goeland.v1.DocumentService.ListDocumentTypes:output_type -> goeland.v1.ListDocumentTypesResponse
-	28, // 66: goeland.v1.DocumentService.CreateDocumentType:output_type -> goeland.v1.CreateDocumentTypeResponse
-	30, // 67: goeland.v1.DocumentService.UpdateDocumentType:output_type -> goeland.v1.UpdateDocumentTypeResponse
-	55, // [55:68] is the sub-list for method output_type
-	42, // [42:55] is the sub-list for method input_type
-	42, // [42:42] is the sub-list for extension type_name
-	42, // [42:42] is the sub-list for extension extendee
-	0,  // [0:42] is the sub-list for field type_name
+	35, // 9: goeland.v1.Document.metadata:type_name -> google.protobuf.Struct
+	34, // 10: goeland.v1.Document.created_at:type_name -> google.protobuf.Timestamp
+	34, // 11: goeland.v1.Document.updated_at:type_name -> google.protobuf.Timestamp
+	37, // 12: goeland.v1.Document.record_metadata:type_name -> goeland.v1.RecordMetadata
+	4,  // 13: goeland.v1.Document.current_version:type_name -> goeland.v1.DocumentVersion
+	35, // 14: goeland.v1.CreateDocumentRequest.metadata:type_name -> google.protobuf.Struct
+	37, // 15: goeland.v1.CreateDocumentRequest.initial_governance:type_name -> goeland.v1.RecordMetadata
+	5,  // 16: goeland.v1.CreateDocumentResponse.document:type_name -> goeland.v1.Document
+	38, // 17: goeland.v1.CreateDocumentResponse.created_event:type_name -> goeland.v1.AuditEvent
+	39, // 18: goeland.v1.CreateDocumentResponse.initial_relationship:type_name -> goeland.v1.SubjectRelationship
+	35, // 19: goeland.v1.AddDocumentVersionRequest.metadata:type_name -> google.protobuf.Struct
+	5,  // 20: goeland.v1.AddDocumentVersionResponse.document:type_name -> goeland.v1.Document
+	4,  // 21: goeland.v1.AddDocumentVersionResponse.version:type_name -> goeland.v1.DocumentVersion
+	38, // 22: goeland.v1.AddDocumentVersionResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	4,  // 23: goeland.v1.ListDocumentVersionsResponse.versions:type_name -> goeland.v1.DocumentVersion
+	5,  // 24: goeland.v1.GetDocumentResponse.document:type_name -> goeland.v1.Document
+	39, // 25: goeland.v1.GetDocumentResponse.relationships:type_name -> goeland.v1.SubjectRelationship
+	38, // 26: goeland.v1.GetDocumentResponse.recent_audit:type_name -> goeland.v1.AuditEvent
+	35, // 27: goeland.v1.UpdateDocumentMetadataRequest.metadata:type_name -> google.protobuf.Struct
+	5,  // 28: goeland.v1.UpdateDocumentMetadataResponse.document:type_name -> goeland.v1.Document
+	38, // 29: goeland.v1.UpdateDocumentMetadataResponse.update_event:type_name -> goeland.v1.AuditEvent
+	5,  // 30: goeland.v1.FinalizeDocumentResponse.document:type_name -> goeland.v1.Document
+	38, // 31: goeland.v1.FinalizeDocumentResponse.finalize_event:type_name -> goeland.v1.AuditEvent
+	34, // 32: goeland.v1.VerifyDocumentIntegrityResponse.verified_at:type_name -> google.protobuf.Timestamp
+	1,  // 33: goeland.v1.VerifyDocumentContentResponse.outcome:type_name -> goeland.v1.ContentVerificationOutcome
+	34, // 34: goeland.v1.VerifyDocumentContentResponse.verified_at:type_name -> google.protobuf.Timestamp
+	38, // 35: goeland.v1.VerifyDocumentContentResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	5,  // 36: goeland.v1.SearchDocumentsResponse.documents:type_name -> goeland.v1.Document
+	39, // 37: goeland.v1.LinkDocumentResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	38, // 38: goeland.v1.LinkDocumentResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	38, // 39: goeland.v1.DeleteDocumentResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	2,  // 40: goeland.v1.ListDocumentTypesResponse.document_types:type_name -> goeland.v1.DocumentType
+	2,  // 41: goeland.v1.CreateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
+	40, // 42: goeland.v1.CreateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	2,  // 43: goeland.v1.UpdateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
+	40, // 44: goeland.v1.UpdateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	6,  // 45: goeland.v1.DocumentService.CreateDocument:input_type -> goeland.v1.CreateDocumentRequest
+	8,  // 46: goeland.v1.DocumentService.AddDocumentVersion:input_type -> goeland.v1.AddDocumentVersionRequest
+	10, // 47: goeland.v1.DocumentService.ListDocumentVersions:input_type -> goeland.v1.ListDocumentVersionsRequest
+	12, // 48: goeland.v1.DocumentService.GetDocument:input_type -> goeland.v1.GetDocumentRequest
+	14, // 49: goeland.v1.DocumentService.UpdateDocumentMetadata:input_type -> goeland.v1.UpdateDocumentMetadataRequest
+	16, // 50: goeland.v1.DocumentService.FinalizeDocument:input_type -> goeland.v1.FinalizeDocumentRequest
+	18, // 51: goeland.v1.DocumentService.VerifyDocumentIntegrity:input_type -> goeland.v1.VerifyDocumentIntegrityRequest
+	20, // 52: goeland.v1.DocumentService.VerifyDocumentContent:input_type -> goeland.v1.VerifyDocumentContentRequest
+	22, // 53: goeland.v1.DocumentService.SearchDocuments:input_type -> goeland.v1.SearchDocumentsRequest
+	24, // 54: goeland.v1.DocumentService.LinkDocument:input_type -> goeland.v1.LinkDocumentRequest
+	26, // 55: goeland.v1.DocumentService.DeleteDocument:input_type -> goeland.v1.DeleteDocumentRequest
+	28, // 56: goeland.v1.DocumentService.ListDocumentTypes:input_type -> goeland.v1.ListDocumentTypesRequest
+	30, // 57: goeland.v1.DocumentService.CreateDocumentType:input_type -> goeland.v1.CreateDocumentTypeRequest
+	32, // 58: goeland.v1.DocumentService.UpdateDocumentType:input_type -> goeland.v1.UpdateDocumentTypeRequest
+	7,  // 59: goeland.v1.DocumentService.CreateDocument:output_type -> goeland.v1.CreateDocumentResponse
+	9,  // 60: goeland.v1.DocumentService.AddDocumentVersion:output_type -> goeland.v1.AddDocumentVersionResponse
+	11, // 61: goeland.v1.DocumentService.ListDocumentVersions:output_type -> goeland.v1.ListDocumentVersionsResponse
+	13, // 62: goeland.v1.DocumentService.GetDocument:output_type -> goeland.v1.GetDocumentResponse
+	15, // 63: goeland.v1.DocumentService.UpdateDocumentMetadata:output_type -> goeland.v1.UpdateDocumentMetadataResponse
+	17, // 64: goeland.v1.DocumentService.FinalizeDocument:output_type -> goeland.v1.FinalizeDocumentResponse
+	19, // 65: goeland.v1.DocumentService.VerifyDocumentIntegrity:output_type -> goeland.v1.VerifyDocumentIntegrityResponse
+	21, // 66: goeland.v1.DocumentService.VerifyDocumentContent:output_type -> goeland.v1.VerifyDocumentContentResponse
+	23, // 67: goeland.v1.DocumentService.SearchDocuments:output_type -> goeland.v1.SearchDocumentsResponse
+	25, // 68: goeland.v1.DocumentService.LinkDocument:output_type -> goeland.v1.LinkDocumentResponse
+	27, // 69: goeland.v1.DocumentService.DeleteDocument:output_type -> goeland.v1.DeleteDocumentResponse
+	29, // 70: goeland.v1.DocumentService.ListDocumentTypes:output_type -> goeland.v1.ListDocumentTypesResponse
+	31, // 71: goeland.v1.DocumentService.CreateDocumentType:output_type -> goeland.v1.CreateDocumentTypeResponse
+	33, // 72: goeland.v1.DocumentService.UpdateDocumentType:output_type -> goeland.v1.UpdateDocumentTypeResponse
+	59, // [59:73] is the sub-list for method output_type
+	45, // [45:59] is the sub-list for method input_type
+	45, // [45:45] is the sub-list for extension type_name
+	45, // [45:45] is the sub-list for extension extendee
+	0,  // [0:45] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_document_proto_init() }
@@ -2978,14 +3250,14 @@ func file_goeland_v1_document_proto_init() {
 	}
 	file_goeland_v1_core_proto_init()
 	file_goeland_v1_document_proto_msgTypes[5].OneofWrappers = []any{}
-	file_goeland_v1_document_proto_msgTypes[28].OneofWrappers = []any{}
+	file_goeland_v1_document_proto_msgTypes[30].OneofWrappers = []any{}
 	type x struct{}
 	out := protoimpl.TypeBuilder{
 		File: protoimpl.DescBuilder{
 			GoPackagePath: reflect.TypeOf(x{}).PkgPath(),
 			RawDescriptor: unsafe.Slice(unsafe.StringData(file_goeland_v1_document_proto_rawDesc), len(file_goeland_v1_document_proto_rawDesc)),
-			NumEnums:      1,
-			NumMessages:   30,
+			NumEnums:      2,
+			NumMessages:   32,
 			NumExtensions: 0,
 			NumServices:   1,
 		},

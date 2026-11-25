@@ -9,9 +9,10 @@
 //     logical business object, a version a dated state of it, the blob the binary
 //     content identified by its SHA-256. Identical content is stored once; creating a
 //     document for content already held by a live document reuses that document.
-//   - Cryptographic integrity metadata (server-computed SHA-256). NOTE:
-//     VerifyDocumentIntegrity currently performs a non-probative stored-hash
-//     comparison only (it does not read storage bytes); real streamed hashing is GLD-021.
+//   - Cryptographic integrity metadata (server-computed SHA-256). VerifyDocumentContent
+//     rereads the stored bytes, recomputes their digest and records the verification
+//     (GLD-021); VerifyDocumentIntegrity only compares a caller's digest with the
+//     registered one, without reading storage bytes.
 //   - External reference without duplication (external_system + external_id + external_url)
 //     for interop with Alfresco / SharePoint / legacy Goéland.
 //   - Records management preparation (per-version is_record / is_final, lock via record_metadata).
@@ -45,7 +46,7 @@ import type { JsonObject, Message } from "@bufbuild/protobuf";
  * Describes the file goeland/v1/document.proto.
  */
 export const file_goeland_v1_document: GenFile = /*@__PURE__*/
-  fileDesc("Chlnb2VsYW5kL3YxL2RvY3VtZW50LnByb3RvEgpnb2VsYW5kLnYxIqcBCgxEb2N1bWVudFR5cGUSFAoCaWQYASABKAlCCLpIBXIDsAEBEhsKBGNvZGUYAiABKAlCDeJBAQK6SAZyBBABGGQSFwoFbGFiZWwYAyABKAlCCLpIBXIDGMgBEh0KC2Rlc2NyaXB0aW9uGAQgASgJQgi6SAVyAxjQDxIZCghjYXRlZ29yeRgFIAEoCUIHukgEcgIYZBIRCglpc19hY3RpdmUYBiABKAgi9QEKC0NvbnRlbnRCbG9iEhQKAmlkGAEgASgJQgi6SAVyA7ABARIOCgZzaGEyNTYYAiABKAkSEwoLc3RvcmFnZV9yZWYYAyABKAkSEQoJbWltZV90eXBlGAQgASgJEhcKD2ZpbGVfc2l6ZV9ieXRlcxgFIAEoAxI0CgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAxISCgpjcmVhdGVkX2J5GAcgASgJEjUKC3ZlcmlmaWVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAyKAAwoPRG9jdW1lbnRWZXJzaW9uEhQKAmlkGAEgASgJQgi6SAVyA7ABARIdCgtkb2N1bWVudF9pZBgCIAEoCUIIukgFcgOwAQESEgoKdmVyc2lvbl9ubxgDIAEoBRIoCgdjb250ZW50GAQgASgLMhcuZ29lbGFuZC52MS5Db250ZW50QmxvYhISCgpwYWdlX2NvdW50GAUgASgFEhAKCGlzX2ZpbmFsGAYgASgIEhEKCWlzX3JlY29yZBgHIAEoCBI2Cgx2YWxpZGF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgTiQQEDEhQKDHZhbGlkYXRlZF9ieRgJIAEoCRIpCghtZXRhZGF0YRgKIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSNAoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBOJBAQMSEgoKY3JlYXRlZF9ieRgMIAEoCSLBBgoIRG9jdW1lbnQSKwoLc3ViamVjdF9yZWYYASABKAsyFi5nb2VsYW5kLnYxLlN1YmplY3RSZWYSLwoNZG9jdW1lbnRfdHlwZRgCIAEoCzIYLmdvZWxhbmQudjEuRG9jdW1lbnRUeXBlEh0KBXRpdGxlGAMgASgJQg7iQQECukgHcgUQARj0AxIdCgtkZXNjcmlwdGlvbhgEIAEoCUIIukgFcgMYoB8SFQoNb2ZmaWNpYWxfZGF0ZRgFIAEoCRIgCg9leHRlcm5hbF9zeXN0ZW0YByABKAlCB7pIBHICGGQSHQoLZXh0ZXJuYWxfaWQYCCABKAlCCLpIBXIDGMgBEh4KDGV4dGVybmFsX3VybBgJIAEoCUIIukgFcgMYgBASGQoIbGFuZ3VhZ2UYEiABKAlCB7pIBHICGAoSKgoGc3RhdHVzGBQgASgOMhouZ29lbGFuZC52MS5Eb2N1bWVudFN0YXR1cxIpCghtZXRhZGF0YRgVIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSNAoKY3JlYXRlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBOJBAQMSEgoKY3JlYXRlZF9ieRgXIAEoCRI0Cgp1cGRhdGVkX2F0GBggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAxIzCg9yZWNvcmRfbWV0YWRhdGEYGSABKAsyGi5nb2VsYW5kLnYxLlJlY29yZE1ldGFkYXRhEjoKD2N1cnJlbnRfdmVyc2lvbhgaIAEoCzIbLmdvZWxhbmQudjEuRG9jdW1lbnRWZXJzaW9uQgTiQQEDSgQIBhAHSgQIChALSgQICxAMSgQIDBANSgQIDRAOSgQIDhAPSgQIDxAQSgQIEBARSgQIERASSgQIExAUUgtzdG9yYWdlX3JlZlIJbWltZV90eXBlUg9maWxlX3NpemVfYnl0ZXNSBnNoYTI1NlISc2hhMjU2X3ZlcmlmaWVkX2F0Ugd2ZXJzaW9uUhNwcmV2aW91c192ZXJzaW9uX2lkUghpc19maW5hbFIJaXNfcmVjb3JkUgpwYWdlX2NvdW50IuoEChVDcmVhdGVEb2N1bWVudFJlcXVlc3QSKQoSZG9jdW1lbnRfdHlwZV9jb2RlGAEgASgJQg3iQQECukgGcgQQARhkEh0KBXRpdGxlGAIgASgJQg7iQQECukgHcgUQARj0AxIdCgtkZXNjcmlwdGlvbhgDIAEoCUIIukgFcgMYoB8SFQoNb2ZmaWNpYWxfZGF0ZRgEIAEoCRIgCg9leHRlcm5hbF9zeXN0ZW0YBiABKAlCB7pIBHICGGQSHQoLZXh0ZXJuYWxfaWQYByABKAlCCLpIBXIDGMgBEh4KDGV4dGVybmFsX3VybBgIIAEoCUIIukgFcgMYgBASEAoIaXNfZmluYWwYDiABKAgSEQoJaXNfcmVjb3JkGA8gASgIEhkKCGxhbmd1YWdlGBAgASgJQge6SARyAhgKEhsKCnBhZ2VfY291bnQYESABKAVCB7pIBBoCKAASKQoIbWV0YWRhdGEYEiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjYKEmluaXRpYWxfZ292ZXJuYW5jZRgUIAEoCzIaLmdvZWxhbmQudjEuUmVjb3JkTWV0YWRhdGESFwoPbGlua190b19jYXNlX2lkGBUgASgJEiQKD2NvbnRlbnRfYmxvYl9pZBgWIAEoCUILukgI2AEBcgOwAQFKBAgFEAZKBAgJEApKBAgKEAtKBAgLEAxKBAgMEA1KBAgNEA5SC3N0b3JhZ2VfcmVmUgltaW1lX3R5cGVSD2ZpbGVfc2l6ZV9ieXRlc1IGc2hhMjU2Ugd2ZXJzaW9uUhNwcmV2aW91c192ZXJzaW9uX2lkItwBChZDcmVhdGVEb2N1bWVudFJlc3BvbnNlEiYKCGRvY3VtZW50GAEgASgLMhQuZ29lbGFuZC52MS5Eb2N1bWVudBItCg1jcmVhdGVkX2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50EkIKFGluaXRpYWxfcmVsYXRpb25zaGlwGAMgASgLMh8uZ29lbGFuZC52MS5TdWJqZWN0UmVsYXRpb25zaGlwSACIAQESDgoGcmV1c2VkGAQgASgIQhcKFV9pbml0aWFsX3JlbGF0aW9uc2hpcCLnAQoZQWRkRG9jdW1lbnRWZXJzaW9uUmVxdWVzdBIdCgtkb2N1bWVudF9pZBgBIAEoCUIIukgFcgOwAQESJAoPY29udGVudF9ibG9iX2lkGAIgASgJQgu6SAjYAQFyA7ABARIQCghpc19maW5hbBgDIAEoCBIRCglpc19yZWNvcmQYBCABKAgSGwoKcGFnZV9jb3VudBgFIAEoBUIHukgEGgIoABIpCghtZXRhZGF0YRgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGAoGcmVhc29uGAcgASgJQgi6SAVyAxjQDyKfAQoaQWRkRG9jdW1lbnRWZXJzaW9uUmVzcG9uc2USJgoIZG9jdW1lbnQYASABKAsyFC5nb2VsYW5kLnYxLkRvY3VtZW50EiwKB3ZlcnNpb24YAiABKAsyGy5nb2VsYW5kLnYxLkRvY3VtZW50VmVyc2lvbhIrCgthdWRpdF9ldmVudBgDIAEoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCI8ChtMaXN0RG9jdW1lbnRWZXJzaW9uc1JlcXVlc3QSHQoLZG9jdW1lbnRfaWQYASABKAlCCLpIBXIDsAEBIk0KHExpc3REb2N1bWVudFZlcnNpb25zUmVzcG9uc2USLQoIdmVyc2lvbnMYASADKAsyGy5nb2VsYW5kLnYxLkRvY3VtZW50VmVyc2lvbiJgChJHZXREb2N1bWVudFJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEh0KFWluY2x1ZGVfcmVsYXRpb25zaGlwcxgCIAEoCBIVCg1pbmNsdWRlX2F1ZGl0GAMgASgIIqMBChNHZXREb2N1bWVudFJlc3BvbnNlEiYKCGRvY3VtZW50GAEgASgLMhQuZ29lbGFuZC52MS5Eb2N1bWVudBI2Cg1yZWxhdGlvbnNoaXBzGAIgAygLMh8uZ29lbGFuZC52MS5TdWJqZWN0UmVsYXRpb25zaGlwEiwKDHJlY2VudF9hdWRpdBgDIAMoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCLmAQodVXBkYXRlRG9jdW1lbnRNZXRhZGF0YVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEhkKBXRpdGxlGAIgASgJQgq6SAdyBRABGPQDEh0KC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxigHxIVCg1vZmZpY2lhbF9kYXRlGAQgASgJEhkKCGxhbmd1YWdlGAUgASgJQge6SARyAhgKEikKCG1ldGFkYXRhGAYgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIYCgZyZWFzb24YCCABKAlCCLpIBXIDGNAPInYKHlVwZGF0ZURvY3VtZW50TWV0YWRhdGFSZXNwb25zZRImCghkb2N1bWVudBgBIAEoCzIULmdvZWxhbmQudjEuRG9jdW1lbnQSLAoMdXBkYXRlX2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50ImcKF0ZpbmFsaXplRG9jdW1lbnRSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABARIYCgZyZWFzb24YAyABKAlCCLpIBXIDGNAPEhwKFGFsc29fbG9ja19nb3Zlcm5hbmNlGAQgASgIInIKGEZpbmFsaXplRG9jdW1lbnRSZXNwb25zZRImCghkb2N1bWVudBgBIAEoCzIULmdvZWxhbmQudjEuRG9jdW1lbnQSLgoOZmluYWxpemVfZXZlbnQYAiABKAsyFi5nb2VsYW5kLnYxLkF1ZGl0RXZlbnQibAoeVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABARI0Cg9leHBlY3RlZF9zaGEyNTYYAiABKAlCG7pIGHIWMhReJHxeW2EtZkEtRjAtOV17NjR9JCKYAQofVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXNwb25zZRIQCgh2ZXJpZmllZBgBIAEoCBIVCg1hY3R1YWxfc2hhMjU2GAIgASgJEi8KC3ZlcmlmaWVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIbChNzdG9yYWdlX3JlZl9jaGVja2VkGAQgASgJIuwEChZTZWFyY2hEb2N1bWVudHNSZXF1ZXN0EhcKBXF1ZXJ5GAEgASgJQgi6SAVyAxj0AxIjChJkb2N1bWVudF90eXBlX2NvZGUYAiABKAlCB7pIBHICGGQSDwoHY2FzZV9pZBgDIAEoCRIQCgh0aGluZ19pZBgEIAEoCRImChNjb25maWRlbnRpYWxpdHlfbWF4GAUgASgFQgm6SAYaBBgFKAASFAoMb25seV9yZWNvcmRzGAYgASgIEhIKCm9ubHlfZmluYWwYByABKAgSFwoPaW5jbHVkZV9kZWxldGVkGAggASgIEh0KCXBhZ2Vfc2l6ZRgJIAEoBUIKukgHGgUYyAEoABIcCgpwYWdlX3Rva2VuGAogASgJQgi6SAVyAxiACBI1CghvcmRlcl9ieRgLIAEoCUIjukggch4YQDIaXiR8XlthLXpfXSsoIChhc2N8ZGVzYykpPyQSPQoNb2ZmaWNpYWxfZnJvbRgMIAEoCUImukgjciEyH14kfF5bMC05XXs0fS1bMC05XXsyfS1bMC05XXsyfSQSOwoLb2ZmaWNpYWxfdG8YDSABKAlCJrpII3IhMh9eJHxeWzAtOV17NH0tWzAtOV17Mn0tWzAtOV17Mn0kEjwKDGNyZWF0ZWRfZnJvbRgOIAEoCUImukgjciEyH14kfF5bMC05XXs0fS1bMC05XXsyfS1bMC05XXsyfSQSOgoKY3JlYXRlZF90bxgPIAEoCUImukgjciEyH14kfF5bMC05XXs0fS1bMC05XXsyfS1bMC05XXsyfSQSHAoKY3JlYXRlZF9ieRgQIAEoCUIIukgFcgMYyAEiigEKF1NlYXJjaERvY3VtZW50c1Jlc3BvbnNlEicKCWRvY3VtZW50cxgBIAMoCzIULmdvZWxhbmQudjEuRG9jdW1lbnQSFwoPbmV4dF9wYWdlX3Rva2VuGAIgASgJEhIKCnRvdGFsX3NpemUYAyABKAUSGQoRdG90YWxfc2l6ZV9jYXBwZWQYBCABKAgipwEKE0xpbmtEb2N1bWVudFJlcXVlc3QSHQoLZG9jdW1lbnRfaWQYASABKAlCCLpIBXIDsAEBEiMKEXRhcmdldF9zdWJqZWN0X2lkGAIgASgJQgi6SAVyA7ABARItChZyZWxhdGlvbnNoaXBfdHlwZV9jb2RlGAMgASgJQg3iQQECukgGcgQQARhkEh0KC3JvbGVfZGV0YWlsGAQgASgJQgi6SAVyAxj0AyJ6ChRMaW5rRG9jdW1lbnRSZXNwb25zZRI1CgxyZWxhdGlvbnNoaXAYASABKAsyHy5nb2VsYW5kLnYxLlN1YmplY3RSZWxhdGlvbnNoaXASKwoLYXVkaXRfZXZlbnQYAiABKAsyFi5nb2VsYW5kLnYxLkF1ZGl0RXZlbnQiRwoVRGVsZXRlRG9jdW1lbnRSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABARIYCgZyZWFzb24YAyABKAlCCLpIBXIDGNAPImMKFkRlbGV0ZURvY3VtZW50UmVzcG9uc2USGwoTZGVsZXRlZF9kb2N1bWVudF9pZBgBIAEoCRIsCgxkZWxldGVfZXZlbnQYAiABKAsyFi5nb2VsYW5kLnYxLkF1ZGl0RXZlbnQiLwoYTGlzdERvY3VtZW50VHlwZXNSZXF1ZXN0EhMKC29ubHlfYWN0aXZlGAEgASgIIk0KGUxpc3REb2N1bWVudFR5cGVzUmVzcG9uc2USMAoOZG9jdW1lbnRfdHlwZXMYASADKAsyGC5nb2VsYW5kLnYxLkRvY3VtZW50VHlwZSK/AQoZQ3JlYXRlRG9jdW1lbnRUeXBlUmVxdWVzdBIvCgRjb2RlGAEgASgJQiHiQQECukgachgyFl5bQS1aXVtBLVowLTlfXXsxLDk5fSQSHQoFbGFiZWwYAiABKAlCDuJBAQK6SAdyBRABGMgBEh0KC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQDxIZCghjYXRlZ29yeRgEIAEoCUIHukgEcgIYZBIYCgZyZWFzb24YBSABKAlCCLpIBXIDGNAPInoKGkNyZWF0ZURvY3VtZW50VHlwZVJlc3BvbnNlEi8KDWRvY3VtZW50X3R5cGUYASABKAsyGC5nb2VsYW5kLnYxLkRvY3VtZW50VHlwZRIrCgZjaGFuZ2UYAiABKAsyGy5nb2VsYW5kLnYxLlJlZmVyZW5jZUNoYW5nZSKDAgoZVXBkYXRlRG9jdW1lbnRUeXBlUmVxdWVzdBIbCgRjb2RlGAEgASgJQg3iQQECukgGcgQQARhkEh4KBWxhYmVsGAIgASgJQgq6SAdyBRABGMgBSACIAQESIgoLZGVzY3JpcHRpb24YAyABKAlCCLpIBXIDGNAPSAGIAQESHgoIY2F0ZWdvcnkYBCABKAlCB7pIBHICGGRIAogBARIWCglpc19hY3RpdmUYBSABKAhIA4gBARIYCgZyZWFzb24YBiABKAlCCLpIBXIDGNAPQggKBl9sYWJlbEIOCgxfZGVzY3JpcHRpb25CCwoJX2NhdGVnb3J5QgwKCl9pc19hY3RpdmUiegoaVXBkYXRlRG9jdW1lbnRUeXBlUmVzcG9uc2USLwoNZG9jdW1lbnRfdHlwZRgBIAEoCzIYLmdvZWxhbmQudjEuRG9jdW1lbnRUeXBlEisKBmNoYW5nZRgCIAEoCzIbLmdvZWxhbmQudjEuUmVmZXJlbmNlQ2hhbmdlKqUBCg5Eb2N1bWVudFN0YXR1cxIfChtET0NVTUVOVF9TVEFUVVNfVU5TUEVDSUZJRUQQABIZChVET0NVTUVOVF9TVEFUVVNfRFJBRlQQARIZChVET0NVTUVOVF9TVEFUVVNfRklOQUwQAhIeChpET0NVTUVOVF9TVEFUVVNfU1VQRVJTRURFRBADEhwKGERPQ1VNRU5UX1NUQVRVU19BUkNISVZFRBAEMuINCg9Eb2N1bWVudFNlcnZpY2UScgoOQ3JlYXRlRG9jdW1lbnQSIS5nb2VsYW5kLnYxLkNyZWF0ZURvY3VtZW50UmVxdWVzdBoiLmdvZWxhbmQudjEuQ3JlYXRlRG9jdW1lbnRSZXNwb25zZSIZgtPkkwITOgEqIg4vYXBpL2RvY3VtZW50cxKVAQoSQWRkRG9jdW1lbnRWZXJzaW9uEiUuZ29lbGFuZC52MS5BZGREb2N1bWVudFZlcnNpb25SZXF1ZXN0GiYuZ29lbGFuZC52MS5BZGREb2N1bWVudFZlcnNpb25SZXNwb25zZSIwgtPkkwIqOgEqIiUvYXBpL2RvY3VtZW50cy97ZG9jdW1lbnRfaWR9L3ZlcnNpb25zEpgBChRMaXN0RG9jdW1lbnRWZXJzaW9ucxInLmdvZWxhbmQudjEuTGlzdERvY3VtZW50VmVyc2lvbnNSZXF1ZXN0GiguZ29lbGFuZC52MS5MaXN0RG9jdW1lbnRWZXJzaW9uc1Jlc3BvbnNlIi2C0+STAicSJS9hcGkvZG9jdW1lbnRzL3tkb2N1bWVudF9pZH0vdmVyc2lvbnMSawoLR2V0RG9jdW1lbnQSHi5nb2VsYW5kLnYxLkdldERvY3VtZW50UmVxdWVzdBofLmdvZWxhbmQudjEuR2V0RG9jdW1lbnRSZXNwb25zZSIbgtPkkwIVEhMvYXBpL2RvY3VtZW50cy97aWR9Eo8BChZVcGRhdGVEb2N1bWVudE1ldGFkYXRhEikuZ29lbGFuZC52MS5VcGRhdGVEb2N1bWVudE1ldGFkYXRhUmVxdWVzdBoqLmdvZWxhbmQudjEuVXBkYXRlRG9jdW1lbnRNZXRhZGF0YVJlc3BvbnNlIh6C0+STAhg6ASoyEy9hcGkvZG9jdW1lbnRzL3tpZH0ShgEKEEZpbmFsaXplRG9jdW1lbnQSIy5nb2VsYW5kLnYxLkZpbmFsaXplRG9jdW1lbnRSZXF1ZXN0GiQuZ29lbGFuZC52MS5GaW5hbGl6ZURvY3VtZW50UmVzcG9uc2UiJ4LT5JMCIToBKiIcL2FwaS9kb2N1bWVudHMve2lkfS9maW5hbGl6ZRKZAQoXVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHkSKi5nb2VsYW5kLnYxLlZlcmlmeURvY3VtZW50SW50ZWdyaXR5UmVxdWVzdBorLmdvZWxhbmQudjEuVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXNwb25zZSIlgtPkkwIfEh0vYXBpL2RvY3VtZW50cy97aWR9L2ludGVncml0eRJ5Cg9TZWFyY2hEb2N1bWVudHMSIi5nb2VsYW5kLnYxLlNlYXJjaERvY3VtZW50c1JlcXVlc3QaIy5nb2VsYW5kLnYxLlNlYXJjaERvY3VtZW50c1Jlc3BvbnNlIh2C0+STAhcSFS9hcGkvZG9jdW1lbnRzL3NlYXJjaBKAAQoMTGlua0RvY3VtZW50Eh8uZ29lbGFuZC52MS5MaW5rRG9jdW1lbnRSZXF1ZXN0GiAuZ29lbGFuZC52MS5MaW5rRG9jdW1lbnRSZXNwb25zZSItgtPkkwInOgEqIiIvYXBpL2RvY3VtZW50cy97ZG9jdW1lbnRfaWR9L2xpbmtzEnQKDkRlbGV0ZURvY3VtZW50EiEuZ29lbGFuZC52MS5EZWxldGVEb2N1bWVudFJlcXVlc3QaIi5nb2VsYW5kLnYxLkRlbGV0ZURvY3VtZW50UmVzcG9uc2UiG4LT5JMCFSoTL2FwaS9kb2N1bWVudHMve2lkfRJ9ChFMaXN0RG9jdW1lbnRUeXBlcxIkLmdvZWxhbmQudjEuTGlzdERvY3VtZW50VHlwZXNSZXF1ZXN0GiUuZ29lbGFuZC52MS5MaXN0RG9jdW1lbnRUeXBlc1Jlc3BvbnNlIhuC0+STAhUSEy9hcGkvZG9jdW1lbnQtdHlwZXMSgwEKEkNyZWF0ZURvY3VtZW50VHlwZRIlLmdvZWxhbmQudjEuQ3JlYXRlRG9jdW1lbnRUeXBlUmVxdWVzdBomLmdvZWxhbmQudjEuQ3JlYXRlRG9jdW1lbnRUeXBlUmVzcG9uc2UiHoLT5JMCGDoBKiITL2FwaS9kb2N1bWVudC10eXBlcxKKAQoSVXBkYXRlRG9jdW1lbnRUeXBlEiUuZ29lbGFuZC52MS5VcGRhdGVEb2N1bWVudFR5cGVSZXF1ZXN0GiYuZ29lbGFuZC52MS5VcGRhdGVEb2N1bWVudFR5cGVSZXNwb25zZSIlgtPkkwIfOgEqMhovYXBpL2RvY3VtZW50LXR5cGVzL3tjb2RlfUK1AQoOY29tLmdvZWxhbmQudjFCDURvY3VtZW50UHJvdG9QAVpLZ2l0aHViLmNvbS9sYW8tdHNldS1pcy1hbGl2ZS9nby1jbG91ZC1rOHMtcG9jLTIwMjYvZ2VuL2dvZWxhbmQvdjE7Z29lbGFuZHYxogIDR1hYqgIKR29lbGFuZC5WMcoCCkdvZWxhbmRcVjHiAhZHb2VsYW5kXFYxXEdQQk1ldGFkYXRh6gILR29lbGFuZDo6VjFiBnByb3RvMw", [file_buf_validate_validate, file_goeland_v1_core, file_google_api_annotations, file_google_api_field_behavior, file_google_protobuf_struct, file_google_protobuf_timestamp]);
+  fileDesc("Chlnb2VsYW5kL3YxL2RvY3VtZW50LnByb3RvEgpnb2VsYW5kLnYxIqcBCgxEb2N1bWVudFR5cGUSFAoCaWQYASABKAlCCLpIBXIDsAEBEhsKBGNvZGUYAiABKAlCDeJBAQK6SAZyBBABGGQSFwoFbGFiZWwYAyABKAlCCLpIBXIDGMgBEh0KC2Rlc2NyaXB0aW9uGAQgASgJQgi6SAVyAxjQDxIZCghjYXRlZ29yeRgFIAEoCUIHukgEcgIYZBIRCglpc19hY3RpdmUYBiABKAgi9QEKC0NvbnRlbnRCbG9iEhQKAmlkGAEgASgJQgi6SAVyA7ABARIOCgZzaGEyNTYYAiABKAkSEwoLc3RvcmFnZV9yZWYYAyABKAkSEQoJbWltZV90eXBlGAQgASgJEhcKD2ZpbGVfc2l6ZV9ieXRlcxgFIAEoAxI0CgpjcmVhdGVkX2F0GAYgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAxISCgpjcmVhdGVkX2J5GAcgASgJEjUKC3ZlcmlmaWVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAyKAAwoPRG9jdW1lbnRWZXJzaW9uEhQKAmlkGAEgASgJQgi6SAVyA7ABARIdCgtkb2N1bWVudF9pZBgCIAEoCUIIukgFcgOwAQESEgoKdmVyc2lvbl9ubxgDIAEoBRIoCgdjb250ZW50GAQgASgLMhcuZ29lbGFuZC52MS5Db250ZW50QmxvYhISCgpwYWdlX2NvdW50GAUgASgFEhAKCGlzX2ZpbmFsGAYgASgIEhEKCWlzX3JlY29yZBgHIAEoCBI2Cgx2YWxpZGF0ZWRfYXQYCCABKAsyGi5nb29nbGUucHJvdG9idWYuVGltZXN0YW1wQgTiQQEDEhQKDHZhbGlkYXRlZF9ieRgJIAEoCRIpCghtZXRhZGF0YRgKIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSNAoKY3JlYXRlZF9hdBgLIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBOJBAQMSEgoKY3JlYXRlZF9ieRgMIAEoCSLBBgoIRG9jdW1lbnQSKwoLc3ViamVjdF9yZWYYASABKAsyFi5nb2VsYW5kLnYxLlN1YmplY3RSZWYSLwoNZG9jdW1lbnRfdHlwZRgCIAEoCzIYLmdvZWxhbmQudjEuRG9jdW1lbnRUeXBlEh0KBXRpdGxlGAMgASgJQg7iQQECukgHcgUQARj0AxIdCgtkZXNjcmlwdGlvbhgEIAEoCUIIukgFcgMYoB8SFQoNb2ZmaWNpYWxfZGF0ZRgFIAEoCRIgCg9leHRlcm5hbF9zeXN0ZW0YByABKAlCB7pIBHICGGQSHQoLZXh0ZXJuYWxfaWQYCCABKAlCCLpIBXIDGMgBEh4KDGV4dGVybmFsX3VybBgJIAEoCUIIukgFcgMYgBASGQoIbGFuZ3VhZ2UYEiABKAlCB7pIBHICGAoSKgoGc3RhdHVzGBQgASgOMhouZ29lbGFuZC52MS5Eb2N1bWVudFN0YXR1cxIpCghtZXRhZGF0YRgVIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSNAoKY3JlYXRlZF9hdBgWIAEoCzIaLmdvb2dsZS5wcm90b2J1Zi5UaW1lc3RhbXBCBOJBAQMSEgoKY3JlYXRlZF9ieRgXIAEoCRI0Cgp1cGRhdGVkX2F0GBggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcEIE4kEBAxIzCg9yZWNvcmRfbWV0YWRhdGEYGSABKAsyGi5nb2VsYW5kLnYxLlJlY29yZE1ldGFkYXRhEjoKD2N1cnJlbnRfdmVyc2lvbhgaIAEoCzIbLmdvZWxhbmQudjEuRG9jdW1lbnRWZXJzaW9uQgTiQQEDSgQIBhAHSgQIChALSgQICxAMSgQIDBANSgQIDRAOSgQIDhAPSgQIDxAQSgQIEBARSgQIERASSgQIExAUUgtzdG9yYWdlX3JlZlIJbWltZV90eXBlUg9maWxlX3NpemVfYnl0ZXNSBnNoYTI1NlISc2hhMjU2X3ZlcmlmaWVkX2F0Ugd2ZXJzaW9uUhNwcmV2aW91c192ZXJzaW9uX2lkUghpc19maW5hbFIJaXNfcmVjb3JkUgpwYWdlX2NvdW50IuoEChVDcmVhdGVEb2N1bWVudFJlcXVlc3QSKQoSZG9jdW1lbnRfdHlwZV9jb2RlGAEgASgJQg3iQQECukgGcgQQARhkEh0KBXRpdGxlGAIgASgJQg7iQQECukgHcgUQARj0AxIdCgtkZXNjcmlwdGlvbhgDIAEoCUIIukgFcgMYoB8SFQoNb2ZmaWNpYWxfZGF0ZRgEIAEoCRIgCg9leHRlcm5hbF9zeXN0ZW0YBiABKAlCB7pIBHICGGQSHQoLZXh0ZXJuYWxfaWQYByABKAlCCLpIBXIDGMgBEh4KDGV4dGVybmFsX3VybBgIIAEoCUIIukgFcgMYgBASEAoIaXNfZmluYWwYDiABKAgSEQoJaXNfcmVjb3JkGA8gASgIEhkKCGxhbmd1YWdlGBAgASgJQge6SARyAhgKEhsKCnBhZ2VfY291bnQYESABKAVCB7pIBBoCKAASKQoIbWV0YWRhdGEYEiABKAsyFy5nb29nbGUucHJvdG9idWYuU3RydWN0EjYKEmluaXRpYWxfZ292ZXJuYW5jZRgUIAEoCzIaLmdvZWxhbmQudjEuUmVjb3JkTWV0YWRhdGESFwoPbGlua190b19jYXNlX2lkGBUgASgJEiQKD2NvbnRlbnRfYmxvYl9pZBgWIAEoCUILukgI2AEBcgOwAQFKBAgFEAZKBAgJEApKBAgKEAtKBAgLEAxKBAgMEA1KBAgNEA5SC3N0b3JhZ2VfcmVmUgltaW1lX3R5cGVSD2ZpbGVfc2l6ZV9ieXRlc1IGc2hhMjU2Ugd2ZXJzaW9uUhNwcmV2aW91c192ZXJzaW9uX2lkItwBChZDcmVhdGVEb2N1bWVudFJlc3BvbnNlEiYKCGRvY3VtZW50GAEgASgLMhQuZ29lbGFuZC52MS5Eb2N1bWVudBItCg1jcmVhdGVkX2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50EkIKFGluaXRpYWxfcmVsYXRpb25zaGlwGAMgASgLMh8uZ29lbGFuZC52MS5TdWJqZWN0UmVsYXRpb25zaGlwSACIAQESDgoGcmV1c2VkGAQgASgIQhcKFV9pbml0aWFsX3JlbGF0aW9uc2hpcCLnAQoZQWRkRG9jdW1lbnRWZXJzaW9uUmVxdWVzdBIdCgtkb2N1bWVudF9pZBgBIAEoCUIIukgFcgOwAQESJAoPY29udGVudF9ibG9iX2lkGAIgASgJQgu6SAjYAQFyA7ABARIQCghpc19maW5hbBgDIAEoCBIRCglpc19yZWNvcmQYBCABKAgSGwoKcGFnZV9jb3VudBgFIAEoBUIHukgEGgIoABIpCghtZXRhZGF0YRgGIAEoCzIXLmdvb2dsZS5wcm90b2J1Zi5TdHJ1Y3QSGAoGcmVhc29uGAcgASgJQgi6SAVyAxjQDyKfAQoaQWRkRG9jdW1lbnRWZXJzaW9uUmVzcG9uc2USJgoIZG9jdW1lbnQYASABKAsyFC5nb2VsYW5kLnYxLkRvY3VtZW50EiwKB3ZlcnNpb24YAiABKAsyGy5nb2VsYW5kLnYxLkRvY3VtZW50VmVyc2lvbhIrCgthdWRpdF9ldmVudBgDIAEoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCI8ChtMaXN0RG9jdW1lbnRWZXJzaW9uc1JlcXVlc3QSHQoLZG9jdW1lbnRfaWQYASABKAlCCLpIBXIDsAEBIk0KHExpc3REb2N1bWVudFZlcnNpb25zUmVzcG9uc2USLQoIdmVyc2lvbnMYASADKAsyGy5nb2VsYW5kLnYxLkRvY3VtZW50VmVyc2lvbiJgChJHZXREb2N1bWVudFJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEh0KFWluY2x1ZGVfcmVsYXRpb25zaGlwcxgCIAEoCBIVCg1pbmNsdWRlX2F1ZGl0GAMgASgIIqMBChNHZXREb2N1bWVudFJlc3BvbnNlEiYKCGRvY3VtZW50GAEgASgLMhQuZ29lbGFuZC52MS5Eb2N1bWVudBI2Cg1yZWxhdGlvbnNoaXBzGAIgAygLMh8uZ29lbGFuZC52MS5TdWJqZWN0UmVsYXRpb25zaGlwEiwKDHJlY2VudF9hdWRpdBgDIAMoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCLmAQodVXBkYXRlRG9jdW1lbnRNZXRhZGF0YVJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEhkKBXRpdGxlGAIgASgJQgq6SAdyBRABGPQDEh0KC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxigHxIVCg1vZmZpY2lhbF9kYXRlGAQgASgJEhkKCGxhbmd1YWdlGAUgASgJQge6SARyAhgKEikKCG1ldGFkYXRhGAYgASgLMhcuZ29vZ2xlLnByb3RvYnVmLlN0cnVjdBIYCgZyZWFzb24YCCABKAlCCLpIBXIDGNAPInYKHlVwZGF0ZURvY3VtZW50TWV0YWRhdGFSZXNwb25zZRImCghkb2N1bWVudBgBIAEoCzIULmdvZWxhbmQudjEuRG9jdW1lbnQSLAoMdXBkYXRlX2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50ImcKF0ZpbmFsaXplRG9jdW1lbnRSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABARIYCgZyZWFzb24YAyABKAlCCLpIBXIDGNAPEhwKFGFsc29fbG9ja19nb3Zlcm5hbmNlGAQgASgIInIKGEZpbmFsaXplRG9jdW1lbnRSZXNwb25zZRImCghkb2N1bWVudBgBIAEoCzIULmdvZWxhbmQudjEuRG9jdW1lbnQSLgoOZmluYWxpemVfZXZlbnQYAiABKAsyFi5nb2VsYW5kLnYxLkF1ZGl0RXZlbnQibAoeVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXF1ZXN0EhQKAmlkGAEgASgJQgi6SAVyA7ABARI0Cg9leHBlY3RlZF9zaGEyNTYYAiABKAlCG7pIGHIWMhReJHxeW2EtZkEtRjAtOV17NjR9JCKYAQofVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXNwb25zZRIQCgh2ZXJpZmllZBgBIAEoCBIVCg1hY3R1YWxfc2hhMjU2GAIgASgJEi8KC3ZlcmlmaWVkX2F0GAMgASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIbChNzdG9yYWdlX3JlZl9jaGVja2VkGAQgASgJIlUKHFZlcmlmeURvY3VtZW50Q29udGVudFJlcXVlc3QSFAoCaWQYASABKAlCCLpIBXIDsAEBEh8KCnZlcnNpb25faWQYAiABKAlCC7pICNgBAXIDsAEBItcCCh1WZXJpZnlEb2N1bWVudENvbnRlbnRSZXNwb25zZRI3CgdvdXRjb21lGAEgASgOMiYuZ29lbGFuZC52MS5Db250ZW50VmVyaWZpY2F0aW9uT3V0Y29tZRISCgp2ZXJzaW9uX2lkGAIgASgJEhkKEXJlZ2lzdGVyZWRfc2hhMjU2GAMgASgJEhcKD2NvbXB1dGVkX3NoYTI1NhgEIAEoCRIdChVyZWdpc3RlcmVkX3NpemVfYnl0ZXMYBSABKAMSGwoTY29tcHV0ZWRfc2l6ZV9ieXRlcxgGIAEoAxIbChNzdG9yYWdlX3JlZl9jaGVja2VkGAcgASgJEi8KC3ZlcmlmaWVkX2F0GAggASgLMhouZ29vZ2xlLnByb3RvYnVmLlRpbWVzdGFtcBIrCgthdWRpdF9ldmVudBgJIAEoCzIWLmdvZWxhbmQudjEuQXVkaXRFdmVudCLsBAoWU2VhcmNoRG9jdW1lbnRzUmVxdWVzdBIXCgVxdWVyeRgBIAEoCUIIukgFcgMY9AMSIwoSZG9jdW1lbnRfdHlwZV9jb2RlGAIgASgJQge6SARyAhhkEg8KB2Nhc2VfaWQYAyABKAkSEAoIdGhpbmdfaWQYBCABKAkSJgoTY29uZmlkZW50aWFsaXR5X21heBgFIAEoBUIJukgGGgQYBSgAEhQKDG9ubHlfcmVjb3JkcxgGIAEoCBISCgpvbmx5X2ZpbmFsGAcgASgIEhcKD2luY2x1ZGVfZGVsZXRlZBgIIAEoCBIdCglwYWdlX3NpemUYCSABKAVCCrpIBxoFGMgBKAASHAoKcGFnZV90b2tlbhgKIAEoCUIIukgFcgMYgAgSNQoIb3JkZXJfYnkYCyABKAlCI7pIIHIeGEAyGl4kfF5bYS16X10rKCAoYXNjfGRlc2MpKT8kEj0KDW9mZmljaWFsX2Zyb20YDCABKAlCJrpII3IhMh9eJHxeWzAtOV17NH0tWzAtOV17Mn0tWzAtOV17Mn0kEjsKC29mZmljaWFsX3RvGA0gASgJQia6SCNyITIfXiR8XlswLTldezR9LVswLTldezJ9LVswLTldezJ9JBI8CgxjcmVhdGVkX2Zyb20YDiABKAlCJrpII3IhMh9eJHxeWzAtOV17NH0tWzAtOV17Mn0tWzAtOV17Mn0kEjoKCmNyZWF0ZWRfdG8YDyABKAlCJrpII3IhMh9eJHxeWzAtOV17NH0tWzAtOV17Mn0tWzAtOV17Mn0kEhwKCmNyZWF0ZWRfYnkYECABKAlCCLpIBXIDGMgBIooBChdTZWFyY2hEb2N1bWVudHNSZXNwb25zZRInCglkb2N1bWVudHMYASADKAsyFC5nb2VsYW5kLnYxLkRvY3VtZW50EhcKD25leHRfcGFnZV90b2tlbhgCIAEoCRISCgp0b3RhbF9zaXplGAMgASgFEhkKEXRvdGFsX3NpemVfY2FwcGVkGAQgASgIIqcBChNMaW5rRG9jdW1lbnRSZXF1ZXN0Eh0KC2RvY3VtZW50X2lkGAEgASgJQgi6SAVyA7ABARIjChF0YXJnZXRfc3ViamVjdF9pZBgCIAEoCUIIukgFcgOwAQESLQoWcmVsYXRpb25zaGlwX3R5cGVfY29kZRgDIAEoCUIN4kEBArpIBnIEEAEYZBIdCgtyb2xlX2RldGFpbBgEIAEoCUIIukgFcgMY9AMiegoUTGlua0RvY3VtZW50UmVzcG9uc2USNQoMcmVsYXRpb25zaGlwGAEgASgLMh8uZ29lbGFuZC52MS5TdWJqZWN0UmVsYXRpb25zaGlwEisKC2F1ZGl0X2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50IkcKFURlbGV0ZURvY3VtZW50UmVxdWVzdBIUCgJpZBgBIAEoCUIIukgFcgOwAQESGAoGcmVhc29uGAMgASgJQgi6SAVyAxjQDyJjChZEZWxldGVEb2N1bWVudFJlc3BvbnNlEhsKE2RlbGV0ZWRfZG9jdW1lbnRfaWQYASABKAkSLAoMZGVsZXRlX2V2ZW50GAIgASgLMhYuZ29lbGFuZC52MS5BdWRpdEV2ZW50Ii8KGExpc3REb2N1bWVudFR5cGVzUmVxdWVzdBITCgtvbmx5X2FjdGl2ZRgBIAEoCCJNChlMaXN0RG9jdW1lbnRUeXBlc1Jlc3BvbnNlEjAKDmRvY3VtZW50X3R5cGVzGAEgAygLMhguZ29lbGFuZC52MS5Eb2N1bWVudFR5cGUivwEKGUNyZWF0ZURvY3VtZW50VHlwZVJlcXVlc3QSLwoEY29kZRgBIAEoCUIh4kEBArpIGnIYMhZeW0EtWl1bQS1aMC05X117MSw5OX0kEh0KBWxhYmVsGAIgASgJQg7iQQECukgHcgUQARjIARIdCgtkZXNjcmlwdGlvbhgDIAEoCUIIukgFcgMY0A8SGQoIY2F0ZWdvcnkYBCABKAlCB7pIBHICGGQSGAoGcmVhc29uGAUgASgJQgi6SAVyAxjQDyJ6ChpDcmVhdGVEb2N1bWVudFR5cGVSZXNwb25zZRIvCg1kb2N1bWVudF90eXBlGAEgASgLMhguZ29lbGFuZC52MS5Eb2N1bWVudFR5cGUSKwoGY2hhbmdlGAIgASgLMhsuZ29lbGFuZC52MS5SZWZlcmVuY2VDaGFuZ2UigwIKGVVwZGF0ZURvY3VtZW50VHlwZVJlcXVlc3QSGwoEY29kZRgBIAEoCUIN4kEBArpIBnIEEAEYZBIeCgVsYWJlbBgCIAEoCUIKukgHcgUQARjIAUgAiAEBEiIKC2Rlc2NyaXB0aW9uGAMgASgJQgi6SAVyAxjQD0gBiAEBEh4KCGNhdGVnb3J5GAQgASgJQge6SARyAhhkSAKIAQESFgoJaXNfYWN0aXZlGAUgASgISAOIAQESGAoGcmVhc29uGAYgASgJQgi6SAVyAxjQD0IICgZfbGFiZWxCDgoMX2Rlc2NyaXB0aW9uQgsKCV9jYXRlZ29yeUIMCgpfaXNfYWN0aXZlInoKGlVwZGF0ZURvY3VtZW50VHlwZVJlc3BvbnNlEi8KDWRvY3VtZW50X3R5cGUYASABKAsyGC5nb2VsYW5kLnYxLkRvY3VtZW50VHlwZRIrCgZjaGFuZ2UYAiABKAsyGy5nb2VsYW5kLnYxLlJlZmVyZW5jZUNoYW5nZSqlAQoORG9jdW1lbnRTdGF0dXMSHwobRE9DVU1FTlRfU1RBVFVTX1VOU1BFQ0lGSUVEEAASGQoVRE9DVU1FTlRfU1RBVFVTX0RSQUZUEAESGQoVRE9DVU1FTlRfU1RBVFVTX0ZJTkFMEAISHgoaRE9DVU1FTlRfU1RBVFVTX1NVUEVSU0VERUQQAxIcChhET0NVTUVOVF9TVEFUVVNfQVJDSElWRUQQBCr1AQoaQ29udGVudFZlcmlmaWNhdGlvbk91dGNvbWUSLAooQ09OVEVOVF9WRVJJRklDQVRJT05fT1VUQ09NRV9VTlNQRUNJRklFRBAAEikKJUNPTlRFTlRfVkVSSUZJQ0FUSU9OX09VVENPTUVfVkVSSUZJRUQQARIpCiVDT05URU5UX1ZFUklGSUNBVElPTl9PVVRDT01FX01JU01BVENIEAISKAokQ09OVEVOVF9WRVJJRklDQVRJT05fT1VUQ09NRV9NSVNTSU5HEAMSKQolQ09OVEVOVF9WRVJJRklDQVRJT05fT1VUQ09NRV9OT1RfSEVMRBAEMoAPCg9Eb2N1bWVudFNlcnZpY2UScgoOQ3JlYXRlRG9jdW1lbnQSIS5nb2VsYW5kLnYxLkNyZWF0ZURvY3VtZW50UmVxdWVzdBoiLmdvZWxhbmQudjEuQ3JlYXRlRG9jdW1lbnRSZXNwb25zZSIZgtPkkwITOgEqIg4vYXBpL2RvY3VtZW50cxKVAQoSQWRkRG9jdW1lbnRWZXJzaW9uEiUuZ29lbGFuZC52MS5BZGREb2N1bWVudFZlcnNpb25SZXF1ZXN0GiYuZ29lbGFuZC52MS5BZGREb2N1bWVudFZlcnNpb25SZXNwb25zZSIwgtPkkwIqOgEqIiUvYXBpL2RvY3VtZW50cy97ZG9jdW1lbnRfaWR9L3ZlcnNpb25zEpgBChRMaXN0RG9jdW1lbnRWZXJzaW9ucxInLmdvZWxhbmQudjEuTGlzdERvY3VtZW50VmVyc2lvbnNSZXF1ZXN0GiguZ29lbGFuZC52MS5MaXN0RG9jdW1lbnRWZXJzaW9uc1Jlc3BvbnNlIi2C0+STAicSJS9hcGkvZG9jdW1lbnRzL3tkb2N1bWVudF9pZH0vdmVyc2lvbnMSawoLR2V0RG9jdW1lbnQSHi5nb2VsYW5kLnYxLkdldERvY3VtZW50UmVxdWVzdBofLmdvZWxhbmQudjEuR2V0RG9jdW1lbnRSZXNwb25zZSIbgtPkkwIVEhMvYXBpL2RvY3VtZW50cy97aWR9Eo8BChZVcGRhdGVEb2N1bWVudE1ldGFkYXRhEikuZ29lbGFuZC52MS5VcGRhdGVEb2N1bWVudE1ldGFkYXRhUmVxdWVzdBoqLmdvZWxhbmQudjEuVXBkYXRlRG9jdW1lbnRNZXRhZGF0YVJlc3BvbnNlIh6C0+STAhg6ASoyEy9hcGkvZG9jdW1lbnRzL3tpZH0ShgEKEEZpbmFsaXplRG9jdW1lbnQSIy5nb2VsYW5kLnYxLkZpbmFsaXplRG9jdW1lbnRSZXF1ZXN0GiQuZ29lbGFuZC52MS5GaW5hbGl6ZURvY3VtZW50UmVzcG9uc2UiJ4LT5JMCIToBKiIcL2FwaS9kb2N1bWVudHMve2lkfS9maW5hbGl6ZRKZAQoXVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHkSKi5nb2VsYW5kLnYxLlZlcmlmeURvY3VtZW50SW50ZWdyaXR5UmVxdWVzdBorLmdvZWxhbmQudjEuVmVyaWZ5RG9jdW1lbnRJbnRlZ3JpdHlSZXNwb25zZSIlgtPkkwIfEh0vYXBpL2RvY3VtZW50cy97aWR9L2ludGVncml0eRKbAQoVVmVyaWZ5RG9jdW1lbnRDb250ZW50EiguZ29lbGFuZC52MS5WZXJpZnlEb2N1bWVudENvbnRlbnRSZXF1ZXN0GikuZ29lbGFuZC52MS5WZXJpZnlEb2N1bWVudENvbnRlbnRSZXNwb25zZSItgtPkkwInOgEqIiIvYXBpL2RvY3VtZW50cy97aWR9L3ZlcmlmeS1jb250ZW50EnkKD1NlYXJjaERvY3VtZW50cxIiLmdvZWxhbmQudjEuU2VhcmNoRG9jdW1lbnRzUmVxdWVzdBojLmdvZWxhbmQudjEuU2VhcmNoRG9jdW1lbnRzUmVzcG9uc2UiHYLT5JMCFxIVL2FwaS9kb2N1bWVudHMvc2VhcmNoEoABCgxMaW5rRG9jdW1lbnQSHy5nb2VsYW5kLnYxLkxpbmtEb2N1bWVudFJlcXVlc3QaIC5nb2VsYW5kLnYxLkxpbmtEb2N1bWVudFJlc3BvbnNlIi2C0+STAic6ASoiIi9hcGkvZG9jdW1lbnRzL3tkb2N1bWVudF9pZH0vbGlua3MSdAoORGVsZXRlRG9jdW1lbnQSIS5nb2VsYW5kLnYxLkRlbGV0ZURvY3VtZW50UmVxdWVzdBoiLmdvZWxhbmQudjEuRGVsZXRlRG9jdW1lbnRSZXNwb25zZSIbgtPkkwIVKhMvYXBpL2RvY3VtZW50cy97aWR9En0KEUxpc3REb2N1bWVudFR5cGVzEiQuZ29lbGFuZC52MS5MaXN0RG9jdW1lbnRUeXBlc1JlcXVlc3QaJS5nb2VsYW5kLnYxLkxpc3REb2N1bWVudFR5cGVzUmVzcG9uc2UiG4LT5JMCFRITL2FwaS9kb2N1bWVudC10eXBlcxKDAQoSQ3JlYXRlRG9jdW1lbnRUeXBlEiUuZ29lbGFuZC52MS5DcmVhdGVEb2N1bWVudFR5cGVSZXF1ZXN0GiYuZ29lbGFuZC52MS5DcmVhdGVEb2N1bWVudFR5cGVSZXNwb25zZSIegtPkkwIYOgEqIhMvYXBpL2RvY3VtZW50LXR5cGVzEooBChJVcGRhdGVEb2N1bWVudFR5cGUSJS5nb2VsYW5kLnYxLlVwZGF0ZURvY3VtZW50VHlwZVJlcXVlc3QaJi5nb2VsYW5kLnYxLlVwZGF0ZURvY3VtZW50VHlwZVJlc3BvbnNlIiWC0+STAh86ASoyGi9hcGkvZG9jdW1lbnQtdHlwZXMve2NvZGV9QrUBCg5jb20uZ29lbGFuZC52MUINRG9jdW1lbnRQcm90b1ABWktnaXRodWIuY29tL2xhby10c2V1LWlzLWFsaXZlL2dvLWNsb3VkLWs4cy1wb2MtMjAyNi9nZW4vZ29lbGFuZC92MTtnb2VsYW5kdjGiAgNHWFiqAgpHb2VsYW5kLlYxygIKR29lbGFuZFxWMeICFkdvZWxhbmRcVjFcR1BCTWV0YWRhdGHqAgtHb2VsYW5kOjpWMWIGcHJvdG8z", [file_buf_validate_validate, file_goeland_v1_core, file_google_api_annotations, file_google_api_field_behavior, file_google_protobuf_struct, file_google_protobuf_timestamp]);
 
 /**
  * DocumentType is a controlled classification (behavior + category).
@@ -216,7 +217,8 @@ export type ContentBlob = Message<"goeland.v1.ContentBlob"> & {
   createdBy: string;
 
   /**
-   * verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+   * verified_at is the last successful probative verification of the bytes
+   * (VerifyDocumentContent, GLD-021); empty when never verified or after a failed one.
    *
    * @generated from field: google.protobuf.Timestamp verified_at = 8;
    */
@@ -281,7 +283,8 @@ export type ContentBlobJson = {
   createdBy?: string;
 
   /**
-   * verified_at is the last probative re-verification of the bytes; currently never set (GLD-021).
+   * verified_at is the last successful probative verification of the bytes
+   * (VerifyDocumentContent, GLD-021); empty when never verified or after a failed one.
    *
    * @generated from field: google.protobuf.Timestamp verified_at = 8;
    */
@@ -1814,15 +1817,15 @@ export type VerifyDocumentIntegrityResponse = Message<"goeland.v1.VerifyDocument
   actualSha256: string;
 
   /**
-   * verified_at is the content's last probative verification time; currently never set.
+   * verified_at is the content's last probative verification time (VerifyDocumentContent).
    *
    * @generated from field: google.protobuf.Timestamp verified_at = 3;
    */
   verifiedAt?: Timestamp | undefined;
 
   /**
-   * storage_ref_checked is the storage reference whose bytes were hashed;
-   * always empty because no bytes are read yet.
+   * storage_ref_checked is always empty: this comparison reads no storage bytes
+   * (VerifyDocumentContent does).
    *
    * @generated from field: string storage_ref_checked = 4;
    */
@@ -1851,15 +1854,15 @@ export type VerifyDocumentIntegrityResponseJson = {
   actualSha256?: string;
 
   /**
-   * verified_at is the content's last probative verification time; currently never set.
+   * verified_at is the content's last probative verification time (VerifyDocumentContent).
    *
    * @generated from field: google.protobuf.Timestamp verified_at = 3;
    */
   verifiedAt?: TimestampJson;
 
   /**
-   * storage_ref_checked is the storage reference whose bytes were hashed;
-   * always empty because no bytes are read yet.
+   * storage_ref_checked is always empty: this comparison reads no storage bytes
+   * (VerifyDocumentContent does).
    *
    * @generated from field: string storage_ref_checked = 4;
    */
@@ -1872,6 +1875,206 @@ export type VerifyDocumentIntegrityResponseJson = {
  */
 export const VerifyDocumentIntegrityResponseSchema: GenMessage<VerifyDocumentIntegrityResponse, {jsonType: VerifyDocumentIntegrityResponseJson}> = /*@__PURE__*/
   messageDesc(file_goeland_v1_document, 17);
+
+/**
+ * VerifyDocumentContentRequest asks the server to reread the stored bytes of a version.
+ *
+ * @generated from message goeland.v1.VerifyDocumentContentRequest
+ */
+export type VerifyDocumentContentRequest = Message<"goeland.v1.VerifyDocumentContentRequest"> & {
+  /**
+   * id is the document UUID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id: string;
+
+  /**
+   * version_id selects one version of this document; empty means the current version.
+   *
+   * @generated from field: string version_id = 2;
+   */
+  versionId: string;
+};
+
+/**
+ * VerifyDocumentContentRequest asks the server to reread the stored bytes of a version.
+ *
+ * @generated from message goeland.v1.VerifyDocumentContentRequest
+ */
+export type VerifyDocumentContentRequestJson = {
+  /**
+   * id is the document UUID.
+   *
+   * @generated from field: string id = 1;
+   */
+  id?: string;
+
+  /**
+   * version_id selects one version of this document; empty means the current version.
+   *
+   * @generated from field: string version_id = 2;
+   */
+  versionId?: string;
+};
+
+/**
+ * Describes the message goeland.v1.VerifyDocumentContentRequest.
+ * Use `create(VerifyDocumentContentRequestSchema)` to create a new message.
+ */
+export const VerifyDocumentContentRequestSchema: GenMessage<VerifyDocumentContentRequest, {jsonType: VerifyDocumentContentRequestJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_document, 18);
+
+/**
+ * VerifyDocumentContentResponse reports the probative verification of a version's bytes.
+ *
+ * @generated from message goeland.v1.VerifyDocumentContentResponse
+ */
+export type VerifyDocumentContentResponse = Message<"goeland.v1.VerifyDocumentContentResponse"> & {
+  /**
+   * outcome is the result of the verification.
+   *
+   * @generated from field: goeland.v1.ContentVerificationOutcome outcome = 1;
+   */
+  outcome: ContentVerificationOutcome;
+
+  /**
+   * version_id is the version whose content was checked.
+   *
+   * @generated from field: string version_id = 2;
+   */
+  versionId: string;
+
+  /**
+   * registered_sha256 is the digest recorded at the upload; empty without content.
+   *
+   * @generated from field: string registered_sha256 = 3;
+   */
+  registeredSha256: string;
+
+  /**
+   * computed_sha256 is the digest of the bytes read; empty unless bytes were read.
+   *
+   * @generated from field: string computed_sha256 = 4;
+   */
+  computedSha256: string;
+
+  /**
+   * registered_size_bytes is the size recorded at the upload.
+   *
+   * @generated from field: int64 registered_size_bytes = 5;
+   */
+  registeredSizeBytes: bigint;
+
+  /**
+   * computed_size_bytes is the number of bytes read; 0 unless bytes were read.
+   *
+   * @generated from field: int64 computed_size_bytes = 6;
+   */
+  computedSizeBytes: bigint;
+
+  /**
+   * storage_ref_checked is the storage reference whose bytes were read; empty when NOT_HELD.
+   *
+   * @generated from field: string storage_ref_checked = 7;
+   */
+  storageRefChecked: string;
+
+  /**
+   * verified_at is the content's last successful probative verification: now when VERIFIED,
+   * cleared by a MISMATCH or a MISSING outcome.
+   *
+   * @generated from field: google.protobuf.Timestamp verified_at = 8;
+   */
+  verifiedAt?: Timestamp | undefined;
+
+  /**
+   * audit_event is the DOCUMENT_CONTENT_VERIFIED or DOCUMENT_CONTENT_VERIFICATION_FAILED
+   * event recorded on the document; absent when NOT_HELD.
+   *
+   * @generated from field: goeland.v1.AuditEvent audit_event = 9;
+   */
+  auditEvent?: AuditEvent | undefined;
+};
+
+/**
+ * VerifyDocumentContentResponse reports the probative verification of a version's bytes.
+ *
+ * @generated from message goeland.v1.VerifyDocumentContentResponse
+ */
+export type VerifyDocumentContentResponseJson = {
+  /**
+   * outcome is the result of the verification.
+   *
+   * @generated from field: goeland.v1.ContentVerificationOutcome outcome = 1;
+   */
+  outcome?: ContentVerificationOutcomeJson;
+
+  /**
+   * version_id is the version whose content was checked.
+   *
+   * @generated from field: string version_id = 2;
+   */
+  versionId?: string;
+
+  /**
+   * registered_sha256 is the digest recorded at the upload; empty without content.
+   *
+   * @generated from field: string registered_sha256 = 3;
+   */
+  registeredSha256?: string;
+
+  /**
+   * computed_sha256 is the digest of the bytes read; empty unless bytes were read.
+   *
+   * @generated from field: string computed_sha256 = 4;
+   */
+  computedSha256?: string;
+
+  /**
+   * registered_size_bytes is the size recorded at the upload.
+   *
+   * @generated from field: int64 registered_size_bytes = 5;
+   */
+  registeredSizeBytes?: string;
+
+  /**
+   * computed_size_bytes is the number of bytes read; 0 unless bytes were read.
+   *
+   * @generated from field: int64 computed_size_bytes = 6;
+   */
+  computedSizeBytes?: string;
+
+  /**
+   * storage_ref_checked is the storage reference whose bytes were read; empty when NOT_HELD.
+   *
+   * @generated from field: string storage_ref_checked = 7;
+   */
+  storageRefChecked?: string;
+
+  /**
+   * verified_at is the content's last successful probative verification: now when VERIFIED,
+   * cleared by a MISMATCH or a MISSING outcome.
+   *
+   * @generated from field: google.protobuf.Timestamp verified_at = 8;
+   */
+  verifiedAt?: TimestampJson;
+
+  /**
+   * audit_event is the DOCUMENT_CONTENT_VERIFIED or DOCUMENT_CONTENT_VERIFICATION_FAILED
+   * event recorded on the document; absent when NOT_HELD.
+   *
+   * @generated from field: goeland.v1.AuditEvent audit_event = 9;
+   */
+  auditEvent?: AuditEventJson;
+};
+
+/**
+ * Describes the message goeland.v1.VerifyDocumentContentResponse.
+ * Use `create(VerifyDocumentContentResponseSchema)` to create a new message.
+ */
+export const VerifyDocumentContentResponseSchema: GenMessage<VerifyDocumentContentResponse, {jsonType: VerifyDocumentContentResponseJson}> = /*@__PURE__*/
+  messageDesc(file_goeland_v1_document, 19);
 
 /**
  * SearchDocumentsRequest performs full-text search + filters (modern GED must-have).
@@ -2136,7 +2339,7 @@ export type SearchDocumentsRequestJson = {
  * Use `create(SearchDocumentsRequestSchema)` to create a new message.
  */
 export const SearchDocumentsRequestSchema: GenMessage<SearchDocumentsRequest, {jsonType: SearchDocumentsRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 18);
+  messageDesc(file_goeland_v1_document, 20);
 
 /**
  * SearchDocumentsResponse is one page of matching documents.
@@ -2215,7 +2418,7 @@ export type SearchDocumentsResponseJson = {
  * Use `create(SearchDocumentsResponseSchema)` to create a new message.
  */
 export const SearchDocumentsResponseSchema: GenMessage<SearchDocumentsResponse, {jsonType: SearchDocumentsResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 19);
+  messageDesc(file_goeland_v1_document, 21);
 
 /**
  * LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
@@ -2296,7 +2499,7 @@ export type LinkDocumentRequestJson = {
  * Use `create(LinkDocumentRequestSchema)` to create a new message.
  */
 export const LinkDocumentRequestSchema: GenMessage<LinkDocumentRequest, {jsonType: LinkDocumentRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 20);
+  messageDesc(file_goeland_v1_document, 22);
 
 /**
  * LinkDocumentResponse returns the created edge.
@@ -2345,7 +2548,7 @@ export type LinkDocumentResponseJson = {
  * Use `create(LinkDocumentResponseSchema)` to create a new message.
  */
 export const LinkDocumentResponseSchema: GenMessage<LinkDocumentResponse, {jsonType: LinkDocumentResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 21);
+  messageDesc(file_goeland_v1_document, 23);
 
 /**
  * DeleteDocumentRequest soft-deletes a document.
@@ -2396,7 +2599,7 @@ export type DeleteDocumentRequestJson = {
  * Use `create(DeleteDocumentRequestSchema)` to create a new message.
  */
 export const DeleteDocumentRequestSchema: GenMessage<DeleteDocumentRequest, {jsonType: DeleteDocumentRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 22);
+  messageDesc(file_goeland_v1_document, 24);
 
 /**
  * DeleteDocumentResponse confirms a soft delete.
@@ -2445,7 +2648,7 @@ export type DeleteDocumentResponseJson = {
  * Use `create(DeleteDocumentResponseSchema)` to create a new message.
  */
 export const DeleteDocumentResponseSchema: GenMessage<DeleteDocumentResponse, {jsonType: DeleteDocumentResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 23);
+  messageDesc(file_goeland_v1_document, 25);
 
 /**
  * ListDocumentTypesRequest filters the document type catalogue.
@@ -2480,7 +2683,7 @@ export type ListDocumentTypesRequestJson = {
  * Use `create(ListDocumentTypesRequestSchema)` to create a new message.
  */
 export const ListDocumentTypesRequestSchema: GenMessage<ListDocumentTypesRequest, {jsonType: ListDocumentTypesRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 24);
+  messageDesc(file_goeland_v1_document, 26);
 
 /**
  * ListDocumentTypesResponse returns the matching catalogue entries.
@@ -2515,7 +2718,7 @@ export type ListDocumentTypesResponseJson = {
  * Use `create(ListDocumentTypesResponseSchema)` to create a new message.
  */
 export const ListDocumentTypesResponseSchema: GenMessage<ListDocumentTypesResponse, {jsonType: ListDocumentTypesResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 25);
+  messageDesc(file_goeland_v1_document, 27);
 
 /**
  * CreateDocumentTypeRequest adds a document type (administrators only).
@@ -2608,7 +2811,7 @@ export type CreateDocumentTypeRequestJson = {
  * Use `create(CreateDocumentTypeRequestSchema)` to create a new message.
  */
 export const CreateDocumentTypeRequestSchema: GenMessage<CreateDocumentTypeRequest, {jsonType: CreateDocumentTypeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 26);
+  messageDesc(file_goeland_v1_document, 28);
 
 /**
  * CreateDocumentTypeResponse returns the new document type and its log entry.
@@ -2657,7 +2860,7 @@ export type CreateDocumentTypeResponseJson = {
  * Use `create(CreateDocumentTypeResponseSchema)` to create a new message.
  */
 export const CreateDocumentTypeResponseSchema: GenMessage<CreateDocumentTypeResponse, {jsonType: CreateDocumentTypeResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 27);
+  messageDesc(file_goeland_v1_document, 29);
 
 /**
  * UpdateDocumentTypeRequest changes a document type (administrators only); absent fields
@@ -2766,7 +2969,7 @@ export type UpdateDocumentTypeRequestJson = {
  * Use `create(UpdateDocumentTypeRequestSchema)` to create a new message.
  */
 export const UpdateDocumentTypeRequestSchema: GenMessage<UpdateDocumentTypeRequest, {jsonType: UpdateDocumentTypeRequestJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 28);
+  messageDesc(file_goeland_v1_document, 30);
 
 /**
  * UpdateDocumentTypeResponse returns the updated document type and its log entry.
@@ -2815,7 +3018,7 @@ export type UpdateDocumentTypeResponseJson = {
  * Use `create(UpdateDocumentTypeResponseSchema)` to create a new message.
  */
 export const UpdateDocumentTypeResponseSchema: GenMessage<UpdateDocumentTypeResponse, {jsonType: UpdateDocumentTypeResponseJson}> = /*@__PURE__*/
-  messageDesc(file_goeland_v1_document, 29);
+  messageDesc(file_goeland_v1_document, 31);
 
 /**
  * DocumentStatus is the lifecycle state of a document.
@@ -2871,6 +3074,63 @@ export type DocumentStatusJson = "DOCUMENT_STATUS_UNSPECIFIED" | "DOCUMENT_STATU
  */
 export const DocumentStatusSchema: GenEnum<DocumentStatus, DocumentStatusJson> = /*@__PURE__*/
   enumDesc(file_goeland_v1_document, 0);
+
+/**
+ * ContentVerificationOutcome is the result of rereading a version's stored bytes (GLD-021).
+ *
+ * @generated from enum goeland.v1.ContentVerificationOutcome
+ */
+export enum ContentVerificationOutcome {
+  /**
+   * CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED is the zero value; never returned.
+   *
+   * @generated from enum value: CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED = 0;
+   */
+  UNSPECIFIED = 0,
+
+  /**
+   * CONTENT_VERIFICATION_OUTCOME_VERIFIED: the bytes have the registered SHA-256 and size.
+   *
+   * @generated from enum value: CONTENT_VERIFICATION_OUTCOME_VERIFIED = 1;
+   */
+  VERIFIED = 1,
+
+  /**
+   * CONTENT_VERIFICATION_OUTCOME_MISMATCH: the bytes differ from the registered digest or size.
+   *
+   * @generated from enum value: CONTENT_VERIFICATION_OUTCOME_MISMATCH = 2;
+   */
+  MISMATCH = 2,
+
+  /**
+   * CONTENT_VERIFICATION_OUTCOME_MISSING: Goéland should hold the bytes, but the store has none.
+   *
+   * @generated from enum value: CONTENT_VERIFICATION_OUTCOME_MISSING = 3;
+   */
+  MISSING = 3,
+
+  /**
+   * CONTENT_VERIFICATION_OUTCOME_NOT_HELD: Goéland holds no bytes for this version (no content,
+   * content known only by its digest such as an imported document, or destroyed bytes);
+   * nothing was read nor recorded.
+   *
+   * @generated from enum value: CONTENT_VERIFICATION_OUTCOME_NOT_HELD = 4;
+   */
+  NOT_HELD = 4,
+}
+
+/**
+ * ContentVerificationOutcome is the result of rereading a version's stored bytes (GLD-021).
+ *
+ * @generated from enum goeland.v1.ContentVerificationOutcome
+ */
+export type ContentVerificationOutcomeJson = "CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED" | "CONTENT_VERIFICATION_OUTCOME_VERIFIED" | "CONTENT_VERIFICATION_OUTCOME_MISMATCH" | "CONTENT_VERIFICATION_OUTCOME_MISSING" | "CONTENT_VERIFICATION_OUTCOME_NOT_HELD";
+
+/**
+ * Describes the enum goeland.v1.ContentVerificationOutcome.
+ */
+export const ContentVerificationOutcomeSchema: GenEnum<ContentVerificationOutcome, ContentVerificationOutcomeJson> = /*@__PURE__*/
+  enumDesc(file_goeland_v1_document, 1);
 
 /**
  * DocumentService is the modern-GED document component of the Goéland POC.
@@ -2954,7 +3214,7 @@ export const DocumentService: GenService<{
   /**
    * Non-mutating, NON-PROBATIVE stored-hash comparison: checks the caller's
    * expected sha256 against the registered hash. It does NOT read storage bytes
-   * and writes nothing (hence read-scoped). Real streamed verification is future work.
+   * and writes nothing (hence read-scoped). VerifyDocumentContent is the probative check.
    *
    * @generated from rpc goeland.v1.DocumentService.VerifyDocumentIntegrity
    */
@@ -2962,6 +3222,19 @@ export const DocumentService: GenService<{
     methodKind: "unary";
     input: typeof VerifyDocumentIntegrityRequestSchema;
     output: typeof VerifyDocumentIntegrityResponseSchema;
+  },
+  /**
+   * Probative verification (GLD-021, spec v2 §49): streams the stored bytes of a version,
+   * recomputes their SHA-256 and size, sets the content's verified_at when they match
+   * (clears it otherwise) and records the result on the document's audit. Requires
+   * goeland:write and READ on the document; NOT_FOUND for an unknown document or version.
+   *
+   * @generated from rpc goeland.v1.DocumentService.VerifyDocumentContent
+   */
+  verifyDocumentContent: {
+    methodKind: "unary";
+    input: typeof VerifyDocumentContentRequestSchema;
+    output: typeof VerifyDocumentContentResponseSchema;
   },
   /**
    * Full-text + filtered search (leverages the generated tsvector + GIN index).

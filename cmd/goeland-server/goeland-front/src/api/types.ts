@@ -95,6 +95,27 @@ export interface ContentBlob {
   verifiedAt?: string
 }
 
+/** Result of rereading a version's stored bytes (GLD-021). */
+export type ContentVerificationOutcome
+  = | 'CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED'
+    | 'CONTENT_VERIFICATION_OUTCOME_VERIFIED'
+    | 'CONTENT_VERIFICATION_OUTCOME_MISMATCH'
+    | 'CONTENT_VERIFICATION_OUTCOME_MISSING'
+    | 'CONTENT_VERIFICATION_OUTCOME_NOT_HELD'
+
+/** POST /api/documents/{id}/verify-content: the probative verification of a version's bytes. */
+export interface VerifyDocumentContentResponse {
+  outcome?: ContentVerificationOutcome
+  versionId?: string
+  registeredSha256?: string
+  computedSha256?: string
+  registeredSizeBytes?: string // int64 as string
+  computedSizeBytes?: string // int64 as string
+  storageRefChecked?: string
+  verifiedAt?: string
+  auditEvent?: AuditEvent
+}
+
 /** A dated, append-only state of a document; final/record versions are immutable. */
 export interface DocumentVersion {
   id: string

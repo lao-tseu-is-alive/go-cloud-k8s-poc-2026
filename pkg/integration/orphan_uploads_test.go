@@ -31,7 +31,7 @@ func TestOrphanUploadCollection(t *testing.T) {
 	orphan := ingest(t, env, orphanText).Blob
 	fresh := ingest(t, env, "récent "+uniqueToken()).Blob
 	attached := ingest(t, env, "rattaché "+uniqueToken()).Blob
-	createWithBlob(t, env, attached.ID)
+	createDocumentOn(t, env, attached.ID)
 	imported := importedBlob(t, env)
 	backdate(t, env, orphan.ID, attached.ID)
 
@@ -66,7 +66,7 @@ func assertSameUploadRestoresBytes(t *testing.T, env *testEnv, collector *docume
 	}
 	collect(t, collector)
 	assertBlobHeld(t, env, orphan.ID, "an upload repeated after the delay")
-	createWithBlob(t, env, orphan.ID)
+	createDocumentOn(t, env, orphan.ID)
 }
 
 // TestOrphanCollectionSkipsBlobBeingAttached covers the lock between the
@@ -93,14 +93,6 @@ func TestOrphanCollectionSkipsBlobBeingAttached(t *testing.T) {
 		t.Fatal(err)
 	}
 	assertBlobHeld(t, env, blob.ID, "a blob being attached")
-}
-
-// createWithBlob creates a document on a blob.
-func createWithBlob(t *testing.T, env *testEnv, blobID uuid.UUID) {
-	t.Helper()
-	if _, err := env.docSvc.Create(env.ctx, document.CreateInput{DocumentTypeCode: "PLAN", Title: "Pièce " + uniqueToken(), ContentBlobID: &blobID, OperatorID: testOperator}); err != nil {
-		t.Fatalf("create document: %v", err)
-	}
 }
 
 // importedBlob registers an old blob known only by its digest, like the legacy

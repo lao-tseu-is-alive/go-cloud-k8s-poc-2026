@@ -1,8 +1,8 @@
 <script setup lang="ts">
-  import type { GoDocument } from '@/api/types'
+  import type { ContentVerificationOutcome, GoDocument, VerifyDocumentContentResponse } from '@/api/types'
   import { computed, ref } from 'vue'
   import { useI18n } from 'vue-i18n'
-  import { downloadDocumentBlob, verifyDocumentIntegrity } from '@/api/documentClient'
+  import { downloadDocumentBlob, verifyDocumentContent, verifyDocumentIntegrity } from '@/api/documentClient'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
   import { downloadable } from '@/utils/documents'
@@ -32,6 +32,33 @@
       report(error)
     } finally {
       downloading.value = false
+    }
+  }
+
+  // The probative verification rereads the stored bytes (GLD-021).
+  const checkingContent = ref(false)
+  const lastCheck = ref<VerifyDocumentContentResponse>()
+
+  const outcomeStyle: Record<ContentVerificationOutcome, { key: string, type: 'success' | 'error' | 'warning' | 'info' }> = {
+    CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED: { key: 'notHeld', type: 'info' },
+    CONTENT_VERIFICATION_OUTCOME_VERIFIED: { key: 'verified', type: 'success' },
+    CONTENT_VERIFICATION_OUTCOME_MISMATCH: { key: 'mismatch', type: 'error' },
+    CONTENT_VERIFICATION_OUTCOME_MISSING: { key: 'missing', type: 'error' },
+    CONTENT_VERIFICATION_OUTCOME_NOT_HELD: { key: 'notHeld', type: 'info' },
+  }
+  const lastOutcome = computed(() => lastCheck.value
+    ? outcomeStyle[lastCheck.value.outcome ?? 'CONTENT_VERIFICATION_OUTCOME_UNSPECIFIED']
+    : undefined)
+
+  async function verifyContent () {
+    checkingContent.value = true
+    try {
+      lastCheck.value = await verifyDocumentContent(documentId())
+      emit('verified')
+    } catch (error) {
+      report(error)
+    } finally {
+      checkingContent.value = false
     }
   }
 
@@ -79,6 +106,31 @@
     </v-table>
 
     <div class="d-flex flex-wrap align-center ga-2 mt-3">
+      <v-btn
+        color="primary"
+        :loading="checkingContent"
+        prepend-icon="mdi-shield-check"
+        variant="tonal"
+        @click="verifyContent"
+      >
+        {{ t('integrity.verifyContent') }}
+      </v-btn>
+    </div>
+
+    <v-alert
+      v-if="lastOutcome"
+      class="mt-3"
+      density="compact"
+      :type="lastOutcome.type"
+      variant="tonal"
+    >
+      {{ t(`integrity.outcome.${lastOutcome.key}`) }}
+      <div v-if="lastCheck?.computedSha256 && lastOutcome.key !== 'verified'" class="text-mono mt-1">
+        {{ t('integrity.computed', { sha256: lastCheck.computedSha256, size: lastCheck.computedSizeBytes ?? '0' }) }}
+      </div>
+    </v-alert>
+
+    <div class="d-flex flex-wrap align-center ga-2 mt-3">
       <v-text-field
         v-model="expected"
         density="compact"
@@ -88,10 +140,8 @@
       />
 
       <v-btn
-        color="primary"
         :loading="verifying"
-        prepend-icon="mdi-shield-check"
-        variant="tonal"
+        variant="text"
         @click="verify"
       >
         {{ t('integrity.check') }}

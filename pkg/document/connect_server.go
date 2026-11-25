@@ -229,8 +229,8 @@ func (s *ConnectServer) FinalizeDocument(ctx context.Context, req *connect.Reque
 }
 
 // VerifyDocumentIntegrity performs a non-mutating, non-probative stored-hash
-// comparison (it does not read bytes from storage). See Service.Verify. It runs
-// under the read scope precisely because it writes nothing.
+// comparison (it does not read bytes from storage; VerifyDocumentContent does).
+// See Service.Verify. It runs under the read scope precisely because it writes nothing.
 func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connect.Request[goelandv1.VerifyDocumentIntegrityRequest]) (*connect.Response[goelandv1.VerifyDocumentIntegrityResponse], error) {
 	id, err := core.ParseUUID(req.Msg.Id)
 	if err != nil {
@@ -250,6 +250,30 @@ func (s *ConnectServer) VerifyDocumentIntegrity(ctx context.Context, req *connec
 	}
 	// storage_ref_checked is left empty on purpose: no storage bytes were read.
 	return connect.NewResponse(resp), nil
+}
+
+// VerifyDocumentContent rereads the stored bytes of a version and records the
+// verification (GLD-021). It needs the write scope, since it writes the
+// content's verified_at and an audit event, and READ on the document: it
+// discloses nothing a reader cannot already download.
+func (s *ConnectServer) VerifyDocumentContent(ctx context.Context, req *connect.Request[goelandv1.VerifyDocumentContentRequest]) (*connect.Response[goelandv1.VerifyDocumentContentResponse], error) {
+	id, err := core.ParseUUID(req.Msg.Id)
+	if err != nil {
+		return nil, err
+	}
+	versionID, err := core.OptionalUUID(req.Msg.VersionId)
+	if err != nil {
+		return nil, err
+	}
+	user, err := s.authz.Caller(ctx, core.ScopeWrite, id, core.LevelRead)
+	if err != nil {
+		return nil, err
+	}
+	res, err := s.service.VerifyContent(ctx, id, versionID, core.OperatorID(user))
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(VerificationToProto(res)), nil
 }
 
 // SearchDocuments runs a full-text + filtered search.

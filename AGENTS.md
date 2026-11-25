@@ -564,6 +564,9 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   `GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24) by `document.OrphanCollector` (GLD-045, run by
   `serve`); a new version locks its blob `FOR SHARE` (`lockBlobForVersion`) so the collector skips
   it, and a destroyed blob is refused: keep that lock in any new code attaching a blob.
+  `VerifyDocumentContent` (GLD-021, `pkg/document/verification.go`) rereads a version's bytes
+  through the `blobstore.Store`, sets or clears `content_blob.verified_at` and audits the outcome on
+  the document; a new store implementation must stream `Get` so this never loads a file in memory.
   `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049).
 - **Document model (spec v2):** `document` (logical object) → `document_version`
   (append-only; `document.current_version_id` is explicit; final/record versions are

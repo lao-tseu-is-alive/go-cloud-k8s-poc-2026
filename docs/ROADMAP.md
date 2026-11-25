@@ -608,7 +608,12 @@ categories with their counts. Mockup with the decisions:
   the GLD-024 `blobstore.Store` that passes `blobstoretest.Run` (no proto change).
 - [ ] **GLD-021 — Probative integrity verification**: stream the stored bytes,
   recompute SHA-256, set `content_blob.verified_at` and write an audited
-  verification event under the write scope (v2 §49 "streaming verification").
+  verification event under the write scope (v2 §49 "streaming verification"). Implemented
+  2026-11-25, unreleased (tick it at the release): `VerifyDocumentContent`
+  (`POST /api/documents/{id}/verify-content`, write scope and READ, optional `version_id`) streams
+  the bytes, compares digest and size, sets `verified_at` on a match and clears it otherwise, and
+  audits `DOCUMENT_CONTENT_VERIFIED` / `DOCUMENT_CONTENT_VERIFICATION_FAILED` on the document;
+  NOT_HELD (bytes not held by Goéland) writes nothing. The document page has the button.
 - [ ] **GLD-045 — Orphan upload collection**: bytes uploaded but never attached by
   `CreateDocument` / `AddDocumentVersion` stay forever (blob row and file); give
   unattached blobs an age limit and a cautious collector that never removes a

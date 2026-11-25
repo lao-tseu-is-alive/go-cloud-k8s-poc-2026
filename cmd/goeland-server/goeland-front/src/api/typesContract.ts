@@ -62,6 +62,8 @@ export type TypesContract = [
   Ok<Conforms<T.DocumentType, documentPb.DocumentTypeJson>>,
   Ok<Conforms<T.ContentBlob, documentPb.ContentBlobJson>>,
   Ok<Conforms<T.DocumentVersion, documentPb.DocumentVersionJson>>,
+  Ok<SameEnum<T.ContentVerificationOutcome, documentPb.ContentVerificationOutcomeJson>>,
+  Ok<Conforms<T.VerifyDocumentContentResponse, documentPb.VerifyDocumentContentResponseJson>>,
   Ok<SameEnum<T.ActorKind, actorPb.ActorKindJson>>,
   Ok<SameEnum<T.ContactType, actorPb.ContactTypeJson>>,
   Ok<Conforms<T.OrganizationCategory, actorPb.OrganizationCategoryJson>>,

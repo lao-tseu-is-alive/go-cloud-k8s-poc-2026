@@ -2,6 +2,7 @@ package document
 
 import (
 	"context"
+	"time"
 
 	"github.com/google/uuid"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -16,6 +17,8 @@ type Repository interface {
 	AddVersion(ctx context.Context, documentID uuid.UUID, in VersionInput) (*Document, *Version, *core.AuditEvent, error)
 	ListVersions(ctx context.Context, documentID uuid.UUID) ([]*Version, error)
 	Content(ctx context.Context, operatorID string, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error)
+	VersionContent(ctx context.Context, documentID uuid.UUID, versionID *uuid.UUID) (*Version, error)
+	RecordContentVerification(ctx context.Context, documentID uuid.UUID, res ContentVerification, operatorID string) (*time.Time, *core.AuditEvent, error)
 	RegisterBlob(ctx context.Context, blob ContentBlob) (*ContentBlob, bool, error)
 	FindBlobBySHA256(ctx context.Context, sha256 string) (*ContentBlob, error)
 	UpdateMetadata(ctx context.Context, id uuid.UUID, in UpdateInput) (*Document, *core.AuditEvent, error)
