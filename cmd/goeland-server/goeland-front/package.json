@@ -21,10 +21,10 @@
     "ol": "10.11.0",
     "pinia": "^4.0.3",
     "proj4": "2.23.0",
-    "vue": "^3.5.45",
-    "vue-i18n": "^11.4.20",
+    "vue": "^3.5.46",
+    "vue-i18n": "^11.4.23",
     "vue-router": "^5.5.1",
-    "vuetify": "^4.3.3"
+    "vuetify": "^4.3.4"
   },
   "devDependencies": {
     "@bufbuild/protobuf": "2.17.0",
@@ -37,13 +37,13 @@
     "eslint-config-vuetify": "^4.3.4",
     "eslint-plugin-sonarjs": "^4.2.2",
     "eslint-plugin-vuejs-accessibility": "^2.6.3",
-    "npm-run-all2": "^9.0.4",
+    "npm-run-all2": "^9.1.0",
     "sass-embedded": "^1.108.2",
     "typescript": "~5.9.3",
     "unplugin-fonts": "^2.1.0",
     "vite": "^8.3.8",
     "vite-plugin-vuetify": "^2.1.3",
-    "vitest": "^5.1.0",
+    "vitest": "^5.1.1",
     "vue-tsc": "^3.3.14"
   },
   "overrides": {
