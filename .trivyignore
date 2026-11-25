@@ -5,3 +5,10 @@
 
 # Every entry carries an exp: date so it lapses and must be re-reviewed instead
 # of silently hiding a future advisory.
+
+# GO-2026-5932 — golang.org/x/crypto/openpgp is unmaintained and unsafe by design.
+# x/crypto v0.58.0 comes with minio-go (S3 store, GLD-020), which links only
+# golang.org/x/crypto/argon2 and blake2b (`go list -deps ./cmd/goeland-server`);
+# openpgp is not in the binary and govulncheck finds no call. The only fix is an
+# untagged commit: re-check when x/crypto tags a release (2026-11-25).
+GO-2026-5932 exp:2027-02-25

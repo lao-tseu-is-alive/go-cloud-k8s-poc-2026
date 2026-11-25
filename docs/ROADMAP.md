@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.22.1**.
+Tracked version: **v0.23.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -50,7 +50,8 @@ traces (GLD-010) — in v0.19.0; retention, legal holds and the transfer to the 
 in v0.20.0; the elimination of cases, off by default and simulated until enabled (GLD-077), in
 v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1; the migrations separated from
 the runtime role (GLD-046) in v0.22.0; Go 1.27.4, pgx 5.12.0 and the SPA updates (security patch)
-in v0.22.1.
+in v0.22.1; the orphan upload collection (GLD-045), the probative content verification (GLD-021) and
+the S3 storage on Garage (GLD-020) in v0.23.0.
 
 ## Cross-cutting quality
 
@@ -604,26 +605,25 @@ categories with their counts. Mockup with the decisions:
 
 ## Infrastructure
 
-- [ ] **GLD-020 — S3 storage**: an S3-compatible implementation of the GLD-024
+- [x] **GLD-020 — S3 storage**: an S3-compatible implementation of the GLD-024
   `blobstore.Store` that passes `blobstoretest.Run` (no proto change). Targets Garage (the city's
-  own S3 is not available to the project), on the S3 subset it supports. Implemented 2026-11-25,
-  unreleased (tick it at the release): `pkg/blobstore/s3store` behind `GOELAND_BLOB_STORE=s3`,
+  own S3 is not available to the project), on the S3 subset it supports. Released in v0.23.0: `pkg/blobstore/s3store` behind `GOELAND_BLOB_STORE=s3`,
   `blobstore.Chain` keeping the earlier local files readable, a disposable Garage in CI
   (`scripts/garage_test_server.sh`) running the conformance suite and the end-to-end scenario on
   S3. Not done: copying the local files into the bucket (they stay served from
   `GOELAND_DOCUMENT_PATH`).
-- [ ] **GLD-021 — Probative integrity verification**: stream the stored bytes,
+- [x] **GLD-021 — Probative integrity verification**: stream the stored bytes,
   recompute SHA-256, set `content_blob.verified_at` and write an audited
-  verification event under the write scope (v2 §49 "streaming verification"). Implemented
-  2026-11-25, unreleased (tick it at the release): `VerifyDocumentContent`
+  verification event under the write scope (v2 §49 "streaming verification"). Released in
+  v0.23.0: `VerifyDocumentContent`
   (`POST /api/documents/{id}/verify-content`, write scope and READ, optional `version_id`) streams
   the bytes, compares digest and size, sets `verified_at` on a match and clears it otherwise, and
   audits `DOCUMENT_CONTENT_VERIFIED` / `DOCUMENT_CONTENT_VERIFICATION_FAILED` on the document;
   NOT_HELD (bytes not held by Goéland) writes nothing. The document page has the button.
-- [ ] **GLD-045 — Orphan upload collection**: bytes uploaded but never attached by
+- [x] **GLD-045 — Orphan upload collection**: bytes uploaded but never attached by
   `CreateDocument` / `AddDocumentVersion` stay forever (blob row and file); give
   unattached blobs an age limit and a cautious collector that never removes a
-  referenced blob (review 2026-09-30). Implemented 2026-11-25, unreleased (tick it at the release):
+  referenced blob (review 2026-09-30). Released in v0.23.0:
   `document.OrphanCollector`, run by every replica, destroys the bytes of a blob no version references after
   `GOELAND_ORPHAN_UPLOAD_TTL_HOURS` (default 24) since its last upload (`content_blob.uploaded_at`,
   migration `0039`) and marks it `disposed_at`; a blob being attached is locked `FOR SHARE`, a

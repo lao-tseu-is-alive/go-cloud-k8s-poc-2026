@@ -8,6 +8,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.23.0] - 2026-11-25
+
+Storage and integrity: orphan upload collection (GLD-045), probative content verification
+(GLD-021) and S3 storage tested on Garage (GLD-020). Migrations `0038` and `0039`; a new RPC,
+`VerifyDocumentContent`. Upgrading needs no action: `file` stays the default backend.
+
 ### Added
 
 - The legacy import logs its progress on stderr as `slog` records: each stage and set-based step
@@ -50,7 +56,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   `docs/PRODUCTION_READINESS.md` that explains it; placeholders replace the sample secrets, no value
   is quoted any more, and the JWT variables no longer read were removed. `make docs-assert` fails
   when the server reads a variable the sample does not list.
-
+- Dependencies: pgx 5.13.0, Bun 1.4.5 for the frontend build stage, vue 3.5.46, vue-i18n 11.4.23,
+  vuetify 4.3.4, vitest 5.1.1 (#20, #21, #22); minio-go 7.4.1 is new (S3 client), with
+  klauspost/compress 1.20.2 (GO-2026-6865, not reachable from Goéland).
 - The user menu shows the Goéland user id (the one grants, roles and `GOELAND_BOOTSTRAP_ADMINS`
   name) on its own line, and the Goéland roles held.
 - Faster legacy import: the 52 secondary indexes of the bulk-loaded tables are dropped during the
@@ -61,6 +69,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 - An upload identical to content Goéland knows only by its digest (an imported document) now keeps
   its bytes for that content instead of discarding them; a repeated upload restarts the orphan
   delay of the content.
+
+### Security
+
+- `.trivyignore` lists GO-2026-5932 until 2027-02-25: the advisory concerns the unmaintained
+  `golang.org/x/crypto/openpgp` package, which the binary does not contain (minio-go brings only
+  `argon2` and `blake2b` of `x/crypto` v0.58.0) and govulncheck finds no call to it; the only fix
+  is an untagged commit.
 
 ## [0.22.1] - 2026-11-23
 
