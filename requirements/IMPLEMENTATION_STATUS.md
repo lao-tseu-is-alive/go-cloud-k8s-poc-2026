@@ -42,7 +42,7 @@ Legend: ✅ done · 🟡 partial · ⬜ not started
 | §6.2 / v2 §15-22 `document_type` + `document` + `document_version` + `content_blob` | ✅ `0003` (+ `0005`, `0008`, `0009`) | ✅ `DocumentService.*` (12 RPCs) | ✅ | modern-GED slice; accent-insensitive FTS; finalize+lock; integrity |
 | §14 seed: subject kinds, relationship types (10 + 4 case roles/links in `0010`), document types (7) | ✅ `0004`, `0010` | — | ✅ | |
 | §13 delivery surface: REST/JSON + **embedded web UI** | — | ✅ Vanguard REST `/api/*` + Vue 3 / Vuetify 4 SPA at `/` | ✅ | every domain as a full slice in the browser (documents, actors, cases with timeline, tasks and circulations, things with geometry preview, org units, my tasks, reference data administration); core panels read-only |
-| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /api/documents/{id}/content` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store today, MinIO later (§19) |
+| §6.2 document binary upload (metadata-first) | — | ✅ out-of-proto `POST /api/documents/upload` + `GET /api/documents/{id}/content` (`pkg/blobstore/filestore`) | ✅ | proto stays `storage_ref`-only; local blob store or an S3-compatible bucket (`pkg/blobstore/s3store`, Garage, GLD-020) |
 | §6.1 / v2 §24 `case_type` + `case_file` | ✅ `0010` | ✅ `CaseService.*` (7 RPCs) | ✅ | GLD-011: status lifecycle OPEN/IN_PROGRESS/SUSPENDED/CLOSED with reasons, closed case frozen, reference allocated in the type namespace, accent-insensitive search (also by exact reference) |
 | §8 / v2 §26-27 `case_timeline_entry` + `timeline_document_link` | ✅ `0017` | ✅ `TimelineService.*` (9 RPCs) | ✅ | GLD-012: DRAFT → VALIDATED / LOCKED / WITHDRAWN, immutable once out of draft (DB trigger too), corrections as new entries, documents cited by logical id with the version pinned on validation, case status changes as SYSTEM entries, audited on the CASE subject; SPA "Suivis" panel in the case detail |
 | §9 / v2 §29 `case_circulation` + `case_circulation_recipient` | ✅ `0020` | ✅ `CirculationService.*` (5 RPCs) | ✅ | GLD-013: a composition of tasks (one per recipient, user or unit, origin CIRCULATION, managed by the circulation), ordered steps, answers as locked RESPONSE timeline entries, completion with a SYSTEM summary, cancellation of open tasks, no closure with an open circulation; overdue computed; SPA case panel + answer from "Mes tâches" |
@@ -138,8 +138,9 @@ These are deliberate betterments beyond the spec — keep them:
   through `POST /api/documents/upload` → deduplicated `content_blob` → `contentBlobId` →
   `CreateDocument` / `AddDocumentVersion` (server computes sha256/size/mime;
   `pkg/blobstore/filestore` behind `blobstore.Store`, path-traversal guarded). Preserves proto validation /
-  governance / audit while still supporting real file upload; swap the local blob store
-  for MinIO later without touching the contract.
+  governance / audit while still supporting real file upload; the S3 backend
+  (`GOELAND_BLOB_STORE=s3`, GLD-020, tested on Garage) replaced the local store without touching
+  the contract, and a `blobstore.Chain` keeps the earlier local bytes readable.
 
 - 🚀 **Timeline beyond v2 §26-27 (GLD-012)**: a business date `occurred_at` distinct from
   the recording time (the timeline is ordered on it — a call from yesterday is recorded

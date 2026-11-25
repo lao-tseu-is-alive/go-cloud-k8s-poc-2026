@@ -10,6 +10,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"strings"
 	"time"
 )
 
@@ -71,4 +72,44 @@ type ObjectInfo struct {
 	Size int64
 	// ModTime is when the bytes were written; zero when unknown.
 	ModTime time.Time
+}
+
+// maxExtLength bounds the extension SafeExt keeps, dot included.
+const maxExtLength = 16
+
+// SafeExt returns the lower-cased extension of a client filename when it is a
+// short run of ASCII letters and digits, otherwise "". Stores use it to keep a
+// recognizable extension in a reference the filename never otherwise shapes.
+func SafeExt(filename string) string {
+	base := filename[strings.LastIndexAny(filename, `/\`)+1:]
+	dot := strings.LastIndexByte(base, '.')
+	if dot < 0 || len(base)-dot > maxExtLength || dot == len(base)-1 {
+		return ""
+	}
+	ext := strings.ToLower(base[dot:])
+	for _, c := range ext[1:] {
+		if (c < 'a' || c > 'z') && (c < '0' || c > '9') {
+			return ""
+		}
+	}
+	return ext
+}
+
+// ContextReader wraps r so that a copy stops as soon as ctx is cancelled.
+func ContextReader(ctx context.Context, r io.Reader) io.Reader {
+	return contextReader{ctx: ctx, r: r}
+}
+
+// contextReader is the reader ContextReader returns.
+type contextReader struct {
+	ctx context.Context
+	r   io.Reader
+}
+
+// Read reads from the wrapped reader unless the context is done.
+func (c contextReader) Read(p []byte) (int, error) {
+	if err := c.ctx.Err(); err != nil {
+		return 0, err
+	}
+	return c.r.Read(p)
 }

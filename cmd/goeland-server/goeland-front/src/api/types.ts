@@ -86,7 +86,7 @@ export interface DocumentType {
 export interface ContentBlob {
   id: string
   sha256?: string
-  /** internal://… ref; empty when only the digest is known (bytes held elsewhere). */
+  /** internal://… or s3://… ref; empty when only the digest is known (bytes held elsewhere). */
   storageRef?: string
   mimeType?: string
   fileSizeBytes?: string // int64 as string

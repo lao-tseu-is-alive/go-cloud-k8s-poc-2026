@@ -19,6 +19,8 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/s3store"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/s3store/s3storetest"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/coretest"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
 )
@@ -56,12 +58,12 @@ func newE2E(t *testing.T) *e2e {
 	t.Helper()
 	dsn := runtimeDatabaseURL(t, coretest.TestDatabaseURL(t, "end-to-end tests"))
 	var adminApp *application
+	storeCfg := e2eBlobStore(t)
 	start := func(token string, userID int64, name string, admin bool) *httptest.Server {
-		cfg := serverConfig{
-			DatabaseURL: dsn, DBMigrate: migrateVerify, AuthMode: "dev", DevToken: token, DevUserID: userID, DevUserEmail: name + "@e2e.test",
-			DevDisplayName: name, DevUserAdmin: admin, MaxConnections: 4, RequestTimeout: 10 * time.Second,
-			DocumentPath: t.TempDir(), MaxUploadBytes: 1 << 20, ShutdownPeriod: time.Second,
-		}
+		cfg := storeCfg
+		cfg.DatabaseURL, cfg.DBMigrate, cfg.AuthMode, cfg.DevToken, cfg.DevUserID = dsn, migrateVerify, "dev", token, userID
+		cfg.DevUserEmail, cfg.DevDisplayName, cfg.DevUserAdmin = name+"@e2e.test", name, admin
+		cfg.MaxConnections, cfg.RequestTimeout, cfg.MaxUploadBytes, cfg.ShutdownPeriod = 4, 10*time.Second, 1<<20, time.Second
 		app, err := newApplication(context.Background(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 		if err != nil {
 			t.Fatalf("start server: %v", err)
@@ -85,6 +87,22 @@ func newE2E(t *testing.T) *e2e {
 	}
 	e.operators = []string{strconv.FormatInt(base, 10), strconv.FormatInt(base+1, 10)}
 	return e
+}
+
+// e2eBlobStore is the blob store both servers share: a fresh prefix of the
+// test S3 bucket when one is configured (GLD-020, as in CI), else a temporary
+// directory.
+func e2eBlobStore(t *testing.T) serverConfig {
+	t.Helper()
+	cfg := serverConfig{BlobStore: blobStoreFile, DocumentPath: t.TempDir()}
+	if env, ok := s3storetest.FromEnv(); ok {
+		cfg.BlobStore = blobStoreS3
+		cfg.S3 = s3store.Config{
+			Endpoint: env.Endpoint, Region: env.Region, Bucket: env.Bucket, Prefix: "goeland-e2e/" + uuid.NewString(),
+			AccessKeyID: env.AccessKeyID, SecretAccessKey: env.SecretAccessKey,
+		}
+	}
+	return cfg
 }
 
 // runtimeDatabaseURL migrates the test database as its owner, as

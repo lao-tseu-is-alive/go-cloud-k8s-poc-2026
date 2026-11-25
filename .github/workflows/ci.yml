@@ -40,6 +40,9 @@ jobs:
     env:
       GOELAND_TEST_DATABASE_URL: postgres://postgres@localhost:5432/goeland_ci?sslmode=disable
       GOELAND_REQUIRE_DB_TESTS: "true"
+      # The S3 blob store tests and the end-to-end scenario run against the
+      # disposable Garage started below (GLD-020); a missing one is a failure.
+      GOELAND_REQUIRE_S3_TESTS: "true"
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
@@ -66,6 +69,14 @@ jobs:
           version: 1.70.0
           checksum: e2bbcdd324da09c16a15963dc2dae0525c955c05dc118223cf732f4f7509c5e6
           setup_only: true
+
+      - name: Start a disposable Garage (S3 blob store)
+        # Single-node Garage pinned by digest in the script; its key is generated
+        # for this container only, masked in the logs.
+        run: |
+          scripts/garage_test_server.sh start "${RUNNER_TEMP}/garage-test.env"
+          echo "::add-mask::$(sed -n 's/^GOELAND_TEST_S3_SECRET_ACCESS_KEY=//p' "${RUNNER_TEMP}/garage-test.env")"
+          cat "${RUNNER_TEMP}/garage-test.env" >> "${GITHUB_ENV}"
 
       # release-check = check (frontend, format, lint, race tests including the
       # database ones, docs-check) + version/changelog/scripts consistency + binary build.

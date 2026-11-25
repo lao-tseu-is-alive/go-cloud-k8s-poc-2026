@@ -20,7 +20,13 @@ export function documentIcon (mimeType?: string): string {
   return MIME_ICONS.find(([test]) => test(mime))?.[1] ?? 'mdi-file-outline'
 }
 
-/** Whether the content is stored by Goéland, so the SPA can download it. */
+/**
+ * Reference schemes of the blob stores Goéland writes to: the local files and
+ * the S3 bucket (GLD-020, pkg/blobstore). Keep in step with the server stores.
+ */
+const HELD_SCHEMES = ['internal://', 's3://']
+
+/** Whether the content is stored by Goéland, so the SPA can download and verify it. */
 export function downloadable (storageRef?: string): boolean {
-  return !!storageRef?.startsWith('internal://')
+  return !!storageRef && HELD_SCHEMES.some(scheme => storageRef.startsWith(scheme))
 }

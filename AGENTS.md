@@ -173,7 +173,6 @@ whenever a task starts, completes, changes scope or order.
 
 ### Not yet built (same foundation)
 
-Storage (MinIO),
 search (Meilisearch), AI proposals, workflow; the outbox (GLD-028) exists but has no business
 consumer yet. The Actor
 domain continues too (the full production role vocabulary mapped onto
@@ -214,8 +213,9 @@ pkg/core/                    transversal domain
   │   └── db/migrations/     0001..0039 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
-pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral
+pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral; Chain
   ├── filestore/             local-filesystem implementation (internal:// refs)
+  ├── s3store/               S3-compatible implementation, tested on Garage (s3:// refs, GLD-020)
   └── blobstoretest/         conformance suite every implementation must pass
 pkg/actor/                   actor domain: persons & organizations (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
@@ -287,6 +287,13 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   changes an API, and add each new RPC to one of them. CI runs all of them against a PostGIS
   service with `GOELAND_REQUIRE_DB_TESTS=true`, which turns a missing database into a failure
   (`coretest.TestDatabaseURL`); use that helper in any new database test.
+- **S3 blob store tests** (`pkg/blobstore/s3store`, GLD-020) are gated on `GOELAND_TEST_S3_*`
+  (`s3storetest.Require`): start a disposable Garage with
+  `scripts/garage_test_server.sh start <env-file>` (docker or podman, image pinned by digest, key
+  generated for the container and written to the file, never printed), load the file, run, then
+  `stop`. Never point them at the developer's own Garage or a shared bucket. With those variables
+  set, the scenario and API surface servers use the `s3` backend; CI sets
+  `GOELAND_REQUIRE_S3_TESTS=true`.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,
@@ -567,6 +574,10 @@ at `/` with an SPA fallback to `index.html` (client-side routing). `dist/` is a
   `VerifyDocumentContent` (GLD-021, `pkg/document/verification.go`) rereads a version's bytes
   through the `blobstore.Store`, sets or clears `content_blob.verified_at` and audits the outcome on
   the document; a new store implementation must stream `Get` so this never loads a file in memory.
+  `GOELAND_BLOB_STORE` picks the backend (`file` default, `s3`: `pkg/blobstore/s3store`, GLD-020,
+  built in `cmd/goeland-server/blobstore.go`); the `s3` backend sits in a `blobstore.Chain` in front
+  of the filestore, so `internal://` bytes stored before the move stay readable. A store owns its
+  reference scheme and answers `ErrInvalidRef` for any other: the chain routes on it.
   `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049).
 - **Document model (spec v2):** `document` (logical object) → `document_version`
   (append-only; `document.current_version_id` is explicit; final/record versions are

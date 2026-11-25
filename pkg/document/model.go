@@ -51,7 +51,7 @@ type ContentBlob struct {
 	ID uuid.UUID `db:"id"`
 	// SHA256 is the lower-case hex digest computed by the server while storing.
 	SHA256 string `db:"sha256"`
-	// StorageRef is the URI of the bytes (internal://...); empty when Goéland
+	// StorageRef is the URI of the bytes (internal://... or s3://...); empty when Goéland
 	// knows the content only by digest (bytes held by an external system).
 	StorageRef string `db:"storage_ref"`
 	// MimeType is the media type of the bytes; empty when unknown.

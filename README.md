@@ -166,8 +166,8 @@ pkg/core/                transversal domain: model, sql, storage, service, mappe
       └── db/migrations/  0001..0039 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
-pkg/blobstore/           content-bytes contract (Put/Get/Delete); filestore/ = local implementation,
-                         blobstoretest/ = conformance suite for any implementation (S3 later)
+pkg/blobstore/           content-bytes contract (Put/Get/Delete) + Chain; filestore/ = local implementation,
+                         s3store/ = S3-compatible (Garage), blobstoretest/ = conformance suite
 pkg/actor/               actor domain: persons & organizations (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/casefile/            case (affaire) domain: case types, status lifecycle, search
@@ -332,8 +332,9 @@ All add read-only governance and audit panels. Bilingual (fr-CH default, en).
   (identical content returns the existing blob, `reused: true`, and the new bytes are
   discarded); the UI passes the returned `contentBlobId` to `CreateDocument` or
   `AddDocumentVersion`. `GET /api/documents/{id}/content[?versionId=]` (`goeland:read` + READ on the document) streams a version's bytes back (GLD-049). Blobs live under `GOELAND_DOCUMENT_PATH` (default
-  `./go_documents`, gitignored); a single upload is capped by `GOELAND_MAX_UPLOAD_BYTES`
-  (default 100 MiB).
+  `./go_documents`, gitignored), or in an S3-compatible bucket with `GOELAND_BLOB_STORE=s3`
+  (GLD-020, tested on Garage; settings in [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.md) §3);
+  a single upload is capped by `GOELAND_MAX_UPLOAD_BYTES` (default 100 MiB).
 
 Dev workflow: run the Vite dev server with `cd cmd/goeland-server/goeland-front &&
 bun run dev` (HMR) while the Go server runs separately, or `make run` to rebuild the
@@ -555,6 +556,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
 | `import_rebuild.sh <goeland_import…> [--dry-run]` | Recreate a local import database and load it from the legacy replica (`docs/IMPORT_MAPPING.md`) |
+| `garage_test_server.sh start <env-file> \| stop` | Disposable single-node Garage (docker or podman) for the S3 blob store tests; writes the generated test settings to the file |
 | `check_build_inputs.sh`          | Images pinned by digest, third-party actions by SHA, Go builder >= `go.mod` (`make build-inputs-check`) |
 | `sbom.sh [dir]`                  | CycloneDX SBOM + license inventory with Trivy (`make sbom`; attached to each GitHub release)          |
 | `check_documentation_claims.sh`  | Executable doc claims: stable defaults/security facts must agree across sources (`make docs-assert`) |
@@ -578,6 +580,6 @@ POC limitations) see [`docs/PRODUCTION_READINESS.md`](docs/PRODUCTION_READINESS.
 
 ### Not built yet
 
-MinIO storage, Meilisearch, the outbox consumers (search indexer, notifications), AI
+Meilisearch, the outbox consumers (search indexer, notifications), AI
 proposals and workflow integration — all designed to sit on top of the same
 subject/relationship/audit foundation. The order lives in [`docs/ROADMAP.md`](docs/ROADMAP.md).

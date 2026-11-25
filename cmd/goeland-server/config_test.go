@@ -2,6 +2,7 @@ package main
 
 import (
 	"log/slog"
+	"maps"
 	"slices"
 	"strings"
 	"testing"
@@ -13,10 +14,12 @@ import (
 // exported .env never leaks into these tests.
 var configEnv = []string{
 	"AUTH_SERVER_URL", "DATABASE_URL", "GOELAND_BOOTSTRAP_ADMINS", "DB_HOST", "DB_NAME", "DB_PASSWORD", "DB_PORT", "DB_SSL_MODE", "DB_USER",
-	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_DB_APP_ROLE", "GOELAND_DB_MIGRATE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
+	"GOELAND_ALLOW_INSECURE_AUTH_URL", "GOELAND_AUTH_MODE", "GOELAND_BLOB_STORE", "GOELAND_DB_APP_ROLE", "GOELAND_DB_MIGRATE", "GOELAND_DB_CONNECT_TIMEOUT_SECONDS",
 	"GOELAND_DB_MAX_CONNECTIONS", "GOELAND_DEV_TOKEN", "GOELAND_DEV_USER_ADMIN", "GOELAND_DEV_USER_EMAIL",
 	"GOELAND_DEV_USER_ID", "GOELAND_DEV_USER_NAME", "GOELAND_DISPOSAL_ENABLED", "GOELAND_DOCUMENT_PATH", "GOELAND_LISTEN_ADDRESS", "GOELAND_METRICS_ADDRESS",
 	"GOELAND_MAX_UPLOAD_BYTES", "GOELAND_ORPHAN_SCAN_MINUTES", "GOELAND_ORPHAN_UPLOAD_TTL_HOURS", "GOELAND_REQUEST_TIMEOUT_SECONDS", "GOELAND_SHUTDOWN_TIMEOUT_SECONDS", "JWT_ISSUER_ID", "JWT_SECRET", "LOG_LEVEL",
+	"GOELAND_S3_ENDPOINT", "GOELAND_S3_REGION", "GOELAND_S3_BUCKET", "GOELAND_S3_PREFIX", "GOELAND_S3_ACCESS_KEY_ID",
+	"GOELAND_S3_SECRET_ACCESS_KEY", "GOELAND_S3_ALLOW_PLAIN_HTTP",
 }
 
 // setConfigEnv blanks the configuration environment, then sets values; a
@@ -47,7 +50,7 @@ func TestLoadConfigDefaults(t *testing.T) {
 		cfg.MaxUploadBytes != defaultMaxUploadBytes || cfg.DocumentPath != defaultDocumentPath ||
 		cfg.LogLevel != slog.LevelInfo || cfg.DevUserID != 1 || cfg.DevUserAdmin || cfg.MetricsAddress != "" || cfg.DisposalEnabled ||
 		cfg.JWT.Issuer != "<jwt-issuer-placeholder>" || cfg.JWT.Secret == "" || cfg.DBMigrate != "auto" ||
-		cfg.OrphanUploadTTL != 24*time.Hour || cfg.OrphanScanInterval != time.Hour {
+		cfg.OrphanUploadTTL != 24*time.Hour || cfg.OrphanScanInterval != time.Hour || cfg.BlobStore != blobStoreFile {
 		t.Fatalf("unexpected defaults: %+v", cfg)
 	}
 	if !strings.HasPrefix(cfg.DatabaseURL, "postgres://goeland_poc_db:") || !strings.Contains(cfg.DatabaseURL, "@127.0.0.1:5432/goeland_poc_db?sslmode=prefer") {
@@ -114,6 +117,11 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"jwt without secret", map[string]string{"JWT_SECRET": ""}, "JWT_SECRET is required in jwt mode"},
 		{"jwt issuer too short", map[string]string{"JWT_ISSUER_ID": "short"}, "JWT_ISSUER_ID is required in jwt mode (at least 16 characters)"},
 		{"unknown migrate mode", map[string]string{"GOELAND_DB_MIGRATE": "never"}, "GOELAND_DB_MIGRATE must be auto or verify"},
+		{"unknown blob store", map[string]string{"GOELAND_BLOB_STORE": "minio"}, "GOELAND_BLOB_STORE must be file or s3"},
+		{"s3 without bucket", s3Env(map[string]string{"GOELAND_S3_BUCKET": ""}), "GOELAND_S3_BUCKET is required when GOELAND_BLOB_STORE=s3"},
+		{"s3 without secret", s3Env(map[string]string{"GOELAND_S3_SECRET_ACCESS_KEY": ""}), "GOELAND_S3_SECRET_ACCESS_KEY is required"},
+		{"s3 endpoint scheme", s3Env(map[string]string{"GOELAND_S3_ENDPOINT": "garage.example.ch:3900"}), "GOELAND_S3_ENDPOINT must be an http(s) URL"},
+		{"s3 plain http", s3Env(map[string]string{"GOELAND_S3_ENDPOINT": "http://garage.example.ch:3900"}), "must use https outside loopback"},
 		{"too many bootstrap admins", map[string]string{"GOELAND_BOOTSTRAP_ADMINS": strings.Repeat("1,", maxBootstrapAdmins+1)}, "more than 20 user ids"},
 	}
 	for _, c := range cases {
@@ -173,5 +181,35 @@ func TestLoadMigrateConfig(t *testing.T) {
 	setConfigEnv(t, map[string]string{"GOELAND_DB_APP_ROLE": "App-Role"})
 	if _, err := loadMigrateConfig(); err == nil || !strings.Contains(err.Error(), "GOELAND_DB_APP_ROLE") {
 		t.Fatalf("an invalid role name is refused, got %v", err)
+	}
+}
+
+// s3Env is a valid s3 backend configuration with overrides.
+func s3Env(overrides map[string]string) map[string]string {
+	values := map[string]string{
+		"GOELAND_BLOB_STORE": "S3", "GOELAND_S3_ENDPOINT": "https://s3.example.ch", "GOELAND_S3_REGION": "garage",
+		"GOELAND_S3_BUCKET": "goeland", "GOELAND_S3_ACCESS_KEY_ID": "<access-key-id>", "GOELAND_S3_SECRET_ACCESS_KEY": "<secret-access-key>",
+	}
+	maps.Copy(values, overrides)
+	return values
+}
+
+func TestLoadConfigS3Backend(t *testing.T) {
+	for name, values := range map[string]map[string]string{
+		"https":                    s3Env(map[string]string{"GOELAND_S3_PREFIX": "poc/documents"}),
+		"loopback http":            s3Env(map[string]string{"GOELAND_S3_ENDPOINT": "http://127.0.0.1:3900"}),
+		"plain http when accepted": s3Env(map[string]string{"GOELAND_S3_ENDPOINT": "http://garage.svc:3900", "GOELAND_S3_ALLOW_PLAIN_HTTP": "true"}),
+	} {
+		t.Run(name, func(t *testing.T) {
+			setConfigEnv(t, values)
+			cfg, err := loadConfig()
+			if err != nil {
+				t.Fatalf("valid s3 settings: %v", err)
+			}
+			if cfg.BlobStore != blobStoreS3 || cfg.S3.Endpoint != values["GOELAND_S3_ENDPOINT"] || cfg.S3.Bucket != "goeland" ||
+				cfg.S3.Prefix != values["GOELAND_S3_PREFIX"] || cfg.S3.SecretAccessKey != "<secret-access-key>" {
+				t.Fatalf("s3 settings not applied: endpoint %q bucket %q prefix %q", cfg.S3.Endpoint, cfg.S3.Bucket, cfg.S3.Prefix)
+			}
+		})
 	}
 }

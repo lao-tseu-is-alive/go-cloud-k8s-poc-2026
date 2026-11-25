@@ -99,12 +99,26 @@ adds migrations.
 
 ## 3. Blob storage
 
-Uploaded document bytes are written to a **local filesystem** directory and registered as
-a `content_blob` (unique SHA-256, so identical content is stored once) referenced through an
-`internal://…` storage ref:
+Uploaded document bytes are registered as a `content_blob` (unique SHA-256, so identical content
+is stored once) and written to the backend chosen by `GOELAND_BLOB_STORE`:
 
-- `GOELAND_DOCUMENT_PATH` — blob directory (default `./go_documents`).
-- `GOELAND_MAX_UPLOAD_BYTES` — per-upload cap (default 100 MiB).
+- `file` (default): a **local filesystem** directory, `GOELAND_DOCUMENT_PATH` (default
+  `./go_documents`), referenced through `internal://…` storage refs;
+- `s3` (GLD-020): a bucket of an S3-compatible store, referenced through
+  `s3://<bucket>/<key>` storage refs. Tested against **Garage** (v2.3) and limited to the
+  operations every S3-compatible store supports (single and multipart PutObject, ranged
+  GetObject, HeadObject, DeleteObject, HeadBucket). Settings: `GOELAND_S3_ENDPOINT` (URL of the
+  S3 API; https, or http to a loopback host, or anywhere with `GOELAND_S3_ALLOW_PLAIN_HTTP=true`),
+  `GOELAND_S3_REGION` (the region the endpoint signs for, Garage's `s3_region`),
+  `GOELAND_S3_BUCKET` (must exist: startup checks it), `GOELAND_S3_PREFIX` (optional key
+  prefix, for a bucket shared by several deployments), `GOELAND_S3_ACCESS_KEY_ID` and
+  `GOELAND_S3_SECRET_ACCESS_KEY` (secrets: keep them in a Secret, never in the ConfigMap; they
+  are never logged). The key needs read, write and delete on the bucket, nothing more. Content
+  up to 16 MiB is sent in one request, larger content in 16 MiB parts (so one upload holds at
+  most 16 MiB in memory); a failed multipart upload is aborted. The bytes stored before the move
+  in `GOELAND_DOCUMENT_PATH` stay readable and disposable (the server reads an `internal://`
+  reference there), so switching to `s3` needs no immediate copy; new bytes all go to the bucket.
+- `GOELAND_MAX_UPLOAD_BYTES` — per-upload cap (default 100 MiB), whatever the backend.
 
 The case export archives (GLD-029) are written to the same store and removed when they expire
 (`GOELAND_EXPORT_TTL_HOURS`, default 24, 1–720); the worker that builds them runs in every
@@ -129,10 +143,11 @@ lease, so a replica that dies mid-delivery leaves its events to the others). Eac
 extra database connection, outside the pool, to `LISTEN` for new events. Watch the given-up events in
 Administration › Outbox: they stay until replayed.
 
-**This is node-local.** For more than one replica, or on ephemeral containers, this path
-**must** be a shared/persistent volume with a single writer, or the deployment must be
-pinned to one replica. Object storage (MinIO/S3) is the intended replacement and is a
-roadmap item — see [IMPLEMENTATION_STATUS.md](../requirements/IMPLEMENTATION_STATUS.md).
+**The `file` backend is node-local.** For more than one replica, or on ephemeral containers,
+its path **must** be a shared/persistent volume with a single writer, or the deployment must be
+pinned to one replica. The `s3` backend lifts that limit: every replica reads and writes the same
+bucket. Its durability and backups are those of the S3 store (Garage: its replication factor and
+its own backups of the metadata and data directories).
 
 ## 4. Authentication
 
@@ -202,6 +217,14 @@ so a pod started before its database does not crash-loop.
 | `GOELAND_EXPORT_POLL_SECONDS`       | `5`              | How often the export worker looks for queued exports and expired archives (1–3600). |
 | `GOELAND_ORPHAN_UPLOAD_TTL_HOURS`   | `24`             | How long uploaded bytes may wait to be attached to a document before they are destroyed (1–720, §3, GLD-045). |
 | `GOELAND_ORPHAN_SCAN_MINUTES`       | `60`             | How often the orphan upload collector runs (1–1440). |
+| `GOELAND_BLOB_STORE`                | `file`           | Backend of new content bytes: `file` or `s3` (§3, GLD-020). |
+| `GOELAND_S3_ENDPOINT`               | —                | URL of the S3 API, required with `s3` (§3). |
+| `GOELAND_S3_REGION`                 | —                | Signing region, required with `s3` (Garage: its `s3_region`). |
+| `GOELAND_S3_BUCKET`                 | —                | Existing bucket, required with `s3`. |
+| `GOELAND_S3_PREFIX`                 | —                | Optional key prefix inside the bucket. |
+| `GOELAND_S3_ACCESS_KEY_ID`          | —                | Access key, required with `s3`; a secret. |
+| `GOELAND_S3_SECRET_ACCESS_KEY`      | —                | Secret key, required with `s3`; a secret. |
+| `GOELAND_S3_ALLOW_PLAIN_HTTP`       | `false`          | Accept a plain-http `GOELAND_S3_ENDPOINT` outside loopback (§3). |
 | `GOELAND_OUTBOX_RETENTION_DAYS`     | `7`              | How long delivered outbox events are kept before the purge (1–365, GLD-028). |
 | `GOELAND_OUTBOX_POLL_SECONDS`       | `5`              | How often the outbox worker looks for due events besides its notifications (1–3600). |
 | `GOELAND_OUTBOX_LOG`                | `false`          | Log every delivered outbox event (references only), to watch the outbox work. |
@@ -310,8 +333,10 @@ These are the gaps that make this a POC rather than a production service:
 - **Integrity is verified on demand only.** `VerifyDocumentContent` rereads the stored bytes of a
   version and audits the result (GLD-021), but nothing rereads the whole store periodically yet,
   and the imported documents, whose bytes stay in the legacy store, cannot be verified.
-- **Blob storage is node-local** (§3): not safe for multi-replica or ephemeral deployments
-  without a shared/persistent volume (GLD-020).
+- **The default blob storage is node-local** (§3): the `file` backend is not safe for
+  multi-replica or ephemeral deployments without a shared/persistent volume; use the `s3`
+  backend there (GLD-020). The local files written before a move to `s3` are not copied to the
+  bucket: keep `GOELAND_DOCUMENT_PATH` mounted until they are no longer needed.
 - **No production chart.** `deployments/k8s/` holds smoke-test manifests only (disposable
   PostGIS, `dev` auth, one replica), exercised by `scripts/k8s_smoke_test.sh`.
 - **No rate limiting in the server.** Uploads are bounded in size (`GOELAND_MAX_UPLOAD_BYTES`),
@@ -337,3 +362,17 @@ GOELAND_TEST_DATABASE_URL='postgres://postgres@127.0.0.1:5432/goeland_test?sslmo
 
 They are skipped when `GOELAND_TEST_DATABASE_URL` is unset, so the default `go test ./...`
 run needs no database.
+
+Run the S3 blob store tests against a disposable Garage (needs docker or podman; never your own
+Garage or a shared store):
+
+```bash
+scripts/garage_test_server.sh start /tmp/garage-test.env   # generated key, file mode 600
+set -a; . /tmp/garage-test.env; set +a
+go test ./pkg/blobstore/... ./cmd/goeland-server -run 'TestConformance|TestMultipart|TestFailedPut|TestScenarioV2|TestAPISurface'
+scripts/garage_test_server.sh stop
+```
+
+With `GOELAND_TEST_S3_*` set, the end-to-end scenario and the API surface test also run their
+servers on the `s3` backend (a fresh prefix of the test bucket). CI starts that Garage and sets
+`GOELAND_REQUIRE_S3_TESTS=true`.

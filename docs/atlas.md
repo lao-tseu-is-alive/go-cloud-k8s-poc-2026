@@ -53,6 +53,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
 - `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/`, `api/openapi/` or the SPA contract types differ (`make generated-check`, GLD-008, GLD-072).
+- `scripts/garage_test_server.sh` — Starts or stops a disposable single-node Garage (docker or podman, pinned by digest) for the S3 tests, writing its generated settings to an env file.
 - `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
 - `scripts/createLocalDBAndUser.sh` — Creates a local role and database, enables the required extensions as admin, writes `.env`.
@@ -123,6 +124,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/doccheck/main.go` — Documentation checker: GoDoc coverage and exact atlas inventory, parameterized by flags.
 - `cmd/doccheck/main_test.go` — Accepted and rejected cases for the atlas, version-source and GoDoc checks.
 - `cmd/goeland-server/api_surface_test.go` — Calls over REST every RPC the §50 scenario does not reach (reads, searches, updates, deletions, catalogues, not-found mapping); env-gated on `GOELAND_TEST_DATABASE_URL`.
+- `cmd/goeland-server/blobstore.go` — `GOELAND_BLOB_STORE` and `GOELAND_S3_*` settings (https outside loopback) and the blob store build: the filestore, or S3 chained in front of it (GLD-020).
 - `cmd/goeland-server/config.go` — Server environment configuration: defaults, parsing and validation (HTTPS auth server outside loopback).
 - `cmd/goeland-server/config_test.go` — Tests the configuration defaults, valid settings, every rejection and the auth server HTTP rules.
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
@@ -147,10 +149,15 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 ## Shared Go packages
 
-- `pkg/blobstore/blobstore.go` — Domain-neutral content-bytes contract (`Store`: Put/Get/Delete) with its sentinel errors (spec v2 §23).
+- `pkg/blobstore/blobstore.go` — Domain-neutral content-bytes contract (`Store`: Put/Get/Delete) with its sentinel errors (spec v2 §23), and the `SafeExt` / `ContextReader` helpers the stores share.
+- `pkg/blobstore/blobstore_test.go` — Conformance of the chain, routing of a previous store's references, `SafeExt` cases.
+- `pkg/blobstore/chain.go` — `Chain`: writes to the primary store, reads and deletes a reference through the store that owns it (a move to S3 keeps the local bytes readable, GLD-020).
 - `pkg/blobstore/blobstoretest/blobstoretest.go` — Conformance suite of the `blobstore.Store` contract, run by every implementation.
 - `pkg/blobstore/filestore/filestore.go` — Local-filesystem `blobstore.Store` with `internal://` references and path-traversal guards.
 - `pkg/blobstore/filestore/filestore_test.go` — Runs the conformance suite plus extension, unsafe-reference and failed-write tests.
+- `pkg/blobstore/s3store/s3store.go` — S3-compatible `blobstore.Store` (Garage, GLD-020): `s3://<bucket>/<key>` references confined to a bucket and prefix, single or multipart streamed puts with SHA-256, seekable objects.
+- `pkg/blobstore/s3store/s3store_test.go` — Conformance suite, multipart round trip with range reads and failed puts against a test Garage; reference and configuration validation offline.
+- `pkg/blobstore/s3store/s3storetest/s3storetest.go` — `GOELAND_TEST_S3_*` settings of the test store, skipping without them or failing when `GOELAND_REQUIRE_S3_TESTS=true` (CI).
 - `pkg/version/version.go` — Release version constant (source of truth) and build provenance variables injected by ldflags.
 - `pkg/authadapter/composite_verifier.go` — Routes `pat_` tokens to introspection and other bearer tokens to the JWT verifier.
 - `pkg/authadapter/context.go` — Authenticated user model, context storage and scope checks.

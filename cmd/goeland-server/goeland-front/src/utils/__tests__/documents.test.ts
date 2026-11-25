@@ -14,6 +14,8 @@ describe('documents', () => {
 
   it('downloads only the contents Goéland stores', () => {
     expect(downloadable('internal://ab/cd')).toBe(true)
+    expect(downloadable('s3://goeland/documents/ab.pdf')).toBe(true)
+    expect(downloadable('')).toBe(false)
     expect(downloadable('alfresco://x')).toBe(false)
     expect(downloadable()).toBe(false)
   })

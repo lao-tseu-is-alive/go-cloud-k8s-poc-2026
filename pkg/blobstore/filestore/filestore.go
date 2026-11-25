@@ -61,7 +61,7 @@ func (s *Store) Put(ctx context.Context, r io.Reader, meta blobstore.Metadata) (
 	if err := ctx.Err(); err != nil {
 		return blobstore.Stored{}, err
 	}
-	name := uuid.NewString() + safeExt(meta.Filename)
+	name := uuid.NewString() + blobstore.SafeExt(meta.Filename)
 	dst := filepath.Join(s.root, name)
 
 	f, err := os.OpenFile(dst, os.O_WRONLY|os.O_CREATE|os.O_EXCL, 0o640)
@@ -69,7 +69,7 @@ func (s *Store) Put(ctx context.Context, r io.Reader, meta blobstore.Metadata) (
 		return blobstore.Stored{}, fmt.Errorf("filestore: create blob: %w", err)
 	}
 	hasher := sha256.New()
-	size, copyErr := io.Copy(io.MultiWriter(f, hasher), contextReader{ctx: ctx, r: r})
+	size, copyErr := io.Copy(io.MultiWriter(f, hasher), blobstore.ContextReader(ctx, r))
 	closeErr := f.Close()
 	if err := errors.Join(copyErr, closeErr); err != nil {
 		_ = os.Remove(dst)
@@ -135,20 +135,6 @@ type object struct {
 // Info describes the open file.
 func (o *object) Info() blobstore.ObjectInfo { return o.info }
 
-// contextReader stops a copy as soon as ctx is cancelled.
-type contextReader struct {
-	ctx context.Context
-	r   io.Reader
-}
-
-// Read reads from the wrapped reader unless the context is done.
-func (c contextReader) Read(p []byte) (int, error) {
-	if err := c.ctx.Err(); err != nil {
-		return 0, err
-	}
-	return c.r.Read(p)
-}
-
 // resolve maps an internal:// reference to its absolute path, returning
 // blobstore.ErrInvalidRef for any reference not owned by this backend or
 // escaping root.
@@ -169,14 +155,4 @@ func (s *Store) resolve(ref string) (string, error) {
 		return "", blobstore.ErrInvalidRef
 	}
 	return full, nil
-}
-
-// safeExt returns the (lowercased) extension of name if it is short and free
-// of path separators, otherwise the empty string.
-func safeExt(name string) string {
-	ext := filepath.Ext(filepath.Base(name))
-	if len(ext) > 16 || strings.ContainsAny(ext, `/\`) {
-		return ""
-	}
-	return strings.ToLower(ext)
 }

@@ -604,8 +604,14 @@ categories with their counts. Mockup with the decisions:
 
 ## Infrastructure
 
-- [ ] **GLD-020 — Object storage**: an S3-compatible (MinIO) implementation of
-  the GLD-024 `blobstore.Store` that passes `blobstoretest.Run` (no proto change).
+- [ ] **GLD-020 — S3 storage**: an S3-compatible implementation of the GLD-024
+  `blobstore.Store` that passes `blobstoretest.Run` (no proto change). Targets Garage (the city's
+  own S3 is not available to the project), on the S3 subset it supports. Implemented 2026-11-25,
+  unreleased (tick it at the release): `pkg/blobstore/s3store` behind `GOELAND_BLOB_STORE=s3`,
+  `blobstore.Chain` keeping the earlier local files readable, a disposable Garage in CI
+  (`scripts/garage_test_server.sh`) running the conformance suite and the end-to-end scenario on
+  S3. Not done: copying the local files into the bucket (they stay served from
+  `GOELAND_DOCUMENT_PATH`).
 - [ ] **GLD-021 — Probative integrity verification**: stream the stored bytes,
   recompute SHA-256, set `content_blob.verified_at` and write an audited
   verification event under the write scope (v2 §49 "streaming verification"). Implemented

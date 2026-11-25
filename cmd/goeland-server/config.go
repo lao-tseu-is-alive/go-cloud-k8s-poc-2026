@@ -14,6 +14,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/s3store"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 )
@@ -84,8 +85,15 @@ type serverConfig struct {
 	// (GOELAND_DB_CONNECT_TIMEOUT_SECONDS, default 60s; 0 means a single attempt).
 	DBConnectTimeout time.Duration
 	// DocumentPath is the local directory where uploaded document blobs are
-	// stored (referenced by documents via an internal:// storage_ref).
+	// stored (referenced by documents via an internal:// storage_ref). With the
+	// s3 backend it still serves the bytes stored there before.
 	DocumentPath string
+	// BlobStore is the backend of new content bytes: "file" (default) or "s3"
+	// (GOELAND_BLOB_STORE, GLD-020).
+	BlobStore string
+	// S3 locates the bucket of the s3 backend (GOELAND_S3_*); its access keys
+	// are secrets that must never be logged.
+	S3 s3store.Config
 	// MaxUploadBytes caps the size of a single multipart upload.
 	MaxUploadBytes int64
 	// ExportTTL is how long a built case export stays downloadable
@@ -223,6 +231,9 @@ func loadConfig() (serverConfig, error) {
 		return serverConfig{}, err
 	}
 	if err := config.readAuthSecrets(); err != nil {
+		return serverConfig{}, err
+	}
+	if err := config.readBlobStoreSettings(); err != nil {
 		return serverConfig{}, err
 	}
 	return config, nil

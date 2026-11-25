@@ -61,7 +61,7 @@ type uploadResponse struct {
 	// deduplicated and the existing blob returned (accepted existence-oracle
 	// risk, IMPLEMENTATION_STATUS §3g).
 	Reused bool `json:"reused"`
-	// StorageRef is the internal://<name> reference of the stored blob.
+	// StorageRef is the reference of the stored blob (internal://<name> or s3://<bucket>/<key>).
 	StorageRef string `json:"storageRef"`
 	// SHA256 is the server-computed lower-case hex digest of the bytes.
 	SHA256 string `json:"sha256"`

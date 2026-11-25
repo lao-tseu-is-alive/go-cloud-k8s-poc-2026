@@ -30,6 +30,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   held by Goéland, such as an imported document) writes nothing. The document page has a
   « Vérifier le contenu stocké » button showing the outcome; the former check is renamed
   « Comparer l'empreinte ».
+- S3 storage (GLD-020): `GOELAND_BLOB_STORE=s3` writes the content bytes to a bucket of an
+  S3-compatible store (`pkg/blobstore/s3store`, `s3://<bucket>/<key>` references), tested against
+  Garage v2.3 and limited to the operations every S3-compatible store supports. Settings
+  `GOELAND_S3_ENDPOINT` (https, or http to loopback unless `GOELAND_S3_ALLOW_PLAIN_HTTP=true`),
+  `_REGION`, `_BUCKET` (checked at startup), `_PREFIX`, `_ACCESS_KEY_ID`, `_SECRET_ACCESS_KEY`
+  (never logged). Content up to 16 MiB goes in one request, larger content in 16 MiB parts, so an
+  upload holds at most 16 MiB in memory. The files stored before in `GOELAND_DOCUMENT_PATH` stay
+  readable and disposable through a `blobstore.Chain`. `file` stays the default.
+  The document page offers the download and the verification of content stored in S3 too.
+- `scripts/garage_test_server.sh`: a disposable single-node Garage (docker or podman, image
+  pinned by digest) for the S3 tests; CI starts it and requires them (`GOELAND_REQUIRE_S3_TESTS`),
+  and with it the end-to-end scenario and the API surface test run on the `s3` backend.
 
 ### Changed
 

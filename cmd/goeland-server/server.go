@@ -23,7 +23,6 @@ import (
 	actormodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/actor/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore"
-	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/blobstore/filestore"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/caseexport"
 	caseexportmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/caseexport/module"
 	casemodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/casefile/module"
@@ -88,13 +87,12 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 		return nil, err
 	}
 
-	// Local blob store for uploaded document files (referenced by documents via
-	// an internal:// storage_ref). The directory is created if missing.
-	blobStore, err := filestore.New(config.DocumentPath)
+	// Blob store for uploaded document files: the local directory, or an S3
+	// bucket reading the local files stored before (GLD-020).
+	blobStore, err := buildBlobStore(ctx, config, log)
 	if err != nil {
-		return nil, fmt.Errorf("document blob store: %w", err)
+		return nil, err
 	}
-	log.Info("document blob store ready", "path", blobStore.Root(), "max_upload_bytes", config.MaxUploadBytes)
 	logDisposalMode(log, config.DisposalEnabled)
 
 	coreMod, outbox, err := buildCoreModule(ctx, config, pool, verifier, log)
