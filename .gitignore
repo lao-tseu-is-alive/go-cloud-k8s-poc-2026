@@ -50,3 +50,5 @@ reports/
 cmd/goeland-server/goeland-front/dist
 # Local logs of the legacy import (scripts/import_rebuild.sh ... | tee import-*.log)
 /import-*.log
+# Local exports of presentation decks (pdf, pptx)
+/demo/
