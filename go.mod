@@ -9,7 +9,7 @@ require (
 	connectrpc.com/vanguard v0.3.0
 	github.com/cristalhq/jwt/v5 v5.4.0
 	github.com/google/uuid v1.6.0
-	github.com/jackc/pgx/v5 v5.12.0
+	github.com/jackc/pgx/v5 v5.13.0
 	github.com/minio/minio-go/v7 v7.4.1
 	github.com/prometheus/client_golang v1.25.0
 	go.opentelemetry.io/otel v1.47.0
