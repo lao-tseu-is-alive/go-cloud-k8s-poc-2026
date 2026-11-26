@@ -693,7 +693,7 @@ placed on Swiss territory.
 
 ## UI remarks on the demo (2026-11-26)
 
-- [x] **GLD-087 — Document preview**: the document page shows the content of the current (or
+- [~] **GLD-087 — Document preview**: the document page shows the content of the current (or
   chosen) version: images inline, PDFs in the browser's viewer, plain text as text. The bytes come
   through the governed download (READ on the document, `DOWNLOAD` audited as now) fetched with
   the bearer token and shown from an object URL, so the CSP must allow `blob:` for images and
@@ -701,7 +701,7 @@ placed on Swiss territory.
   confidential document (level 2 or more) and a large file are previewed on request, a PDF is
   framed from a blob the SPA types `application/pdf`, a text is shown as text (never markup), and
   an eye button in the versions list previews an older version.
-- [x] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
+- [~] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
   GLD-033): as in the legacy Goéland (`AffaireLogAcces` / `DocumentLogAcces`), every detail read
   and download is logged, allowed or refused, whatever the confidentiality, and so are the changes
   refused in the adapters (`WRITE_DENIED`); a repeated access is recorded once per 15 minutes.
@@ -710,7 +710,7 @@ placed on Swiss territory.
   `0041`, `core.AccessLogWindow`, `Authorizer.Require` records refused changes. Open for
   production: the log's retention and its validation with the data protection officer
   (PRODUCTION_READINESS, Known limitations).
-- [x] **GLD-088 — « Mon tableau de bord » home page**: the first page after signing in lists the
+- [~] **GLD-088 — « Mon tableau de bord » home page**: the first page after signing in lists the
   caller's latest cases, documents and other subjects, most recent first: what they changed (read
   from the audit, `actor_user_id`) and what they consulted. Decided 2026-11-26 with the product
   owner: one tab per kind with its count (a subject once, at its last activity), each the kind's
