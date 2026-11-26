@@ -602,6 +602,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode (the demo user picker in demo mode), retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/CaseTypeDefaultGrantsDialog.vue` — Editor of a case type's default grants (users, groups, units, the creator's units) with a logged reason.
+- `cmd/goeland-server/goeland-front/src/components/admin/UsersAdminPanel.vue` — Administration › Utilisateurs (GLD-091): the internal users with their roles, administrators marked, search and filter.
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/OutboxPanel.vue` — Administration › Outbox: pending, given-up and kept events, consumers, latest failures and replay (GLD-028).
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.

@@ -1,6 +1,7 @@
 <script setup lang="ts">
   import type { AuditEvent, GroupMember, SecurityGroup } from '@/api/types'
   import type { ListSort } from '@/utils/listSort'
+  import { storeToRefs } from 'pinia'
   import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
@@ -14,6 +15,7 @@
   import UserPicker from '@/components/core/UserPicker.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useMyAccess } from '@/composables/useMyAccess'
+  import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
   import { sortRows } from '@/utils/listSort'
@@ -28,7 +30,9 @@
   const ui = useUiStore()
 
   const id = computed(() => String(route.params.id))
-  const { access, reload: reloadAccess, canManage, hasFullControl } = useMyAccess(id)
+  const { access, reload: reloadAccess } = useMyAccess(id)
+  // Groups and their members are managed by administrators only (GLD-090).
+  const { isAdmin } = storeToRefs(useAuthStore())
   const group = ref<SecurityGroup | null>(null)
   const members = ref<GroupMember[]>([])
   // Every member is loaded with the group: sorted here (GLD-056).
@@ -110,10 +114,10 @@
 
     <template v-if="group">
       <div v-if="live" class="d-flex ga-2 mb-4">
-        <v-btn v-if="canManage" prepend-icon="mdi-pencil" variant="tonal" @click="openDialog('edit')">{{ t('groups.actions.edit') }}</v-btn>
+        <v-btn v-if="isAdmin" prepend-icon="mdi-pencil" variant="tonal" @click="openDialog('edit')">{{ t('groups.actions.edit') }}</v-btn>
 
         <v-btn
-          v-if="hasFullControl"
+          v-if="isAdmin"
           color="error"
           prepend-icon="mdi-archive-outline"
           variant="text"
@@ -129,7 +133,7 @@
               <v-spacer />
 
               <v-btn
-                v-if="live && canManage"
+                v-if="live && isAdmin"
                 color="primary"
                 prepend-icon="mdi-account-plus-outline"
                 size="small"
@@ -158,7 +162,7 @@
 
                     <td class="text-right">
                       <v-btn
-                        v-if="live && canManage"
+                        v-if="live && isAdmin"
                         color="error"
                         icon="mdi-account-remove-outline"
                         size="small"

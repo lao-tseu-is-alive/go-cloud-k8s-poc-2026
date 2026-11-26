@@ -1,23 +1,26 @@
 <script setup lang="ts">
   import type { SecurityGroup } from '@/api/types'
   import type { ListSort } from '@/utils/listSort'
+  import { storeToRefs } from 'pinia'
   import { computed, onMounted, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { createGroup, listGroups } from '@/api/accessClient'
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
+  import { useAuthStore } from '@/stores/auth'
   import { useUiStore } from '@/stores/ui'
   import { sortRows } from '@/utils/listSort'
   import { maxLength, required } from '@/utils/validation'
 
   // Security groups (GLD-048): named sets of internal users given grants like
-  // an org unit, for cross-unit audiences. Anyone may create one and fully
-  // controls it; archived groups grant nothing.
+  // an org unit, for cross-unit audiences. Administrators create and manage
+  // them (GLD-090); archived groups grant nothing.
   const { t } = useI18n()
   const router = useRouter()
   const { report } = useApiErrors()
   const ui = useUiStore()
+  const { isAdmin } = storeToRefs(useAuthStore())
 
   const groups = ref<SecurityGroup[]>([])
   // Every group is loaded at once (a few hundred at most): sorted here.
@@ -73,7 +76,14 @@
     <div class="d-flex align-center mb-4">
       <h1 class="text-h4">{{ t('groups.title') }}</h1>
       <v-spacer />
-      <v-btn color="primary" prepend-icon="mdi-plus" variant="flat" @click="creating = true; name = ''; description = ''">{{ t('groups.actions.create') }}</v-btn>
+
+      <v-btn
+        v-if="isAdmin"
+        color="primary"
+        prepend-icon="mdi-plus"
+        variant="flat"
+        @click="creating = true; name = ''; description = ''"
+      >{{ t('groups.actions.create') }}</v-btn>
     </div>
 
     <p class="text-body-2 text-medium-emphasis mb-4">{{ t('groups.intro') }}</p>

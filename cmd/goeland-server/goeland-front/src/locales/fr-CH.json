@@ -92,6 +92,19 @@
       "hiddenLabel": "Libellé masqué : vous n'avez pas accès à ce sujet"
     }
   },
+  "users": {
+    "tab": "Utilisateurs",
+    "hint": "Les utilisateurs internes connus de Goéland (ceux qui se sont connectés au moins une fois) et leurs rôles. Les rôles s'attribuent et se retirent dans l'onglet « Rôles ».",
+    "search": "Rechercher un nom ou un e-mail",
+    "onlyAdmins": "Administrateurs seulement",
+    "count": "{n} utilisateur(s), dont {admins} administrateur(s)",
+    "limited": "Seuls les {n} premiers sont affichés : affinez la recherche.",
+    "name": "Nom",
+    "email": "E-mail",
+    "roles": "Rôles",
+    "firstSeen": "Première connexion",
+    "lastSeen": "Dernière activité"
+  },
   "roles": {
     "tab": "Rôles",
     "empty": "Personne ne détient ce rôle.",

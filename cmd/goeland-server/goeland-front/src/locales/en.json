@@ -92,6 +92,19 @@
       "hiddenLabel": "Label hidden: you have no access to this subject"
     }
   },
+  "users": {
+    "tab": "Users",
+    "hint": "The internal users Goéland knows (those who signed in at least once) and their roles. Roles are granted and revoked in the « Roles » tab.",
+    "search": "Search a name or an e-mail",
+    "onlyAdmins": "Administrators only",
+    "count": "{n} user(s), {admins} administrator(s)",
+    "limited": "Only the first {n} are shown: refine the search.",
+    "name": "Name",
+    "email": "E-mail",
+    "roles": "Roles",
+    "firstSeen": "First sign-in",
+    "lastSeen": "Last activity"
+  },
   "roles": {
     "tab": "Roles",
     "empty": "Nobody holds this role.",

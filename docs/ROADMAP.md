@@ -701,6 +701,18 @@ placed on Swiss territory.
   confidential document (level 2 or more) and a large file are previewed on request, a PDF is
   framed from a blob the SPA types `application/pdf`, a text is shown as text (never markup), and
   an eye button in the versions list previews an older version.
+- [~] **GLD-090 — Org units and security groups administered by administrators only** (bug found
+  by the product owner, 2026-11-26): creating, changing or archiving a security group, and adding
+  or removing a member of a group or an org unit, need `goeland:admin`; GLD-048 had let any user
+  create a group and manage it, and a holder of MANAGE on a unit manage its members. The org unit
+  RPCs already required it. Done 2026-11-26: the group RPCs and the membership changes of
+  `LinkSubjects` / `EndRelationship` / `UnlinkSubjects` require it, the SPA shows those actions to
+  administrators only; the API surface test checks the refusals.
+- [~] **GLD-091 — Users in the administration** (asked by the product owner, 2026-11-26):
+  Administration › Utilisateurs lists the internal users (those who signed in once) with their
+  application roles, administrators marked and filterable, searchable by name or e-mail; roles are
+  still granted in Administration › Rôles. Done 2026-11-26 (SPA only: `SearchUsers` already returns
+  the roles); at most 200 users per search for now, a paged list if the real volume needs it.
 - [~] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
   GLD-033): as in the legacy Goéland (`AffaireLogAcces` / `DocumentLogAcces`), every detail read
   and download is logged, allowed or refused, whatever the confidentiality, and so are the changes

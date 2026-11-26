@@ -184,18 +184,21 @@ type CoreServiceClient interface {
 	// last administrator. Requires goeland:admin.
 	RevokeUserRole(context.Context, *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
-	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
 	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
 	// (an open edge of the same type already links the two subjects).
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
-	// Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_UNLINKED audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
 	// End an open relationship in the business sense by setting its valid_to; the
 	// edge stays listed as history and a new open edge of the same type may then be
 	// created. Distinct from UnlinkSubjects, which removes a mistaken edge.
-	// Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_ENDED audit event.
 	EndRelationship(context.Context, *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error)
 	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.
@@ -604,18 +607,21 @@ type CoreServiceHandler interface {
 	// last administrator. Requires goeland:admin.
 	RevokeUserRole(context.Context, *connect.Request[v1.RevokeUserRoleRequest]) (*connect.Response[v1.RevokeUserRoleResponse], error)
 	// Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
-	// Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_LINKED audit event. Fails with
 	// NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
 	// soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
 	// (an open edge of the same type already links the two subjects).
 	LinkSubjects(context.Context, *connect.Request[v1.LinkSubjectsRequest]) (*connect.Response[v1.LinkSubjectsResponse], error)
 	// Soft-delete an existing relationship (non-destructive) and write an audit event.
-	// Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_UNLINKED audit event.
 	UnlinkSubjects(context.Context, *connect.Request[v1.UnlinkSubjectsRequest]) (*connect.Response[v1.UnlinkSubjectsResponse], error)
 	// End an open relationship in the business sense by setting its valid_to; the
 	// edge stays listed as history and a new open edge of the same type may then be
 	// created. Distinct from UnlinkSubjects, which removes a mistaken edge.
-	// Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+	// Requires goeland:write (goeland:admin for a membership of an org unit or a
+	// group, GLD-090); writes a RELATIONSHIP_ENDED audit event.
 	EndRelationship(context.Context, *connect.Request[v1.EndRelationshipRequest]) (*connect.Response[v1.EndRelationshipResponse], error)
 	// List relationships for a subject (graph traversal primitive). Use the `outgoing`
 	// query parameter to choose direction: /api/subjects/{id}/relationships?outgoing=true.

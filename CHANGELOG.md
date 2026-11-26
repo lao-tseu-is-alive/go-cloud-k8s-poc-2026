@@ -10,6 +10,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- Administration › Utilisateurs (GLD-091), the first tab of the administration: the internal users
+  with their roles, administrators marked, a search and an « administrators only » filter.
+
 - Demo consultations (GLD-079, DEMO_SCRIPT §4.7): the demo stories now open the cases, documents
   and things their people would read before acting, at story times, and include two refusals
   (Félix's attempt to close the complaint, Bruno's attempt to open the confidential subsidy), so
@@ -61,6 +64,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   banner marks every screen as fictional and the interface follows the demo language. The server
   refuses this password-less mode unless the database holds the marker `demo-seed` writes
   (migration `0040`, `demo_dataset`), so real data can never be served this way.
+
+### Security
+
+- Security groups and the members of org units and groups are managed by administrators only
+  (GLD-090): every group change (create, rename, archive, add or remove a member) and the
+  membership changes through `LinkSubjects`, `EndRelationship` and `UnlinkSubjects` require
+  `goeland:admin`; before, any user could create a group, and a holder of MANAGE on a unit could
+  manage its members. The SPA shows these actions to administrators only.
 
 ## [0.23.0] - 2026-11-25
 

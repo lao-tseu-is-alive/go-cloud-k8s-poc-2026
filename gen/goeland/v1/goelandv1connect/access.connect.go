@@ -94,15 +94,17 @@ type AccessServiceClient interface {
 	ListGroups(context.Context, *connect.Request[v1.ListGroupsRequest]) (*connect.Response[v1.ListGroupsResponse], error)
 	// Read a group and its current members.
 	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error)
-	// Create a security group; the creator gets FULL_CONTROL on it.
+	// Create a security group; the creator gets FULL_CONTROL on it. Requires
+	// goeland:admin, like every change of a group or of its members (GLD-090).
 	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error)
-	// Rename or redescribe a live group (MANAGE on it).
+	// Rename or redescribe a live group. Requires goeland:admin (and MANAGE on it).
 	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error)
-	// Archive a group (FULL_CONTROL on it); its grants stop applying.
+	// Archive a group; its grants stop applying. Requires goeland:admin (and FULL_CONTROL on it).
 	ArchiveGroup(context.Context, *connect.Request[v1.ArchiveGroupRequest]) (*connect.Response[v1.ArchiveGroupResponse], error)
-	// Add an internal user to a live group (MANAGE on it).
+	// Add an internal user to a live group. Requires goeland:admin (and MANAGE on it).
 	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error)
-	// Remove a member (MANAGE on the group); the membership is kept as history.
+	// Remove a member; the membership is kept as history. Requires goeland:admin
+	// (and MANAGE on the group).
 	RemoveGroupMember(context.Context, *connect.Request[v1.RemoveGroupMemberRequest]) (*connect.Response[v1.RemoveGroupMemberResponse], error)
 }
 
@@ -270,15 +272,17 @@ type AccessServiceHandler interface {
 	ListGroups(context.Context, *connect.Request[v1.ListGroupsRequest]) (*connect.Response[v1.ListGroupsResponse], error)
 	// Read a group and its current members.
 	GetGroup(context.Context, *connect.Request[v1.GetGroupRequest]) (*connect.Response[v1.GetGroupResponse], error)
-	// Create a security group; the creator gets FULL_CONTROL on it.
+	// Create a security group; the creator gets FULL_CONTROL on it. Requires
+	// goeland:admin, like every change of a group or of its members (GLD-090).
 	CreateGroup(context.Context, *connect.Request[v1.CreateGroupRequest]) (*connect.Response[v1.CreateGroupResponse], error)
-	// Rename or redescribe a live group (MANAGE on it).
+	// Rename or redescribe a live group. Requires goeland:admin (and MANAGE on it).
 	UpdateGroup(context.Context, *connect.Request[v1.UpdateGroupRequest]) (*connect.Response[v1.UpdateGroupResponse], error)
-	// Archive a group (FULL_CONTROL on it); its grants stop applying.
+	// Archive a group; its grants stop applying. Requires goeland:admin (and FULL_CONTROL on it).
 	ArchiveGroup(context.Context, *connect.Request[v1.ArchiveGroupRequest]) (*connect.Response[v1.ArchiveGroupResponse], error)
-	// Add an internal user to a live group (MANAGE on it).
+	// Add an internal user to a live group. Requires goeland:admin (and MANAGE on it).
 	AddGroupMember(context.Context, *connect.Request[v1.AddGroupMemberRequest]) (*connect.Response[v1.AddGroupMemberResponse], error)
-	// Remove a member (MANAGE on the group); the membership is kept as history.
+	// Remove a member; the membership is kept as history. Requires goeland:admin
+	// (and MANAGE on the group).
 	RemoveGroupMember(context.Context, *connect.Request[v1.RemoveGroupMemberRequest]) (*connect.Response[v1.RemoveGroupMemberResponse], error)
 }
 

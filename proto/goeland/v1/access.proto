@@ -377,7 +377,8 @@ service AccessService {
     option (google.api.http) = {get: "/api/groups/{id}"};
   }
 
-  // Create a security group; the creator gets FULL_CONTROL on it.
+  // Create a security group; the creator gets FULL_CONTROL on it. Requires
+  // goeland:admin, like every change of a group or of its members (GLD-090).
   rpc CreateGroup(CreateGroupRequest) returns (CreateGroupResponse) {
     option (google.api.http) = {
       post: "/api/groups"
@@ -385,7 +386,7 @@ service AccessService {
     };
   }
 
-  // Rename or redescribe a live group (MANAGE on it).
+  // Rename or redescribe a live group. Requires goeland:admin (and MANAGE on it).
   rpc UpdateGroup(UpdateGroupRequest) returns (UpdateGroupResponse) {
     option (google.api.http) = {
       patch: "/api/groups/{id}"
@@ -393,7 +394,7 @@ service AccessService {
     };
   }
 
-  // Archive a group (FULL_CONTROL on it); its grants stop applying.
+  // Archive a group; its grants stop applying. Requires goeland:admin (and FULL_CONTROL on it).
   rpc ArchiveGroup(ArchiveGroupRequest) returns (ArchiveGroupResponse) {
     option (google.api.http) = {
       post: "/api/groups/{id}/archive"
@@ -401,7 +402,7 @@ service AccessService {
     };
   }
 
-  // Add an internal user to a live group (MANAGE on it).
+  // Add an internal user to a live group. Requires goeland:admin (and MANAGE on it).
   rpc AddGroupMember(AddGroupMemberRequest) returns (AddGroupMemberResponse) {
     option (google.api.http) = {
       post: "/api/groups/{group_id}/members"
@@ -409,7 +410,8 @@ service AccessService {
     };
   }
 
-  // Remove a member (MANAGE on the group); the membership is kept as history.
+  // Remove a member; the membership is kept as history. Requires goeland:admin
+  // (and MANAGE on the group).
   rpc RemoveGroupMember(RemoveGroupMemberRequest) returns (RemoveGroupMemberResponse) {
     option (google.api.http) = {
       post: "/api/groups/{group_id}/members/{user_id}/remove"

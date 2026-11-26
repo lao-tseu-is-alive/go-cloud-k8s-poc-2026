@@ -570,6 +570,14 @@ func (s *surface) groups(writer string) {
 	if len(list(s.ok("GET", "/api/groups?query=renommée+"+s.token, nil), "groups")) != 1 {
 		s.t.Fatal("the group is found by name")
 	}
+	// Groups and the members of groups and units are managed by administrators only (GLD-090).
+	asWriter := func(method, path string, body any) reply { return s.call(s.writer, writerToken, method, path, body) }
+	s.expect(asWriter("POST", "/api/groups", map[string]any{"name": "Groupe interdit " + s.token}), codePermissionDenied, "a group is created by an administrator")
+	s.expect(asWriter("POST", "/api/groups/"+id+"/members", map[string]any{"userId": writer}), codePermissionDenied, "a member is added by an administrator")
+	writerSubject := str(asWriter("GET", "/api/me", nil).body, "user", "subjectId")
+	s.expect(asWriter("POST", "/api/relationships", map[string]any{
+		"sourceSubjectId": writerSubject, "targetSubjectId": id, "relationshipTypeCode": "USER_MEMBER_OF_GROUP",
+	}), codePermissionDenied, "a membership is linked by an administrator")
 	s.ok("POST", "/api/groups/"+id+"/members/"+writer+"/remove", map[string]any{"reason": "départ"})
 	s.ok("POST", "/api/groups/"+id+"/archive", map[string]any{"reason": "commission dissoute"})
 	s.fails(codeNotFound, "GET", missing("/api/groups"), nil)

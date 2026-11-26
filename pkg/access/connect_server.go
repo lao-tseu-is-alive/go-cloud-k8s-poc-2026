@@ -158,9 +158,11 @@ func (s *ConnectServer) GetGroup(ctx context.Context, req *connect.Request[goela
 	return connect.NewResponse(&goelandv1.GetGroupResponse{Group: GroupToProto(group), Members: out}), nil
 }
 
-// CreateGroup creates a security group.
+// CreateGroup creates a security group. Security groups are managed by
+// administrators only (GLD-090): every change of a group or of its members
+// requires goeland:admin.
 func (s *ConnectServer) CreateGroup(ctx context.Context, req *connect.Request[goelandv1.CreateGroupRequest]) (*connect.Response[goelandv1.CreateGroupResponse], error) {
-	operator, err := caller(ctx, core.ScopeWrite)
+	operator, err := caller(ctx, core.ScopeAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -173,7 +175,7 @@ func (s *ConnectServer) CreateGroup(ctx context.Context, req *connect.Request[go
 
 // UpdateGroup renames or redescribes a group.
 func (s *ConnectServer) UpdateGroup(ctx context.Context, req *connect.Request[goelandv1.UpdateGroupRequest]) (*connect.Response[goelandv1.UpdateGroupResponse], error) {
-	operator, err := caller(ctx, core.ScopeWrite)
+	operator, err := caller(ctx, core.ScopeAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -191,7 +193,7 @@ func (s *ConnectServer) UpdateGroup(ctx context.Context, req *connect.Request[go
 
 // ArchiveGroup archives a group.
 func (s *ConnectServer) ArchiveGroup(ctx context.Context, req *connect.Request[goelandv1.ArchiveGroupRequest]) (*connect.Response[goelandv1.ArchiveGroupResponse], error) {
-	operator, err := caller(ctx, core.ScopeWrite)
+	operator, err := caller(ctx, core.ScopeAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -208,7 +210,7 @@ func (s *ConnectServer) ArchiveGroup(ctx context.Context, req *connect.Request[g
 
 // AddGroupMember adds a user to a group.
 func (s *ConnectServer) AddGroupMember(ctx context.Context, req *connect.Request[goelandv1.AddGroupMemberRequest]) (*connect.Response[goelandv1.AddGroupMemberResponse], error) {
-	operator, err := caller(ctx, core.ScopeWrite)
+	operator, err := caller(ctx, core.ScopeAdmin)
 	if err != nil {
 		return nil, err
 	}
@@ -225,7 +227,7 @@ func (s *ConnectServer) AddGroupMember(ctx context.Context, req *connect.Request
 
 // RemoveGroupMember removes a member from a group.
 func (s *ConnectServer) RemoveGroupMember(ctx context.Context, req *connect.Request[goelandv1.RemoveGroupMemberRequest]) (*connect.Response[goelandv1.RemoveGroupMemberResponse], error) {
-	operator, err := caller(ctx, core.ScopeWrite)
+	operator, err := caller(ctx, core.ScopeAdmin)
 	if err != nil {
 		return nil, err
 	}

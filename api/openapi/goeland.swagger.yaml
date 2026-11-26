@@ -2018,7 +2018,9 @@ paths:
       tags:
         - AccessService
     post:
-      summary: Create a security group; the creator gets FULL_CONTROL on it.
+      summary: |-
+        Create a security group; the creator gets FULL_CONTROL on it. Requires
+        goeland:admin, like every change of a group or of its members (GLD-090).
       operationId: CreateGroup
       responses:
         "200":
@@ -2040,7 +2042,7 @@ paths:
         - AccessService
   /api/groups/{groupId}/members:
     post:
-      summary: Add an internal user to a live group (MANAGE on it).
+      summary: Add an internal user to a live group. Requires goeland:admin (and MANAGE on it).
       operationId: AddGroupMember
       responses:
         "200":
@@ -2066,7 +2068,9 @@ paths:
         - AccessService
   /api/groups/{groupId}/members/{userId}/remove:
     post:
-      summary: Remove a member (MANAGE on the group); the membership is kept as history.
+      summary: |-
+        Remove a member; the membership is kept as history. Requires goeland:admin
+        (and MANAGE on the group).
       operationId: RemoveGroupMember
       responses:
         "200":
@@ -2117,7 +2121,7 @@ paths:
       tags:
         - AccessService
     patch:
-      summary: Rename or redescribe a live group (MANAGE on it).
+      summary: Rename or redescribe a live group. Requires goeland:admin (and MANAGE on it).
       operationId: UpdateGroup
       responses:
         "200":
@@ -2143,7 +2147,7 @@ paths:
         - AccessService
   /api/groups/{id}/archive:
     post:
-      summary: Archive a group (FULL_CONTROL on it); its grants stop applying.
+      summary: Archive a group; its grants stop applying. Requires goeland:admin (and FULL_CONTROL on it).
       operationId: ArchiveGroup
       responses:
         "200":
@@ -2711,7 +2715,8 @@ paths:
     post:
       summary: |-
         Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
-        Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+        Requires goeland:write (goeland:admin for a membership of an org unit or a
+        group, GLD-090); writes a RELATIONSHIP_LINKED audit event. Fails with
         NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
         soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
         (an open edge of the same type already links the two subjects).
@@ -2738,7 +2743,8 @@ paths:
     delete:
       summary: |-
         Soft-delete an existing relationship (non-destructive) and write an audit event.
-        Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
+        Requires goeland:write (goeland:admin for a membership of an org unit or a
+        group, GLD-090); writes a RELATIONSHIP_UNLINKED audit event.
       operationId: UnlinkSubjects
       responses:
         "200":
@@ -2768,7 +2774,8 @@ paths:
         End an open relationship in the business sense by setting its valid_to; the
         edge stays listed as history and a new open edge of the same type may then be
         created. Distinct from UnlinkSubjects, which removes a mistaken edge.
-        Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+        Requires goeland:write (goeland:admin for a membership of an org unit or a
+        group, GLD-090); writes a RELATIONSHIP_ENDED audit event.
       operationId: EndRelationship
       responses:
         "200":

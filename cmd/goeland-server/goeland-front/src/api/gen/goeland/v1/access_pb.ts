@@ -1693,7 +1693,8 @@ export const AccessService: GenService<{
     output: typeof GetGroupResponseSchema;
   },
   /**
-   * Create a security group; the creator gets FULL_CONTROL on it.
+   * Create a security group; the creator gets FULL_CONTROL on it. Requires
+   * goeland:admin, like every change of a group or of its members (GLD-090).
    *
    * @generated from rpc goeland.v1.AccessService.CreateGroup
    */
@@ -1703,7 +1704,7 @@ export const AccessService: GenService<{
     output: typeof CreateGroupResponseSchema;
   },
   /**
-   * Rename or redescribe a live group (MANAGE on it).
+   * Rename or redescribe a live group. Requires goeland:admin (and MANAGE on it).
    *
    * @generated from rpc goeland.v1.AccessService.UpdateGroup
    */
@@ -1713,7 +1714,7 @@ export const AccessService: GenService<{
     output: typeof UpdateGroupResponseSchema;
   },
   /**
-   * Archive a group (FULL_CONTROL on it); its grants stop applying.
+   * Archive a group; its grants stop applying. Requires goeland:admin (and FULL_CONTROL on it).
    *
    * @generated from rpc goeland.v1.AccessService.ArchiveGroup
    */
@@ -1723,7 +1724,7 @@ export const AccessService: GenService<{
     output: typeof ArchiveGroupResponseSchema;
   },
   /**
-   * Add an internal user to a live group (MANAGE on it).
+   * Add an internal user to a live group. Requires goeland:admin (and MANAGE on it).
    *
    * @generated from rpc goeland.v1.AccessService.AddGroupMember
    */
@@ -1733,7 +1734,8 @@ export const AccessService: GenService<{
     output: typeof AddGroupMemberResponseSchema;
   },
   /**
-   * Remove a member (MANAGE on the group); the membership is kept as history.
+   * Remove a member; the membership is kept as history. Requires goeland:admin
+   * (and MANAGE on the group).
    *
    * @generated from rpc goeland.v1.AccessService.RemoveGroupMember
    */

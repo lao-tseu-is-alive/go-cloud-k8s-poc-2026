@@ -6271,7 +6271,8 @@ export const CoreService: GenService<{
   },
   /**
    * Create a typed, validated relationship (enforces kind compatibility + uniqueness of the active link).
-   * Requires goeland:write; writes a RELATIONSHIP_LINKED audit event. Fails with
+   * Requires goeland:write (goeland:admin for a membership of an org unit or a
+   * group, GLD-090); writes a RELATIONSHIP_LINKED audit event. Fails with
    * NOT_FOUND (unknown subject or type), FAILED_PRECONDITION (kind mismatch or a
    * soft-deleted subject; locked subjects may still be linked) or ALREADY_EXISTS
    * (an open edge of the same type already links the two subjects).
@@ -6285,7 +6286,8 @@ export const CoreService: GenService<{
   },
   /**
    * Soft-delete an existing relationship (non-destructive) and write an audit event.
-   * Requires goeland:write; writes a RELATIONSHIP_UNLINKED audit event.
+   * Requires goeland:write (goeland:admin for a membership of an org unit or a
+   * group, GLD-090); writes a RELATIONSHIP_UNLINKED audit event.
    *
    * @generated from rpc goeland.v1.CoreService.UnlinkSubjects
    */
@@ -6298,7 +6300,8 @@ export const CoreService: GenService<{
    * End an open relationship in the business sense by setting its valid_to; the
    * edge stays listed as history and a new open edge of the same type may then be
    * created. Distinct from UnlinkSubjects, which removes a mistaken edge.
-   * Requires goeland:write; writes a RELATIONSHIP_ENDED audit event.
+   * Requires goeland:write (goeland:admin for a membership of an org unit or a
+   * group, GLD-090); writes a RELATIONSHIP_ENDED audit event.
    *
    * @generated from rpc goeland.v1.CoreService.EndRelationship
    */

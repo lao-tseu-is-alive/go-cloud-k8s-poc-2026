@@ -8,8 +8,10 @@ import (
 
 	"connectrpc.com/connect"
 	"github.com/google/uuid"
+	"github.com/jackc/pgx/v5"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
 )
 
 // ConnectServer exposes Service through the generated CoreService contract.
@@ -89,6 +91,9 @@ func (s *ConnectServer) GetSubjectRef(ctx context.Context, req *connect.Request[
 func (s *ConnectServer) LinkSubjects(ctx context.Context, req *connect.Request[goelandv1.LinkSubjectsRequest]) (*connect.Response[goelandv1.LinkSubjectsResponse], error) {
 	user, err := RequireCaller(ctx, ScopeWrite)
 	if err != nil {
+		return nil, err
+	}
+	if err := requireMembershipAdmin(user, req.Msg.RelationshipTypeCode); err != nil {
 		return nil, err
 	}
 	sourceID, err := ParseUUID(req.Msg.SourceSubjectId)
@@ -190,6 +195,9 @@ func (s *ConnectServer) UnlinkSubjects(ctx context.Context, req *connect.Request
 	if err != nil {
 		return nil, err
 	}
+	if err := s.requireMembershipAdminFor(ctx, user, id); err != nil {
+		return nil, err
+	}
 	_, ev, err := s.service.UnlinkSubjects(ctx, id, OperatorID(user), req.Msg.Reason)
 	if err != nil {
 		return nil, s.mapError(err)
@@ -208,6 +216,9 @@ func (s *ConnectServer) EndRelationship(ctx context.Context, req *connect.Reques
 	}
 	id, err := ParseUUID(req.Msg.RelationshipId)
 	if err != nil {
+		return nil, err
+	}
+	if err := s.requireMembershipAdminFor(ctx, user, id); err != nil {
 		return nil, err
 	}
 	rel, ev, err := s.service.EndRelationship(ctx, EndInput{
@@ -615,3 +626,35 @@ func (s *ConnectServer) ReplayOutboxEvents(ctx context.Context, req *connect.Req
 	}
 	return connect.NewResponse(&goelandv1.ReplayOutboxEventsResponse{Replayed: n}), nil
 }
+
+// errMembershipNeedsAdmin explains why a membership change was refused.
+var errMembershipNeedsAdmin = errors.New("the members of org units and security groups are managed by administrators (goeland:admin)")
+
+// requireMembershipAdmin requires goeland:admin to change a membership
+// (typeCode USER_MEMBER_OF_ORG_UNIT or USER_MEMBER_OF_GROUP): org units and
+// security groups are managed by administrators only (GLD-090), whatever level
+// a user holds on the unit or group.
+func requireMembershipAdmin(user *authadapter.AuthenticatedUser, typeCode string) error {
+	if membershipTypes[typeCode] && !user.HasScope(ScopeAdmin) {
+		return connect.NewError(connect.CodePermissionDenied, errMembershipNeedsAdmin)
+	}
+	return nil
+}
+
+// requireMembershipAdminFor is requireMembershipAdmin for an existing
+// relationship; an unknown one is left to the service (NOT_FOUND).
+func (s *ConnectServer) requireMembershipAdminFor(ctx context.Context, user *authadapter.AuthenticatedUser, relationshipID uuid.UUID) error {
+	var code string
+	err := s.authz.q.QueryRow(ctx, relationshipCodeSQL, pgx.NamedArgs{"id": relationshipID}).Scan(&code)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
+	if err != nil {
+		return ToConnectError(s.authz.log, "relationship", err)
+	}
+	return requireMembershipAdmin(user, code)
+}
+
+// relationshipCodeSQL reads the type code of a relationship.
+const relationshipCodeSQL = `
+SELECT rt.code FROM subject_relationship r JOIN relationship_type rt ON rt.id = r.relationship_type_id WHERE r.id = @id;`

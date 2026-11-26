@@ -123,8 +123,9 @@ whenever a task starts, completes, changes scope or order.
 - **access** (`pkg/access`) — grants and security groups → `AccessService` (GLD-048). A grant gives
   READ < CONTRIBUTE < MANAGE < FULL_CONTROL on one subject to a user, a GROUP subject or an org
   unit (covering its sub-units); changes keep history, are audited on the subject, and the last
-  FULL_CONTROL is kept. Membership is `USER_MEMBER_OF_GROUP`. The effective level lives in `core`
-  (see "Authorization" below).
+  FULL_CONTROL is kept. Membership is `USER_MEMBER_OF_GROUP`. Groups and their members are managed
+  by administrators only (GLD-090: every group RPC that changes something requires `goeland:admin`).
+  The effective level lives in `core` (see "Authorization" below).
 - **caseexport** (`pkg/caseexport`) — the case export (GLD-029, v2 §51) → `CaseExportService`:
   `RequestCaseExport` (MANAGE on the case, recorded as EXPORT in `access_audit_event` whether
   granted or refused, any confidentiality) queues a `case_export` row; `Service.Run`, started by
@@ -359,7 +360,9 @@ a confidential subject (`confidentiality_level` >= 2) gets neither roles nor the
   circulations: MANAGE, an answer by the recipient or MANAGE) — `core.EnsureAssigneeOrAccessTx`;
 - relationships: `core.LinkSubjectsTx` / `EndRelationshipTx` / unlink require MANAGE on the source
   (CONTRIBUTE to attach a document to a case) and READ on the target; a membership needs MANAGE on
-  the group or unit, never one's own subject.
+  the group or unit, never one's own subject, and its RPCs (`LinkSubjects`, `EndRelationship`,
+  `UnlinkSubjects`) also require `goeland:admin` (GLD-090: org units and groups are administered
+  by administrators only, `core.requireMembershipAdmin`).
 
 Every new subject gets its creator's FULL_CONTROL and its owning unit's MANAGE
 (`core.InsertRecordMetadataTx`); a document deposited from a case copies the case's grants and

@@ -348,7 +348,9 @@ Decisions taken when adopting v2; they complete or adjust the spec without rewri
   completion stamps are cleared, the audit keeps them). A case cannot close with open tasks.
   Only completion and cancellation write SYSTEM timeline entries (creation and reassignment stay
   in the history and the audit). Unit membership is the `USER_MEMBER_OF_ORG_UNIT` relationship;
-  the SPA offers it to administrators; since GLD-048 a membership needs MANAGE on the unit.
+  the SPA offers it to administrators; since GLD-048 a membership needs MANAGE on the unit, and
+  since GLD-090 (2026-11-26, product owner) its RPCs need `goeland:admin` too, like every change of
+  a security group (GLD-048 had let anyone create a group and manage it).
 - **Circulation (GLD-013, v2 §29, spec v1 §9, 2026-09-29)** — modelled from the production
   structure (aggregates only: 134k circulations, 3.1 recipients on average, 60% with several
   ordered steps). A circulation is a composition of tasks: each recipient (one user or one live

@@ -10,6 +10,7 @@
   import { CATALOGUES } from '@/components/admin/referenceCatalogues'
   import ReferenceChangesPanel from '@/components/admin/ReferenceChangesPanel.vue'
   import RolesAdminPanel from '@/components/admin/RolesAdminPanel.vue'
+  import UsersAdminPanel from '@/components/admin/UsersAdminPanel.vue'
   import { useAuthStore } from '@/stores/auth'
 
   // Administration, for holders of the ADMIN role only: reference data (GLD-040),
@@ -18,7 +19,7 @@
   // role on every call; this page only hides what cannot work.
   const { t } = useI18n()
   const { isAdmin } = storeToRefs(useAuthStore())
-  const tab = ref<ReferenceCatalogue | 'log' | 'roles' | 'sensitive' | 'outbox'>('case_type')
+  const tab = ref<ReferenceCatalogue | 'users' | 'log' | 'roles' | 'sensitive' | 'outbox'>('users')
   const log = ref<InstanceType<typeof ReferenceChangesPanel>>()
   const caseTypes = ref<InstanceType<typeof ReferenceCatalogPanel>[]>([])
   const defaultsOf = ref<CaseType | null>(null) // the case type whose default grants are edited
@@ -38,15 +39,20 @@
 
     <v-card v-else>
       <v-tabs v-model="tab" show-arrows>
+        <v-tab prepend-icon="mdi-account-multiple" value="users">{{ t('users.tab') }}</v-tab>
+        <v-tab prepend-icon="mdi-shield-account-outline" value="roles">{{ t('roles.tab') }}</v-tab>
         <v-tab v-for="c in CATALOGUES" :key="c.catalogue" :value="c.catalogue">{{ t(`sections.reference.${c.catalogue}`) }}</v-tab>
         <v-tab prepend-icon="mdi-history" value="log">{{ t('sections.reference.log') }}</v-tab>
-        <v-tab prepend-icon="mdi-shield-account-outline" value="roles">{{ t('roles.tab') }}</v-tab>
         <v-tab prepend-icon="mdi-eye-lock-outline" value="sensitive">{{ t('access.audit.tab') }}</v-tab>
         <v-tab prepend-icon="mdi-tray-arrow-up" value="outbox">{{ t('outbox.tab') }}</v-tab>
       </v-tabs>
 
       <v-card-text>
         <v-window v-model="tab">
+          <v-window-item value="users">
+            <UsersAdminPanel />
+          </v-window-item>
+
           <v-window-item v-for="c in CATALOGUES" :key="c.catalogue" :value="c.catalogue">
             <ReferenceCatalogPanel v-if="c.catalogue === 'case_type'" ref="caseTypes" :config="c" @changed="log?.reload()">
               <template #row-actions="{ entry }">
