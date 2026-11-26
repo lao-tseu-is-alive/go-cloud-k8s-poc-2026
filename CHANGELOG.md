@@ -10,6 +10,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- Document preview (GLD-087): the document page shows the content of the current version, or of
+  the version picked in the versions list: an image, a PDF in the browser's viewer, a text. The
+  bytes come through the governed download; a confidential document is previewed on request, since
+  every read of its content is recorded, and a large file loads on request. The CSP allows `blob:`
+  frames (`frame-src 'self' blob:`).
+
 - `goeland-server demo-seed -profile small -lang fr|en` (GLD-079, in progress) generates the
   synthetic demo of docs/DEMO_SCRIPT.md in a brand-new database, through the API as its demo
   users: the catalogue, the org chart of the fictional « Commune de Goéland-sur-Lac », seven demo

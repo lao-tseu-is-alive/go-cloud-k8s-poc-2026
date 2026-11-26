@@ -1068,6 +1068,23 @@
     "openExternal": "Ouvrir dans {system}",
     "externalSystem": "le système externe"
   },
+  "documentPreview": {
+    "title": "Aperçu",
+    "version": "Version {n}",
+    "backToCurrent": "Revenir à la version courante",
+    "show": "Afficher l’aperçu",
+    "showVersion": "Afficher l’aperçu de la version {n}",
+    "askAudited": "Document confidentiel : chaque consultation de son contenu est enregistrée dans le journal des accès.",
+    "askLarge": "Fichier volumineux ({size}) : l’aperçu se charge à la demande.",
+    "unsupported": "Pas d’aperçu pour ce type de fichier : téléchargez-le.",
+    "noContent": "Cette version n’a pas de contenu.",
+    "missing": "Le contenu de cette version n’est plus disponible.",
+    "denied": "Vous n’avez pas le droit de lire ce contenu.",
+    "failed": "L’aperçu n’a pas pu être chargé : téléchargez le fichier.",
+    "truncated": "Texte tronqué : téléchargez le fichier pour le lire en entier.",
+    "imageAlt": "Image du document",
+    "pdfTitle": "PDF du document"
+  },
   "thingPage": {
     "tabs": {
       "object": "Objet"

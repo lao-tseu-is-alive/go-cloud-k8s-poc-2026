@@ -17,7 +17,7 @@ import type {
  * All business codes (document_type_code, relationship_type_code) are sent
  * as-is; never translated.
  */
-import { apiFetch, downloadAs } from './client'
+import { apiFetch, apiFetchBlob, downloadAs } from './client'
 
 export function searchDocuments (params: SearchDocumentsParams, signal?: AbortSignal): Promise<SearchDocumentsResponse> {
   return apiFetch<SearchDocumentsResponse>('/api/documents/search', {
@@ -136,4 +136,14 @@ export function uploadDocumentFile (file: File, signal?: AbortSignal): Promise<U
 export function downloadDocumentBlob (documentId: string, filename: string, versionId?: string): Promise<void> {
   const query = versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''
   return downloadAs(`/api/documents/${encodeURIComponent(documentId)}/content${query}`, filename || 'document')
+}
+
+/**
+ * Reads the content of a document version, the current one by default, for an
+ * inline preview (GLD-087): the same governed download (READ on the document,
+ * DOWNLOAD recorded on a confidential one), fetched with the token.
+ */
+export function fetchDocumentContent (documentId: string, versionId?: string): Promise<Blob> {
+  const query = versionId ? `?versionId=${encodeURIComponent(versionId)}` : ''
+  return apiFetchBlob(`/api/documents/${encodeURIComponent(documentId)}/content${query}`)
 }

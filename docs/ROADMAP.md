@@ -691,11 +691,14 @@ placed on Swiss territory.
 
 ## UI remarks on the demo (2026-11-26)
 
-- [ ] **GLD-087 — Document preview**: the document page shows the content of the current (or
+- [x] **GLD-087 — Document preview**: the document page shows the content of the current (or
   chosen) version: images inline, PDFs in the browser's viewer, plain text as text. The bytes come
   through the governed download (READ on the document, `DOWNLOAD` audited as now) fetched with
   the bearer token and shown from an object URL, so the CSP must allow `blob:` for images and
-  frames; other types keep the download button.
+  frames; other types keep the download button. Done 2026-11-26 (`DocumentPreview.vue`): a
+  confidential document (level 2 or more) and a large file are previewed on request, a PDF is
+  framed from a blob the SPA types `application/pdf`, a text is shown as text (never markup), and
+  an eye button in the versions list previews an older version.
 - [ ] **GLD-088 — « Mon activité » home page**: the first page after signing in lists the caller's
   latest cases, documents and other subjects, most recent first: what he created or changed (read
   from the audit, `actor_user_id`) and what he consulted, which needs a small server-side

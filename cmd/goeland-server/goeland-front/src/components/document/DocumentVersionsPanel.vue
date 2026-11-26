@@ -8,13 +8,15 @@
   import DocumentUploadField from '@/components/document/DocumentUploadField.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
+  import { downloadable, previewKind } from '@/utils/documents'
   import { formatBytes, formatDateTime, shortHash } from '@/utils/formatters'
   import { sortRows } from '@/utils/listSort'
 
   // Lists the append-only versions of a document (newest first) and, when the
-  // document is editable, adds a new current version from an uploaded file.
-  const props = defineProps<{ documentId: string, currentVersionId?: string, canAdd?: boolean }>()
-  const emit = defineEmits<{ changed: [] }>()
+  // document is editable, adds a new current version from an uploaded file. A
+  // version with a content that can be previewed offers to show it (GLD-087).
+  const props = defineProps<{ documentId: string, currentVersionId?: string, previewVersionId?: string, canAdd?: boolean }>()
+  const emit = defineEmits<{ changed: [], preview: [version: DocumentVersion] }>()
 
   const { t } = useI18n()
   const { report } = useApiErrors()
@@ -31,6 +33,11 @@
   const busy = ref(false)
   const upload = ref<UploadResult | null>(null)
   const reason = ref('')
+
+  /** Whether the page can show this version's content inline. */
+  function previewable (v: DocumentVersion): boolean {
+    return downloadable(v.content?.storageRef) && previewKind(v.content?.mimeType) !== null
+  }
 
   async function load () {
     loading.value = true
@@ -78,6 +85,7 @@
           <SortableHeader v-model:sort="sort" field="content" :label="t('versions.content')" />
           <th scope="col" />
           <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
+          <th scope="col"><span class="sr-only">{{ t('documentPreview.title') }}</span></th>
         </tr>
       </thead>
 
@@ -100,6 +108,18 @@
           </td>
 
           <td class="text-caption">{{ formatDateTime(v.createdAt) }}</td>
+
+          <td class="text-right">
+            <v-btn
+              v-if="previewable(v)"
+              :aria-label="t('documentPreview.showVersion', { n: v.versionNo })"
+              :color="v.id === previewVersionId ? 'primary' : undefined"
+              :icon="v.id === previewVersionId ? 'mdi-eye' : 'mdi-eye-outline'"
+              size="small"
+              variant="text"
+              @click="emit('preview', v)"
+            />
+          </td>
         </tr>
       </tbody>
     </v-table>

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { documentIcon, downloadable } from '../documents'
+import { documentIcon, downloadable, PREVIEW_AUTO_LIMITS, previewKind, previewLoadsByItself } from '../documents'
 
 describe('documents', () => {
   it('picks an icon by file family', () => {
@@ -18,5 +18,26 @@ describe('documents', () => {
     expect(downloadable('')).toBe(false)
     expect(downloadable('alfresco://x')).toBe(false)
     expect(downloadable()).toBe(false)
+  })
+
+  it('previews images, PDFs and texts only', () => {
+    expect(previewKind('image/jpeg')).toBe('image')
+    expect(previewKind('IMAGE/SVG+XML')).toBe('image')
+    expect(previewKind('application/pdf')).toBe('pdf')
+    expect(previewKind('text/plain; charset=utf-8')).toBe('text')
+    expect(previewKind('text/html')).toBe('text')
+    expect(previewKind('application/json')).toBe('text')
+    expect(previewKind('image/tiff')).toBeNull()
+    expect(previewKind('application/vnd.openxmlformats-officedocument.wordprocessingml.document')).toBeNull()
+    expect(previewKind()).toBeNull()
+  })
+
+  it('loads a preview by itself only when small and not audited', () => {
+    expect(previewLoadsByItself('image', '120000')).toBe(true)
+    expect(previewLoadsByItself('image', String(PREVIEW_AUTO_LIMITS.image + 1))).toBe(false)
+    expect(previewLoadsByItself('text', '600000')).toBe(false)
+    expect(previewLoadsByItself('pdf', '120000', true)).toBe(false)
+    expect(previewLoadsByItself('pdf')).toBe(false)
+    expect(previewLoadsByItself('pdf', 'x')).toBe(false)
   })
 })

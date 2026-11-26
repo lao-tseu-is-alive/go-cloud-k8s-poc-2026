@@ -671,6 +671,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentStatusChip.vue` — Colored document status chip.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentTypeSelect.vue` — Document type selector bound to the type code.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentUploadField.vue` — File upload field returning the registered content (blob id, digest, reuse flag).
+- `cmd/goeland-server/goeland-front/src/components/document/DocumentPreview.vue` — Inline preview of a document version's content (GLD-087): image, PDF or text from the governed download, on request when confidential or large.
 - `cmd/goeland-server/goeland-front/src/components/document/DocumentVersionsPanel.vue` — Version list of a document and adding a new version from an upload.
 - `cmd/goeland-server/goeland-front/src/components/document/documentForm.ts` — Document metadata form model.
 - `cmd/goeland-server/goeland-front/src/composables/useSubjectLinks.ts` — Link and unlink handlers shared by the case, document and actor detail pages.

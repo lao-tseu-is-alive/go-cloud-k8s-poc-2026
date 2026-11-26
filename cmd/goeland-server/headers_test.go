@@ -19,7 +19,7 @@ func TestContentSecurityPolicyAllowsTheAuthServerOnlyInJWTMode(t *testing.T) {
 	if bad := contentSecurityPolicy(serverConfig{AuthMode: "jwt", AuthServerURL: "not a url"}); !strings.Contains(bad, "connect-src 'self' https://tilesmn95.lausanne.ch;") {
 		t.Fatalf("a relative auth URL adds no origin: %s", bad)
 	}
-	for _, directive := range []string{"script-src 'self'", "object-src 'none'", "frame-ancestors 'none'"} {
+	for _, directive := range []string{"script-src 'self'", "object-src 'none'", "frame-ancestors 'none'", "img-src 'self' data: blob: ", "frame-src 'self' blob:"} {
 		if !strings.Contains(jwt, directive) {
 			t.Fatalf("missing %q in %s", directive, jwt)
 		}

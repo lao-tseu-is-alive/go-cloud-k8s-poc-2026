@@ -1,5 +1,5 @@
 <script setup lang="ts">
-  import type { AuditEvent, GoDocument } from '@/api/types'
+  import type { AuditEvent, DocumentVersion, GoDocument } from '@/api/types'
   import type { DocumentFormModel } from '@/components/document/documentForm'
   import type { RoleSection } from '@/utils/roleHeadings'
   import { computed, nextTick, ref, watch } from 'vue'
@@ -24,6 +24,7 @@
   import DocumentFinalizeDialog from '@/components/document/DocumentFinalizeDialog.vue'
   import DocumentIntegrityPanel from '@/components/document/DocumentIntegrityPanel.vue'
   import DocumentMetadataForm from '@/components/document/DocumentMetadataForm.vue'
+  import DocumentPreview from '@/components/document/DocumentPreview.vue'
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import DocumentVersionsPanel from '@/components/document/DocumentVersionsPanel.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
@@ -83,6 +84,12 @@
   const content = computed(() => doc.value?.currentVersion?.content)
   const canDownload = computed(() => downloadable(content.value?.storageRef))
   const icon = computed(() => documentIcon(content.value?.mimeType))
+  // The version previewed (GLD-087): the current one unless another was chosen
+  // in the versions list; every content read of a confidential document (level
+  // 2 or more) is audited, so its preview waits for the viewer.
+  const chosenVersion = ref<DocumentVersion | null>(null)
+  const previewVersion = computed(() => chosenVersion.value ?? doc.value?.currentVersion ?? null)
+  const previewAudited = computed(() => (doc.value?.recordMetadata?.confidentialityLevel ?? 0) >= 2)
   const fileFacts = computed(() => [content.value?.mimeType, content.value?.fileSizeBytes ? formatBytes(content.value.fileSizeBytes) : '']
     .filter(Boolean)
     .join(' · '))
@@ -92,6 +99,7 @@
     try {
       const res = await getDocument(id.value, { includeAudit: true })
       doc.value = res.document ?? null
+      if (chosenVersion.value?.id === doc.value?.currentVersion?.id) chosenVersion.value = null
       audit.value = res.recentAudit ?? []
       rolesKey.value++
       await reloadRelationships()
@@ -186,6 +194,7 @@
   watch(id, () => {
     tab.value = 'document'
     editing.value = false
+    chosenVersion.value = null
     void reload()
   }, { immediate: true })
 </script>
@@ -377,6 +386,21 @@
 
       <v-window v-model="tab">
         <v-window-item value="document">
+          <v-card v-if="previewVersion?.content" class="mb-4" tag="section">
+            <v-card-title class="d-flex flex-wrap align-center ga-2 text-subtitle-1">
+              {{ t('documentPreview.title') }}
+
+              <template v-if="chosenVersion">
+                <v-chip label size="small">{{ t('documentPreview.version', { n: chosenVersion.versionNo }) }}</v-chip>
+                <v-btn size="small" variant="text" @click="chosenVersion = null">{{ t('documentPreview.backToCurrent') }}</v-btn>
+              </template>
+            </v-card-title>
+
+            <v-card-text>
+              <DocumentPreview :audited="previewAudited" :document-id="id" :title="doc.title" :version="previewVersion" />
+            </v-card-text>
+          </v-card>
+
           <v-row>
             <v-col cols="12" md="7">
               <SubjectRolesPanel :reload-key="rolesKey" :subject-id="id" subject-kind="SUBJECT_KIND_DOCUMENT" @sections="sections = $event" />
@@ -391,7 +415,9 @@
                     :can-add="editable"
                     :current-version-id="doc.currentVersion?.id"
                     :document-id="id"
+                    :preview-version-id="previewVersion?.id"
                     @changed="reload"
+                    @preview="chosenVersion = $event.id === doc?.currentVersion?.id ? null : $event"
                   />
                 </v-card-text>
               </v-card>

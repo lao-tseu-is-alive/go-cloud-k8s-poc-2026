@@ -478,6 +478,9 @@ Decisions for the POC (v2 §32):
 - 🚀 **Document page on the same model (GLD-075, 2026-10-27)** — the last detail page to follow:
   the download is the main action, the cases, actors and objects come grouped by role beside the
   versions, and integrity, governance and audit move to the technical tab.
+- 🚀 **Document preview (GLD-087, 2026-11-26)** — the document page shows the content itself (image,
+  PDF, text) through the governed download, so reading a letter or a photo no longer means a
+  download; a confidential document waits for the viewer to ask, since every content read is audited.
 - 🚀 **Information hierarchy (GLD-063, decided 2026-10-15 from the user's UI feedback)** — a detail
   page shows the essentials first and unfolds the rest, instead of one flat table where every link
   and every technical panel weighs the same (the legacy Goéland, ugly as it is, grouped by category

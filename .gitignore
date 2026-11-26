@@ -55,3 +55,4 @@ cmd/goeland-server/goeland-front/dist
 /import-*.log
 # Local exports of presentation decks (pdf, pptx)
 /demo/
+history.txt

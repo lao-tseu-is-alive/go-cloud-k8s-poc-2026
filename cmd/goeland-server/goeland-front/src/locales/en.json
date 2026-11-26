@@ -1068,6 +1068,23 @@
     "openExternal": "Open in {system}",
     "externalSystem": "the external system"
   },
+  "documentPreview": {
+    "title": "Preview",
+    "version": "Version {n}",
+    "backToCurrent": "Back to the current version",
+    "show": "Show the preview",
+    "showVersion": "Show the preview of version {n}",
+    "askAudited": "Confidential document: every reading of its content is recorded in the access log.",
+    "askLarge": "Large file ({size}): the preview loads on request.",
+    "unsupported": "No preview for this type of file: download it.",
+    "noContent": "This version has no content.",
+    "missing": "The content of this version is no longer available.",
+    "denied": "You may not read this content.",
+    "failed": "The preview could not be loaded: download the file.",
+    "truncated": "Text truncated: download the file to read all of it.",
+    "imageAlt": "Image of the document",
+    "pdfTitle": "PDF of the document"
+  },
   "thingPage": {
     "tabs": {
       "object": "Object"
