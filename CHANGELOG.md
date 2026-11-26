@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.25.0] - 2026-11-26
+
+User administration and a lived-in demo. An administrator pre-registers a new employee before
+their first sign-in and manages each user's units, security groups and roles (GLD-093, migration
+`0043`); the app bar shows the org chart to everyone and the groups to administrators only. The
+demo holds work in progress dated from the day it is generated, with security groups and English
+labels for the seeded catalogues (GLD-092). Upgrading: migration `0043` makes `first_seen_at` and
+`last_seen_at` of `app_user` nullable (NULL for a pre-registered user); regenerate a demo with
+`scripts/demo_seed.sh -r` to get the new stories.
+
 ### Added
 
 - User administration (GLD-093, migration `0043`): an administrator pre-registers a new employee

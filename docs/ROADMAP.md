@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.24.0**.
+Tracked version: **v0.25.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -54,9 +54,10 @@ in v0.22.1; the orphan upload collection (GLD-045), the probative content verifi
 the S3 storage on Garage (GLD-020) in v0.23.0; the synthetic demo generator (GLD-079) with the demo
 mode and banner (GLD-085, GLD-081), the document preview (GLD-087), the access log of every subject
 (GLD-089), « Mon tableau de bord » (GLD-088), the administration of units and groups by
-administrators only (GLD-090) and the users list (GLD-091) in v0.24.0. Next: the demo's ongoing
-work (GLD-092) and the map source (GLD-080), then an MCP server over the API restricted to the
-demo data.
+administrators only (GLD-090) and the users list (GLD-091) in v0.24.0; the user administration with
+pre-registration (GLD-093) and the demo's work in progress (GLD-092) in v0.25.0. Next: the demo's
+background data (GLD-094) and the map source (GLD-080), then an MCP server over the API restricted
+to the demo data.
 
 ## Cross-cutting quality
 
@@ -656,7 +657,7 @@ placed on Swiss territory.
   Then the consultations of the stories (DEMO_SCRIPT §4.7): reads and downloads at story times
   and two refusals, recorded without the 15-minute window (`core.WithEveryAccessLogged`, set by
   `demo-seed` only). Released in v0.24.0 (profile `small`); what remains is GLD-092.
-- [~] **GLD-093 — User administration** (asked by the product owner, 2026-11-26, done first): a
+- [x] **GLD-093 — User administration** (asked by the product owner, 2026-11-26, done first): a
   new employee must be ready before their first sign-in. Administrators pre-register a user (the
   authentication service's numeric id, name, e-mail, optionally a unit; `RegisterUser`, audited
   USER_PREREGISTERED, migration `0043`), and every user has an administration page
@@ -665,7 +666,7 @@ placed on Swiss territory.
   name and e-mail, so they are not edited in Goéland. With it, the app bar shows « Organigramme »
   (the org units, read only for non-administrators) to everyone and « Groupes » to administrators
   only. Done 2026-11-26.
-- [~] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
+- [x] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
   cases in progress dated from the generation day (DEMO_SCRIPT §4.8 to §4.12, agreed 2026-11-26):
   tasks open, in progress, overdue, assigned to a user or a unit, reassigned, cancelled, reopened,
   open circulations, so every demo user's dashboard holds today's work; the background of profile
@@ -673,9 +674,13 @@ placed on Swiss territory.
   edited by the product owner in QGIS. Progress 2026-11-26: the ongoing work (DEMO_SCRIPT §4.8 to
   §4.12, dated from the generation day, deadlines kept by the re-dating), the two security groups
   with their grants, and the English labels of the seeded catalogues; `TestDemoSeed` checks them;
-  the task lists show a case reference with its namespace. Next: the background of profile `demo`,
-  the places of §4.8 to §4.12 in QGIS (provisional points), and the SYSTEM timeline titles of the
-  task module (« Tâche terminée »), still French in an English demo.
+  the task lists show a case reference with its namespace. Released in v0.25.0; what remains is
+  GLD-094.
+- [ ] **GLD-094 — Demo: background data and finishing** (split from GLD-092 at the v0.25.0
+  release): the background of profile `demo` (DEMO_SCRIPT §5, a few hundred actors, cases,
+  documents and things around the heroes), the places of §4.8 to §4.12 edited in QGIS (provisional
+  points today), and the SYSTEM timeline titles of the task module (« Tâche terminée »), still
+  French in an English demo.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
