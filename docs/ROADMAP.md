@@ -51,7 +51,8 @@ in v0.20.0; the elimination of cases, off by default and simulated until enabled
 v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1; the migrations separated from
 the runtime role (GLD-046) in v0.22.0; Go 1.27.4, pgx 5.12.0 and the SPA updates (security patch)
 in v0.22.1; the orphan upload collection (GLD-045), the probative content verification (GLD-021) and
-the S3 storage on Garage (GLD-020) in v0.23.0.
+the S3 storage on Garage (GLD-020) in v0.23.0. Next: the public demo on synthetic data (GLD-079, with GLD-080
+and GLD-081), then an MCP server over the API restricted to that data.
 
 ## Cross-cutting quality
 
@@ -491,10 +492,11 @@ runbook live in [IMPORT_MAPPING.md](IMPORT_MAPPING.md); real data stays local.
   follow-ups with cited documents and final status, case–thing, case–document, thing–document
   and case–case links, actor roles on things and documents.
 
-- [ ] **GLD-018 — Synthetic actor fixture**: a deterministic, fixed-seed
+- [-] **GLD-018 — Synthetic actor fixture**: a deterministic, fixed-seed
   generator of fake actors matching the profiled real distributions (kind
   ratio, 33-category histogram, contact-type mix); zero PII, committable, used
-  by integration tests and demos. Build before GLD-019.
+  by integration tests and demos. Build before GLD-019. Superseded 2026-11-26 by GLD-079, which
+  generates every domain, actors included.
 - [ ] **GLD-019 — Nightly internal refresh**: full rebuild of ACTOR rows only
   (never seeds, migrations or other domains), set-based SQL on the same
   instance, the full `subject_ref` → `record_metadata` → `actor` →
@@ -602,6 +604,52 @@ categories with their counts. Mockup with the decisions:
   parameters (`PATCH /api/cases/{id}`, `POST /api/cases/{id}/transition`): Vanguard returns the
   codec's error unwrapped there. Done 2026-10-15: the strict REST codec reports its errors as
   INVALID_ARGUMENT; the API surface test covers both shapes.
+
+## Public demo on synthetic data (decided 2026-11-26)
+
+A demo that can be shown online, to anyone, and the only data a future MCP server (and so an
+online model) may see. Every value is generated, never sampled or anonymized from real data;
+only aggregate distributions already profiled (kind ratio, category histogram, contact-type mix)
+may shape it. The demo takes place in a fictional municipality, « Commune de Goéland-sur-Lac »,
+placed on Swiss territory.
+
+- [ ] **GLD-079 — Synthetic dataset generator**: a deterministic generator (fixed seed, UUIDv5
+  ids) writing through the domain services, so the data passes the same validation, rights,
+  audit, outbox and timeline rules as the application, and the generator doubles as a regression
+  test of the business API. It refuses a database that is not brand new, like `goeland-import`;
+  the generator is committed, never a dump. Profiles: `small` (tests), `demo` (online demo),
+  `volume` later (set-based, for performance). Content:
+  - a reduced catalogue: 8 case types (building permit, opposition / appeal, tree felling,
+    advertising sign, public domain occupation, citizen report — a one-off defect fixed by one
+    task —, complaints and requests — a recurring grievance followed by several services over
+    time —, energy subsidy — the confidential one) plus the generic request, each with a retention policy; 12 document types (request
+    form, incoming and outgoing letter, plan, photo, report, decision, service opinion, public
+    inquiry notice, opposition, supporting document, internal note) in the existing categories;
+  - a few scripted "hero" cases that carry the demo script, and a background of a few hundred
+    actors, cases, documents and things so lists, filters, search and counts mean something;
+  - a fictional org chart, groups and demo users with different roles (administrator, records
+    manager, agent, reader);
+  - generated document bytes (small PDFs or texts) stored in the configured blob store;
+  - fictional identifiers (commune, parcel numbers, EGRID, EGID, IDE with valid check digits in
+    ranges that cannot be real ones), names from generic lists, `@example.ch` e-mails, phone
+    numbers in fictional ranges that pass E.164 validation; geometries may come from Swiss open
+    geodata (official survey parcels, building footprints) so they match the cadastral
+    background, never their real identifiers or owners.
+- [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
+  WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
+  deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
+  LV95 tiles: national map, SWISSIMAGE, official cadastral map; free open data with the
+  « © swisstopo » attribution), the CSP following the chosen source.
+- [ ] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
+  démonstration » banner in the SPA, so a screenshot of the demo is never mistaken for real
+  records.
+- [ ] **GLD-082 — Deployment coordinate system** (later, exploration): geometries are stored as
+  `geometry(Geometry, 2056)` and validated inside Switzerland, and parcels and buildings carry
+  Swiss register identifiers (EGRID, EGID, commune OFS number). To serve other countries: a
+  deployment-wide coordinate system chosen at installation (one SRID for the whole database, not
+  per row), validation bounds taken from the deployment, the Swiss identifiers as a country
+  profile, and WGS84 / Web Mercator backgrounds (e.g. OpenStreetMap) in OpenLayers, which
+  already reprojects through proj4. To be scoped before any work.
 
 ## Infrastructure
 
