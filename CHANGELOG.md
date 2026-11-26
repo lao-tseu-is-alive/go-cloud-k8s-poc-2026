@@ -10,6 +10,12 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- Demo consultations (GLD-079, DEMO_SCRIPT §4.7): the demo stories now open the cases, documents
+  and things their people would read before acting, at story times, and include two refusals
+  (Félix's attempt to close the complaint, Bruno's attempt to open the confidential subsidy), so
+  the « Consultations » cards and « Mon tableau de bord » show a lived-in history. `demo-seed`
+  records every one of these reads (`core.WithEveryAccessLogged`, in-process only).
+
 - « Mon tableau de bord » (GLD-088, migration `0042`), the new home page (`/home`, first in the app
   bar; `/` leads there): « Mes tâches » as its first tab (it leaves the app bar, `/tasks/mine`
   redirects), then the cases, documents, objects and actors the user changed or consulted, each

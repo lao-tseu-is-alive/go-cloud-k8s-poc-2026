@@ -483,6 +483,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `pkg/demodata/doc.go` — Package documentation: a fictional municipality generated through the public API, one demo user at a time, every value invented (GLD-079).
 - `pkg/demodata/catalogue.go` — The demo's org chart, case types, document types and retention policies, and their creation (or relabelling of the seeded ones) by the demo administrator; the users' memberships and roles.
+- `pkg/demodata/consult.go` — Consultations of the stories (GLD-089): opening cases, things and documents (with the download) as a demo user, and the refusals a story expects.
 - `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer.
 - `pkg/demodata/generate.go` — `Generate`: language, profile and places checks, the order of the stories, the report.
 - `pkg/demodata/heroes.go` — The hero cases building permit (§4.1), opposition (§4.2) and citizen report (§4.6) of docs/DEMO_SCRIPT.md; fictional register identifiers, story enum shorthands.

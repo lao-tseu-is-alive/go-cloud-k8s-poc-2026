@@ -186,6 +186,23 @@ an item is approved by a holder of MANAGE on the case's owning unit, never by th
   replaces the lamp on Thursday 12; Chloé closes the case on Friday 13.
 - **Show:** the shortest case, in contrast with the complaint of §4.3.
 
+### 4.7 Consultations and refusals (every story)
+
+People read before they act, so the stories open the pages their people would open, at story
+times (GLD-089): Bruno opens the permit and its plans at each step and the opposition before
+deciding; each consulted service (Chloé, Hugo, Emma) reads the permit and the plan before its
+opinion, Hugo also the parcel; Chloé rereads M. Tutu's 2024 complaint before asking the services,
+Félix reads the complaint and its letter before answering and again after the reopening; Emma
+reads the quote, the income certificate and the invoice; David opens both sign cases before the
+legal hold; Chloé opens the street light report, its photo and the lamp. Opening a document
+downloads it, as its preview does. Two refusals give the log something to show: **Félix tries
+to close the complaint** (26 September 2025, refused change: only its owner may) and **Bruno tries
+to open the confidential subsidy** (6 October 2025, refused read).
+
+- **Show:** the « Consultations » card of the permit (who read it, when) and of the subsidy (Emma's
+  reads, Bruno's refusal); « Mon tableau de bord » of each user, with « Consulté » and « Modifié »
+  rows.
+
 ## 5. Background data
 
 Generated around the heroes so lists, filters, search and counts mean something (profile `demo`,
@@ -198,7 +215,8 @@ keeps the heroes and a minimal background for the tests.
 1. Log in as Bruno: the building permit (§4.1), then the opposition through the case link (§4.2).
 2. As Chloé: « mes tâches », the complaint (§4.3) and its reopening; the citizen report (§4.6).
 3. As Félix: the same complaint without the police note.
-4. As Bruno, then Emma, then Alice: the confidential subsidy and its audit (§4.4).
+4. As Bruno, then Emma, then Alice: the confidential subsidy and its access log, Bruno's refusal
+   included (§4.4, §4.7).
 5. As David: the due list, the bordereau and the simulation (§4.5).
 
 ## 7. Generating the demo

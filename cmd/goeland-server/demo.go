@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/demodata"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/version"
 )
@@ -118,7 +119,8 @@ func generateDemo(ctx context.Context, clients *demodata.Clients, ownerURL strin
 	clock := &storyClock{pool: owner}
 	opts.Clock = clock.mark
 	started := time.Now()
-	report, err := demodata.Generate(ctx, clients, opts)
+	// The stories read at story times months apart within seconds: record every read.
+	report, err := demodata.Generate(core.WithEveryAccessLogged(ctx), clients, opts)
 	log.Info("demo data written", "duration", time.Since(started).Round(time.Millisecond), "story_steps", len(clock.marks))
 	if err != nil {
 		return report, err

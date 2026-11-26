@@ -179,6 +179,7 @@ func checkStoryDates(t *testing.T, dsn string) {
 		t.Errorf("the OPC 2025 counter continues after the stories: %d (%v)", next, err)
 	}
 	checkDisposalStory(t, pool)
+	checkAccessStory(t, pool)
 	if _, err := pool.Exec(t.Context(), `UPDATE audit_event SET occurred_at = now()`); err == nil {
 		t.Error("the audit must be immutable again after the re-dating")
 	}
@@ -196,6 +197,42 @@ func checkDisposalStory(t *testing.T, pool *pgxpool.Pool) {
 		       (SELECT count(*) FROM access_audit_event a WHERE a.action = 'READ' AND a.outcome = 'GRANTED' AND a.confidentiality_level >= 2)`).Scan(&due, &held, &sensitive)
 	if err != nil || due != 2 || held != 1 || sensitive < 1 {
 		t.Errorf("disposal story: due=%d held=%d sensitive reads=%d (%v)", due, held, sensitive, err)
+	}
+}
+
+// checkAccessStory checks the consultations of the stories (GLD-089): each one
+// is recorded at its story day, a read repeated months apart is not merged,
+// and the two refusals of the script are there: Bruno's read of the
+// confidential subsidy and Félix's attempt to close the complaint.
+func checkAccessStory(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	rows, err := pool.Query(t.Context(), `
+		SELECT u.display_name || ' ' || a.action || ' ' || a.outcome || ' ' || sr.business_ref_namespace || ' ' || sr.business_ref
+		       || ' ' || to_char(a.occurred_at AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD')
+		  FROM access_audit_event a
+		  JOIN subject_ref sr ON sr.id = a.subject_id
+		  JOIN app_user u ON u.user_id = a.user_id
+		 WHERE a.outcome = 'DENIED' AND a.occurred_at < '2026-06-01'
+		 ORDER BY a.occurred_at`)
+	if err != nil {
+		t.Fatalf("read the refusals: %v", err)
+	}
+	refusals, err := pgx.CollectRows(rows, pgx.RowTo[string])
+	want := []string{
+		"Félix Morel WRITE_DENIED DENIED PLA 2025-000118 2025-09-26",
+		"Bruno Favre READ DENIED SUB 2025-000009 2025-10-06",
+	}
+	if err != nil || !slices.Equal(refusals, want) {
+		t.Errorf("story refusals: %v (%v), want %v", refusals, err, want)
+	}
+	var hugoReads, downloads int
+	err = pool.QueryRow(t.Context(), `
+		SELECT (SELECT count(*) FROM access_audit_event a JOIN subject_ref sr ON sr.id = a.subject_id
+		         WHERE a.action = 'READ' AND sr.business_ref = '2025-000031' AND sr.business_ref_namespace = 'OPC'
+		           AND a.user_id = (SELECT user_id FROM app_user WHERE display_name = 'Hugo Delessert')),
+		       (SELECT count(*) FROM access_audit_event a WHERE a.action = 'DOWNLOAD' AND a.outcome = 'GRANTED')`).Scan(&hugoReads, &downloads)
+	if err != nil || hugoReads != 2 || downloads < 10 {
+		t.Errorf("consultations: Hugo read the permit %d times (want 2), %d downloads (%v)", hugoReads, downloads, err)
 	}
 }
 

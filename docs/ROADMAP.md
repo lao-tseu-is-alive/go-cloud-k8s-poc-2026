@@ -649,7 +649,9 @@ placed on Swiss territory.
   (« SIG 2026-000014 »). Then the heroes §4.3 (recurring complaint, reopened, restricted police
   note), §4.4 (confidential subsidy, sensitive read audited) and §4.5 (two sign cases due since
   2025, one under a legal hold); `TestDemoSeed` checks their dates and the rights they show.
-  Next: the places edited by the product owner in QGIS, the background of profile `demo`, and the
+  Then the consultations of the stories (DEMO_SCRIPT §4.7): reads and downloads at story times
+  and two refusals, recorded without the 15-minute window (`core.WithEveryAccessLogged`, set by
+  `demo-seed` only). Next: the places edited by the product owner in QGIS, the background of profile `demo`, and the
   seeded task, relationship and org unit type labels in English.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a

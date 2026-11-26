@@ -22,6 +22,17 @@ import (
 // AccessLogWindow is the period within which a repeated access is recorded once.
 const AccessLogWindow = 15 * time.Minute
 
+// everyAccessKey marks a context whose accesses are all recorded (WithEveryAccessLogged).
+type everyAccessKey struct{}
+
+// WithEveryAccessLogged returns a context in which every access is recorded,
+// without the AccessLogWindow: the demo generator (GLD-079) reads at story
+// times months apart within seconds of real time. Only code running in the
+// process can set it (demo-seed's in-process server); no request can.
+func WithEveryAccessLogged(ctx context.Context) context.Context {
+	return context.WithValue(ctx, everyAccessKey{}, true)
+}
+
 // AccessAction is what an access did; it mirrors access_audit_event.action.
 type AccessAction string
 
@@ -167,10 +178,11 @@ func RecordWriteDeniedTx(ctx context.Context, q Querier, userID string, access A
 }
 
 // insertAccessAuditTx writes one access_audit_event row, unless the same
-// access was recorded within AccessLogWindow (an export always is).
+// access was recorded within AccessLogWindow (an export always is, and every
+// access in a WithEveryAccessLogged context).
 func insertAccessAuditTx(ctx context.Context, q Querier, userID string, access Access, action AccessAction, outcome AccessOutcome, versionID *uuid.UUID) error {
 	window := AccessLogWindow
-	if action == AccessExport {
+	if every, _ := ctx.Value(everyAccessKey{}).(bool); every || action == AccessExport {
 		window = 0
 	}
 	if _, err := q.Exec(ctx, insertAccessAuditSQL, pgx.NamedArgs{
