@@ -228,6 +228,11 @@ version keys (`0001`…), so they are interchangeable. In production the schema 
 `goeland-server migrate` and the server, with `GOELAND_DB_MIGRATE=verify`, runs as a role limited
 to rows (GLD-046, [docs/PRODUCTION_READINESS.md](docs/PRODUCTION_READINESS.md) §2).
 
+A brand-new database can be filled with the synthetic public demo (GLD-079, fictional data only):
+`scripts/demo_seed.sh -e .env_demo_small_fr` (settings copied from `.env_demo.sample`), then serve
+it with `scripts/demo_seed.sh -s -e .env_demo_small_fr` — see
+[docs/DEMO_SCRIPT.md](docs/DEMO_SCRIPT.md) §7.
+
 ## Running locally (dev auth)
 
 ```bash
@@ -556,6 +561,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
 | `import_rebuild.sh <goeland_import…> [--dry-run]` | Recreate a local import database and load it from the legacy replica (`docs/IMPORT_MAPPING.md`) |
+| `demo_seed.sh [-s] [-e <env-file>] [<database>] [fr\|en]` | Create the database if missing (owner from `.env`, extensions as superuser) and generate the synthetic demo into it, or with `-s` serve the existing demo; `-e` adds demo settings (`.env_demo.sample`, `docs/DEMO_SCRIPT.md` §7) |
 | `garage_test_server.sh start <env-file> \| stop` | Disposable single-node Garage (docker or podman) for the S3 blob store tests; writes the generated test settings to the file |
 | `check_build_inputs.sh`          | Images pinned by digest, third-party actions by SHA, Go builder >= `go.mod` (`make build-inputs-check`) |
 | `sbom.sh [dir]`                  | CycloneDX SBOM + license inventory with Trivy (`make sbom`; attached to each GitHub release)          |

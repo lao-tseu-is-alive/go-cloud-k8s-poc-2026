@@ -11,6 +11,9 @@
 //	goeland-server            run the server (configured by environment variables)
 //	goeland-server migrate    apply the migrations as the schema owner, grant the
 //	                          runtime role GOELAND_DB_APP_ROLE, and exit (GLD-046)
+//	goeland-server demo-seed [-profile small] [-lang fr|en]
+//	                          generate the synthetic demo data in a brand-new
+//	                          database through the API, and exit (GLD-079)
 //	goeland-server --version  print "<app> v<Version> (revision <rev>, built <stamp>)" and exit
 package main
 
@@ -46,8 +49,10 @@ func main() {
 	switch args := flag.Args(); {
 	case len(args) == 1 && args[0] == "migrate":
 		os.Exit(migrateMain())
+	case len(args) > 0 && args[0] == "demo-seed":
+		os.Exit(demoSeedMain(args[1:]))
 	case len(args) > 0:
-		fmt.Fprintf(os.Stderr, "goeland-server: unknown command %q (usage: goeland-server [migrate] [--version])\n", strings.Join(args, " "))
+		fmt.Fprintf(os.Stderr, "goeland-server: unknown command %q (usage: goeland-server [migrate | demo-seed] [--version])\n", strings.Join(args, " "))
 		os.Exit(2)
 	}
 

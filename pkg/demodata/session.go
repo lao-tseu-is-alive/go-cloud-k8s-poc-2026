@@ -1,0 +1,223 @@
+package demodata
+
+import (
+	"bytes"
+	"context"
+	"crypto/rand"
+	"crypto/subtle"
+	"encoding/hex"
+	"encoding/json"
+	"fmt"
+	"io"
+	"mime/multipart"
+	"net/http"
+	"strconv"
+	"strings"
+
+	"connectrpc.com/connect"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/authadapter"
+)
+
+// User keys of the demo users (docs/DEMO_SCRIPT.md §3).
+const (
+	userAlice = "alice" // administrator
+	userBruno = "bruno" // agent, Urbanisme
+	userChloe = "chloe" // agent, Voirie et propreté
+	userDavid = "david" // records manager, Archives communales
+	userEmma  = "emma"  // reader, Énergie
+	userFelix = "felix" // agent, Cohésion sociale
+	userHugo  = "hugo"  // agent, Parcs et promenades
+)
+
+// DemoUser is a demo user: its fixed application user id (as the auth
+// service would give it), its name and e-mail, and its unit.
+type DemoUser struct {
+	// Key names the user in the stories ("alice", "bruno", ...).
+	Key string
+	// ID is the application user id; log in as the user with GOELAND_DEV_USER_ID.
+	ID int64
+	// DisplayName is the user's name.
+	DisplayName string
+	// Email is the user's fictional e-mail address.
+	Email string
+	// Unit is the key of the org unit it belongs to ("" for none).
+	Unit string
+}
+
+// demoUsers is the cast, in creation order; Alice comes first because she is
+// the bootstrap administrator who creates the catalogue and the org chart.
+var demoUsers = []DemoUser{
+	{userAlice, 1, "Alice Martin", "alice.martin@example.ch", ""},
+	{userBruno, 2, "Bruno Favre", "bruno.favre@example.ch", unitPlanning},
+	{userChloe, 3, "Chloé Bonvin", "chloe.bonvin@example.ch", unitRoads},
+	{userDavid, 4, "David Perret", "david.perret@example.ch", unitArchives},
+	{userEmma, 5, "Emma Jaquet", "emma.jaquet@example.ch", unitEnergy},
+	{userFelix, 6, "Félix Morel", "felix.morel@example.ch", unitSocial},
+	{userHugo, 7, "Hugo Delessert", "hugo.delessert@example.ch", unitParks},
+}
+
+// Users returns the demo users, administrator first.
+func Users() []DemoUser { return append([]DemoUser(nil), demoUsers...) }
+
+// AdminUserID is the id of the demo administrator, to bootstrap as ADMIN
+// (GOELAND_BOOTSTRAP_ADMINS) on the server the generator talks to.
+func AdminUserID() string { return strconv.FormatInt(demoUsers[0].ID, 10) }
+
+// Session holds one in-process bearer token per demo user, drawn at random for
+// one run and never written anywhere.
+type Session struct {
+	tokens map[string]string // user key -> token
+	users  map[string]authadapter.AuthenticatedUser
+}
+
+// NewSession draws the tokens of the demo users.
+func NewSession() (*Session, error) {
+	s := &Session{tokens: map[string]string{}, users: map[string]authadapter.AuthenticatedUser{}}
+	for _, u := range demoUsers {
+		raw := make([]byte, 32)
+		if _, err := rand.Read(raw); err != nil {
+			return nil, fmt.Errorf("draw a demo token: %w", err)
+		}
+		token := hex.EncodeToString(raw)
+		s.tokens[u.Key] = token
+		s.users[token] = authadapter.AuthenticatedUser{
+			AppUserID: u.ID, Email: u.Email, DisplayName: u.DisplayName, Scopes: []string{"goeland:read", "goeland:write"},
+		}
+	}
+	return s, nil
+}
+
+// Verifier authenticates the demo users' tokens. Install it only on a server
+// built for the generator run, never on one that listens on a network.
+func (s *Session) Verifier() authadapter.TokenVerifier { return sessionVerifier{s} }
+
+// sessionVerifier is the TokenVerifier of a Session.
+type sessionVerifier struct{ s *Session }
+
+// VerifyBearerToken accepts the token of a demo user.
+func (v sessionVerifier) VerifyBearerToken(_ context.Context, token string) (*authadapter.AuthenticatedUser, error) {
+	for known, user := range v.s.users {
+		if subtle.ConstantTimeCompare([]byte(token), []byte(known)) == 1 {
+			u := user
+			u.Scopes = append([]string(nil), user.Scopes...)
+			return &u, nil
+		}
+	}
+	return nil, authadapter.ErrInvalidToken
+}
+
+// actingUserKey carries the key of the demo user a request is sent as.
+type actingUserKey struct{}
+
+// as returns ctx in which the requests are sent as the demo user key.
+func as(ctx context.Context, key string) context.Context {
+	return context.WithValue(ctx, actingUserKey{}, key)
+}
+
+// tokenFor returns the bearer token of the user ctx acts as.
+func (s *Session) tokenFor(ctx context.Context) (string, error) {
+	key, _ := ctx.Value(actingUserKey{}).(string)
+	token, ok := s.tokens[key]
+	if !ok {
+		return "", fmt.Errorf("no demo user %q to act as", key)
+	}
+	return token, nil
+}
+
+// Clients are the API clients the generator writes through.
+type Clients struct {
+	core         goelandv1connect.CoreServiceClient
+	actors       goelandv1connect.ActorServiceClient
+	cases        goelandv1connect.CaseServiceClient
+	things       goelandv1connect.ThingServiceClient
+	documents    goelandv1connect.DocumentServiceClient
+	orgUnits     goelandv1connect.OrgUnitServiceClient
+	timeline     goelandv1connect.TimelineServiceClient
+	tasks        goelandv1connect.TaskServiceClient
+	circulations goelandv1connect.CirculationServiceClient
+	access       goelandv1connect.AccessServiceClient
+	retention    goelandv1connect.RetentionServiceClient
+
+	session *Session
+	http    *http.Client
+	baseURL string
+}
+
+// NewClients builds the clients of every service on httpClient and baseURL;
+// each request carries the token of the demo user its context acts as.
+func (s *Session) NewClients(httpClient *http.Client, baseURL string) *Clients {
+	baseURL = strings.TrimRight(baseURL, "/")
+	opt := connect.WithInterceptors(connect.UnaryInterceptorFunc(func(next connect.UnaryFunc) connect.UnaryFunc {
+		return func(ctx context.Context, req connect.AnyRequest) (connect.AnyResponse, error) {
+			token, err := s.tokenFor(ctx)
+			if err != nil {
+				return nil, err
+			}
+			req.Header().Set("Authorization", "Bearer "+token)
+			return next(ctx, req)
+		}
+	}))
+	return &Clients{
+		core:         goelandv1connect.NewCoreServiceClient(httpClient, baseURL, opt),
+		actors:       goelandv1connect.NewActorServiceClient(httpClient, baseURL, opt),
+		cases:        goelandv1connect.NewCaseServiceClient(httpClient, baseURL, opt),
+		things:       goelandv1connect.NewThingServiceClient(httpClient, baseURL, opt),
+		documents:    goelandv1connect.NewDocumentServiceClient(httpClient, baseURL, opt),
+		orgUnits:     goelandv1connect.NewOrgUnitServiceClient(httpClient, baseURL, opt),
+		timeline:     goelandv1connect.NewTimelineServiceClient(httpClient, baseURL, opt),
+		tasks:        goelandv1connect.NewTaskServiceClient(httpClient, baseURL, opt),
+		circulations: goelandv1connect.NewCirculationServiceClient(httpClient, baseURL, opt),
+		access:       goelandv1connect.NewAccessServiceClient(httpClient, baseURL, opt),
+		retention:    goelandv1connect.NewRetentionServiceClient(httpClient, baseURL, opt),
+		session:      s,
+		http:         httpClient,
+		baseURL:      baseURL,
+	}
+}
+
+// upload sends content to the out-of-proto upload endpoint as the user ctx
+// acts as, and returns the content blob id.
+func (c *Clients) upload(ctx context.Context, filename string, content []byte) (string, error) {
+	token, err := c.session.tokenFor(ctx)
+	if err != nil {
+		return "", err
+	}
+	var body bytes.Buffer
+	form := multipart.NewWriter(&body)
+	part, err := form.CreateFormFile("file", filename)
+	if err == nil {
+		_, err = part.Write(content)
+	}
+	if err == nil {
+		err = form.Close()
+	}
+	if err != nil {
+		return "", fmt.Errorf("build the upload of %s: %w", filename, err)
+	}
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+"/api/documents/upload", &body)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", form.FormDataContentType())
+	req.Header.Set("Authorization", "Bearer "+token)
+	resp, err := c.http.Do(req)
+	if err != nil {
+		return "", fmt.Errorf("upload %s: %w", filename, err)
+	}
+	defer func() { _ = resp.Body.Close() }()
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
+	if err != nil {
+		return "", fmt.Errorf("upload %s: %w", filename, err)
+	}
+	if resp.StatusCode != http.StatusOK && resp.StatusCode != http.StatusCreated {
+		return "", fmt.Errorf("upload %s: HTTP %d: %s", filename, resp.StatusCode, raw)
+	}
+	var reply struct {
+		ContentBlobID string `json:"contentBlobId"`
+	}
+	if err := json.Unmarshal(raw, &reply); err != nil || reply.ContentBlobID == "" {
+		return "", fmt.Errorf("upload %s: unexpected reply %s", filename, raw)
+	}
+	return reply.ContentBlobID, nil
+}

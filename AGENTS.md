@@ -239,6 +239,7 @@ pkg/task/                    case tasks (assignment history, lifecycle, "my task
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/timeline/                case timeline (suivis): entries, corrections, cited documents
   └── module/                bundleable module (NO migrations; core owns schema)
+pkg/demodata/                synthetic demo generator (GLD-079): catalogue, org chart, demo users, hero cases, through the API
 pkg/integration/             env-gated DB integration tests (migrations + document/actor lifecycles)
 cmd/goeland-server/          server: pool → migrate → wire the modules → one shared transcoder
   ├── server.go              routes; embeds + serves the SPA (SPA fallback to index.html)
@@ -296,6 +297,14 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   `stop`. Never point them at the developer's own Garage or a shared bucket. With those variables
   set, the scenario and API surface servers use the `s3` backend; CI sets
   `GOELAND_REQUIRE_S3_TESTS=true`.
+- **Synthetic demo (GLD-079):** `scripts/demo_seed.sh [-s] [-e <env-file>] [<database>] [fr|en]`
+  (creates the database if missing, owner from `.env`; `-e` adds Git-ignored demo settings,
+  `.env_demo.sample`; `-s` serves the existing demo instead) runs `goeland-server demo-seed -profile small -lang fr|en`
+  (`cmd/goeland-server/demo.go`, `pkg/demodata`) writes docs/DEMO_SCRIPT.md into a brand-new
+  database through the in-process API, each request as a demo user (tokens drawn per run, never
+  a listener). Every value is invented: never sample, copy or anonymize real data into it. Every
+  text lives in `texts_<lang>.go` (`TestTextsAreComplete`); `TestDemoSeed` runs it per language in
+  a fresh database as the runtime role, so an API change that breaks the demo fails `make check`.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,

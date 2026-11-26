@@ -613,10 +613,10 @@ only aggregate distributions already profiled (kind ratio, category histogram, c
 may shape it. The demo takes place in a fictional municipality, « Commune de Goéland-sur-Lac »,
 placed on Swiss territory.
 
-- [ ] **GLD-079 — Synthetic dataset generator**: a deterministic generator (fixed seed, UUIDv5
-  ids) writing through the domain services, so the data passes the same validation, rights,
-  audit, outbox and timeline rules as the application, and the generator doubles as a regression
-  test of the business API. It refuses a database that is not brand new, like `goeland-import`;
+- [~] **GLD-079 — Synthetic dataset generator**: a deterministic generator (same content in the
+  same order; ids and references allocated by the server) writing through the API as the demo
+  users, so the data passes the same validation, rights, audit, outbox and timeline rules as the
+  application, and the generator doubles as a regression test of the business API. It refuses a database that is not brand new, like `goeland-import`;
   the generator is committed, never a dump. A language parameter (`--lang`, `fr` by default)
   picks the catalogue holding every generated text (type labels, hero stories, letters, unit
   names, name lists); one database is generated in one language, the structure and seed are the
@@ -638,6 +638,14 @@ placed on Swiss territory.
     numbers in fictional ranges that pass E.164 validation; geometries may come from Swiss open
     geodata (official survey parcels, building footprints) so they match the cadastral
     background, never their real identifiers or owners.
+
+  Progress 2026-11-26: `goeland-server demo-seed -profile small -lang fr|en` (`pkg/demodata`)
+  writes the catalogue (relabelling the seeded entries in the demo language), the org chart, seven
+  demo users (Alice bootstrapped ADMIN, David RECORDS_MANAGER) and the hero cases §4.1, §4.2 and
+  §4.6, as the runtime role in the test (`TestDemoSeed`, both languages). Next: heroes §4.3 to
+  §4.5 (§4.5 needs a case due on the day of the generation: the API never backdates), the
+  background of profile `demo`, open geodata geometries (generated rectangles in the meantime),
+  and the seeded task, relationship and org unit type labels in English.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native

@@ -21,6 +21,9 @@
 /.env_for_github.txt
 /.env_original
 /.env.import
+/.env_demo*
+!/.env_demo.sample
+/demo_documents/
 
 # IDE
 .idea

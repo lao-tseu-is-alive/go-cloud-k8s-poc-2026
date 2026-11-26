@@ -129,6 +129,10 @@ type serverConfig struct {
 	// (GOELAND_DISPOSAL_ENABLED=true, GLD-077); off by default, an elimination
 	// is only simulated.
 	DisposalEnabled bool
+	// tokenVerifier, when set, replaces the verifier of the auth mode: the
+	// demo users of `goeland-server demo-seed`, on a server that never
+	// listens (GLD-079). Never read from the environment.
+	tokenVerifier authadapter.TokenVerifier
 }
 
 // maxBootstrapAdmins bounds GOELAND_BOOTSTRAP_ADMINS.

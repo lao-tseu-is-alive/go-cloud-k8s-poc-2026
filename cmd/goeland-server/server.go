@@ -371,6 +371,9 @@ func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.L
 
 // buildTokenVerifier selects the verifier for the configured auth mode.
 func buildTokenVerifier(config serverConfig) (authadapter.TokenVerifier, error) {
+	if config.tokenVerifier != nil {
+		return config.tokenVerifier, nil
+	}
 	if config.AuthMode == "dev" {
 		return authadapter.NewDevTokenVerifier(config.DevToken, authadapter.AuthenticatedUser{
 			AppUserID:   config.DevUserID,

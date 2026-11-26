@@ -11,6 +11,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Governance, documentation and automation
 
 - `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
+- `.env_demo.sample` — Secret-free example of a demo settings file for `scripts/demo_seed.sh -e`: demo database, language, separate document directory, demo user to serve as.
 - `.env_sample` — Secret-free example of every environment variable the server reads, with defaults and pointers to `docs/PRODUCTION_READINESS.md` (`docs-assert` checks the list is complete).
 - `.env.import.sample` — Secret-free example of `.env.import`, the replica and superuser connections of the legacy import (kept out of `.env`).
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
@@ -54,6 +55,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
 - `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/`, `api/openapi/` or the SPA contract types differ (`make generated-check`, GLD-008, GLD-072).
+- `scripts/demo_seed.sh` — Creates a local database when missing (owner from `.env`, extensions as superuser) and runs `goeland-server demo-seed` into it, or with `-s` serves the existing demo database; settings from the environment, then the `-e` demo file, then `.env`; never prints credentials.
 - `scripts/garage_test_server.sh` — Starts or stops a disposable single-node Garage (docker or podman, pinned by digest) for the S3 tests, writing its generated settings to an env file.
 - `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
@@ -131,9 +133,11 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
 - `cmd/goeland-import/main.go` — Legacy data import command: migrates a brand-new target and runs `pkg/legacyimport` in one transaction; dry run unless `-apply`, counts only.
 - `cmd/goeland-import/tables2replicate.yaml` — The 44 legacy tables and columns the import reads on the source replica, by area, for the tool that replicates them from MSSQL; kept in sync with the source queries of `pkg/legacyimport`.
+- `cmd/goeland-server/demo.go` — The `demo-seed` command (GLD-079): builds the application in-process with the demo users' verifier, refuses a database that is not brand new, and writes the synthetic demo data through the API without listening on a network.
+- `cmd/goeland-server/demo_test.go` — Generates the small demo profile in every language, each in a fresh database as the runtime role, reads it back and checks that a second run is refused; env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
-- `cmd/goeland-server/main.go` — Server entry point: `--version`, config, logger, startup, listener and graceful shutdown.
+- `cmd/goeland-server/main.go` — Server entry point: `--version`, the `migrate` and `demo-seed` commands, config, logger, startup, listener and graceful shutdown.
 - `cmd/goeland-server/queryparams.go` — REST bindings read from the proto descriptors and a middleware answering 400 for a query parameter that names no request field (GLD-043).
 - `cmd/goeland-server/queryparams_test.go` — Tests the most specific binding match and the unknown query parameter middleware.
 - `cmd/goeland-server/scenario_test.go` — End-to-end spec v2 §50 scenario over HTTP against the real handler (REST, dev tokens, scopes, validation, error codes); env-gated on `GOELAND_TEST_DATABASE_URL`.
@@ -469,6 +473,20 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/timeline/tx.go` — Transaction helpers: open-case and draft locks, document citation with case link, audit on the case; exported `EnsureNoDraftsTx` and `RecordSystemEntryTx` for the case lifecycle.
 - `pkg/timeline/module/module.go` — Bundleable timeline module: dependency validation and lifecycle.
 - `pkg/timeline/module/routes.go` — Timeline interceptor chain, Vanguard services and standalone routes.
+
+## Synthetic demo data (`pkg/demodata`)
+
+- `pkg/demodata/doc.go` — Package documentation: a fictional municipality generated through the public API, one demo user at a time, every value invented (GLD-079).
+- `pkg/demodata/catalogue.go` — The demo's org chart, case types, document types and retention policies, and their creation (or relabelling of the seeded ones) by the demo administrator; the users' memberships and roles.
+- `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer, and small PNG photographs.
+- `pkg/demodata/generate.go` — `Generate`: language and profile checks, the order of the stories, the report; story coordinates and GeoJSON helpers.
+- `pkg/demodata/heroes.go` — The hero cases of docs/DEMO_SCRIPT.md built so far: building permit (§4.1), opposition (§4.2), citizen report (§4.6); fictional register identifiers.
+- `pkg/demodata/run.go` — One generation: typed API calls that stop at the first refused request, and the steps the stories use (actors, things, cases, documents, timeline, tasks, circulations).
+- `pkg/demodata/session.go` — The demo users, their in-process bearer tokens and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
+- `pkg/demodata/texts.go` — The catalogue of generated texts and the supported languages.
+- `pkg/demodata/texts_en.go` — English texts of the demo.
+- `pkg/demodata/texts_fr.go` — French texts of the demo (default language).
+- `pkg/demodata/demodata_test.go` — Unit tests: every language complete, PDF structure and encoding, photos, demo user tokens.
 
 ## Integration tests (`pkg/integration`)
 

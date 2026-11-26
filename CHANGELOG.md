@@ -8,6 +8,16 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- `goeland-server demo-seed -profile small -lang fr|en` (GLD-079, in progress) generates the
+  synthetic demo of docs/DEMO_SCRIPT.md in a brand-new database, through the API as its demo
+  users: the catalogue, the org chart of the fictional « Commune de Goéland-sur-Lac », seven demo
+  users and the first hero cases (building permit, opposition, citizen report), with generated PDF
+  documents and photographs. `scripts/demo_seed.sh [-e <env-file>] [<database>] [fr|en]` creates
+  the database if needed (owner from `.env`) and runs it, or with `-s` serves the existing demo; a demo settings file
+  (`.env_demo.sample`, Git-ignored copies) keeps the demo database and documents apart.
+
 ## [0.23.0] - 2026-11-25
 
 Storage and integrity: orphan upload collection (GLD-045), probative content verification
