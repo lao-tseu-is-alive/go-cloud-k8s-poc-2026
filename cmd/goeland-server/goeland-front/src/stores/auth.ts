@@ -1,11 +1,13 @@
-import type { FrontendConfig, TokenResponse, TokenUser, User } from '@/api/types'
+import type { DemoConfig, DemoUser, FrontendConfig, TokenResponse, TokenUser, User } from '@/api/types'
 /**
  * Authentication store (setup style).
  *
- * Bootstraps from GET /config, then supports two modes :
+ * Bootstraps from GET /config, then supports three modes :
  *   - dev:  a static token is entered manually for local hacking.
  *   - jwt:  short-lived JWTs are minted silently from the SSO session cookie
  *           at ${authBaseUrl}/auth/token and re-minted before expiry.
+ *   - demo: the synthetic demo (GLD-085); the visitor picks a demo user, whose
+ *           public token the server lists in /config.
  *
  * The token is kept in memory only (never localStorage) and mirrored into the
  * REST client via setAuthToken so every apiFetch carries it.
@@ -17,7 +19,9 @@ import { getCurrentUser } from '@/api/coreClient'
 import { useUsersStore } from '@/stores/users'
 
 export const useAuthStore = defineStore('auth', () => {
-  const mode = ref<'dev' | 'jwt'>('jwt')
+  const mode = ref<'dev' | 'jwt' | 'demo'>('jwt')
+  // demo mode: the generated demo and the users one may sign in as.
+  const demo = ref<DemoConfig | null>(null)
   const authBaseUrl = ref('')
   // Whether this server lets an elimination run (GOELAND_DISPOSAL_ENABLED); off, it is only simulated.
   const disposalEnabled = ref(false)
@@ -118,9 +122,10 @@ export const useAuthStore = defineStore('auth', () => {
       const res = await fetch('/config')
       if (res.ok) {
         const cfg = await res.json() as FrontendConfig
-        mode.value = cfg.authMode === 'dev' ? 'dev' : 'jwt'
+        mode.value = cfg.authMode === 'dev' || cfg.authMode === 'demo' ? cfg.authMode : 'jwt'
         authBaseUrl.value = cfg.authBaseUrl ?? ''
         disposalEnabled.value = cfg.disposalEnabled === true
+        demo.value = cfg.authMode === 'demo' ? cfg.demo ?? null : null
       }
     } catch {
       // assume jwt mode if /config is unreachable
@@ -149,6 +154,11 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
+  /** demo mode: sign in as a demo user (signing out picks another one). */
+  async function signInAsDemo (demoUser: DemoUser): Promise<boolean> {
+    return applyDevToken(demoUser.token)
+  }
+
   /** jwt mode: redirect to the external auth service login page. */
   function signIn (): void {
     const redirect = encodeURIComponent(window.location.href)
@@ -167,8 +177,8 @@ export const useAuthStore = defineStore('auth', () => {
   }
 
   return {
-    mode, authBaseUrl, disposalEnabled, token, user, me, scopes, ready, error,
+    mode, demo, authBaseUrl, disposalEnabled, token, user, me, scopes, ready, error,
     isAuthenticated, displayName, isAdmin, isRecordsManager, loadMe,
-    bootstrap, applyDevToken, mintToken, signIn, signOut, clear,
+    bootstrap, applyDevToken, signInAsDemo, mintToken, signIn, signOut, clear,
   }
 })

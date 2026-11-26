@@ -163,7 +163,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0039 (dbmate format)
+      └── db/migrations/  0001..0040 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete) + Chain; filestore/ = local implementation,
@@ -474,6 +474,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0037_elimination.sql         controlled erasure during an elimination, destroyed files (GLD-077)
 0038_deferrable_current_version.sql  deferrable current version reference, for the legacy import
 0039_orphan_uploads.sql      content_blob.uploaded_at: collection of uploads never attached (GLD-045)
+0040_demo_dataset.sql        demo_dataset: marker of a generated demo, required by the demo mode (GLD-085)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document
@@ -561,7 +562,7 @@ Helper scripts for the dev loop and ops (all run from the repo root):
 | `create_k8s_configmap_from_env.sh` | Render a k8s ConfigMap from `.env` (dry-run)                                                          |
 | `k8s_smoke_test.sh [--delete]`   | Deploy the published image + disposable PostGIS on a local cluster (`deployments/k8s`) and check it runs |
 | `import_rebuild.sh <goeland_import…> [--dry-run]` | Recreate a local import database and load it from the legacy replica (`docs/IMPORT_MAPPING.md`) |
-| `demo_seed.sh [-s] [-e <env-file>] [<database>] [fr\|en]` | Create the database if missing (owner from `.env`, extensions as superuser) and generate the synthetic demo into it, or with `-s` serve the existing demo; `-e` adds demo settings (`.env_demo.sample`, `docs/DEMO_SCRIPT.md` §7) |
+| `demo_seed.sh [-r \| -s] [-e <env-file>] [<database>] [fr\|en]` | Create the database if missing (owner from `.env`, extensions as superuser) and generate the synthetic demo into it, with `-r` after dropping the previous demo (marker required), or with `-s` serve the existing demo; `-e` adds demo settings (`.env_demo.sample`, `docs/DEMO_SCRIPT.md` §7) |
 | `garage_test_server.sh start <env-file> \| stop` | Disposable single-node Garage (docker or podman) for the S3 blob store tests; writes the generated test settings to the file |
 | `check_build_inputs.sh`          | Images pinned by digest, third-party actions by SHA, Go builder >= `go.mod` (`make build-inputs-check`) |
 | `sbom.sh [dir]`                  | CycloneDX SBOM + license inventory with Trivy (`make sbom`; attached to each GitHub release)          |

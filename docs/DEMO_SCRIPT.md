@@ -181,6 +181,7 @@ database, the language and a separate document directory, then:
 
 ```bash
 scripts/demo_seed.sh -e .env_demo_small_fr
+scripts/demo_seed.sh -r -e .env_demo_small_fr   # regenerate: drop the previous demo first
 scripts/demo_seed.sh goeland_demo en            # without a file: database and language as arguments
 scripts/demo_seed.sh -e .env_demo_small_fr other_db en   # arguments win over the file
 ```
@@ -194,34 +195,41 @@ The script creates the database when it does not exist, owned by the application
 (`DB_USER`), with the extensions enabled as the PostgreSQL superuser (`GOELAND_DEMO_ADMIN_URL`,
 by default `postgres@DB_HOST:DB_PORT`), then runs `goeland-server demo-seed`, which migrates it
 and writes the demo. An existing database is used as it is, but the generator only writes into
-a **brand-new** one: it refuses a database holding any subject. Serve the demo with the same
-blob store settings, so its documents are found.
+a **brand-new** one: it refuses a database holding any subject. To generate it again (a newer
+generator, another language), `-r` first drops the database, only when it carries the demo marker
+`demo-seed` writes (`demo_dataset`, see below; any other database is refused), and the documents
+of the file store when they are under `./demo_documents`. Serve the demo with the same blob store
+settings, so its documents are found.
 
 The generator replaces the authentication: the demo users get tokens drawn for the run, used
 in-process only (it never listens on a network), and Alice (user id 1) is bootstrapped as
 administrator.
 
 To look at the demo, serve it with the same settings: `-s` creates and writes nothing, it checks
-that the database exists and runs the server on it (`DB_NAME` set, `DATABASE_URL` unset), in dev
-mode as the user of the `GOELAND_DEV_USER_*` settings (Bruno in `.env_demo.sample`). Give the
-user's id, name and e-mail, or the name would be replaced by the dev user's; the environment
-wins over the file, so another user is one command away:
+that the database exists and runs the server on it (`DB_NAME` set, `DATABASE_URL` unset).
 
 ```bash
 scripts/demo_seed.sh -s -e .env_demo_small_fr
-GOELAND_DEV_USER_ID=3 GOELAND_DEV_USER_NAME='Chloé Bonvin' GOELAND_DEV_USER_EMAIL=chloe.bonvin@example.ch \
-  scripts/demo_seed.sh -s -e .env_demo_small_fr
 ```
+
+`.env_demo.sample` serves it in the **demo mode** (`GOELAND_AUTH_MODE=demo`, GLD-085): the
+sign-in screen lists the demo users below with their role and what each shows, one click signs in,
+« Changer d'utilisateur » in the user menu brings the list back, a banner says on every screen that
+the data is fictional, and the interface opens in the language of the generated data. Nobody types
+a token: the demo users' tokens are public on purpose. Because anyone can sign in, the server
+refuses this mode unless the database holds the marker `demo-seed` writes once it has generated
+the demo into a brand-new database (`demo_dataset`, migration `0040`): a database holding real data
+can never be served this way.
+
+| User | Id | Role |
+| --- | --- | --- |
+| Alice Martin | 1 | administrator |
+| Bruno Favre | 2 | agent, Urbanisme |
+| Chloé Bonvin | 3 | agent, Voirie et propreté |
+| David Perret | 4 | records manager, Archives communales |
+| Emma Jaquet | 5 | reader, Énergie |
+| Félix Morel | 6 | agent, Cohésion sociale |
+| Hugo Delessert | 7 | agent, Parcs et promenades |
 
 The server applies pending migrations at startup, as locally: a newer POC updates the schema of
 the demo database, never its data.
-
-| User | `GOELAND_DEV_USER_ID` | `GOELAND_DEV_USER_NAME` | `GOELAND_DEV_USER_EMAIL` |
-| --- | --- | --- | --- |
-| Alice | 1 | Alice Martin | alice.martin@example.ch |
-| Bruno | 2 | Bruno Favre | bruno.favre@example.ch |
-| Chloé | 3 | Chloé Bonvin | chloe.bonvin@example.ch |
-| David | 4 | David Perret | david.perret@example.ch |
-| Emma | 5 | Emma Jaquet | emma.jaquet@example.ch |
-| Félix | 6 | Félix Morel | felix.morel@example.ch |
-| Hugo | 7 | Hugo Delessert | hugo.delessert@example.ch |

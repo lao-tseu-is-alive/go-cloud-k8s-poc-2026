@@ -131,3 +131,24 @@ func TestSessionVerifier(t *testing.T) {
 		t.Error("Alice is the first user and the bootstrap administrator")
 	}
 }
+
+// TestPublicSession checks the public tokens of the demo mode: each signs in
+// as its demo user, and a token of another session does not.
+func TestPublicSession(t *testing.T) {
+	ctx := context.Background()
+	verifier := PublicSession().Verifier()
+	for _, u := range Users() {
+		user, err := verifier.VerifyBearerToken(ctx, PublicToken(u.Key))
+		if err != nil || user.AppUserID != u.ID {
+			t.Errorf("%s: %v %v", u.Key, user, err)
+		}
+	}
+	drawn, err := NewSession()
+	if err != nil {
+		t.Fatal(err)
+	}
+	token, _ := drawn.tokenFor(as(ctx, userAlice))
+	if _, err := verifier.VerifyBearerToken(ctx, token); err == nil {
+		t.Error("a token drawn for demo-seed must not sign in on the demo mode")
+	}
+}

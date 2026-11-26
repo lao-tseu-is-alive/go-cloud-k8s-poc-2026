@@ -212,7 +212,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0039 (dbmate format)
+  │   └── db/migrations/     0001..0040 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral; Chain
@@ -297,9 +297,10 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
   `stop`. Never point them at the developer's own Garage or a shared bucket. With those variables
   set, the scenario and API surface servers use the `s3` backend; CI sets
   `GOELAND_REQUIRE_S3_TESTS=true`.
-- **Synthetic demo (GLD-079):** `scripts/demo_seed.sh [-s] [-e <env-file>] [<database>] [fr|en]`
+- **Synthetic demo (GLD-079):** `scripts/demo_seed.sh [-r | -s] [-e <env-file>] [<database>] [fr|en]`
   (creates the database if missing, owner from `.env`; `-e` adds Git-ignored demo settings,
-  `.env_demo.sample`; `-s` serves the existing demo instead) runs `goeland-server demo-seed -profile small -lang fr|en`
+  `.env_demo.sample`; `-r` drops a previous demo first, only one carrying the `demo_dataset` marker;
+  `-s` serves the existing demo instead) runs `goeland-server demo-seed -profile small -lang fr|en`
   (`cmd/goeland-server/demo.go`, `pkg/demodata`) writes docs/DEMO_SCRIPT.md into a brand-new
   database through the in-process API, each request as a demo user (tokens drawn per run, never
   a listener). Every value is invented: never sample, copy or anonymize real data into it. Every
@@ -340,6 +341,10 @@ Reuses `pkg/authadapter`. `GOELAND_AUTH_MODE`:
 - `dev`: accepts `GOELAND_DEV_TOKEN` (required in dev mode) for one user
   (`GOELAND_DEV_USER_ID` / `_EMAIL` / `_NAME`; `GOELAND_DEV_USER_ADMIN=true` bootstraps it as
   administrator).
+- `demo` (GLD-085): the public tokens of the demo users (`demodata.PublicSession`), listed by
+  `GET /config` for the SPA's user picker; `newApplication` refuses to start unless the database
+  holds the `demo_dataset` row `demo-seed` writes (`requireDemoDataset`). Never weaken that guard:
+  it is what keeps real data out of a password-less mode.
 
 **Authorization (GLD-048, model GLD-017):** the effective level of a user on a subject is the
 most specific grant — personal, then its groups (highest), then the nearest of its units or their

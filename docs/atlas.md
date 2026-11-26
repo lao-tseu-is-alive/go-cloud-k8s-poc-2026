@@ -11,7 +11,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Governance, documentation and automation
 
 - `.dockerignore` — Excludes secrets, local outputs and dependency trees from the Docker build context.
-- `.env_demo.sample` — Secret-free example of a demo settings file for `scripts/demo_seed.sh -e`: demo database, language, separate document directory, demo user to serve as.
+- `.env_demo.sample` — Secret-free example of a demo settings file for `scripts/demo_seed.sh -e`: demo database, language, separate document directory, demo authentication mode.
 - `.env_sample` — Secret-free example of every environment variable the server reads, with defaults and pointers to `docs/PRODUCTION_READINESS.md` (`docs-assert` checks the list is complete).
 - `.env.import.sample` — Secret-free example of `.env.import`, the replica and superuser connections of the legacy import (kept out of `.env`).
 - `.gitignore` — Keeps secrets, binaries, coverage, blobs, `dist/` and `node_modules/` out of Git.
@@ -55,7 +55,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `scripts/check_release_traceability.sh` — Bidirectional check between done roadmap tasks and dated changelog sections.
 - `scripts/check_release_traceability_test.sh` — Accepted and rejected cases for the traceability checker, run by `make scripts-check`.
 - `scripts/check_generated.sh` — Regenerates into a temporary directory and fails when `gen/`, `api/openapi/` or the SPA contract types differ (`make generated-check`, GLD-008, GLD-072).
-- `scripts/demo_seed.sh` — Creates a local database when missing (owner from `.env`, extensions as superuser) and runs `goeland-server demo-seed` into it, or with `-s` serves the existing demo database; settings from the environment, then the `-e` demo file, then `.env`; never prints credentials.
+- `scripts/demo_seed.sh` — Creates a local database when missing (owner from `.env`, extensions as superuser) and runs `goeland-server demo-seed` into it, with `-r` after dropping the previous demo (only a database carrying the demo marker, its documents only under `./demo_documents`), or with `-s` serves the existing demo database; settings from the environment, then the `-e` demo file, then `.env`; never prints credentials.
 - `scripts/garage_test_server.sh` — Starts or stops a disposable single-node Garage (docker or podman, pinned by digest) for the S3 tests, writing its generated settings to an env file.
 - `scripts/check_build_inputs.sh` — Refuses images not pinned by digest, third-party actions not pinned by SHA and a Go builder older than `go.mod` (`make build-inputs-check`).
 - `scripts/check_documentation_claims.sh` — Executable documentation claims tying stable defaults and security facts to their sources.
@@ -133,8 +133,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-import-orgunits/main.go` — Optional import of the legacy org unit tree (structure only) from a read-only replica through the org unit service; idempotent, dry run by default, counts only.
 - `cmd/goeland-import/main.go` — Legacy data import command: migrates a brand-new target and runs `pkg/legacyimport` in one transaction; dry run unless `-apply`, counts only.
 - `cmd/goeland-import/tables2replicate.yaml` — The 44 legacy tables and columns the import reads on the source replica, by area, for the tool that replicates them from MSSQL; kept in sync with the source queries of `pkg/legacyimport`.
-- `cmd/goeland-server/demo.go` — The `demo-seed` command (GLD-079): builds the application in-process with the demo users' verifier, refuses a database that is not brand new, and writes the synthetic demo data through the API without listening on a network.
-- `cmd/goeland-server/demo_test.go` — Generates the small demo profile in every language, each in a fresh database as the runtime role, reads it back and checks that a second run is refused; env-gated on `GOELAND_TEST_DATABASE_URL`.
+- `cmd/goeland-server/demo.go` — The `demo-seed` command (GLD-079): builds the application in-process with the demo users' verifier, refuses a database that is not brand new, writes the synthetic demo through the API without listening on a network and marks the database; the demo mode guard and its `GET /config` block (GLD-085).
+- `cmd/goeland-server/demo_test.go` — Generates the small demo profile in every language, each in a fresh database as the runtime role, reads it back, checks that a second run is refused and that the demo mode refuses an unmarked database then signs in every demo user; env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, the `migrate` and `demo-seed` commands, config, logger, startup, listener and graceful shutdown.
@@ -326,6 +326,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0037_elimination.sql` — Schema migration: the controlled exception of the audit, timeline and document version guards during an elimination (`goeland.disposal`), destroyed files (`content_blob.disposed_at`) (GLD-077).
 - `pkg/core/module/db/migrations/0038_deferrable_current_version.sql` — Schema migration: `document.current_version_id` deferrable (initially immediate), so the legacy import writes a document with its current version before the version.
 - `pkg/core/module/db/migrations/0039_orphan_uploads.sql` — Schema migration: `content_blob.uploaded_at` and the index of the held blobs by age, for the orphan upload collection (GLD-045).
+- `pkg/core/module/db/migrations/0040_demo_dataset.sql` — Schema migration: the `demo_dataset` marker row `demo-seed` writes, without which the demo authentication mode refuses to start (GLD-085).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -482,7 +483,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/demodata/generate.go` — `Generate`: language and profile checks, the order of the stories, the report; story coordinates and GeoJSON helpers.
 - `pkg/demodata/heroes.go` — The hero cases of docs/DEMO_SCRIPT.md built so far: building permit (§4.1), opposition (§4.2), citizen report (§4.6); fictional register identifiers.
 - `pkg/demodata/run.go` — One generation: typed API calls that stop at the first refused request, and the steps the stories use (actors, things, cases, documents, timeline, tasks, circulations).
-- `pkg/demodata/session.go` — The demo users, their in-process bearer tokens and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
+- `pkg/demodata/session.go` — The demo users, their bearer tokens (drawn per run for demo-seed, public for the demo mode) and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
 - `pkg/demodata/texts.go` — The catalogue of generated texts and the supported languages.
 - `pkg/demodata/texts_en.go` — English texts of the demo.
 - `pkg/demodata/texts_fr.go` — French texts of the demo (default language).
@@ -538,7 +539,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/index.html` — SPA HTML entry point; declares the Vuetify cascade layer order before any stylesheet.
 - `cmd/goeland-server/goeland-front/package.json` — Frontend dependencies and bun scripts (build, type-check, lint, test).
 - `cmd/goeland-server/goeland-front/public/favicon.ico` — Browser favicon asset.
-- `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: responsive app bar (labels, icons, or a drawer and a search row on small screens), locale switch, auth controls, snackbar; dates follow the interface language.
+- `cmd/goeland-server/goeland-front/src/App.vue` — Root layout: responsive app bar (labels, icons, or a drawer and a search row on small screens), locale switch, auth controls, snackbar, the demo banner (demo mode); dates follow the interface language.
 - `cmd/goeland-server/goeland-front/src/api/accessClient.ts` — REST client for `AccessService` (my access, grants, groups and members) and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/api/actorClient.ts` — REST client for `ActorService` bindings.
 - `cmd/goeland-server/goeland-front/src/api/caseClient.ts` — REST client for `CaseService` bindings.
@@ -576,11 +577,12 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/api/types.ts` — Hand-maintained proto3-JSON projections of the goeland.v1 messages; keep in sync with the protos.
 - `cmd/goeland-server/goeland-front/src/assets/logo.png` — Raster logo asset.
 - `cmd/goeland-server/goeland-front/src/assets/logo.svg` — Vector logo asset.
-- `cmd/goeland-server/goeland-front/src/components/AppAuthControls.vue` — App bar login/logout controls for dev-token and JWT modes.
+- `cmd/goeland-server/goeland-front/src/components/AppAuthControls.vue` — App bar login/logout controls for dev-token and JWT modes, and « Changer d'utilisateur » in demo mode.
+- `cmd/goeland-server/goeland-front/src/components/DemoUserPicker.vue` — Demo mode sign-in (GLD-085): one entry per demo user with its role and what it shows; a click signs in as that user.
 - `cmd/goeland-server/goeland-front/src/components/DevTokenForm.vue` — Dev-mode static token entry shared by the app bar and the sign-in panel.
 - `cmd/goeland-server/goeland-front/src/components/README.md` — Scaffold note on component auto-import.
 - `cmd/goeland-server/goeland-front/src/components/GlobalSearch.vue` — App bar global search (GLD-064): suggestions grouped by kind with counts, "/" shortcut, every result on Enter.
-- `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode, retry, unreachable auth service, loopback host mismatch.
+- `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode (the demo user picker in demo mode), retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/CaseTypeDefaultGrantsDialog.vue` — Editor of a case type's default grants (users, groups, units, the creator's units) with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
@@ -699,7 +701,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, things, actors and administration.
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
-- `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token or silent JWT minting and re-mint, in-memory token.
+- `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token, demo user or silent JWT minting and re-mint, in-memory token.
 - `cmd/goeland-server/goeland-front/src/stores/users.ts` — Operator id → user directory: batched `BatchGetUsers` calls and a page-lifetime cache.
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.

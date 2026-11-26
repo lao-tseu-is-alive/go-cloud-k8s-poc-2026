@@ -426,7 +426,23 @@
     "scopes": "Rights",
     "userId": "User id: {id}",
     "roles": "Goéland roles",
-    "noRole": "none"
+    "noRole": "none",
+    "demoTitle": "Demonstration — pick a user",
+    "demoExplain": "All data is fictional. Each user has other rights: switch users to see what each one can do.",
+    "demoRejected": "The server refused this demo user.",
+    "switchUser": "Switch user"
+  },
+  "demo": {
+    "banner": "Fictional demonstration data — Municipality of Goéland-sur-Lac",
+    "users": {
+      "alice": { "role": "Administrator", "hint": "Catalogues, org chart and sensitive read audit" },
+      "bruno": { "role": "Agent — Planning", "hint": "Building permit « Villa Les Tilleuls » and opposition" },
+      "chloe": { "role": "Agent — Roads and cleaning", "hint": "Citizen report, complaint and « my tasks »" },
+      "david": { "role": "Records manager — Municipal archives", "hint": "Retention due dates and bordereaux" },
+      "emma": { "role": "Reader — Energy", "hint": "Energy opinion and confidential subsidy" },
+      "felix": { "role": "Agent — Social cohesion", "hint": "Complaint followed by several services, without the police note" },
+      "hugo": { "role": "Agent — Parks and gardens", "hint": "Opinion on the building permit" }
+    }
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }

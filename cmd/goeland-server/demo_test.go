@@ -5,6 +5,7 @@ import (
 	"errors"
 	"io"
 	"log/slog"
+	"net/http/httptest"
 	"net/url"
 	"strings"
 	"testing"
@@ -30,6 +31,11 @@ func TestDemoSeed(t *testing.T) {
 			cfg.DatabaseURL, cfg.DBMigrate = runtimeDatabaseURL(t, ownerDSN), migrateVerify
 			cfg.MaxConnections, cfg.RequestTimeout, cfg.MaxUploadBytes, cfg.ShutdownPeriod = 4, 10*time.Second, 1<<20, time.Second
 			quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+			demoCfg := cfg
+			demoCfg.AuthMode = authModeDemo
+			if _, err := newApplication(t.Context(), demoCfg, quiet); !errors.Is(err, errNotDemoDatabase) {
+				t.Fatalf("the demo mode must refuse a database demo-seed did not generate, got %v", err)
+			}
 
 			report, err := runDemoSeed(t.Context(), cfg, demodata.Options{Profile: demodata.ProfileSmall, Language: lang}, quiet)
 			if err != nil {
@@ -39,12 +45,43 @@ func TestDemoSeed(t *testing.T) {
 				t.Errorf("counts: %v", report.Counts)
 			}
 			checkDemoDatabase(t, ownerDSN, lang)
+			checkDemoMode(t, demoCfg, lang)
 
 			if _, err := runDemoSeed(t.Context(), cfg, demodata.Options{Profile: demodata.ProfileSmall, Language: lang}, quiet); !errors.Is(err, errNotBrandNew) {
 				t.Errorf("a second run must be refused, got %v", err)
 			}
 		})
 	}
+}
+
+// checkDemoMode serves the generated demo in demo mode: GET /config lists the
+// demo users with their public tokens, each token signs in as its user, and
+// only Alice is an administrator (GLD-085).
+func checkDemoMode(t *testing.T, cfg serverConfig, lang string) {
+	t.Helper()
+	app, err := newApplication(t.Context(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
+	if err != nil {
+		t.Fatalf("demo mode on the generated demo: %v", err)
+	}
+	srv := httptest.NewServer(app.handler)
+	defer func() { srv.Close(); app.close() }()
+	e := &e2e{t: t}
+	config := e.call(srv, "", "GET", "/config", nil)
+	if str(config.body, "authMode") != authModeDemo || str(config.body, "demo", "language") != lang {
+		t.Fatalf("/config in demo mode: %v", config.body)
+	}
+	users := list(config.body, "demo", "users")
+	if len(users) != len(demodata.Users()) {
+		t.Fatalf("/config lists %d demo users", len(users))
+	}
+	for _, u := range users {
+		me := e.call(srv, str(u, "token"), "GET", "/api/me", nil)
+		admin, _ := me.body["user"].(map[string]any)["isAdmin"].(bool)
+		if me.status != 200 || str(me.body, "user", "id") != str(u, "id") || admin != (str(u, "key") == "alice") {
+			t.Errorf("sign in as %s: HTTP %d %v", str(u, "key"), me.status, me.body)
+		}
+	}
+	e.expect(e.call(srv, "not-a-demo-token", "GET", "/api/me", nil), codeUnauthenticated, "an unknown token")
 }
 
 // checkDemoDatabase reads back what the generator wrote.

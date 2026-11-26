@@ -426,7 +426,23 @@
     "scopes": "Droits",
     "userId": "Identifiant utilisateur : {id}",
     "roles": "Rôles Goéland",
-    "noRole": "aucun"
+    "noRole": "aucun",
+    "demoTitle": "Démonstration — choisissez un utilisateur",
+    "demoExplain": "Toutes les données sont fictives. Chaque utilisateur a d'autres droits : changez d'utilisateur pour voir ce que chacun peut faire.",
+    "demoRejected": "Le serveur a refusé cet utilisateur de démonstration.",
+    "switchUser": "Changer d'utilisateur"
+  },
+  "demo": {
+    "banner": "Données fictives de démonstration — Commune de Goéland-sur-Lac",
+    "users": {
+      "alice": { "role": "Administratrice", "hint": "Catalogues, organigramme et audit des accès sensibles" },
+      "bruno": { "role": "Agent — Urbanisme", "hint": "Permis de construire « Villa Les Tilleuls » et opposition" },
+      "chloe": { "role": "Agente — Voirie et propreté", "hint": "Signalement citoyen, plainte et « mes tâches »" },
+      "david": { "role": "Gestionnaire d'archives — Archives communales", "hint": "Échéances de conservation et bordereaux" },
+      "emma": { "role": "Lectrice — Énergie", "hint": "Préavis énergie et subvention confidentielle" },
+      "felix": { "role": "Agent — Cohésion sociale", "hint": "Plainte suivie à plusieurs, sans la note de la police" },
+      "hugo": { "role": "Agent — Parcs et promenades", "hint": "Préavis sur le permis de construire" }
+    }
   },
   "resources": {
     "document": { "label": "Document", "plural": "Documents" }

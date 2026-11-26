@@ -4,6 +4,7 @@
   import { useI18n } from 'vue-i18n'
   import { useAuthStore } from '@/stores/auth'
   import { loopbackMismatchUrl } from '@/utils/authOrigin'
+  import DemoUserPicker from './DemoUserPicker.vue'
   import DevTokenForm from './DevTokenForm.vue'
 
   // Shown instead of the app while nobody is signed in: explains how to sign in
@@ -20,7 +21,19 @@
 </script>
 
 <template>
-  <v-card class="pa-2" max-width="480" width="100%">
+  <v-card v-if="mode === 'demo'" class="pa-2" max-width="560" width="100%">
+    <v-card-title class="d-flex align-center text-wrap">
+      <v-icon class="mr-2" icon="mdi-account-switch-outline" />
+      {{ t('auth.demoTitle') }}
+    </v-card-title>
+
+    <v-card-text>
+      <p class="mb-2">{{ t('auth.demoExplain') }}</p>
+      <DemoUserPicker />
+    </v-card-text>
+  </v-card>
+
+  <v-card v-else class="pa-2" max-width="480" width="100%">
     <v-card-title class="d-flex align-center text-wrap">
       <v-icon class="mr-2" icon="mdi-lock-outline" />
       {{ t('messages.common.signInRequired') }}

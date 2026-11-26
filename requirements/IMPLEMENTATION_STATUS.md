@@ -6,7 +6,7 @@ of each slice (a few lines), and keep it honest.
 - **Active spec (immutable):** [`goeland_poc_domain_model_agent_v2.md`](goeland_poc_domain_model_agent_v2.md) — spec v2, adopted 2026-09-23; cite it as "v2 §N". Do not rewrite it to match reality; record reconciliations in §3g.
 - **Historical spec (immutable):** [`goeland_poc_domain_model_agent.md`](goeland_poc_domain_model_agent.md) — v1; §1–§2 below and older "spec §N" citations still refer to it.
 - **This document (living):** maps the spec to the current state + records intentional deviations. Task order lives in [`docs/ROADMAP.md`](../docs/ROADMAP.md).
-- **Snapshot:** as of **2026-11-25**, app version **0.23.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0039` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
+- **Snapshot:** as of **2026-11-25**, app version **0.23.0** (documentation contract enforced by `make release-check`; task order in [`docs/ROADMAP.md`](../docs/ROADMAP.md)). Build/vet/lint/tests green; migrations `0001–0040` applied; verified end-to-end against PostgreSQL. **Core + Document + Actor + Case + Thing + Timeline + ORG_UNIT + Task + Circulation** components live (plus internal users and reference data administration), each exercisable from the **embedded Vue 3 + Vuetify 4 web UI**; metadata-first file upload; repository SQL uses pgx **named parameters**. The Actor component was modelled from the real production `Acteur` schema (profiled read-only) — persons/organizations, typed contacts, 33 seeded org categories, roles kept as relationships.
 
 Legend: ✅ done · 🟡 partial · ⬜ not started
 
@@ -156,6 +156,12 @@ These are deliberate betterments beyond the spec — keep them:
   and one gate (`make release-check`) shared by local runs and CI. Rationale: agents work
   without memory, and the hand-synced layers (proto ↔ SQL ↔ model ↔ `types.ts`) are the
   known drift risk. Adoption runs in five slices (status table in the contract).
+
+- 🚀 **Synthetic public demo and demo mode** (2026-11-26, GLD-079, GLD-085, beyond the spec):
+  `goeland-server demo-seed` generates a fictional municipality through the API as its demo users
+  (docs/DEMO_SCRIPT.md), and `GOELAND_AUTH_MODE=demo` lets a visitor pick a demo user, guarded by
+  the `demo_dataset` marker so it can never serve real data. Rationale: show the POC, and later
+  an MCP server, without any real data reaching an audience or an online model.
 
 ### 3b. Neutral architectural choices (vs the spec's suggestions)
 

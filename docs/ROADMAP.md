@@ -51,8 +51,8 @@ in v0.20.0; the elimination of cases, off by default and simulated until enabled
 v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1; the migrations separated from
 the runtime role (GLD-046) in v0.22.0; Go 1.27.4, pgx 5.12.0 and the SPA updates (security patch)
 in v0.22.1; the orphan upload collection (GLD-045), the probative content verification (GLD-021) and
-the S3 storage on Garage (GLD-020) in v0.23.0. Next: the public demo on synthetic data (GLD-079, with GLD-080
-and GLD-081), then an MCP server over the API restricted to that data.
+the S3 storage on Garage (GLD-020) in v0.23.0. Next: the public demo on synthetic data (GLD-079, with GLD-080,
+GLD-081 and the demo mode GLD-085), then an MCP server over the API restricted to that data.
 
 ## Cross-cutting quality
 
@@ -651,9 +651,18 @@ placed on Swiss territory.
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
   LV95 tiles: national map, SWISSIMAGE, official cadastral map; free open data with the
   « © swisstopo » attribution), the CSP following the chosen source.
-- [ ] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
+- [~] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
   démonstration » banner in the SPA, so a screenshot of the demo is never mistaken for real
-  records.
+  records. Built with GLD-085: the demo mode is that setting (the banner shows on every screen).
+- [~] **GLD-085 — Demo mode**: decided 2026-11-26, the dev mode's token entry is no way into a
+  demo, and a demo is about switching users. `GOELAND_AUTH_MODE=demo`: the sign-in screen lists
+  the demo users (name, role, what each shows) and one click signs in as one; « Changer
+  d'utilisateur » brings the list back; the interface opens in the language of the generated
+  data. Their tokens are public on purpose (`demo-<key>`, listed by `GET /config`). Guard: since
+  anyone may sign in, the server refuses to start in this mode unless the database holds the
+  `demo_dataset` row that `demo-seed` writes once it has generated the demo into a brand-new
+  database (migration `0040`), so a database holding real data can never be served this way.
+  Done 2026-11-26: `TestDemoSeed` checks the refusal before generation, then every public token.
 - [ ] **GLD-083 — German demo**: the SPA in `de-CH` (a locale beside `fr-CH` and `en`, kept up to
   date with every new feature) and the `de` catalogue of the generator, with German-speaking
   name lists; the data stays Swiss.

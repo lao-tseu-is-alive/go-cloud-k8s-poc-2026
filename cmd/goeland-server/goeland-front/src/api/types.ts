@@ -485,10 +485,30 @@ export interface UploadResult {
 
 /** Payload returned by GET /config. */
 export interface FrontendConfig {
-  authMode: 'dev' | 'jwt'
+  authMode: 'dev' | 'jwt' | 'demo'
   authBaseUrl: string
   /** Whether executing an elimination destroys records; otherwise it is only simulated (GLD-077). */
   disposalEnabled?: boolean
+  /** demo mode only: the generated demo and its users (GLD-085). */
+  demo?: DemoConfig
+}
+
+/** The synthetic demo a server in demo mode serves (GET /config, GLD-085). */
+export interface DemoConfig {
+  profile: string
+  /** Language of the generated data: fr or en. */
+  language: string
+  users: DemoUser[]
+}
+
+/** A demo user anyone may sign in as; its token is public on purpose. */
+export interface DemoUser {
+  /** Names the user in the demo script and in the demo.users.* messages. */
+  key: string
+  id: string
+  displayName: string
+  email: string
+  token: string
 }
 
 /** Authenticated user shape from the auth server's silent token mint. */

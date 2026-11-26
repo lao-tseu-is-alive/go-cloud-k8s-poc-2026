@@ -161,6 +161,11 @@ its own backups of the metadata and data directories).
 - `dev` (local only): accepts one static token. Requires `GOELAND_DEV_TOKEN` (startup
   fails without it) and the `GOELAND_DEV_USER_*` identity fields (`GOELAND_DEV_USER_ADMIN=true`
   bootstraps the dev user as administrator). **Never enable in production.**
+- `demo` (synthetic demo only, GLD-085): the sign-in screen lists the demo users and anyone can
+  sign in as any of them without a password (their tokens are public, `GET /config` lists them).
+  The server **refuses to start** in this mode unless the database holds the `demo_dataset` row
+  written by `goeland-server demo-seed`, which only writes into a brand-new database: a database
+  holding real data can never be served this way. Needs no secret.
 
 Every verified caller is recorded in `app_user` (operator id, display name, e-mail, first/last
 seen) so governance and audit can show names: employee personal data, mirrored from the auth

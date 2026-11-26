@@ -16,7 +16,7 @@
   const { t, locale } = useI18n()
   const auth = useAuthStore()
   const ui = useUiStore()
-  const { isAuthenticated, isAdmin, isRecordsManager, ready } = storeToRefs(auth)
+  const { isAuthenticated, isAdmin, isRecordsManager, ready, demo } = storeToRefs(auth)
   const { snackbar } = storeToRefs(ui)
   const appInfo = useAppInfo()
   const versionHint = computed(() => buildHint(appInfo.value, t))
@@ -35,11 +35,24 @@
   // Dates on screen follow the interface language.
   watch(locale, l => setDateLocale(l), { immediate: true })
 
+  // demo mode: the interface opens in the language of the generated data.
+  watch(demo, d => {
+    if (d) {
+      locale.value = d.language === 'en' ? 'en' : 'fr-CH'
+    }
+  })
+
   onMounted(() => auth.bootstrap())
 </script>
 
 <template>
   <v-app>
+    <!-- demo mode (GLD-085, GLD-081): every screen says the data is fictional. -->
+    <v-system-bar v-if="demo" class="justify-center demo-banner" color="warning" height="28">
+      <v-icon class="mr-1" icon="mdi-information-outline" size="small" />
+      <span class="text-truncate">{{ t('demo.banner') }}</span>
+    </v-system-bar>
+
     <!--
       The bar adapts to the screen (Vuetify 4 breakpoints): on an extra-large screen (xl, about
       1545 px and more) every module keeps its label; on a large one (lg, about 1145 px) the main
@@ -152,6 +165,10 @@
 </template>
 
 <style scoped>
+  .demo-banner {
+    font-weight: 500;
+  }
+
   .app-version {
     font-family: ui-monospace, monospace;
   }

@@ -15,8 +15,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   users: the catalogue, the org chart of the fictional « Commune de Goéland-sur-Lac », seven demo
   users and the first hero cases (building permit, opposition, citizen report), with generated PDF
   documents and photographs. `scripts/demo_seed.sh [-e <env-file>] [<database>] [fr|en]` creates
-  the database if needed (owner from `.env`) and runs it, or with `-s` serves the existing demo; a demo settings file
+  the database if needed (owner from `.env`) and runs it, with `-r` after dropping the previous
+  demo (only a database carrying the demo marker), or with `-s` serves the existing demo; a demo settings file
   (`.env_demo.sample`, Git-ignored copies) keeps the demo database and documents apart.
+- Demo mode (GLD-085, with the demo banner GLD-081): `GOELAND_AUTH_MODE=demo` replaces the token
+  entry by a list of the demo users, one click signs in, « Changer d'utilisateur » switches, a
+  banner marks every screen as fictional and the interface follows the demo language. The server
+  refuses this password-less mode unless the database holds the marker `demo-seed` writes
+  (migration `0040`, `demo_dataset`), so real data can never be served this way.
 
 ## [0.23.0] - 2026-11-25
 

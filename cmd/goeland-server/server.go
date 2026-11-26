@@ -29,6 +29,7 @@ import (
 	circulationmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/circulation/module"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 	coremodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core/module"
+	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/demodata"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document"
 	documentmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/document/module"
 	orgunitmodule "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/orgunit/module"
@@ -78,7 +79,7 @@ func newApplication(ctx context.Context, config serverConfig, log *slog.Logger) 
 	if err := waitForDatabase(ctx, pool.Ping, config.DBConnectTimeout, log); err != nil {
 		return nil, err
 	}
-	if err := prepareSchema(ctx, config.DBMigrate, pool, log); err != nil {
+	if err := prepareDatabase(ctx, &config, pool, log); err != nil {
 		return nil, err
 	}
 
@@ -373,6 +374,9 @@ func buildRecordingVerifier(config serverConfig, pool *pgxpool.Pool, log *slog.L
 func buildTokenVerifier(config serverConfig) (authadapter.TokenVerifier, error) {
 	if config.tokenVerifier != nil {
 		return config.tokenVerifier, nil
+	}
+	if config.AuthMode == authModeDemo {
+		return demodata.PublicSession().Verifier(), nil
 	}
 	if config.AuthMode == "dev" {
 		return authadapter.NewDevTokenVerifier(config.DevToken, authadapter.AuthenticatedUser{

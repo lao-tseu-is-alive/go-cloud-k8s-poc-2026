@@ -99,7 +99,7 @@ func TestLoadConfigRejectsInvalidSettings(t *testing.T) {
 		{"bad listen address", map[string]string{"GOELAND_LISTEN_ADDRESS": "8080"}, "GOELAND_LISTEN_ADDRESS must be host:port"},
 		{"bad metrics address", map[string]string{"GOELAND_METRICS_ADDRESS": "9464"}, "GOELAND_METRICS_ADDRESS must be host:port"},
 		{"public metrics port", map[string]string{"GOELAND_METRICS_ADDRESS": "0.0.0.0:8080"}, "another port than GOELAND_LISTEN_ADDRESS"},
-		{"unknown auth mode", map[string]string{"GOELAND_AUTH_MODE": "basic"}, "GOELAND_AUTH_MODE must be jwt or dev"},
+		{"unknown auth mode", map[string]string{"GOELAND_AUTH_MODE": "basic"}, "GOELAND_AUTH_MODE must be jwt, dev or demo"},
 		{"dev without token", map[string]string{"GOELAND_AUTH_MODE": "dev"}, "GOELAND_DEV_TOKEN is required"},
 		{"non-integer dev user", map[string]string{"GOELAND_DEV_USER_ID": "u-1"}, "GOELAND_DEV_USER_ID must be an integer"},
 		{"pool too large", map[string]string{"GOELAND_DB_MAX_CONNECTIONS": "1001"}, "GOELAND_DB_MAX_CONNECTIONS must be between 1 and 1000"},
@@ -169,6 +169,16 @@ func TestBootstrapAdmins(t *testing.T) {
 	setConfigEnv(t, map[string]string{"GOELAND_DEV_USER_ID": "9", "GOELAND_DEV_USER_ADMIN": "true"})
 	if cfg, _ := loadConfig(); len(cfg.bootstrapAdmins()) != 0 {
 		t.Fatal("GOELAND_DEV_USER_ADMIN has no effect outside dev mode")
+	}
+}
+
+// TestLoadConfigDemoMode checks that the demo mode needs neither a dev token
+// nor the JWT secrets: its tokens are public (GLD-085).
+func TestLoadConfigDemoMode(t *testing.T) {
+	setConfigEnv(t, map[string]string{"GOELAND_AUTH_MODE": "Demo", "JWT_SECRET": "", "JWT_ISSUER_ID": ""})
+	cfg, err := loadConfig()
+	if err != nil || cfg.AuthMode != authModeDemo {
+		t.Fatalf("demo mode: %q %v", cfg.AuthMode, err)
 	}
 }
 

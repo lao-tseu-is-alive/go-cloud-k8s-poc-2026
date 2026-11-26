@@ -62,7 +62,21 @@
           :title="t('app.about', { version: appInfo.version })"
         />
 
-        <v-list-item base-color="error" prepend-icon="mdi-logout" :title="t('auth.signOut')" @click="auth.signOut()" />
+        <!-- demo mode: signing out brings back the demo user picker. -->
+        <v-list-item
+          v-if="mode === 'demo'"
+          prepend-icon="mdi-account-switch-outline"
+          :title="t('auth.switchUser')"
+          @click="auth.signOut()"
+        />
+
+        <v-list-item
+          v-else
+          base-color="error"
+          prepend-icon="mdi-logout"
+          :title="t('auth.signOut')"
+          @click="auth.signOut()"
+        />
       </v-list>
     </v-menu>
 
@@ -82,9 +96,10 @@
     </v-menu>
 
     <!-- jwt mode, not connected: redirect to SSO. Outlined without a color so it
-         inherits the app bar's on-primary text (color="primary" was invisible on it). -->
+         inherits the app bar's on-primary text (color="primary" was invisible on it).
+         demo mode, not connected: the page itself lists the demo users. -->
     <v-btn
-      v-else
+      v-else-if="mode === 'jwt'"
       prepend-icon="mdi-login"
       variant="outlined"
       @click="auth.signIn()"

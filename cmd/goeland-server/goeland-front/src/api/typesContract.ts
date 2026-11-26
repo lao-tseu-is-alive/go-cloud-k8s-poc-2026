@@ -48,6 +48,8 @@ export const UNCHECKED_TYPES: Readonly<Record<string, string>> = {
   TaskContent: 'fragment checked through CreateTaskRequest and UpdateTaskRequest',
   TimelineEntryContent: 'fragment checked through the timeline entry requests',
   FrontendConfig: 'out-of-proto GET /config',
+  DemoConfig: 'out-of-proto GET /config, demo mode',
+  DemoUser: 'out-of-proto GET /config, demo mode',
   TokenResponse: 'answer of the authentication server',
   TokenUser: 'answer of the authentication server',
   UploadResult: 'out-of-proto POST /api/documents/upload',
