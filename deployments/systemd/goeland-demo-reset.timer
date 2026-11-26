@@ -1,0 +1,12 @@
+# goeland-demo-reset.timer — regenerate the demo every night: its work in progress is dated
+# from the generation day (DEMO_SCRIPT §4.8 to §4.12), and what visitors changed is wiped.
+# Enable: systemctl enable --now goeland-demo-reset.timer
+[Unit]
+Description=Regenerate the goeland demo every night
+
+[Timer]
+OnCalendar=*-*-* 03:30
+Persistent=true
+
+[Install]
+WantedBy=timers.target

@@ -1,0 +1,31 @@
+# goeland-demo-reset.service — regenerate the synthetic demo (GLD-079, docs/DEMO_SCRIPT.md):
+# stop the server, recreate the demo database and empty its documents (as root, through the
+# postgres OS user), generate the demo as the schema owner, grant the runtime role, then start
+# the server again. Run it with `systemctl start goeland-demo-reset` (deployments/systemd/README.md).
+[Unit]
+Description=goeland-poc-2026: regenerate the synthetic demo
+Documentation=https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/tree/main/deployments/systemd
+Requires=postgresql.service
+After=postgresql.service
+# The server stops while the demo is regenerated and starts again once it is ready.
+Conflicts=goeland.service
+OnSuccess=goeland.service
+
+[Service]
+Type=oneshot
+User=goeland
+Group=goeland
+WorkingDirectory=/var/lib/goeland
+# The schema owner's settings (root-only file: systemd reads it before dropping to goeland).
+EnvironmentFile=/etc/goeland/seed.env
+# "+" runs this step as root: drop and recreate the demo database, empty its documents.
+ExecStartPre=+/usr/local/sbin/goeland-demo-recreate-db
+ExecStart=/usr/local/bin/goeland-server-linux-amd64 demo-seed -profile small -lang ${GOELAND_DEMO_LANG}
+# Grants the runtime role (GOELAND_DB_APP_ROLE) on the freshly migrated schema.
+ExecStartPost=/usr/local/bin/goeland-server-linux-amd64 migrate
+TimeoutStartSec=15min
+
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true

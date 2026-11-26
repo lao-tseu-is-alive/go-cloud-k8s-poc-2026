@@ -1,0 +1,26 @@
+# goeland.service — the Goéland server as a systemd service (deployments/systemd/README.md).
+# Install: /etc/systemd/system/goeland.service; settings in /etc/goeland/config.env.
+[Unit]
+Description=goeland-poc-2026 server
+Documentation=https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/tree/main/deployments/systemd
+Wants=network-online.target postgresql.service
+After=network-online.target postgresql.service
+
+[Service]
+Type=simple
+User=goeland
+Group=goeland
+WorkingDirectory=/var/lib/goeland
+EnvironmentFile=/etc/goeland/config.env
+ExecStart=/usr/local/bin/goeland-server-linux-amd64
+Restart=always
+RestartSec=5
+
+# Hardening: the server only writes its documents under /var/lib/goeland.
+ProtectSystem=full
+ProtectHome=true
+PrivateTmp=true
+NoNewPrivileges=true
+
+[Install]
+WantedBy=multi-user.target

@@ -289,6 +289,13 @@ The dev token is generated on the first run and stored only in the Secret `goela
 then sign in on `http://127.0.0.1:18090`. Choosing your own token, resetting and
 troubleshooting: [deployments/k8s/README.md](deployments/k8s/README.md).
 
+## Running the demo on a Linux server (systemd)
+
+`deployments/systemd/` serves the synthetic demo on one server from the release binary only: the
+server as a systemd service (runtime role, demo mode) and a one-shot reset service, by hand or every
+night, that recreates the demo database and runs `demo-seed` as the schema owner. Install and daily
+use: [deployments/systemd/README.md](deployments/systemd/README.md).
+
 ## Web UI
 
 Open <http://127.0.0.1:8088/> for the embedded **Vue 3 + Vuetify 4** SPA

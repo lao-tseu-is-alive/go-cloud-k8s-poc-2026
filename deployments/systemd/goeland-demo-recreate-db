@@ -1,0 +1,72 @@
+#!/usr/bin/env bash
+#
+# goeland-demo-recreate-db
+# Recreate the demo database and empty its documents before demo-seed
+# (ExecStartPre of goeland-demo-reset.service, deployments/systemd/README.md).
+# Runs as root and talks to PostgreSQL as the postgres OS user over the local
+# socket (peer authentication: no password). Like scripts/demo_seed.sh -r, it
+# drops only a database carrying the demo marker (demo_dataset, written by
+# demo-seed) and empties only a document directory under DOCS_ROOT. Settings
+# are read from the seed env file; no value is printed.
+#
+# Install: /usr/local/sbin/goeland-demo-recreate-db (root:root, 0750).
+
+set -euo pipefail
+
+readonly ENV_FILE="${GOELAND_SEED_ENV:-/etc/goeland/seed.env}"
+readonly DOCS_ROOT="${GOELAND_DEMO_DOCS_ROOT:-/var/lib/goeland/demo_documents}"
+readonly SERVICE_USER="${GOELAND_SERVICE_USER:-goeland}"
+readonly NAME_PATTERN='^[a-z][a-z0-9_]{0,62}$'
+
+fail() {
+    local message="$1"
+    echo "goeland-demo-recreate-db: ${message}" >&2
+    exit 1
+}
+
+# value prints the value of key in the seed env file.
+value() {
+    local key="$1"
+    sed -n "s/^${key}=//p" "$ENV_FILE" | tail -n 1
+}
+
+# admin runs psql as the postgres OS user (peer authentication).
+admin() {
+    runuser -u postgres -- psql -X -q -v ON_ERROR_STOP=1 "$@"
+}
+
+# is_demo_database succeeds when the database carries the demo marker.
+is_demo_database() {
+    local db="$1"
+    [[ "$(admin -d "$db" -Atc "SELECT to_regclass('public.demo_dataset') IS NOT NULL")" == "t" ]] &&
+        [[ "$(admin -d "$db" -Atc "SELECT count(*) FROM demo_dataset")" != "0" ]]
+}
+
+main() {
+    [[ "$(id -u)" == "0" ]] || fail "run as root"
+    [[ -r "$ENV_FILE" ]] || fail "cannot read ${ENV_FILE}"
+    local db owner docs
+    db="$(value DB_NAME)"
+    owner="$(value DB_USER)"
+    docs="$(value GOELAND_DOCUMENT_PATH)"
+    [[ "$db" =~ $NAME_PATTERN ]] || fail "DB_NAME must be lower-case letters, digits and _"
+    [[ "$owner" =~ $NAME_PATTERN ]] || fail "DB_USER must be lower-case letters, digits and _"
+    [[ "$(realpath -m "${docs:-/}")" == "$(realpath -m "$DOCS_ROOT")"/* ]] ||
+        fail "GOELAND_DOCUMENT_PATH must be a directory under ${DOCS_ROOT}"
+
+    if [[ "$(admin -Atc "SELECT 1 FROM pg_database WHERE datname = '${db}'")" == "1" ]]; then
+        is_demo_database "$db" || fail "${db} has no demo marker (demo_dataset): refusing to drop it"
+        echo "dropping the demo database ${db}"
+        admin -c "DROP DATABASE \"${db}\" WITH (FORCE);"
+    fi
+    echo "creating the demo database ${db} (owner ${owner})"
+    admin -c "CREATE DATABASE \"${db}\" OWNER \"${owner}\";"
+    admin -d "$db" \
+        -c "CREATE EXTENSION IF NOT EXISTS pgcrypto; CREATE EXTENSION IF NOT EXISTS pg_trgm;" \
+        -c "CREATE EXTENSION IF NOT EXISTS unaccent; CREATE EXTENSION IF NOT EXISTS postgis;"
+    echo "emptying the demo documents ${docs}"
+    rm -rf -- "$docs"
+    install -d -o "$SERVICE_USER" -g "$SERVICE_USER" -m 750 "$docs"
+}
+
+main "$@"

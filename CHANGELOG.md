@@ -8,6 +8,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- `deployments/systemd/`: the synthetic demo on a Linux server from the release binary, with a
+  server unit, a one-shot reset unit (the equivalent of `scripts/demo_seed.sh -r`, without a
+  PostgreSQL password for root) and an optional nightly timer, sample settings for the two database
+  roles, and a README.
+
 ## [0.25.0] - 2026-11-26
 
 User administration and a lived-in demo. An administrator pre-registers a new employee before
