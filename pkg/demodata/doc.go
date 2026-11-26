@@ -14,3 +14,5 @@
 // comes from a catalogue per language (textSet); the cases, links and story dates
 // are the same in every language.
 package demodata
+
+import _ "time/tzdata" // the story times are in Europe/Zurich, also in a scratch image

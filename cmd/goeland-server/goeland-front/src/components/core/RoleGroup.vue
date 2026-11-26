@@ -8,6 +8,7 @@
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDate } from '@/utils/formatters'
   import { GROUP_FILTER_THRESHOLD } from '@/utils/roleHeadings'
+  import { subjectReference } from '@/utils/subjects'
 
   // One relationship group of a detail page (GLD-063): a heading read from the
   // subject on screen and its count, unfolded on demand into its edges. A case
@@ -75,8 +76,7 @@
 
   /** A business reference with its namespace (two namespaces may share a number). */
   function reference (ref?: SubjectRef): string {
-    if (!ref?.businessRef) return '—'
-    return ref.businessRefNamespace ? `${ref.businessRefNamespace} ${ref.businessRef}` : ref.businessRef
+    return subjectReference(ref) || '—'
   }
 
   async function load (reset: boolean) {

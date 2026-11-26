@@ -34,3 +34,14 @@ export function subjectRoute (ref?: SubjectRef): string | undefined {
   const base = kindListRoute(ref?.kind)
   return base && ref?.id ? `${base}/${encodeURIComponent(ref.id)}` : undefined
 }
+
+/**
+ * A subject's business reference with its namespace ("SIG 2026-000001"): each case type numbers
+ * in its own namespace, so the number alone is ambiguous. Empty without a reference.
+ */
+export function subjectReference (s?: Pick<SubjectRef, 'businessRef' | 'businessRefNamespace'>): string {
+  if (!s?.businessRef) {
+    return ''
+  }
+  return [s.businessRefNamespace, s.businessRef].filter(Boolean).join(' ')
+}

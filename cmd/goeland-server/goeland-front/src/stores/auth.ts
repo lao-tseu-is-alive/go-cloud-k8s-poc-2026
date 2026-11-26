@@ -10,13 +10,40 @@ import type { DemoConfig, DemoUser, FrontendConfig, TokenResponse, TokenUser, Us
  *           public token the server lists in /config.
  *
  * The token is kept in memory only (never localStorage) and mirrored into the
- * REST client via setAuthToken so every apiFetch carries it.
+ * REST client via setAuthToken so every apiFetch carries it. In demo mode only,
+ * the browser remembers which demo user was picked (its key, never a token:
+ * the demo tokens are public anyway), so a reload or a new tab keeps it.
  */
 import { defineStore } from 'pinia'
 import { computed, ref } from 'vue'
 import { ApiError, setAuthToken } from '@/api/client'
 import { getCurrentUser } from '@/api/coreClient'
 import { useUsersStore } from '@/stores/users'
+
+// demo mode: where the browser remembers the picked demo user's key.
+const DEMO_USER_KEY = 'goeland.demoUser'
+
+// Browser storage may be blocked (private window, policies): the demo then
+// simply asks again after a reload.
+function rememberDemoUser (key: string | null): void {
+  try {
+    if (key) {
+      localStorage.setItem(DEMO_USER_KEY, key)
+    } else {
+      localStorage.removeItem(DEMO_USER_KEY)
+    }
+  } catch {
+    // storage unavailable
+  }
+}
+
+function rememberedDemoUser (): string | null {
+  try {
+    return localStorage.getItem(DEMO_USER_KEY)
+  } catch {
+    return null
+  }
+}
 
 export const useAuthStore = defineStore('auth', () => {
   const mode = ref<'dev' | 'jwt' | 'demo'>('jwt')
@@ -133,6 +160,9 @@ export const useAuthStore = defineStore('auth', () => {
     if (mode.value === 'jwt') {
       await mintToken()
     }
+    if (mode.value === 'demo') {
+      await resumeDemoUser()
+    }
     ready.value = true
   }
 
@@ -154,9 +184,22 @@ export const useAuthStore = defineStore('auth', () => {
     return true
   }
 
-  /** demo mode: sign in as a demo user (signing out picks another one). */
+  /** demo mode: sign in as a demo user and remember it (signing out picks another one). */
   async function signInAsDemo (demoUser: DemoUser): Promise<boolean> {
-    return applyDevToken(demoUser.token)
+    const ok = await applyDevToken(demoUser.token)
+    rememberDemoUser(ok ? demoUser.key : null)
+    return ok
+  }
+
+  /** demo mode: sign in again as the demo user this browser picked last, if the demo still has it. */
+  async function resumeDemoUser (): Promise<void> {
+    const key = rememberedDemoUser()
+    const demoUser = demo.value?.users.find(u => u.key === key)
+    if (demoUser) {
+      await signInAsDemo(demoUser)
+    } else if (key) {
+      rememberDemoUser(null)
+    }
   }
 
   /** jwt mode: redirect to the external auth service login page. */
@@ -172,6 +215,9 @@ export const useAuthStore = defineStore('auth', () => {
       } catch {
         // ignore network errors on logout
       }
+    }
+    if (mode.value === 'demo') {
+      rememberDemoUser(null)
     }
     clear()
   }

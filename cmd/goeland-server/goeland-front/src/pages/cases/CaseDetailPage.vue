@@ -26,7 +26,7 @@
   import { useSubjectLinks } from '@/composables/useSubjectLinks'
   import { useUiStore } from '@/stores/ui'
   import { formatDateTime } from '@/utils/formatters'
-  import { kindIcon } from '@/utils/subjects'
+  import { kindIcon, subjectReference } from '@/utils/subjects'
   import { maxLength, required } from '@/utils/validation'
 
   const { t } = useI18n()
@@ -209,7 +209,7 @@
 
           <div class="detail-page__title">
             <div v-if="current.subjectRef?.businessRef" class="detail-page__mono text-medium-emphasis">
-              {{ [current.subjectRef.businessRefNamespace, current.subjectRef.businessRef].filter(Boolean).join(' ') }}
+              {{ subjectReference(current.subjectRef) }}
             </div>
 
             <h1 id="case-title" class="text-h5 font-weight-medium">{{ current.title }}</h1>

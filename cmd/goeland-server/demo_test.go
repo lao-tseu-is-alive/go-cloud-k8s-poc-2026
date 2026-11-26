@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http/httptest"
 	"net/url"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -29,6 +30,7 @@ func TestDemoSeed(t *testing.T) {
 			ownerDSN := freshDatabase(t, adminDSN)
 			cfg := e2eBlobStore(t)
 			cfg.DatabaseURL, cfg.DBMigrate = runtimeDatabaseURL(t, ownerDSN), migrateVerify
+			cfg.demoOwnerURL = ownerDSN
 			cfg.MaxConnections, cfg.RequestTimeout, cfg.MaxUploadBytes, cfg.ShutdownPeriod = 4, 10*time.Second, 1<<20, time.Second
 			quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
 			demoCfg := cfg
@@ -45,6 +47,7 @@ func TestDemoSeed(t *testing.T) {
 				t.Errorf("counts: %v", report.Counts)
 			}
 			checkDemoDatabase(t, ownerDSN, lang)
+			checkStoryDates(t, ownerDSN)
 			checkDemoMode(t, demoCfg, lang)
 
 			if _, err := runDemoSeed(t.Context(), cfg, demodata.Options{Profile: demodata.ProfileSmall, Language: lang}, quiet); !errors.Is(err, errNotBrandNew) {
@@ -84,6 +87,47 @@ func checkDemoMode(t *testing.T, cfg serverConfig, lang string) {
 	e.expect(e.call(srv, "not-a-demo-token", "GET", "/api/me", nil), codeUnauthenticated, "an unknown token")
 }
 
+// checkStoryDates checks the re-dated history: each case opens and closes on
+// its story days with the reference its story gives, the audit follows, the
+// reference counters continue after them, and the audit is immutable again.
+func checkStoryDates(t *testing.T, dsn string) {
+	t.Helper()
+	pool, err := pgxpool.New(t.Context(), dsn)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer pool.Close()
+	rows, err := pool.Query(t.Context(), `
+		SELECT s.business_ref_namespace || ' ' || s.business_ref,
+		       to_char(c.opened_at AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD'),
+		       to_char(c.closed_at AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD'),
+		       (SELECT to_char(min(a.occurred_at) AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD') FROM audit_event a WHERE a.subject_id = c.id)
+		  FROM case_file c JOIN subject_ref s ON s.id = c.id ORDER BY 1`)
+	if err != nil {
+		t.Fatalf("read the cases: %v", err)
+	}
+	got, err := pgx.CollectRows(rows, func(row pgx.CollectableRow) (string, error) {
+		var ref, opened, closed, audited string
+		err := row.Scan(&ref, &opened, &closed, &audited)
+		return ref + " " + opened + " " + closed + " " + audited, err
+	})
+	want := []string{
+		"OPC 2025-000031 2025-03-03 2025-05-21 2025-03-03",
+		"OPP 2025-000007 2025-04-11 2025-05-21 2025-04-11",
+		"SIG 2026-000014 2026-02-09 2026-02-13 2026-02-09",
+	}
+	if err != nil || !slices.Equal(got, want) {
+		t.Errorf("story dates: %v (%v), want %v", got, err, want)
+	}
+	var next int64
+	if err := pool.QueryRow(t.Context(), `SELECT last_value FROM business_ref_counter WHERE namespace = 'OPC' AND period = '2025'`).Scan(&next); err != nil || next != 31 {
+		t.Errorf("the OPC 2025 counter continues after the stories: %d (%v)", next, err)
+	}
+	if _, err := pool.Exec(t.Context(), `UPDATE audit_event SET occurred_at = now()`); err == nil {
+		t.Error("the audit must be immutable again after the re-dating")
+	}
+}
+
 // checkDemoDatabase reads back what the generator wrote.
 func checkDemoDatabase(t *testing.T, dsn, lang string) {
 	t.Helper()
@@ -107,7 +151,7 @@ func checkDemoDatabase(t *testing.T, dsn, lang string) {
 	if closed != 3 || admins != 1 || records != 1 || namespaces != "OPC,OPP,SIG" {
 		t.Errorf("closed=%d admins=%d records=%d namespaces=%q", closed, admins, records, namespaces)
 	}
-	if versions != 12 { // 11 documents, the plan in two versions
+	if versions != 13 { // 12 documents, the plan in two versions
 		t.Errorf("document versions: %d", versions)
 	}
 	var label string

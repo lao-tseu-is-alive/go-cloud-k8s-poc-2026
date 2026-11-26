@@ -134,7 +134,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-import/main.go` — Legacy data import command: migrates a brand-new target and runs `pkg/legacyimport` in one transaction; dry run unless `-apply`, counts only.
 - `cmd/goeland-import/tables2replicate.yaml` — The 44 legacy tables and columns the import reads on the source replica, by area, for the tool that replicates them from MSSQL; kept in sync with the source queries of `pkg/legacyimport`.
 - `cmd/goeland-server/demo.go` — The `demo-seed` command (GLD-079): builds the application in-process with the demo users' verifier, refuses a database that is not brand new, writes the synthetic demo through the API without listening on a network and marks the database; the demo mode guard and its `GET /config` block (GLD-085).
-- `cmd/goeland-server/demo_test.go` — Generates the small demo profile in every language, each in a fresh database as the runtime role, reads it back, checks that a second run is refused and that the demo mode refuses an unmarked database then signs in every demo user; env-gated on `GOELAND_TEST_DATABASE_URL`.
+- `cmd/goeland-server/demo_clock.go` — Demo story time (GLD-079): records when each story step started, then re-dates the generated history to the story times as the schema owner (triggers disabled for that transaction), and derives the retention dates and reference counters.
+- `cmd/goeland-server/demo_test.go` — Generates the small demo profile in every language, each in a fresh database as the runtime role, reads it back, checks the story dates and references, that the audit is immutable again, that a second run is refused and that the demo mode refuses an unmarked database then signs in every demo user; env-gated on `GOELAND_TEST_DATABASE_URL`.
 - `cmd/goeland-server/headers.go` — Browser security headers on every response: the CSP (auth server origin allowed in jwt mode), nosniff, no framing, referrer and permissions policies.
 - `cmd/goeland-server/headers_test.go` — Tests the CSP per auth mode and that the middleware sets every security header.
 - `cmd/goeland-server/main.go` — Server entry point: `--version`, the `migrate` and `demo-seed` commands, config, logger, startup, listener and graceful shutdown.
@@ -712,7 +713,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/router/index.ts` — Client-side routes: cases, documents, things, actors and administration.
 - `cmd/goeland-server/goeland-front/src/schemas/core.ui.schema.json` — UI schema for core components (input of the frontend brief; not imported at runtime).
 - `cmd/goeland-server/goeland-front/src/schemas/document.ui.schema.json` — UI schema for the document resource (input of the frontend brief; not imported at runtime).
-- `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token, demo user or silent JWT minting and re-mint, in-memory token.
+- `cmd/goeland-server/goeland-front/src/stores/auth.ts` — Auth store: `/config` bootstrap, dev token, demo user (remembered by the browser, demo mode only) or silent JWT minting and re-mint, in-memory token.
 - `cmd/goeland-server/goeland-front/src/stores/users.ts` — Operator id → user directory: batched `BatchGetUsers` calls and a page-lifetime cache.
 - `cmd/goeland-server/goeland-front/src/stores/ui.ts` — Shared snackbar state.
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
@@ -745,7 +746,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/utils/globalSearch.ts` — Global search suggestions grouped by kind, the results and filtered-list routes (GLD-064).
 - `cmd/goeland-server/goeland-front/src/utils/roleHeadings.ts` — Relationship group headings read from the subject on screen, French plurals of roles, the case filter threshold (GLD-063).
 - `cmd/goeland-server/goeland-front/src/utils/geometry.ts` — GeoJSON parsing, SPA mirror of the geometry rules, SVG projection and map link.
-- `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon, SPA list and detail routes.
+- `cmd/goeland-server/goeland-front/src/utils/subjects.ts` — Per-kind subject icon, SPA list and detail routes, and a business reference with its namespace.
 - `cmd/goeland-server/goeland-front/src/utils/textSearch.ts` — Accent folding and the filter of the searchable type pickers.
 - `cmd/goeland-server/goeland-front/src/utils/validation.ts` — Vuetify rule factories mirroring the protos' buf.validate constraints.
 - `cmd/goeland-server/goeland-front/tsconfig.app.json` — TypeScript configuration for the application sources.

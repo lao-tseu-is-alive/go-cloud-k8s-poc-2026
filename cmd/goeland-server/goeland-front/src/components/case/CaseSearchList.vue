@@ -16,6 +16,7 @@
   import { usePagedSearch } from '@/composables/usePagedSearch'
   import { formatDateTime } from '@/utils/formatters'
   import { activeCount, emptyRecordFilters, RECORD_FILTER_KEYS } from '@/utils/routeFilters'
+  import { subjectReference } from '@/utils/subjects'
 
   // The case list with its filters (GLD-074), on the case page and in a tab
   // of the search results; the filters live in the URL.
@@ -109,7 +110,7 @@
           @keydown.enter="openCase(c)"
           @keydown.space.prevent="openCase(c)"
         >
-          <td class="text-no-wrap">{{ c.subjectRef?.businessRef || '—' }}</td>
+          <td class="text-no-wrap">{{ subjectReference(c.subjectRef) || '—' }}</td>
 
           <td>
             <router-link class="list-link" :to="`/cases/${c.subjectRef?.id}`" @click.stop>{{ c.title }}</router-link>

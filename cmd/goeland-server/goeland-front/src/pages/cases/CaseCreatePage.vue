@@ -6,6 +6,7 @@
   import CaseTypeSelect from '@/components/case/CaseTypeSelect.vue'
   import { useApiErrors } from '@/composables/useApiErrors'
   import { useUiStore } from '@/stores/ui'
+  import { subjectReference } from '@/utils/subjects'
   import { maxLength, required } from '@/utils/validation'
 
   const { t } = useI18n()
@@ -29,7 +30,7 @@
         title: title.value.trim(),
         description: description.value.trim() || undefined,
       })
-      ui.notify(t('messages.case.createSuccess', { ref: c.subjectRef?.businessRef ?? '' }), 'success')
+      ui.notify(t('messages.case.createSuccess', { ref: subjectReference(c.subjectRef) }), 'success')
       const id = c.subjectRef?.id
       router.push(id ? `/cases/${id}` : '/cases')
     } catch (error) {

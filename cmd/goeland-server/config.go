@@ -134,6 +134,9 @@ type serverConfig struct {
 	// demo users of `goeland-server demo-seed`, on a server that never
 	// listens (GLD-079). Never read from the environment.
 	tokenVerifier authadapter.TokenVerifier
+	// demoOwnerURL, when set, is the schema owner's DSN demo-seed re-dates the
+	// generated history with; empty, DatabaseURL (which must then be the owner).
+	demoOwnerURL string
 	// demo is the demo dataset served in demo mode, read from the database at
 	// startup (GLD-085); nil otherwise.
 	demo *demoDataset

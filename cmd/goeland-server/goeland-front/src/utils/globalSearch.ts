@@ -2,7 +2,7 @@ import type { SubjectKind, SubjectRef, SubjectSearchGroup } from '@/api/types'
 /** The global search (GLD-064): the grouped suggestions of the app bar field. */
 import type { useI18n } from 'vue-i18n'
 import { formatTotal } from '@/utils/formatters'
-import { kindIcon, kindListRoute, subjectRoute } from '@/utils/subjects'
+import { kindIcon, kindListRoute, subjectReference, subjectRoute } from '@/utils/subjects'
 
 /** A query shorter than this is not sent: one letter matches too much to help. */
 export const MIN_QUERY_LENGTH = 2
@@ -42,11 +42,6 @@ export function resultsRoute (query: string): string {
 export function filteredListRoute (kind: SubjectKind, query: string): string | undefined {
   const list = kindListRoute(kind)
   return list && `${list}?q=${encodeURIComponent(query.trim())}`
-}
-
-/** A subject's business reference, with its namespace. */
-export function subjectReference (s: SubjectRef): string {
-  return [s.businessRefNamespace, s.businessRef].filter(Boolean).join(' ')
 }
 
 /** A group's title: the kind in the plural and its count ("Affaires (500+)"). */

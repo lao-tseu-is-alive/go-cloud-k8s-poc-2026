@@ -116,11 +116,17 @@ var textsEN = textSet{
 		CaseTitle:       "Street light out — avenue des Cèdres",
 		CaseDescription: "Street light out in front of avenue des Cèdres 14, reported by a resident.",
 		LampName:        "Street light EP-1042 — avenue des Cèdres",
-		Photo: docText{"Photo of the street light out", []string{
-			"Photograph sent with the online report.",
+		Email: docText{"E-mail of Ms Sofia Keller — street light out, avenue des Cèdres", []string{
+			"From: sofia.keller@example.ch — To: roads@goeland-sur-lac.example.ch",
+			"Hello, the street light in front of avenue des Cèdres 14 has been out for three evenings.",
+			"The pavement is very dark and there is broken glass at the foot of the pole.",
+			"I attach a photo taken last night. Thank you, Sofia Keller",
 		}},
-		Received:      entryText{"Report received", "Report received through the online desk, with a photo."},
-		Repaired:      entryText{"Lamp replaced", "Lamp replaced by the street lighting team the same day."},
+		Photo: docText{"Photo of the street light out", []string{
+			"Photograph attached to Ms Keller's e-mail.",
+		}},
+		Received:      entryText{"Report received", "E-mail of Ms Keller received with a photo; repair requested from street lighting."},
+		Repaired:      entryText{"Lamp replaced", "Lamp and cover replaced by the street lighting team; broken glass removed."},
 		Task:          "Replace the lamp of street light EP-1042",
 		TaskNote:      "LED lamp replaced, street light working.",
 		ClosingReason: "Street light repaired",

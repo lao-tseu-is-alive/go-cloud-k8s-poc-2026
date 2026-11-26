@@ -99,13 +99,34 @@ func runDemoSeed(ctx context.Context, config serverConfig, opts demodata.Options
 		return demodata.Report{}, err
 	}
 	clients := session.NewClients(&http.Client{Transport: handlerTransport{app.handler}}, demoSeedBaseURL)
+	ownerURL := config.demoOwnerURL
+	if ownerURL == "" {
+		ownerURL = config.DatabaseURL
+	}
+	return generateDemo(ctx, clients, ownerURL, opts, log)
+}
+
+// generateDemo writes the demo through clients while a story clock records
+// its steps, then, as the schema owner, re-dates the generated history to the
+// story times and marks the database as a demo.
+func generateDemo(ctx context.Context, clients *demodata.Clients, ownerURL string, opts demodata.Options, log *slog.Logger) (demodata.Report, error) {
+	owner, err := pgxpool.New(ctx, ownerURL)
+	if err != nil {
+		return demodata.Report{}, fmt.Errorf("connect as the schema owner: %w", err)
+	}
+	defer owner.Close()
+	clock := &storyClock{pool: owner}
+	opts.Clock = clock.mark
 	started := time.Now()
 	report, err := demodata.Generate(ctx, clients, opts)
-	log.Info("demo data written", "duration", time.Since(started).Round(time.Millisecond))
+	log.Info("demo data written", "duration", time.Since(started).Round(time.Millisecond), "story_steps", len(clock.marks))
 	if err != nil {
 		return report, err
 	}
-	return report, markDemoDataset(ctx, app.pool, report)
+	if err := redateDemo(ctx, owner, clock.marks); err != nil {
+		return report, fmt.Errorf("re-date the demo history: %w", err)
+	}
+	return report, markDemoDataset(ctx, owner, report)
 }
 
 // demoDataset is the marker row demo-seed writes once the demo is generated.

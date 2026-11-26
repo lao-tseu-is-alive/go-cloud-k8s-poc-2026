@@ -116,11 +116,17 @@ var textsFR = textSet{
 		CaseTitle:       "Lampadaire éteint — avenue des Cèdres",
 		CaseDescription: "Lampadaire éteint devant l'avenue des Cèdres 14, signalé par une habitante.",
 		LampName:        "Lampadaire EP-1042 — avenue des Cèdres",
-		Photo: docText{"Photo du lampadaire éteint", []string{
-			"Photographie transmise avec le signalement en ligne.",
+		Email: docText{"Courriel de Mme Sofia Keller — lampadaire éteint, avenue des Cèdres", []string{
+			"De : sofia.keller@example.ch — À : voirie@goeland-sur-lac.example.ch",
+			"Bonjour, le lampadaire devant le n° 14 de l'avenue des Cèdres est éteint depuis trois soirs.",
+			"Le trottoir est très sombre et il y a des débris de verre au pied du mât.",
+			"Je vous joins une photo prise hier soir. Merci d'avance, Sofia Keller",
 		}},
-		Received:      entryText{"Signalement reçu", "Signalement reçu par le guichet en ligne, avec une photo."},
-		Repaired:      entryText{"Lampe remplacée", "Lampe remplacée par l'équipe de l'éclairage public le jour même."},
+		Photo: docText{"Photo du lampadaire éteint", []string{
+			"Photographie jointe au courriel de Mme Keller.",
+		}},
+		Received:      entryText{"Signalement reçu", "Courriel de Mme Keller reçu avec une photo ; intervention demandée à l'éclairage public."},
+		Repaired:      entryText{"Lampe remplacée", "Lampe et vasque remplacées par l'équipe de l'éclairage public ; débris de verre ramassés."},
 		Task:          "Remplacer la lampe du lampadaire EP-1042",
 		TaskNote:      "Lampe LED remplacée, lampadaire en service.",
 		ClosingReason: "Lampadaire réparé",

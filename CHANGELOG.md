@@ -18,6 +18,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   the database if needed (owner from `.env`) and runs it, with `-r` after dropping the previous
   demo (only a database carrying the demo marker), or with `-s` serves the existing demo; a demo settings file
   (`.env_demo.sample`, Git-ignored copies) keeps the demo database and documents apart.
+- Demo story time (GLD-079): each step of a demo story has a realistic date; `demo-seed` re-dates
+  the generated history to those dates as the schema owner (in the brand-new demo database only)
+  and gives the cases references in their story year. The demo photographs are AI-generated
+  images in the repository, the positions of its things an editable GeoJSON file.
+- Demo mode: the browser remembers the demo user picked (its key, demo mode only), so a reload, a
+  tab put to sleep by the browser or a new tab no longer bring back the user picker.
+- The case list, pickers and detail pages show a business reference with its namespace
+  (« SIG 2026-000014 »): each case type numbers in its own namespace.
 - Demo mode (GLD-085, with the demo banner GLD-081): `GOELAND_AUTH_MODE=demo` replaces the token
   entry by a list of the demo users, one click signs in, « Changer d'utilisateur » switches, a
   banner marks every screen as fictional and the interface follows the demo language. The server

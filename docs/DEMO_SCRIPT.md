@@ -23,15 +23,21 @@ every document of this repository.
 - **Fictional identifiers:** parcel numbers, EGRID, EGID and IDE numbers have valid check digits in
   ranges that cannot be real ones; e-mails are `@example.ch`; phone numbers are in fictional ranges
   that still pass E.164 validation; names come from generic lists.
-- **Reproducible:** the same content in the same order on every run. Identifiers and reference
-  numbers are allocated by the server (the references in the year of the generation).
+- **Reproducible:** the same content, dates and case references on every run; only the internal
+  identifiers are drawn by the server. Each story gives its cases a reference in its year and type
+  namespace (« OPC 2025-000031 »); the counters continue after them.
 - **Through the API:** the generator sends every request as one of the demo users, so the data
   passes the same validation, rights, audit, outbox and timeline rules as the application, and
-  every audit trail shown in the demo is a real one. The API never backdates a record: the story
-  dates (2014 to 2026) are those of the timeline entries (`occurred_at`) and of the documents
-  (official date); creation, opening, closing and audit times are those of the generation. The
-  case due for disposal (§4.5) therefore needs a way to be due on the day of the generation,
-  decided when it is built.
+  every audit trail shown in the demo is a real one.
+- **Story time:** each step of a story starts at a story time (`at("2025-03-03 09:10")`, Europe/
+  Zurich), with realistic delays between steps. The API never backdates, so the server stamps
+  everything at the time of the generation; `demo-seed` records when each step started and, once
+  the demo is written, re-dates the whole database to the story times in one transaction, as the
+  schema owner, the tables' triggers disabled for that transaction only (`demo_clock.go`): opening
+  and closing times, audit, timeline, tasks, versions, then the retention dates derived from the
+  closing. This happens only in the brand-new database it has just generated, before marking it
+  as a demo; the server itself has no such path. The fictional municipality sets up its catalogue
+  in January 2014.
 - **A permanent banner** « Données fictives de démonstration » (GLD-081), so a screenshot is never
   mistaken for real records.
 - **One language per demo:** the generator takes the language of the generated data (`--lang`,
@@ -158,8 +164,9 @@ The head of Urbanisme (a user holding MANAGE on that unit) approves the disposal
 
 ### 4.6 Citizen report « Lampadaire éteint, avenue des Cèdres » (Chloé)
 
-- **Story:** report with a photo, a task assigned to the unit Éclairage public, completed the same
-  day, case closed.
+- **Story:** on Monday 9 February 2026 Mme Sofia Keller's e-mail arrives with a photo (the
+  original e-mail is filed as an incoming letter); a task goes to the unit Éclairage public, which
+  replaces the lamp on Thursday 12; Chloé closes the case on Friday 13.
 - **Show:** the shortest case, in contrast with the complaint of §4.3.
 
 ## 5. Background data
@@ -195,7 +202,9 @@ only holds what differs and **no secret** (the database role and its password st
 The database is the argument, else `DB_NAME` of the `-e` file itself, never the development
 database of `.env`; the language is the argument, else `GOELAND_DEMO_LANG`, else `fr`.
 
-The script creates the database when it does not exist, owned by the application role
+`demo-seed` must connect as the schema owner (the role that ran the migrations, `DB_USER` with the
+script) to re-date the history it generated. The script creates the database when it does not
+exist, owned by the application role
 (`DB_USER`), with the extensions enabled as the PostgreSQL superuser (`GOELAND_DEMO_ADMIN_URL`,
 by default `postgres@DB_HOST:DB_PORT`), then runs `goeland-server demo-seed`, which migrates it
 and writes the demo. An existing database is used as it is, but the generator only writes into
@@ -218,7 +227,8 @@ scripts/demo_seed.sh -s -e .env_demo_small_fr
 
 `.env_demo.sample` serves it in the **demo mode** (`GOELAND_AUTH_MODE=demo`, GLD-085): the
 sign-in screen lists the demo users below with their role and what each shows, one click signs in,
-« Changer d'utilisateur » in the user menu brings the list back, a banner says on every screen that
+« Changer d'utilisateur » in the user menu brings the list back (the browser remembers the demo user
+picked, so a reload or a new tab keeps it; only its key, the demo tokens being public), a banner says on every screen that
 the data is fictional, and the interface opens in the language of the generated data. Nobody types
 a token: the demo users' tokens are public on purpose. Because anyone can sign in, the server
 refuses this mode unless the database holds the marker `demo-seed` writes once it has generated

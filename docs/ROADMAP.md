@@ -642,10 +642,13 @@ placed on Swiss territory.
   Progress 2026-11-26: `goeland-server demo-seed -profile small -lang fr|en` (`pkg/demodata`)
   writes the catalogue (relabelling the seeded entries in the demo language), the org chart, seven
   demo users (Alice bootstrapped ADMIN, David RECORDS_MANAGER) and the hero cases §4.1, §4.2 and
-  §4.6, as the runtime role in the test (`TestDemoSeed`, both languages). Next: heroes §4.3 to
-  §4.5 (§4.5 needs a case due on the day of the generation: the API never backdates), the
-  background of profile `demo`, open geodata geometries (generated rectangles in the meantime),
-  and the seeded task, relationship and org unit type labels in English.
+  §4.6, as the runtime role in the test (`TestDemoSeed`, both languages). Then, the same day: AI
+  photographs and editable GeoJSON places in the repository; story time (each step at a story
+  time, the history re-dated by `demo-seed` as the schema owner, explicit references in the story
+  year, origin e-mail of the citizen report); the SPA shows a reference with its namespace
+  (« SIG 2026-000014 »). Next: heroes §4.3 to §4.5, the places edited by the product owner in
+  QGIS, the background of profile `demo`, and the seeded task, relationship and org unit type
+  labels in English.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
@@ -663,6 +666,13 @@ placed on Swiss territory.
   `demo_dataset` row that `demo-seed` writes once it has generated the demo into a brand-new
   database (migration `0040`), so a database holding real data can never be served this way.
   Done 2026-11-26: `TestDemoSeed` checks the refusal before generation, then every public token.
+- [ ] **GLD-086 — Citizen view (e-guichet)** (to design before any code, proposed 2026-11-26): a
+  citizen, an ACTOR with a portal account and rights entirely apart from the employees', sees his
+  own requests, their status, steps and the documents explicitly shared with him (a new « visible
+  to the requester » mark on timeline entries and documents), never internal notes, opinions or
+  other parties; then files a request with an attachment (creating the case and its incoming
+  letter) and answers a request for more information. In the demo, Mme Keller and M. Tutu join
+  the user picker under « Citoyens ». Consultation first, filing next.
 - [ ] **GLD-083 — German demo**: the SPA in `de-CH` (a locale beside `fr-CH` and `en`, kept up to
   date with every new feature) and the `de` catalogue of the generator, with German-speaking
   name lists; the data stays Swiss.
@@ -676,6 +686,19 @@ placed on Swiss territory.
   per row), validation bounds taken from the deployment, the Swiss identifiers as a country
   profile, and WGS84 / Web Mercator backgrounds (e.g. OpenStreetMap) in OpenLayers, which
   already reprojects through proj4. To be scoped before any work.
+
+## UI remarks on the demo (2026-11-26)
+
+- [ ] **GLD-087 — Document preview**: the document page shows the content of the current (or
+  chosen) version: images inline, PDFs in the browser's viewer, plain text as text. The bytes come
+  through the governed download (READ on the document, `DOWNLOAD` audited as now) fetched with
+  the bearer token and shown from an object URL, so the CSP must allow `blob:` for images and
+  frames; other types keep the download button.
+- [ ] **GLD-088 — « Mon activité » home page**: the first page after signing in lists the caller's
+  latest cases, documents and other subjects, most recent first: what he created or changed (read
+  from the audit, `actor_user_id`) and what he consulted, which needs a small server-side
+  « recently viewed » record per user (kept short, never audited), so it follows the user across
+  devices. To decide: the list's grouping and its length.
 
 ## Infrastructure
 

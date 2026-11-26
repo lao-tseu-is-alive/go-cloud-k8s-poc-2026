@@ -3,7 +3,7 @@
   import { useI18n } from 'vue-i18n'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { formatDateTime } from '@/utils/formatters'
-  import { kindIcon } from '@/utils/subjects'
+  import { kindIcon, subjectReference } from '@/utils/subjects'
 
   defineProps<{ subject?: SubjectRef }>()
 
@@ -31,7 +31,7 @@
           size="small"
           :title="t('fields.subject.business_ref')"
         >
-          {{ subject.businessRefNamespace ? `${subject.businessRefNamespace} ${subject.businessRef}` : subject.businessRef }}
+          {{ subjectReference(subject) }}
         </v-chip>
 
         <span class="text-caption">{{ subject.id }}</span>

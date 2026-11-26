@@ -1,6 +1,7 @@
 import type { SubjectSearchGroup } from '@/api/types'
 import { describe, expect, it } from 'vitest'
-import { buildSearchItems, filteredListRoute, resultsRoute, searchable, subjectReference } from '../globalSearch'
+import { buildSearchItems, filteredListRoute, resultsRoute, searchable } from '../globalSearch'
+import { subjectReference } from '../subjects'
 import { t } from './i18nStub'
 
 const cases: SubjectSearchGroup = {

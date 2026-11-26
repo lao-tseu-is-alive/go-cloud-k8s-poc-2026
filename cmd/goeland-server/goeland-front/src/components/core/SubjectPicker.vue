@@ -9,7 +9,7 @@
   import { searchOrgUnits } from '@/api/orgUnitClient'
   import { searchThings } from '@/api/thingClient'
   import { useDebouncedSearch } from '@/composables/useDebouncedSearch'
-  import { kindIcon } from '@/utils/subjects'
+  import { kindIcon, subjectReference } from '@/utils/subjects'
 
   // Searches the subjects of one kind (server-side, accent-insensitive) and binds
   // the chosen subject's id, so nobody has to paste a UUID.
@@ -69,7 +69,7 @@
   }, { immediate: true })
 
   function subtitle (s: SubjectRef): string {
-    return [s.businessRefNamespace, s.businessRef].filter(Boolean).join(' ')
+    return subjectReference(s)
   }
 </script>
 

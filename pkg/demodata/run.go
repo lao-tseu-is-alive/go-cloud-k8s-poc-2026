@@ -25,7 +25,11 @@ type run struct {
 	users map[string]*v1.User // user key -> recorded user
 	// places are the things of the stories, from geodata/things.geojson.
 	places map[string]place
-	count  map[string]int // kind -> number created
+	// now is the story time of the current step (at), in Europe/Zurich.
+	now time.Time
+	// clock is told each story time before its step (Options.Clock).
+	clock func(context.Context, time.Time) error
+	count map[string]int // kind -> number created
 }
 
 // call sends req as the demo user and returns the reply message, or nil after
@@ -42,14 +46,35 @@ func call[Req, Res any](r *run, user, what string, fn func(context.Context, *con
 	return resp.Msg
 }
 
-// day is a story date at 9:00 UTC: the API stamps records with the time of
-// the generation, the story dates live in the timeline and document dates.
-func day(date string) *timestamppb.Timestamp {
-	t, err := time.Parse(time.DateOnly, date)
+// zurich is the time zone of the story times.
+var zurich = mustLoadZurich()
+
+func mustLoadZurich() *time.Location {
+	loc, err := time.LoadLocation("Europe/Zurich") // embedded by time/tzdata
 	if err != nil {
-		panic("demodata: invalid story date " + date) // a typo in a story, caught by the tests
+		panic(err)
 	}
-	return timestamppb.New(t.Add(9 * time.Hour))
+	return loc
+}
+
+// at starts a story step at stamp ("2006-01-02 15:04", Europe/Zurich): the
+// timeline entries and documents of the step take that time, and the clock is
+// told, so demo-seed can re-date afterwards what the server stamped (the API
+// never backdates).
+func (r *run) at(stamp string) {
+	if r.err != nil {
+		return
+	}
+	t, err := time.ParseInLocation("2006-01-02 15:04", stamp, zurich)
+	if err != nil {
+		panic("demodata: invalid story time " + stamp) // a typo in a story, caught by the tests
+	}
+	r.now = t
+	if r.clock != nil {
+		if err := r.clock(r.ctx, t); err != nil {
+			r.err = fmt.Errorf("story clock at %s: %w", stamp, err)
+		}
+	}
 }
 
 // person creates a person actor.
@@ -88,13 +113,27 @@ func (r *run) thing(user string, req *v1.CreateThingRequest) string {
 	return call(r, user, "create thing "+req.GetName(), r.c.things.CreateThing, req).GetThing().GetSubjectRef().GetId()
 }
 
-// newCase opens a case owned by unit, at confidentiality level.
-func (r *run) newCase(user, caseType, title, description, unit string, confidentiality int32) string {
+// newCase opens a case owned by unit, at confidentiality level, with the
+// reference number of its story ("2025-000031", in its type's namespace).
+func (r *run) newCase(user, caseType, number, title, description, unit string, confidentiality int32) string {
 	r.count["cases"]++
 	return call(r, user, "create case "+title, r.c.cases.CreateCase, &v1.CreateCaseRequest{
 		CaseTypeCode: caseType, Title: title, Description: description,
+		BusinessRef: &v1.BusinessRefRequest{
+			Namespace: namespaceOf(caseType), Source: &v1.BusinessRefRequest_Value{Value: number},
+		},
 		InitialGovernance: &v1.RecordMetadata{OwnerOrgId: r.units[unit], ConfidentialityLevel: confidentiality},
 	}).GetCase().GetSubjectRef().GetId()
+}
+
+// namespaceOf is the reference namespace of a demo case type.
+func namespaceOf(caseType string) string {
+	for _, ct := range caseTypes {
+		if ct.code == caseType {
+			return ct.namespace
+		}
+	}
+	return ""
 }
 
 // link relates two subjects.
@@ -105,22 +144,22 @@ func (r *run) link(user, source, target, typeCode string) {
 }
 
 // document uploads the PDF rendering of doc and files it in caseID, dated
-// date; final documents can no longer change.
-func (r *run) document(user, docType string, doc docText, date, caseID string, final bool) string {
-	return r.file(user, docType, doc, date, caseID, final, "document.pdf", renderPDF(doc.Title, doc.Lines, r.t.Footer))
+// the story day; final documents can no longer change.
+func (r *run) document(user, docType string, doc docText, caseID string, final bool) string {
+	return r.file(user, docType, doc, caseID, final, "document.pdf", renderPDF(doc.Title, doc.Lines, r.t.Footer))
 }
 
 // photo files the demo photograph asset (assets/) in caseID as a final photo.
-func (r *run) photo(user string, doc docText, asset, date, caseID string) string {
-	return r.file(user, docPhoto, doc, date, caseID, true, asset, r.asset(asset))
+func (r *run) photo(user string, doc docText, asset, caseID string) string {
+	return r.file(user, docPhoto, doc, caseID, true, asset, r.asset(asset))
 }
 
 // file uploads content as filename and files it as a document of caseID.
-func (r *run) file(user, docType string, doc docText, date, caseID string, final bool, filename string, content []byte) string {
+func (r *run) file(user, docType string, doc docText, caseID string, final bool, filename string, content []byte) string {
 	blob := r.uploadAs(user, filename, content)
 	r.count["documents"]++
 	return call(r, user, "create document "+doc.Title, r.c.documents.CreateDocument, &v1.CreateDocumentRequest{
-		DocumentTypeCode: docType, Title: doc.Title, OfficialDate: date, Language: r.t.Language,
+		DocumentTypeCode: docType, Title: doc.Title, OfficialDate: r.now.Format(time.DateOnly), Language: r.t.Language,
 		LinkToCaseId: caseID, ContentBlobId: blob, IsFinal: final,
 	}).GetDocument().GetSubjectRef().GetId()
 }
@@ -144,11 +183,12 @@ func (r *run) uploadAs(user, filename string, content []byte) string {
 	return blob
 }
 
-// entry writes a validated timeline entry of the case, citing documents.
-func (r *run) entry(user, caseID string, kind v1.TimelineEntryType, e entryText, visibility v1.TimelineVisibility, date string, documents ...string) {
+// entry writes a validated timeline entry of the case at the story time,
+// citing documents.
+func (r *run) entry(user, caseID string, kind v1.TimelineEntryType, e entryText, visibility v1.TimelineVisibility, documents ...string) {
 	created := call(r, user, "timeline entry "+e.Title, r.c.timeline.CreateTimelineEntry, &v1.CreateTimelineEntryRequest{
 		CaseId: caseID, EntryType: kind, Title: e.Title, Body: e.Body, Visibility: visibility,
-		OccurredAt: day(date), DocumentIds: slices.DeleteFunc(documents, func(id string) bool { return id == "" }),
+		OccurredAt: timestamppb.New(r.now), DocumentIds: slices.DeleteFunc(documents, func(id string) bool { return id == "" }),
 	})
 	call(r, user, "validate entry "+e.Title, r.c.timeline.ValidateTimelineEntry, &v1.ValidateTimelineEntryRequest{Id: created.GetEntry().GetId()})
 	r.count["timeline entries"]++

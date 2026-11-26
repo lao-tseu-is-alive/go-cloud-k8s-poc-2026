@@ -157,6 +157,8 @@ type reportText struct {
 	CaseDescription string
 	// LampName is the name of the street light.
 	LampName string
+	// Email is the resident's e-mail reporting the street light.
+	Email docText
 	// Photo is the resident's photograph.
 	Photo docText
 	// Received is the timeline entry of the report.
