@@ -8,6 +8,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.24.0] - 2026-11-26
+
+The public demo on synthetic data and what it showed was missing. `goeland-server demo-seed` and
+`scripts/demo_seed.sh` generate the fictional « Commune de Goéland-sur-Lac » (GLD-079) in French or
+English, served in a password-less demo mode that refuses any database it did not generate
+(GLD-085, GLD-081); the document page previews its content (GLD-087); every read of a subject is
+logged and shown to its readers (GLD-089); the home page is « Mon tableau de bord » (GLD-088);
+org units and security groups are administered by administrators only (GLD-090) and the
+administration lists the users (GLD-091). Migrations `0040` to `0042`. Upgrading: the access log
+grows with every read (see PRODUCTION_READINESS, its retention and its visibility to colleagues
+are to be validated before production); security groups created by non-administrators are kept,
+only their further changes need an administrator.
+
 ### Added
 
 - Administration › Utilisateurs (GLD-091), the first tab of the administration: the internal users

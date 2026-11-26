@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.23.0**.
+Tracked version: **v0.24.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -51,8 +51,12 @@ in v0.20.0; the elimination of cases, off by default and simulated until enabled
 v0.21.0; the JWT verification without Echo (GLD-078) in v0.21.1; the migrations separated from
 the runtime role (GLD-046) in v0.22.0; Go 1.27.4, pgx 5.12.0 and the SPA updates (security patch)
 in v0.22.1; the orphan upload collection (GLD-045), the probative content verification (GLD-021) and
-the S3 storage on Garage (GLD-020) in v0.23.0. Next: the public demo on synthetic data (GLD-079, with GLD-080,
-GLD-081 and the demo mode GLD-085), then an MCP server over the API restricted to that data.
+the S3 storage on Garage (GLD-020) in v0.23.0; the synthetic demo generator (GLD-079) with the demo
+mode and banner (GLD-085, GLD-081), the document preview (GLD-087), the access log of every subject
+(GLD-089), « Mon tableau de bord » (GLD-088), the administration of units and groups by
+administrators only (GLD-090) and the users list (GLD-091) in v0.24.0. Next: the demo's ongoing
+work (GLD-092) and the map source (GLD-080), then an MCP server over the API restricted to the
+demo data.
 
 ## Cross-cutting quality
 
@@ -613,7 +617,7 @@ only aggregate distributions already profiled (kind ratio, category histogram, c
 may shape it. The demo takes place in a fictional municipality, « Commune de Goéland-sur-Lac »,
 placed on Swiss territory.
 
-- [~] **GLD-079 — Synthetic dataset generator**: a deterministic generator (same content in the
+- [x] **GLD-079 — Synthetic dataset generator**: a deterministic generator (same content in the
   same order; ids and references allocated by the server) writing through the API as the demo
   users, so the data passes the same validation, rights, audit, outbox and timeline rules as the
   application, and the generator doubles as a regression test of the business API. It refuses a database that is not brand new, like `goeland-import`;
@@ -651,17 +655,22 @@ placed on Swiss territory.
   2025, one under a legal hold); `TestDemoSeed` checks their dates and the rights they show.
   Then the consultations of the stories (DEMO_SCRIPT §4.7): reads and downloads at story times
   and two refusals, recorded without the 15-minute window (`core.WithEveryAccessLogged`, set by
-  `demo-seed` only). Next: the places edited by the product owner in QGIS, the background of profile `demo`, and the
-  seeded task, relationship and org unit type labels in English.
+  `demo-seed` only). Released in v0.24.0 (profile `small`); what remains is GLD-092.
+- [ ] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
+  cases in progress dated from the generation day (DEMO_SCRIPT §4.8 to §4.12, agreed 2026-11-26):
+  tasks open, in progress, overdue, assigned to a user or a unit, reassigned, cancelled, reopened,
+  open circulations, so every demo user's dashboard holds today's work; the background of profile
+  `demo` (§5); the seeded task, relationship and org unit type labels in English; the places
+  edited by the product owner in QGIS.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
   LV95 tiles: national map, SWISSIMAGE, official cadastral map; free open data with the
   « © swisstopo » attribution), the CSP following the chosen source.
-- [~] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
+- [x] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
   démonstration » banner in the SPA, so a screenshot of the demo is never mistaken for real
   records. Built with GLD-085: the demo mode is that setting (the banner shows on every screen).
-- [~] **GLD-085 — Demo mode**: decided 2026-11-26, the dev mode's token entry is no way into a
+- [x] **GLD-085 — Demo mode**: decided 2026-11-26, the dev mode's token entry is no way into a
   demo, and a demo is about switching users. `GOELAND_AUTH_MODE=demo`: the sign-in screen lists
   the demo users (name, role, what each shows) and one click signs in as one; « Changer
   d'utilisateur » brings the list back; the interface opens in the language of the generated
@@ -693,7 +702,7 @@ placed on Swiss territory.
 
 ## UI remarks on the demo (2026-11-26)
 
-- [~] **GLD-087 — Document preview**: the document page shows the content of the current (or
+- [x] **GLD-087 — Document preview**: the document page shows the content of the current (or
   chosen) version: images inline, PDFs in the browser's viewer, plain text as text. The bytes come
   through the governed download (READ on the document, `DOWNLOAD` audited as now) fetched with
   the bearer token and shown from an object URL, so the CSP must allow `blob:` for images and
@@ -701,19 +710,19 @@ placed on Swiss territory.
   confidential document (level 2 or more) and a large file are previewed on request, a PDF is
   framed from a blob the SPA types `application/pdf`, a text is shown as text (never markup), and
   an eye button in the versions list previews an older version.
-- [~] **GLD-090 — Org units and security groups administered by administrators only** (bug found
+- [x] **GLD-090 — Org units and security groups administered by administrators only** (bug found
   by the product owner, 2026-11-26): creating, changing or archiving a security group, and adding
   or removing a member of a group or an org unit, need `goeland:admin`; GLD-048 had let any user
   create a group and manage it, and a holder of MANAGE on a unit manage its members. The org unit
   RPCs already required it. Done 2026-11-26: the group RPCs and the membership changes of
   `LinkSubjects` / `EndRelationship` / `UnlinkSubjects` require it, the SPA shows those actions to
   administrators only; the API surface test checks the refusals.
-- [~] **GLD-091 — Users in the administration** (asked by the product owner, 2026-11-26):
+- [x] **GLD-091 — Users in the administration** (asked by the product owner, 2026-11-26):
   Administration › Utilisateurs lists the internal users (those who signed in once) with their
   application roles, administrators marked and filterable, searchable by name or e-mail; roles are
   still granted in Administration › Rôles. Done 2026-11-26 (SPA only: `SearchUsers` already returns
   the roles); at most 200 users per search for now, a paged list if the real volume needs it.
-- [~] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
+- [x] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
   GLD-033): as in the legacy Goéland (`AffaireLogAcces` / `DocumentLogAcces`), every detail read
   and download is logged, allowed or refused, whatever the confidentiality, and so are the changes
   refused in the adapters (`WRITE_DENIED`); a repeated access is recorded once per 15 minutes.
@@ -722,7 +731,7 @@ placed on Swiss territory.
   `0041`, `core.AccessLogWindow`, `Authorizer.Require` records refused changes. Open for
   production: the log's retention and its validation with the data protection officer
   (PRODUCTION_READINESS, Known limitations).
-- [~] **GLD-088 — « Mon tableau de bord » home page**: the first page after signing in lists the
+- [x] **GLD-088 — « Mon tableau de bord » home page**: the first page after signing in lists the
   caller's latest cases, documents and other subjects, most recent first: what they changed (read
   from the audit, `actor_user_id`) and what they consulted. Decided 2026-11-26 with the product
   owner: one tab per kind with its count (a subject once, at its last activity), each the kind's
