@@ -646,9 +646,11 @@ placed on Swiss territory.
   photographs and editable GeoJSON places in the repository; story time (each step at a story
   time, the history re-dated by `demo-seed` as the schema owner, explicit references in the story
   year, origin e-mail of the citizen report); the SPA shows a reference with its namespace
-  (« SIG 2026-000014 »). Next: heroes §4.3 to §4.5, the places edited by the product owner in
-  QGIS, the background of profile `demo`, and the seeded task, relationship and org unit type
-  labels in English.
+  (« SIG 2026-000014 »). Then the heroes §4.3 (recurring complaint, reopened, restricted police
+  note), §4.4 (confidential subsidy, sensitive read audited) and §4.5 (two sign cases due since
+  2025, one under a legal hold); `TestDemoSeed` checks their dates and the rights they show.
+  Next: the places edited by the product owner in QGIS, the background of profile `demo`, and the
+  seeded task, relationship and org unit type labels in English.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native

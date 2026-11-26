@@ -1,8 +1,8 @@
 # Goéland POC demo script (synthetic data)
 
 Status: **in progress** (GLD-079, see [ROADMAP.md](ROADMAP.md)). `goeland-server demo-seed`
-(`pkg/demodata`) writes the catalogue, the org chart, the demo users and the hero cases §4.1, §4.2
-and §4.6 (profile `small`, §7); §4.3 to §4.5 and the background data come next. Decided 2026-11-26.
+(`pkg/demodata`) writes the catalogue, the org chart, the demo users and the six hero cases
+(profile `small`, §7); the background data (profile `demo`) comes next. Decided 2026-11-26.
 
 This document has two readers:
 
@@ -95,11 +95,12 @@ promenades, Police municipale, Cohésion sociale, Énergie, Archives communales,
 | Bruno | agent | Urbanisme | building permit, opposition (§4.1, §4.2); does not see §4.4 |
 | Chloé | agent | Voirie et propreté | complaint, citizen report (§4.3, §4.6) |
 | David | records manager | Archives communales | disposal (§4.5) |
-| Emma | reader | Énergie | confidential subsidy (§4.4) |
+| Emma | agent | Énergie | confidential subsidy (§4.4) |
 | Félix | agent | Cohésion sociale | complaint (§4.3); does not see the police note |
 | Hugo | agent | Parcs et promenades | answers the circulation of §4.1 |
 
-The head of Urbanisme (a user holding MANAGE on that unit) approves the disposal item of §4.5.
+Bruno, a member of Urbanisme (whose cases its members manage), approves the disposal item of §4.5:
+an item is approved by a holder of MANAGE on the case's owning unit, never by the preparer.
 
 ## 4. Hero cases
 
@@ -128,36 +129,51 @@ The head of Urbanisme (a user holding MANAGE on that unit) approves the disposal
 ### 4.3 Complaint « Propreté et nuisances, rue du Port 12 » (Chloé, Félix)
 
 - **Actors:** M. Jean Tutu (complainant), Lacrégie SA (property manager of the building).
-- **Thing:** the street section in front of number 12.
-- **Story:**
-  1. M. Tutu writes: litter, syringes, a pavement hardly ever cleaned.
-  2. Circulation to three services:
-     - Voirie et propreté notes the facts; a task « nettoyage renforcé hebdomadaire » is created;
-     - Police municipale reports on its patrols in an internal note with restricted visibility;
-     - Cohésion sociale sends its outreach social workers.
-  3. A coordinated reply letter; case closed.
-  4. Six weeks later M. Tutu writes again: « rien n'a changé ». The case is **reopened with a
-     reason**, a new task is created and a second reply letter is sent.
-- **Also:** M. Tutu's actor page shows an older complaint (2024, noise from a bar), closed.
+- **Things:** the street section in front of number 12 and the building (owned by Lacrégie SA).
+- **Story** (PLA 2025-000118):
+  1. 15 September 2025: M. Tutu's letter, with two photographs: litter, syringes, a pavement
+     hardly ever cleaned.
+  2. 16 September: circulation to three services:
+     - Voirie et propreté notes the facts (18 September); a task « nettoyage renforcé
+       hebdomadaire » goes to the unit;
+     - Police municipale reports on its patrols (23 September). The demo has no police account:
+       Chloé, managing the case, records the answer the police sent her and files its report as an
+       internal note in a **restricted** timeline entry;
+     - Cohésion sociale (Félix, 25 September) sends its outreach social workers.
+  3. 2 October: a coordinated reply letter; case closed.
+  4. 17 November: M. Tutu writes again: « rien n'a changé ». The case is **reopened with a
+     reason**, an on-site check is done on the 20th, a second reply is sent on the 24th and the
+     case closed on the 25th.
+- **Also:** M. Tutu's actor page shows an older complaint (PLA 2024-000052, June 2024, noise from
+  a bar, owned by the police), closed.
 - **Show:** the lifecycle with a reopening, several services on one case, Chloé's « mes tâches »,
   restricted visibility (Félix does not see the police note), a citizen's history on the actor page.
 
 ### 4.4 Confidential energy subsidy « Pompe à chaleur, chemin des Vignes 4 » (Emma)
 
-- **Actors:** M. and Mme Berger (applicants).
-- **Documents:** request form, supporting documents (quote, income certificate), granting decision.
-- **Access:** confidentiality level 2, granted to Énergie only.
+- **Actors:** M. Marc and Mme Anne Berger (applicants); the house is a thing of the case.
+- **Story** (SUB 2025-000009, August to November 2025): request form with the installer's quote
+  and the income certificate (18 August), check (25 August), subsidy promise (10 September),
+  photograph of the installed heat pump and invoice (3 November), payment letter (10 November),
+  case closed (12 November). Emma read the case again in March 2026, so the sensitive read audit
+  already holds a read.
+- **Access:** confidentiality level 2 (the case type's minimum): its creator and the Énergie unit
+  only; Alice, although administrator, does not read it (an application role never opens a
+  confidential subject) but consults its audit.
 - **Show:** Bruno finds it neither in the case list nor in the global search; Emma opens it; Alice
   then reads the sensitive read audit and sees Emma's read.
 
 ### 4.5 Closed case due for disposal « Réclame, Café du Lac (2014) » (David)
 
-- **Case:** an advertising sign authorization closed in 2015 whose policy destroys it after 10
-  years; next to it, a similar case under a **legal hold**.
+- **Cases:** REC 2014-000023, the Café du Lac sign, authorized in April 2014 and closed in January
+  2015 under the 10-year destruction policy, so due since January 2025; next to it REC 2014-000031,
+  the Garage du Port sign, closed in February 2015 and due as well, but kept by a **legal hold**
+  David placed in June 2025 (a dispute on its brightness). The generator stops there: the steps
+  below are done live.
 - **Story:**
   1. David finds the case in the due list (the one under hold is not offered).
   2. He prepares an elimination bordereau.
-  3. The head of Urbanisme approves the item from « mes tâches ».
+  3. Bruno (Urbanisme) approves the item from « mes tâches ».
   4. David runs the **simulation** and reads its counts. The real elimination stays disabled in the
      demo (`GOELAND_DISPOSAL_ENABLED` unset).
 - **Show:** records governance end to end without destroying anything.
@@ -241,7 +257,7 @@ can never be served this way.
 | Bruno Favre | 2 | agent, Urbanisme |
 | Chloé Bonvin | 3 | agent, Voirie et propreté |
 | David Perret | 4 | records manager, Archives communales |
-| Emma Jaquet | 5 | reader, Énergie |
+| Emma Jaquet | 5 | agent, Énergie |
 | Félix Morel | 6 | agent, Cohésion sociale |
 | Hugo Delessert | 7 | agent, Parcs et promenades |
 

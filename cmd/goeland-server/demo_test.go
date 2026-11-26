@@ -43,12 +43,12 @@ func TestDemoSeed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("demo-seed: %v", err)
 			}
-			if report.Counts["cases"] != 3 || report.Counts["users"] != len(demodata.Users()) {
+			if report.Counts["cases"] != 8 || report.Counts["users"] != len(demodata.Users()) {
 				t.Errorf("counts: %v", report.Counts)
 			}
-			checkDemoDatabase(t, ownerDSN, lang)
+			checkDemoDatabase(t, ownerDSN, lang, report.Counts["documents"])
 			checkStoryDates(t, ownerDSN)
-			checkDemoMode(t, demoCfg, lang)
+			checkDemoMode(t, demoCfg, lang, ownerDSN)
 
 			if _, err := runDemoSeed(t.Context(), cfg, demodata.Options{Profile: demodata.ProfileSmall, Language: lang}, quiet); !errors.Is(err, errNotBrandNew) {
 				t.Errorf("a second run must be refused, got %v", err)
@@ -60,7 +60,7 @@ func TestDemoSeed(t *testing.T) {
 // checkDemoMode serves the generated demo in demo mode: GET /config lists the
 // demo users with their public tokens, each token signs in as its user, and
 // only Alice is an administrator (GLD-085).
-func checkDemoMode(t *testing.T, cfg serverConfig, lang string) {
+func checkDemoMode(t *testing.T, cfg serverConfig, lang, ownerDSN string) {
 	t.Helper()
 	app, err := newApplication(t.Context(), cfg, slog.New(slog.NewTextHandler(io.Discard, nil)))
 	if err != nil {
@@ -85,6 +85,47 @@ func checkDemoMode(t *testing.T, cfg serverConfig, lang string) {
 		}
 	}
 	e.expect(e.call(srv, "not-a-demo-token", "GET", "/api/me", nil), codeUnauthenticated, "an unknown token")
+	checkStoryRights(t, e, srv, ownerDSN)
+}
+
+// checkStoryRights checks the rights the demo script shows (§4.3, §4.4):
+// Félix does not see the restricted police note Chloé sees, Bruno cannot
+// open the confidential subsidy Emma handles.
+func checkStoryRights(t *testing.T, e *e2e, srv *httptest.Server, ownerDSN string) {
+	t.Helper()
+	pool, err := pgxpool.New(t.Context(), ownerDSN)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer pool.Close()
+	caseID := func(namespace, ref string) string {
+		var id string
+		if err := pool.QueryRow(t.Context(), `SELECT id::text FROM subject_ref WHERE business_ref_namespace = $1 AND business_ref = $2`, namespace, ref).Scan(&id); err != nil {
+			t.Fatalf("case %s %s: %v", namespace, ref, err)
+		}
+		return id
+	}
+	restricted := func(token, complaint string) int {
+		r := e.call(srv, token, "GET", "/api/cases/"+complaint+"/timeline", nil)
+		n := 0
+		for _, entry := range list(r.body, "entries") {
+			if str(entry, "visibility") == "TIMELINE_VISIBILITY_RESTRICTED" {
+				n++
+			}
+		}
+		return n
+	}
+	complaint := caseID("PLA", "2025-000118")
+	if chloe, felix := restricted(demodata.PublicToken("chloe"), complaint), restricted(demodata.PublicToken("felix"), complaint); chloe != 1 || felix != 0 {
+		t.Errorf("the police note: Chloé sees %d, Félix sees %d (want 1 and 0)", chloe, felix)
+	}
+	subsidy := caseID("SUB", "2025-000009")
+	if r := e.call(srv, demodata.PublicToken("emma"), "GET", "/api/cases/"+subsidy, nil); r.status != 200 {
+		t.Errorf("Emma opens the subsidy: HTTP %d", r.status)
+	}
+	if r := e.call(srv, demodata.PublicToken("bruno"), "GET", "/api/cases/"+subsidy, nil); r.status/100 == 2 {
+		t.Error("Bruno must not open the confidential subsidy")
+	}
 }
 
 // checkStoryDates checks the re-dated history: each case opens and closes on
@@ -114,7 +155,12 @@ func checkStoryDates(t *testing.T, dsn string) {
 	want := []string{
 		"OPC 2025-000031 2025-03-03 2025-05-21 2025-03-03",
 		"OPP 2025-000007 2025-04-11 2025-05-21 2025-04-11",
+		"PLA 2024-000052 2024-06-03 2024-06-27 2024-06-03",
+		"PLA 2025-000118 2025-09-15 2025-11-25 2025-09-15",
+		"REC 2014-000023 2014-03-10 2015-01-15 2014-03-10",
+		"REC 2014-000031 2014-05-05 2015-02-03 2014-05-05",
 		"SIG 2026-000014 2026-02-09 2026-02-13 2026-02-09",
+		"SUB 2025-000009 2025-08-18 2025-11-12 2025-08-18",
 	}
 	if err != nil || !slices.Equal(got, want) {
 		t.Errorf("story dates: %v (%v), want %v", got, err, want)
@@ -123,13 +169,29 @@ func checkStoryDates(t *testing.T, dsn string) {
 	if err := pool.QueryRow(t.Context(), `SELECT last_value FROM business_ref_counter WHERE namespace = 'OPC' AND period = '2025'`).Scan(&next); err != nil || next != 31 {
 		t.Errorf("the OPC 2025 counter continues after the stories: %d (%v)", next, err)
 	}
+	checkDisposalStory(t, pool)
 	if _, err := pool.Exec(t.Context(), `UPDATE audit_event SET occurred_at = now()`); err == nil {
 		t.Error("the audit must be immutable again after the re-dating")
 	}
 }
 
+// checkDisposalStory checks §4.5 and §4.4: both 2014 sign cases are due
+// (closed in 2015, destroyed after 10 years), the Garage du Port one under a
+// legal hold, and Emma's read of the confidential subsidy is audited.
+func checkDisposalStory(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	var due, held, sensitive int
+	err := pool.QueryRow(t.Context(), `
+		SELECT (SELECT count(*) FROM subject_retention r WHERE r.ended_at IS NULL AND r.until_on <= current_date),
+		       (SELECT count(*) FROM retention_hold h WHERE h.released_at IS NULL),
+		       (SELECT count(*) FROM access_audit_event a WHERE a.action = 'READ_SENSITIVE' AND a.outcome = 'GRANTED')`).Scan(&due, &held, &sensitive)
+	if err != nil || due != 2 || held != 1 || sensitive < 1 {
+		t.Errorf("disposal story: due=%d held=%d sensitive reads=%d (%v)", due, held, sensitive, err)
+	}
+}
+
 // checkDemoDatabase reads back what the generator wrote.
-func checkDemoDatabase(t *testing.T, dsn, lang string) {
+func checkDemoDatabase(t *testing.T, dsn, lang string, documents int) {
 	t.Helper()
 	pool, err := pgxpool.New(t.Context(), dsn)
 	if err != nil {
@@ -148,10 +210,10 @@ func checkDemoDatabase(t *testing.T, dsn, lang string) {
 	if err := row.Scan(&closed, &versions, &admins, &records, &namespaces); err != nil {
 		t.Fatalf("read back: %v", err)
 	}
-	if closed != 3 || admins != 1 || records != 1 || namespaces != "OPC,OPP,SIG" {
+	if closed != 8 || admins != 1 || records != 1 || namespaces != "OPC,OPP,PLA,REC,SIG,SUB" {
 		t.Errorf("closed=%d admins=%d records=%d namespaces=%q", closed, admins, records, namespaces)
 	}
-	if versions != 13 { // 12 documents, the plan in two versions
+	if versions != documents+1 { // the plan has two versions
 		t.Errorf("document versions: %d", versions)
 	}
 	var label string

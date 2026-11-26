@@ -18,6 +18,9 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   the database if needed (owner from `.env`) and runs it, with `-r` after dropping the previous
   demo (only a database carrying the demo marker), or with `-s` serves the existing demo; a demo settings file
   (`.env_demo.sample`, Git-ignored copies) keeps the demo database and documents apart.
+- Demo heroes §4.3 to §4.5 (GLD-079): M. Tutu's recurring complaint, answered by three services,
+  closed then reopened, with a restricted police note; the confidential energy subsidy whose read
+  is audited; two 2014 sign cases due for disposal, one under a legal hold.
 - Demo story time (GLD-079): each step of a demo story has a realistic date; `demo-seed` re-dates
   the generated history to those dates as the schema owner (in the brand-new demo database only)
   and gives the cases references in their story year. The demo photographs are AI-generated

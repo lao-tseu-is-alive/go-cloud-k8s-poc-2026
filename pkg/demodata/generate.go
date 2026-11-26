@@ -62,7 +62,10 @@ func Generate(ctx context.Context, clients *Clients, opts Options) (Report, erro
 	r.setupUsers()
 	r.setupCatalogue()
 	r.setupOrgChart()
+	r.signs()
 	r.permitAndOpposition()
+	r.complaint()
+	r.subsidy()
 	r.citizenReport()
 	report := Report{Profile: opts.Profile, Language: texts.Language, Counts: r.count}
 	report.Counts["users"] = len(r.users)

@@ -439,7 +439,7 @@
       "bruno": { "role": "Agent — Planning", "hint": "Building permit « Villa Les Tilleuls » and opposition" },
       "chloe": { "role": "Agent — Roads and cleaning", "hint": "Citizen report, complaint and « my tasks »" },
       "david": { "role": "Records manager — Municipal archives", "hint": "Retention due dates and bordereaux" },
-      "emma": { "role": "Reader — Energy", "hint": "Energy opinion and confidential subsidy" },
+      "emma": { "role": "Agent — Energy", "hint": "Energy opinion and confidential subsidy" },
       "felix": { "role": "Agent — Social cohesion", "hint": "Complaint followed by several services, without the police note" },
       "hugo": { "role": "Agent — Parks and gardens", "hint": "Opinion on the building permit" }
     }

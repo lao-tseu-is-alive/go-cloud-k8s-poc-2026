@@ -25,7 +25,7 @@ const (
 	userBruno = "bruno" // agent, Urbanisme
 	userChloe = "chloe" // agent, Voirie et propreté
 	userDavid = "david" // records manager, Archives communales
-	userEmma  = "emma"  // reader, Énergie
+	userEmma  = "emma"  // agent, Énergie
 	userFelix = "felix" // agent, Cohésion sociale
 	userHugo  = "hugo"  // agent, Parcs et promenades
 )

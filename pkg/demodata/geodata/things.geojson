@@ -203,6 +203,22 @@
     {
       "type": "Feature",
       "properties": {
+        "key": "garage-port-sign",
+        "thingType": "ADVERTISEMENT",
+        "hero": "4.5",
+        "wanted": "An illuminated light box on the facade of a small garage near the harbour, a few streets from the café."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6268866,
+          46.5114539
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
         "key": "felling-tree",
         "thingType": "TREE",
         "hero": "background",

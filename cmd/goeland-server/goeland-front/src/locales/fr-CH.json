@@ -439,7 +439,7 @@
       "bruno": { "role": "Agent — Urbanisme", "hint": "Permis de construire « Villa Les Tilleuls » et opposition" },
       "chloe": { "role": "Agente — Voirie et propreté", "hint": "Signalement citoyen, plainte et « mes tâches »" },
       "david": { "role": "Gestionnaire d'archives — Archives communales", "hint": "Échéances de conservation et bordereaux" },
-      "emma": { "role": "Lectrice — Énergie", "hint": "Préavis énergie et subvention confidentielle" },
+      "emma": { "role": "Agente — Énergie", "hint": "Préavis énergie et subvention confidentielle" },
       "felix": { "role": "Agent — Cohésion sociale", "hint": "Plainte suivie à plusieurs, sans la note de la police" },
       "hugo": { "role": "Agent — Parcs et promenades", "hint": "Préavis sur le permis de construire" }
     }

@@ -33,6 +33,12 @@ type textSet struct {
 	Opposition oppositionText
 	// Report is the citizen report hero (§4.6).
 	Report reportText
+	// Complaint is the recurring complaint hero (§4.3).
+	Complaint complaintText
+	// Subsidy is the confidential energy subsidy hero (§4.4).
+	Subsidy subsidyText
+	// Signs are the advertising sign cases due for disposal (§4.5).
+	Signs signsText
 }
 
 // label is the label and description of a catalogue entry.
@@ -171,6 +177,154 @@ type reportText struct {
 	TaskNote string
 	// ClosingReason is the reason given when closing the case.
 	ClosingReason string
+}
+
+// complaintText holds the texts of the complaint hero (§4.3): an older noise
+// complaint of 2024, then the recurring cleanliness complaint, reopened.
+type complaintText struct {
+	// OldCaseTitle is the title of the 2024 noise complaint.
+	OldCaseTitle string
+	// OldCaseDescription is its description.
+	OldCaseDescription string
+	// OldLetter is the 2024 complaint letter.
+	OldLetter docText
+	// OldReceived is the timeline entry of its receipt.
+	OldReceived entryText
+	// OldReply is the 2024 reply letter.
+	OldReply docText
+	// OldReplyEntry is the timeline entry of that reply.
+	OldReplyEntry entryText
+	// OldClosingReason closes the 2024 complaint.
+	OldClosingReason string
+	// CaseTitle is the title of the cleanliness complaint.
+	CaseTitle string
+	// CaseDescription is its description.
+	CaseDescription string
+	// StreetName is the name of the street section.
+	StreetName string
+	// BuildingName is the name of the building.
+	BuildingName string
+	// Letter is the first complaint letter.
+	Letter docText
+	// LitterPhoto is the photograph of the building entrance.
+	LitterPhoto docText
+	// PavementPhoto is the photograph of the pavement.
+	PavementPhoto docText
+	// Received is the timeline entry of the first letter.
+	Received entryText
+	// CirculationTitle is the title of the circulation to the services.
+	CirculationTitle string
+	// CirculationMessage is its message.
+	CirculationMessage string
+	// RoadsAnswer is the answer of Voirie et propreté.
+	RoadsAnswer string
+	// PoliceAnswer is the answer of the municipal police.
+	PoliceAnswer string
+	// SocialAnswer is the answer of Cohésion sociale.
+	SocialAnswer string
+	// PoliceNote is the police report, an internal note.
+	PoliceNote docText
+	// PoliceEntry is the restricted timeline entry citing it.
+	PoliceEntry entryText
+	// CleaningTask is the title of the reinforced cleaning task.
+	CleaningTask string
+	// CleaningNote is its completion note.
+	CleaningNote string
+	// Reply is the coordinated reply letter.
+	Reply docText
+	// ReplyEntry is the timeline entry of the reply.
+	ReplyEntry entryText
+	// ClosingReason closes the complaint the first time.
+	ClosingReason string
+	// SecondLetter is the letter « rien n'a changé ».
+	SecondLetter docText
+	// ReopenReason reopens the case.
+	ReopenReason string
+	// SecondReceived is the timeline entry of the second letter.
+	SecondReceived entryText
+	// CheckTask is the title of the on-site check task.
+	CheckTask string
+	// CheckNote is its completion note.
+	CheckNote string
+	// SecondReply is the second reply letter.
+	SecondReply docText
+	// SecondReplyEntry is the timeline entry of the second reply.
+	SecondReplyEntry entryText
+	// SecondClosingReason closes the complaint again.
+	SecondClosingReason string
+}
+
+// subsidyText holds the texts of the confidential subsidy hero (§4.4).
+type subsidyText struct {
+	// CaseTitle is the title of the subsidy case.
+	CaseTitle string
+	// CaseDescription is its description.
+	CaseDescription string
+	// BuildingName is the name of the house.
+	BuildingName string
+	// Form is the subsidy application form.
+	Form docText
+	// Quote is the installer's quote.
+	Quote docText
+	// IncomeCertificate is the applicants' income certificate.
+	IncomeCertificate docText
+	// Filed is the timeline entry of the filing.
+	Filed entryText
+	// CheckTask is the title of the completeness check task.
+	CheckTask string
+	// CheckNote is its completion note.
+	CheckNote string
+	// Promise is the decision promising the subsidy.
+	Promise docText
+	// PromiseEntry is the timeline entry of the promise.
+	PromiseEntry entryText
+	// Photo is the photograph of the installed heat pump.
+	Photo docText
+	// Invoice is the installer's invoice.
+	Invoice docText
+	// Payment is the letter announcing the payment.
+	Payment docText
+	// PaymentEntry is the timeline entry of the payment.
+	PaymentEntry entryText
+	// ClosingReason closes the case.
+	ClosingReason string
+}
+
+// signsText holds the texts of the two advertising sign cases of §4.5: one
+// due for disposal, one under a legal hold.
+type signsText struct {
+	// CaseTitle is the title of the Café du Lac sign case.
+	CaseTitle string
+	// CaseDescription is its description.
+	CaseDescription string
+	// SignName is the name of its sign.
+	SignName string
+	// Form is its application form.
+	Form docText
+	// Photo is the photograph of the sign.
+	Photo docText
+	// Authorization is the authorization granted.
+	Authorization docText
+	// Filed is the timeline entry of its filing.
+	Filed entryText
+	// Granted is the timeline entry of its authorization.
+	Granted entryText
+	// ClosingReason closes it.
+	ClosingReason string
+	// HeldTitle is the title of the case under a legal hold.
+	HeldTitle string
+	// HeldDescription is its description.
+	HeldDescription string
+	// HeldSignName is the name of its sign.
+	HeldSignName string
+	// HeldForm is its application form.
+	HeldForm docText
+	// HeldAuthorization is its authorization.
+	HeldAuthorization docText
+	// HeldClosingReason closes it.
+	HeldClosingReason string
+	// HoldReason is the reason of the legal hold.
+	HoldReason string
 }
 
 // catalogues lists the languages the generator writes, by code.
