@@ -37,6 +37,9 @@ type Options struct {
 	// Clock, when set, is told the story time before each step, so the caller
 	// can re-date afterwards what the server stamped at generation time.
 	Clock func(context.Context, time.Time) error
+	// Today is the generation day the ongoing work is dated from (§4.8 to
+	// §4.12); the zero value means today in Europe/Zurich.
+	Today time.Time
 }
 
 // Generate writes the demo data through clients, in a brand-new database the
@@ -58,16 +61,28 @@ func Generate(ctx context.Context, clients *Clients, opts Options) (Report, erro
 		return Report{}, err
 	}
 	r := &run{ctx: ctx, c: clients, t: texts, places: places, clock: opts.Clock, units: map[string]string{}, users: map[string]*v1.User{}, count: map[string]int{}}
+	r.today = generationDay(opts.Today)
 	r.at(setupTime)
 	r.setupUsers()
 	r.setupCatalogue()
+	r.relabelSeeded()
 	r.setupOrgChart()
-	r.signs()
+	cafe := r.signs()
 	r.permitAndOpposition()
-	r.complaint()
+	tutu := r.complaint()
 	r.subsidy()
 	r.citizenReport()
+	r.ongoing(cafe, tutu)
 	report := Report{Profile: opts.Profile, Language: texts.Language, Counts: r.count}
 	report.Counts["users"] = len(r.users)
 	return report, r.err
+}
+
+// generationDay is midnight of day (today when zero) in Europe/Zurich.
+func generationDay(day time.Time) time.Time {
+	if day.IsZero() {
+		day = time.Now()
+	}
+	day = day.In(zurich)
+	return time.Date(day.Year(), day.Month(), day.Day(), 0, 0, 0, 0, zurich)
 }

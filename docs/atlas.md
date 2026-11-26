@@ -488,6 +488,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer.
 - `pkg/demodata/generate.go` — `Generate`: language, profile and places checks, the order of the stories, the report.
 - `pkg/demodata/heroes.go` — The hero cases building permit (§4.1), opposition (§4.2) and citizen report (§4.6) of docs/DEMO_SCRIPT.md; fictional register identifiers, story enum shorthands.
+- `pkg/demodata/ongoing.go` — The work in progress on the generation day (§4.8 to §4.12, GLD-092): relative story times and deadlines, tasks in every state, the demo security groups and their grants, the English relabelling of the seeded catalogues.
 - `pkg/demodata/heroes_more.go` — The hero cases §4.3 (recurring complaint, reopened, restricted police note), §4.4 (confidential subsidy) and §4.5 (two sign cases due for disposal, one under a legal hold).
 - `pkg/demodata/places.go` — Embeds `geodata/things.geojson` and the photographs; converts the WGS84 geometries to LV95 (swisstopo approximate formulas) and checks their type and extent.
 - `pkg/demodata/assets/README.md` — Provenance of the demo photographs: AI-generated, how they were reduced, the prompt of each.
@@ -504,6 +505,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/demodata/session.go` — The demo users, their bearer tokens (drawn per run for demo-seed, public for the demo mode) and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
 - `pkg/demodata/texts.go` — The catalogue of generated texts and the supported languages.
 - `pkg/demodata/texts_en.go` — English texts of the demo.
+- `pkg/demodata/texts_ongoing.go` — Text types of the ongoing work, of the demo groups and of the seeded catalogue labels, and the seeded codes an English demo relabels.
+- `pkg/demodata/texts_ongoing_fr.go` — French texts of the ongoing work and of the demo groups.
+- `pkg/demodata/texts_ongoing_en.go` — English texts of the ongoing work and of the demo groups.
+- `pkg/demodata/seeded_en.go` — English labels of the catalogues the migrations seed in French (task, org unit, thing and relationship types).
 - `pkg/demodata/texts_fr.go` — French texts of the demo (default language).
 - `pkg/demodata/demodata_test.go` — Unit tests: every language complete, PDF structure and encoding, places and their conversion, photographs and their provenance, demo user tokens.
 

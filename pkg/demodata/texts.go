@@ -39,6 +39,12 @@ type textSet struct {
 	Subsidy subsidyText
 	// Signs are the advertising sign cases due for disposal (§4.5).
 	Signs signsText
+	// Ongoing are the cases in progress on the generation day (§4.8 to §4.12).
+	Ongoing ongoingText
+	// Groups names the demo security groups.
+	Groups groupsText
+	// Seeded relabels the seeded catalogues; nil keeps the migrations' French.
+	Seeded *seededText
 }
 
 // label is the label and description of a catalogue entry.

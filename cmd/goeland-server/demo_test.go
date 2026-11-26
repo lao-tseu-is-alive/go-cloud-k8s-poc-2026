@@ -43,7 +43,7 @@ func TestDemoSeed(t *testing.T) {
 			if err != nil {
 				t.Fatalf("demo-seed: %v", err)
 			}
-			if report.Counts["cases"] != 8 || report.Counts["users"] != len(demodata.Users()) {
+			if report.Counts["cases"] != 13 || report.Counts["users"] != len(demodata.Users()) {
 				t.Errorf("counts: %v", report.Counts)
 			}
 			checkDemoDatabase(t, ownerDSN, lang, report.Counts["documents"])
@@ -152,7 +152,7 @@ func checkStoryDates(t *testing.T, dsn string) {
 		       to_char(c.opened_at AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD'),
 		       to_char(c.closed_at AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD'),
 		       (SELECT to_char(min(a.occurred_at) AT TIME ZONE 'Europe/Zurich', 'YYYY-MM-DD') FROM audit_event a WHERE a.subject_id = c.id)
-		  FROM case_file c JOIN subject_ref s ON s.id = c.id ORDER BY 1`)
+		  FROM case_file c JOIN subject_ref s ON s.id = c.id WHERE c.closed_at IS NOT NULL ORDER BY 1`)
 	if err != nil {
 		t.Fatalf("read the cases: %v", err)
 	}
@@ -256,7 +256,7 @@ func checkDemoDatabase(t *testing.T, dsn, lang string, documents int) {
 	if err := row.Scan(&closed, &versions, &admins, &records, &namespaces); err != nil {
 		t.Fatalf("read back: %v", err)
 	}
-	if closed != 8 || admins != 1 || records != 1 || namespaces != "OPC,OPP,PLA,REC,SIG,SUB" {
+	if closed != 8 || admins != 1 || records != 1 || namespaces != "ABA,ODP,OPC,OPP,PLA,REC,SIG,SUB" {
 		t.Errorf("closed=%d admins=%d records=%d namespaces=%q", closed, admins, records, namespaces)
 	}
 	if versions != documents+1 { // the plan has two versions
@@ -268,6 +268,44 @@ func checkDemoDatabase(t *testing.T, dsn, lang string, documents int) {
 	}
 	if want := map[string]string{"fr": "Signalement citoyen", "en": "Citizen report"}[lang]; label != want {
 		t.Errorf("case type label in %s: %q", lang, label)
+	}
+	// The seeded catalogues follow the demo language (GLD-092).
+	var role, taskType string
+	if err := pool.QueryRow(t.Context(), `SELECT (SELECT role_label FROM relationship_type WHERE code = 'CASE_HAS_ACTOR_REQUESTER'),
+		       (SELECT label FROM task_type WHERE code = 'SITE_VISIT')`).Scan(&role, &taskType); err != nil {
+		t.Fatalf("read seeded labels: %v", err)
+	}
+	if want := map[string]string{"fr": "Requérant Visite sur place", "en": "Applicant Site visit"}[lang]; role+" "+taskType != want {
+		t.Errorf("seeded labels in %s: %q %q", lang, role, taskType)
+	}
+	checkOngoingWork(t, pool)
+}
+
+// checkOngoingWork checks the work in progress on the generation day
+// (DEMO_SCRIPT §4.8 to §4.12, GLD-092): five open cases opened within the last
+// three weeks, and tasks in every state the dashboard shows, the circulation
+// of the chalet overdue for the parks unit; two security groups, each granted
+// on one case (the documents filed there inherit the grant).
+func checkOngoingWork(t *testing.T, pool *pgxpool.Pool) {
+	t.Helper()
+	var open, recent, overdue, inProgress, unitTasks, cancelled, reopened, groups, groupGrants int
+	err := pool.QueryRow(t.Context(), `
+		SELECT (SELECT count(*) FROM case_file WHERE closed_at IS NULL),
+		       (SELECT count(*) FROM case_file WHERE closed_at IS NULL AND opened_at > now() - interval '22 days'),
+		       (SELECT count(*) FROM case_task WHERE status IN (1, 2) AND due_at < now()),
+		       (SELECT count(*) FROM case_task WHERE status = 2),
+		       (SELECT count(*) FROM case_task WHERE status IN (1, 2) AND assignee_org_unit_id IS NOT NULL),
+		       (SELECT count(*) FROM case_task WHERE status = 4),
+		       (SELECT count(*) FROM audit_event WHERE event_type = 'TASK_REOPENED'),
+		       (SELECT count(*) FROM security_group),
+		       (SELECT count(*) FROM access_grant g JOIN subject_ref s ON s.id = g.subject_id WHERE g.grantee_kind = 'GROUP' AND g.revoked_at IS NULL AND s.kind = 'CASE')`).Scan(
+		&open, &recent, &overdue, &inProgress, &unitTasks, &cancelled, &reopened, &groups, &groupGrants)
+	if err != nil {
+		t.Fatalf("read the ongoing work: %v", err)
+	}
+	if open != 5 || recent != 5 || overdue < 1 || inProgress < 2 || unitTasks < 2 || cancelled != 1 || reopened != 1 || groups != 2 || groupGrants != 2 {
+		t.Errorf("ongoing work: open=%d recent=%d overdue=%d in progress=%d unit tasks=%d cancelled=%d reopened=%d groups=%d group grants=%d",
+			open, recent, overdue, inProgress, unitTasks, cancelled, reopened, groups, groupGrants)
 	}
 }
 

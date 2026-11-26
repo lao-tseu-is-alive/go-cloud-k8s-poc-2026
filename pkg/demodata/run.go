@@ -27,6 +27,9 @@ type run struct {
 	places map[string]place
 	// now is the story time of the current step (at), in Europe/Zurich.
 	now time.Time
+	// today is midnight of the generation day in Europe/Zurich: the ongoing
+	// work (§4.8 to §4.12) is dated from it (daysAgo, dueIn).
+	today time.Time
 	// clock is told each story time before its step (Options.Clock).
 	clock func(context.Context, time.Time) error
 	count map[string]int // kind -> number created
@@ -196,7 +199,12 @@ func (r *run) entry(user, caseID string, kind v1.TimelineEntryType, e entryText,
 
 // task creates a task of the case, assigned to a user key or a unit key.
 func (r *run) task(user, caseID, taskType, title, assigneeUser, assigneeUnit string) string {
-	req := &v1.CreateTaskRequest{CaseId: caseID, TaskTypeCode: taskType, Title: title}
+	return r.taskDue(user, caseID, taskType, title, assigneeUser, assigneeUnit, nil)
+}
+
+// taskDue is task with a deadline (nil: none).
+func (r *run) taskDue(user, caseID, taskType, title, assigneeUser, assigneeUnit string, due *timestamppb.Timestamp) string {
+	req := &v1.CreateTaskRequest{CaseId: caseID, TaskTypeCode: taskType, Title: title, DueAt: due}
 	if assigneeUser != "" {
 		req.AssigneeUserId = r.users[assigneeUser].GetId()
 	}
@@ -216,21 +224,28 @@ func (r *run) complete(user, taskID, note string) {
 // circulate opens a one-step circulation to units and returns its recipient
 // ids by unit key.
 func (r *run) circulate(user, caseID, title, message string, units ...string) map[string]string {
-	req := &v1.CreateCirculationRequest{CaseId: caseID, Title: title, Message: message}
+	recipients, _ := r.circulateDue(user, caseID, title, message, nil, units...)
+	return recipients
+}
+
+// circulateDue is circulate with a deadline (nil: none); it also returns the
+// task id of each recipient, by unit key.
+func (r *run) circulateDue(user, caseID, title, message string, due *timestamppb.Timestamp, units ...string) (recipients, tasks map[string]string) {
+	req := &v1.CreateCirculationRequest{CaseId: caseID, Title: title, Message: message, DueAt: due}
 	for _, unit := range units {
 		req.Recipients = append(req.Recipients, &v1.CirculationRecipientInput{Step: 1, AssigneeOrgUnitId: r.units[unit]})
 	}
 	created := call(r, user, "create circulation "+title, r.c.circulations.CreateCirculation, req)
 	r.count["circulations"]++
-	recipients := map[string]string{}
+	recipients, tasks = map[string]string{}, map[string]string{}
 	for _, recipient := range created.GetCirculation().GetRecipients() {
 		for _, unit := range units {
 			if recipient.GetAssigneeOrgUnitId() == r.units[unit] {
-				recipients[unit] = recipient.GetId()
+				recipients[unit], tasks[unit] = recipient.GetId(), recipient.GetTaskId()
 			}
 		}
 	}
-	return recipients
+	return recipients, tasks
 }
 
 // respond answers a circulation recipient.

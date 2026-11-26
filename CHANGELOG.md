@@ -15,11 +15,18 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   and optionally a unit), and manages each user's units, security groups and roles on their page
   (Administration › Utilisateurs › a name). The first sign-in completes a pre-registered user from
   the token; the identity is never edited in Goéland.
+- Demo work in progress (GLD-092, DEMO_SCRIPT §4.8 to §4.12): five open cases dated from the
+  generation day, with tasks open, in progress, overdue, assigned to a unit, reassigned, cancelled
+  and reopened, and a circulation waiting for its last opinions, so every demo user's dashboard
+  holds today's work; two security groups with their grants; an English demo relabels the task,
+  org unit, thing and relationship types the migrations seed in French.
 
 ### Changed
 
 - The app bar shows « Organigramme » (the org units) to everyone and « Groupes » to administrators
   only (GLD-093).
+- Task lists show the case reference with its namespace (« OPC 2026-000087 — … »).
+- `demo-seed` keeps the deadlines (`due_at`) out of the re-dating: they are story dates.
 
 ## [0.24.0] - 2026-11-26
 

@@ -203,6 +203,31 @@ to open the confidential subsidy** (6 October 2025, refused read).
   reads, Bruno's refusal); « Mon tableau de bord » of each user, with « Consulté » and « Modifié »
   rows.
 
+### 4.8 to 4.12 Work in progress on the generation day (GLD-092)
+
+The stories above are closed; these cases are still open, dated from the day the demo is generated
+(D), so every user opens « Mon tableau de bord » on today's work. Regenerate the demo
+(`scripts/demo_seed.sh -r`) the day before showing it, so the deadlines stay meaningful.
+
+| § | Case | Tasks (and what they show) |
+| --- | --- | --- |
+| 4.8 | Permit « Chalet des Pins » (Bruno, OPC D-year-000087), filed D-21 | file check **done** (D-20); circulation for opinions (D-14, due D-2): Voirie **answered** (Chloé, D-10), Parcs **overdue** (unit task), Énergie **in progress** (Emma started it on D-1); Bruno's « prepare the decision » **open**, due D+14 |
+| 4.9 | Felling of a diseased cedar, Roseraie park (Hugo, ABA), reported D-6 | site visit **in progress** for Hugo (due D+1); call-back assigned to the **Parcs unit**, nobody named (due D+5) |
+| 4.10 | Summer terrace of the Café du Lac (Chloé, ODP), D-3 | file check **open** (D+4); lighting check **reassigned** to the street lighting unit (D-1, Chloé away), history kept |
+| 4.11 | M. Tutu's request for a bench (Félix, PLA), D-8 | « call M. Tutu back » **due today**; a duplicate order **cancelled** (D-5); the site visit **done** (D-4) then **reopened** (D-2) |
+| 4.12 | New confidential subsidy, rue du Midi 7 (Emma, SUB, level 2), D-2 | file check **open** (D+5); the group « Cellule énergie et urbanisme » (Bruno, Emma) may **read** it, so Bruno, refused the subsidy of §4.4, opens this one (D-1) |
+
+**Security groups:** « Commission de salubrité » (Chloé, Félix, Hugo) may contribute to M. Tutu's
+complaint (§4.3, granted 16 September 2025); « Cellule énergie et urbanisme » (Bruno, Emma) reads
+the subsidy of §4.12. A document filed in a case after the grant inherits it.
+
+- **Show:** each user's « Mes tâches » (overdue in red, unit tasks with the unit as assignee, the
+  history of the reassigned and reopened tasks); the « Accès » panel of §4.12 with the group grant;
+  Bruno opening §4.12 but not §4.4.
+
+An English demo also relabels the catalogues the migrations seed in French (task, org unit, thing
+and relationship types and their roles).
+
 ## 5. Background data
 
 Generated around the heroes so lists, filters, search and counts mean something (profile `demo`,
@@ -212,7 +237,8 @@ keeps the heroes and a minimal background for the tests.
 
 ## 6. Suggested demo order
 
-1. Log in as Bruno: the building permit (§4.1), then the opposition through the case link (§4.2).
+1. Log in as Bruno: « Mon tableau de bord » and the work in progress (§4.8), the building permit
+   (§4.1), then the opposition through the case link (§4.2).
 2. As Chloé: « mes tâches », the complaint (§4.3) and its reopening; the citizen report (§4.6).
 3. As Félix: the same complaint without the police note.
 4. As Bruno, then Emma, then Alice: the confidential subsidy and its access log, Bruno's refusal

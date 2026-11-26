@@ -34,7 +34,7 @@ func AssigneeLabelSQL(alias string) string {
 
 // readTaskColumns adds the case and assignee labels (needs taskFrom).
 var readTaskColumns = rawTaskColumns + `,
-CASE WHEN sr.business_ref <> '' THEN sr.business_ref || ' — ' || sr.display_label ELSE sr.display_label END AS case_label,
+CASE WHEN sr.business_ref <> '' THEN concat_ws(' ', nullif(sr.business_ref_namespace, ''), sr.business_ref) || ' — ' || sr.display_label ELSE sr.display_label END AS case_label,
 ` + AssigneeLabelSQL("t") + ` AS assignee_label`
 
 const taskFrom = `

@@ -109,6 +109,7 @@ SELECT c.table_name, c.column_name
  WHERE c.table_schema = 'public' AND t.table_type = 'BASE TABLE'
    AND c.data_type = 'timestamp with time zone' AND c.is_generated = 'NEVER'
    AND c.table_name NOT IN ('schema_migrations', 'demo_dataset')
+   AND c.column_name <> 'due_at' -- deadlines are story dates the generator sets, never stamped
  ORDER BY c.table_name, c.ordinal_position`)
 	if err != nil {
 		return nil, err

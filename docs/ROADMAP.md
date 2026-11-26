@@ -665,12 +665,17 @@ placed on Swiss territory.
   name and e-mail, so they are not edited in Goéland. With it, the app bar shows « Organigramme »
   (the org units, read only for non-administrators) to everyone and « Groupes » to administrators
   only. Done 2026-11-26.
-- [ ] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
+- [~] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
   cases in progress dated from the generation day (DEMO_SCRIPT §4.8 to §4.12, agreed 2026-11-26):
   tasks open, in progress, overdue, assigned to a user or a unit, reassigned, cancelled, reopened,
   open circulations, so every demo user's dashboard holds today's work; the background of profile
   `demo` (§5); the seeded task, relationship and org unit type labels in English; the places
-  edited by the product owner in QGIS.
+  edited by the product owner in QGIS. Progress 2026-11-26: the ongoing work (DEMO_SCRIPT §4.8 to
+  §4.12, dated from the generation day, deadlines kept by the re-dating), the two security groups
+  with their grants, and the English labels of the seeded catalogues; `TestDemoSeed` checks them;
+  the task lists show a case reference with its namespace. Next: the background of profile `demo`,
+  the places of §4.8 to §4.12 in QGIS (provisional points), and the SYSTEM timeline titles of the
+  task module (« Tâche terminée »), still French in an English demo.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native

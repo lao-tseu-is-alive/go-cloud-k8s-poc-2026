@@ -14,10 +14,10 @@ const (
 // when he writes again six weeks later, and closed again. Chloé handles it;
 // she files the police report as a restricted note that Félix, who answers
 // for Cohésion sociale, cannot read.
-func (r *run) complaint() {
+func (r *run) complaint() (tutu string) {
 	t := r.t.Complaint
 	r.at("2024-06-03 10:20")
-	tutu := r.person(userChloe, monsieur, "Jean", "Tutu", "jean.tutu@example.ch")
+	tutu = r.person(userChloe, monsieur, "Jean", "Tutu", "jean.tutu@example.ch")
 	old := r.oldComplaint(tutu)
 
 	r.at("2025-09-15 08:20")
@@ -35,6 +35,9 @@ func (r *run) complaint() {
 	pavement := r.photo(userChloe, t.PavementPhoto, "complaint-pavement-dirty.jpg", c)
 	r.entry(userChloe, c, request, t.Received, participants, letter, litter, pavement)
 
+	// The salubrity commission follows recurring complaints (GLD-092).
+	r.at("2025-09-16 08:20")
+	r.salubrityCommission(c)
 	// Chloé reads his earlier complaint before asking the services.
 	r.at("2025-09-16 08:40")
 	r.openCase(userChloe, old)
@@ -69,6 +72,7 @@ func (r *run) complaint() {
 	r.transition(userChloe, c, closed, t.ClosingReason)
 
 	r.complaintAgain(c, tutu)
+	return tutu
 }
 
 // oldComplaint is M. Tutu's noise complaint of June 2024, owned by the police.
@@ -162,10 +166,10 @@ func (r *run) subsidy() {
 // the Café du Lac sign is ready for an elimination bordereau, the Garage du
 // Port sign is kept by a legal hold David placed in June 2025. The bordereau,
 // its approval and the simulation are done live in the demo.
-func (r *run) signs() {
+func (r *run) signs() (cafe string) {
 	t := r.t.Signs
 	r.at("2014-03-10 10:00")
-	cafe := r.organization(userBruno, "Café du Lac Sàrl", "CAFE_RESTO_HOTEL", "")
+	cafe = r.organization(userBruno, "Café du Lac Sàrl", "CAFE_RESTO_HOTEL", "")
 	sign := r.thing(userBruno, &v1.CreateThingRequest{ThingTypeCode: "ADVERTISEMENT", Name: t.SignName, GeometryGeojson: r.placeOf("cafe-du-lac-sign", "ADVERTISEMENT")})
 	c := r.newCase(userBruno, caseAdvertising, "2014-000023", t.CaseTitle, t.CaseDescription, unitPlanning, 0)
 	r.link(userBruno, c, cafe, "CASE_HAS_ACTOR_REQUESTER")
@@ -201,4 +205,5 @@ func (r *run) signs() {
 	r.openDocument(userDavid, heldAuthorization)
 	r.at("2025-06-12 15:00")
 	call(r, userDavid, "place a legal hold", r.c.retention.PlaceRetentionHold, &v1.PlaceRetentionHoldRequest{CaseId: held, Reason: t.HoldReason})
+	return cafe
 }

@@ -225,4 +225,6 @@ var textsFR = textSet{
 		HeldClosingReason: "Enseigne autorisée",
 		HoldReason:        "Litige en cours sur la luminosité de l'enseigne : conserver le dossier",
 	},
+	Ongoing: ongoingFR,
+	Groups:  groupsFR,
 }

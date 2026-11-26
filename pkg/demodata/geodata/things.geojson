@@ -231,6 +231,130 @@
           46.5385636
         ]
       }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "pins-building",
+        "thingType": "BUILDING",
+        "hero": "4.8",
+        "wanted": "A 1950s chalet with a wooden upper floor in a quiet residential area above the town, its roof facing south."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.639,
+              46.5338
+            ],
+            [
+              6.63912,
+              46.5338
+            ],
+            [
+              6.63912,
+              46.533879999999996
+            ],
+            [
+              6.639,
+              46.533879999999996
+            ],
+            [
+              6.639,
+              46.5338
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "roseraie-cedar",
+        "thingType": "TREE",
+        "hero": "4.9",
+        "wanted": "A large old cedar near the entrance of a public park, next to a playground."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6215,
+          46.5275
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "cafe-du-lac-terrace",
+        "thingType": "INFRASTRUCTURE",
+        "hero": "4.10",
+        "wanted": "About 18 m² of pavement in front of the café of 4.5 (rue du Lac 3), where its summer terrace would stand."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.62553,
+              46.51182
+            ],
+            [
+              6.62561,
+              46.51182
+            ],
+            [
+              6.62561,
+              46.51185
+            ],
+            [
+              6.62553,
+              46.51185
+            ],
+            [
+              6.62553,
+              46.51182
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "midi7-building",
+        "thingType": "BUILDING",
+        "hero": "4.12",
+        "wanted": "A detached house with a garden in a residential street, its oil boiler to be replaced by a heat pump."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.656,
+              46.519
+            ],
+            [
+              6.65612,
+              46.519
+            ],
+            [
+              6.65612,
+              46.519079999999995
+            ],
+            [
+              6.656,
+              46.519079999999995
+            ],
+            [
+              6.656,
+              46.519
+            ]
+          ]
+        ]
+      }
     }
   ]
 }
