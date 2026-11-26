@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -169,8 +170,9 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	orderBy := record.MyActivityRequest(req.Msg.MyActivity, viewer.UserID, req.Msg.OrderBy)
 	result, err := s.service.Search(ctx, SearchFilter{
-		OrderBy:             req.Msg.OrderBy,
+		OrderBy:             orderBy,
 		Viewer:              viewer,
 		Query:               req.Msg.Query,
 		ActorKind:           Kind(req.Msg.ActorKind),
@@ -184,11 +186,20 @@ func (s *ConnectServer) SearchActors(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	ids := make([]uuid.UUID, len(result.Actors))
+	for i, item := range result.Actors {
+		ids[i] = item.ID
+	}
+	activity, err := s.authz.MyActivity(ctx, req.Msg.MyActivity, viewer, ids)
+	if err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&goelandv1.SearchActorsResponse{
 		Actors:          DomainsToProto(result.Actors),
 		NextPageToken:   core.NextPageToken(offset, len(result.Actors), result.TotalSize),
 		TotalSize:       result.TotalSize,
 		TotalSizeCapped: result.TotalCapped,
+		MyActivity:      activity,
 	}), nil
 }
 

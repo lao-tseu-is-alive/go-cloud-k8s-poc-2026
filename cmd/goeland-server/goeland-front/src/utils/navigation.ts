@@ -13,11 +13,11 @@ export interface NavItem {
 }
 
 export const NAV_ITEMS: readonly NavItem[] = [
+  { to: '/home', icon: 'mdi-view-dashboard-outline', label: 'nav.home', primary: true },
   { to: '/cases', icon: 'mdi-briefcase-outline', label: 'nav.cases', primary: true },
   { to: '/documents', icon: 'mdi-file-document-multiple', label: 'nav.documents', primary: true },
   { to: '/things', icon: 'mdi-map-marker-outline', label: 'nav.things', primary: true },
   { to: '/actors', icon: 'mdi-account-multiple', label: 'nav.actors', primary: true },
-  { to: '/tasks/mine', icon: 'mdi-checkbox-marked-circle-outline', label: 'nav.myTasks' },
   { to: '/org-units', icon: 'mdi-sitemap-outline', label: 'nav.orgUnits' },
   { to: '/groups', icon: 'mdi-account-group-outline', label: 'nav.groups' },
   { to: '/retention', icon: 'mdi-archive-clock-outline', label: 'nav.retention', records: true },

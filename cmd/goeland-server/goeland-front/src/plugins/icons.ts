@@ -117,6 +117,7 @@ import {
   mdiTrayFull,
   mdiTuneVariant,
   mdiVectorSquare,
+  mdiViewDashboardOutline,
 } from '@mdi/js'
 
 export const ICON_PATHS: Readonly<Record<string, string>> = {
@@ -229,6 +230,7 @@ export const ICON_PATHS: Readonly<Record<string, string>> = {
   'mdi-tray-full': mdiTrayFull,
   'mdi-tune-variant': mdiTuneVariant,
   'mdi-vector-square': mdiVectorSquare,
+  'mdi-view-dashboard-outline': mdiViewDashboardOutline,
 }
 
 /** Returns the SVG path of an `mdi-<name>` icon, or undefined when it is not registered. */

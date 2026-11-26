@@ -98,6 +98,7 @@ ORDER BY label, code;`
 
 // actorSortFields are the sortable columns of the actor list (GLD-055).
 var actorSortFields = map[string]core.SortField{
+	"my_activity":  core.MyActivitySortField("a.id"),
 	"display_name": {Expr: "a.display_name"},
 	"actor_kind":   {Expr: "a.actor_kind"},
 	"is_active":    {Expr: "a.is_active"},

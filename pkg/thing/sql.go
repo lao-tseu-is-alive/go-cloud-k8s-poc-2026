@@ -121,9 +121,10 @@ RETURNING ` + thingTypeColumns + `;`
 // ST_Intersects) and deletion filters.
 // thingSortFields are the sortable columns of the thing list (GLD-055).
 var thingSortFields = map[string]core.SortField{
-	"created_at": {Expr: "t.created_at"},
-	"name":       {Expr: "t.name"},
-	"thing_type": {Expr: "tt.label", Join: "JOIN thing_type tt ON tt.id = t.thing_type_id"},
+	"my_activity": core.MyActivitySortField("t.id"),
+	"created_at":  {Expr: "t.created_at"},
+	"name":        {Expr: "t.name"},
+	"thing_type":  {Expr: "tt.label", Join: "JOIN thing_type tt ON tt.id = t.thing_type_id"},
 }
 
 // defaultThingSort is the order of the thing list without order_by: newest first.

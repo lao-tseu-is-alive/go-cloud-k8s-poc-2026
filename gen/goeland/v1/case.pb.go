@@ -1024,7 +1024,7 @@ type SearchCasesRequest struct {
 	// page_token is the next_page_token of the previous page; empty for the first page.
 	PageToken string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
-	// business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	// business_ref, title, case_type, status, opened_at, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
 	OrderBy string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// opened_from keeps the cases whose opening date (Europe/Zurich) is on or after this day
 	// (YYYY-MM-DD); empty means unbounded.
@@ -1040,7 +1040,11 @@ type SearchCasesRequest struct {
 	CreatedTo string `protobuf:"bytes,11,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
 	// created_by keeps the cases created by this internal user (User.id);
 	// empty means anyone.
-	CreatedBy     string `protobuf:"bytes,12,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedBy string `protobuf:"bytes,12,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// my_activity keeps the cases the caller changed (audit) or consulted (access
+	// log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+	// without order_by they are sorted by the caller's last activity, newest first.
+	MyActivity    bool `protobuf:"varint,13,opt,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1159,6 +1163,13 @@ func (x *SearchCasesRequest) GetCreatedBy() string {
 	return ""
 }
 
+func (x *SearchCasesRequest) GetMyActivity() bool {
+	if x != nil {
+		return x.MyActivity
+	}
+	return false
+}
+
 // SearchCasesResponse is one page of matching cases.
 type SearchCasesResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1171,8 +1182,11 @@ type SearchCasesResponse struct {
 	// total_size_capped reports that total_size is a lower bound: counting stops
 	// at 10000 matches, and so does paging (refine the search to go further).
 	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// my_activity is the caller's last change and consultation of each subject of
+	// this page; filled only when the request set my_activity.
+	MyActivity    []*SubjectActivity `protobuf:"bytes,5,rep,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchCasesResponse) Reset() {
@@ -1231,6 +1245,13 @@ func (x *SearchCasesResponse) GetTotalSizeCapped() bool {
 		return x.TotalSizeCapped
 	}
 	return false
+}
+
+func (x *SearchCasesResponse) GetMyActivity() []*SubjectActivity {
+	if x != nil {
+		return x.MyActivity
+	}
+	return nil
 }
 
 // DeleteCaseRequest soft-deletes a case.
@@ -1960,7 +1981,7 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\x06reason\x18\x03 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"\x81\x01\n" +
 	"\x16TransitionCaseResponse\x12$\n" +
 	"\x04case\x18\x01 \x01(\v2\x10.goeland.v1.CaseR\x04case\x12A\n" +
-	"\x10transition_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\x0ftransitionEvent\"\xa1\x05\n" +
+	"\x10transition_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\x0ftransitionEvent\"\xc2\x05\n" +
 	"\x12SearchCasesRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12-\n" +
 	"\x0ecase_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\fcaseTypeCode\x128\n" +
@@ -1979,13 +2000,17 @@ const file_goeland_v1_case_proto_rawDesc = "" +
 	"\n" +
 	"created_to\x18\v \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
 	"\n" +
-	"created_by\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xb0\x01\n" +
+	"created_by\x18\f \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\x12\x1f\n" +
+	"\vmy_activity\x18\r \x01(\bR\n" +
+	"myActivity\"\xee\x01\n" +
 	"\x13SearchCasesResponse\x12&\n" +
 	"\x05cases\x18\x01 \x03(\v2\x10.goeland.v1.CaseR\x05cases\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
-	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"O\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\x12<\n" +
+	"\vmy_activity\x18\x05 \x03(\v2\x1b.goeland.v1.SubjectActivityR\n" +
+	"myActivity\"O\n" +
 	"\x11DeleteCaseRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"w\n" +
@@ -2110,7 +2135,8 @@ var file_goeland_v1_case_proto_goTypes = []any{
 	(*BusinessRefRequest)(nil),               // 30: goeland.v1.BusinessRefRequest
 	(*AuditEvent)(nil),                       // 31: goeland.v1.AuditEvent
 	(*SubjectRelationship)(nil),              // 32: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),                  // 33: goeland.v1.ReferenceChange
+	(*SubjectActivity)(nil),                  // 33: goeland.v1.SubjectActivity
+	(*ReferenceChange)(nil),                  // 34: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_case_proto_depIdxs = []int32{
 	2,  // 0: goeland.v1.CaseType.default_grants:type_name -> goeland.v1.CaseTypeDefaultGrant
@@ -2141,40 +2167,41 @@ var file_goeland_v1_case_proto_depIdxs = []int32{
 	31, // 25: goeland.v1.TransitionCaseResponse.transition_event:type_name -> goeland.v1.AuditEvent
 	0,  // 26: goeland.v1.SearchCasesRequest.status:type_name -> goeland.v1.CaseStatus
 	3,  // 27: goeland.v1.SearchCasesResponse.cases:type_name -> goeland.v1.Case
-	31, // 28: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	1,  // 29: goeland.v1.ListCaseTypesResponse.case_types:type_name -> goeland.v1.CaseType
-	1,  // 30: goeland.v1.CreateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
-	33, // 31: goeland.v1.CreateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	2,  // 32: goeland.v1.SetCaseTypeDefaultGrantsRequest.grants:type_name -> goeland.v1.CaseTypeDefaultGrant
-	1,  // 33: goeland.v1.SetCaseTypeDefaultGrantsResponse.case_type:type_name -> goeland.v1.CaseType
-	33, // 34: goeland.v1.SetCaseTypeDefaultGrantsResponse.change:type_name -> goeland.v1.ReferenceChange
-	1,  // 35: goeland.v1.UpdateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
-	33, // 36: goeland.v1.UpdateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	4,  // 37: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
-	6,  // 38: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
-	8,  // 39: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
-	10, // 40: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
-	12, // 41: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
-	14, // 42: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
-	16, // 43: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
-	18, // 44: goeland.v1.CaseService.CreateCaseType:input_type -> goeland.v1.CreateCaseTypeRequest
-	20, // 45: goeland.v1.CaseService.UpdateCaseType:input_type -> goeland.v1.UpdateCaseTypeRequest
-	21, // 46: goeland.v1.CaseService.SetCaseTypeDefaultGrants:input_type -> goeland.v1.SetCaseTypeDefaultGrantsRequest
-	5,  // 47: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
-	7,  // 48: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
-	9,  // 49: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
-	11, // 50: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
-	13, // 51: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
-	15, // 52: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
-	17, // 53: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
-	19, // 54: goeland.v1.CaseService.CreateCaseType:output_type -> goeland.v1.CreateCaseTypeResponse
-	23, // 55: goeland.v1.CaseService.UpdateCaseType:output_type -> goeland.v1.UpdateCaseTypeResponse
-	22, // 56: goeland.v1.CaseService.SetCaseTypeDefaultGrants:output_type -> goeland.v1.SetCaseTypeDefaultGrantsResponse
-	47, // [47:57] is the sub-list for method output_type
-	37, // [37:47] is the sub-list for method input_type
-	37, // [37:37] is the sub-list for extension type_name
-	37, // [37:37] is the sub-list for extension extendee
-	0,  // [0:37] is the sub-list for field type_name
+	33, // 28: goeland.v1.SearchCasesResponse.my_activity:type_name -> goeland.v1.SubjectActivity
+	31, // 29: goeland.v1.DeleteCaseResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	1,  // 30: goeland.v1.ListCaseTypesResponse.case_types:type_name -> goeland.v1.CaseType
+	1,  // 31: goeland.v1.CreateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	34, // 32: goeland.v1.CreateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	2,  // 33: goeland.v1.SetCaseTypeDefaultGrantsRequest.grants:type_name -> goeland.v1.CaseTypeDefaultGrant
+	1,  // 34: goeland.v1.SetCaseTypeDefaultGrantsResponse.case_type:type_name -> goeland.v1.CaseType
+	34, // 35: goeland.v1.SetCaseTypeDefaultGrantsResponse.change:type_name -> goeland.v1.ReferenceChange
+	1,  // 36: goeland.v1.UpdateCaseTypeResponse.case_type:type_name -> goeland.v1.CaseType
+	34, // 37: goeland.v1.UpdateCaseTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 38: goeland.v1.CaseService.CreateCase:input_type -> goeland.v1.CreateCaseRequest
+	6,  // 39: goeland.v1.CaseService.GetCase:input_type -> goeland.v1.GetCaseRequest
+	8,  // 40: goeland.v1.CaseService.UpdateCase:input_type -> goeland.v1.UpdateCaseRequest
+	10, // 41: goeland.v1.CaseService.TransitionCase:input_type -> goeland.v1.TransitionCaseRequest
+	12, // 42: goeland.v1.CaseService.SearchCases:input_type -> goeland.v1.SearchCasesRequest
+	14, // 43: goeland.v1.CaseService.DeleteCase:input_type -> goeland.v1.DeleteCaseRequest
+	16, // 44: goeland.v1.CaseService.ListCaseTypes:input_type -> goeland.v1.ListCaseTypesRequest
+	18, // 45: goeland.v1.CaseService.CreateCaseType:input_type -> goeland.v1.CreateCaseTypeRequest
+	20, // 46: goeland.v1.CaseService.UpdateCaseType:input_type -> goeland.v1.UpdateCaseTypeRequest
+	21, // 47: goeland.v1.CaseService.SetCaseTypeDefaultGrants:input_type -> goeland.v1.SetCaseTypeDefaultGrantsRequest
+	5,  // 48: goeland.v1.CaseService.CreateCase:output_type -> goeland.v1.CreateCaseResponse
+	7,  // 49: goeland.v1.CaseService.GetCase:output_type -> goeland.v1.GetCaseResponse
+	9,  // 50: goeland.v1.CaseService.UpdateCase:output_type -> goeland.v1.UpdateCaseResponse
+	11, // 51: goeland.v1.CaseService.TransitionCase:output_type -> goeland.v1.TransitionCaseResponse
+	13, // 52: goeland.v1.CaseService.SearchCases:output_type -> goeland.v1.SearchCasesResponse
+	15, // 53: goeland.v1.CaseService.DeleteCase:output_type -> goeland.v1.DeleteCaseResponse
+	17, // 54: goeland.v1.CaseService.ListCaseTypes:output_type -> goeland.v1.ListCaseTypesResponse
+	19, // 55: goeland.v1.CaseService.CreateCaseType:output_type -> goeland.v1.CreateCaseTypeResponse
+	23, // 56: goeland.v1.CaseService.UpdateCaseType:output_type -> goeland.v1.UpdateCaseTypeResponse
+	22, // 57: goeland.v1.CaseService.SetCaseTypeDefaultGrants:output_type -> goeland.v1.SetCaseTypeDefaultGrantsResponse
+	48, // [48:58] is the sub-list for method output_type
+	38, // [38:48] is the sub-list for method input_type
+	38, // [38:38] is the sub-list for extension type_name
+	38, // [38:38] is the sub-list for extension extendee
+	0,  // [0:38] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_case_proto_init() }

@@ -212,7 +212,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0041 (dbmate format)
+  │   └── db/migrations/     0001..0042 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral; Chain
@@ -408,6 +408,10 @@ search a history entry), and lay out their filters in `SearchFilterCard` (second
 « Plus de filtres »). Every list filters on the creation day and creator (`core.RecordFilter`,
 `RecordFilterFields.vue`; `created_by` is indexed, migration `0033`), cases also on their opening day
 and documents on their official date (`core.DateRange`, days in Europe/Zurich). A new list reuses them.
+With `my_activity` (GLD-088, « Mon tableau de bord » at `/home`) a list keeps what the caller changed
+(audit) or consulted (access log): `RecordFilter.ActivityOf` is set by the adapter from the caller
+(`MyActivityRequest`, default order `my_activity desc`, `core.MyActivitySortField`), and the response
+carries each row's dates (`Authorizer.MyActivity`); the SPA list takes the `my-activity` prop.
 
 **Transactional outbox (GLD-028):** `core.InsertAuditEventTx` also writes an `outbox_event` (one per
 audit event, same transaction, reference-only payload, `pg_notify` on `core.OutboxChannel`), so a new

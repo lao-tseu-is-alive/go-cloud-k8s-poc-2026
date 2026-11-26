@@ -1970,7 +1970,7 @@ type SearchDocumentsRequest struct {
 	// page_token is the next_page_token of the previous page; empty for the first page.
 	PageToken string `protobuf:"bytes,10,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
-	// title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	// title, document_type, status, official_date, is_final, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
 	OrderBy string `protobuf:"bytes,11,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// official_from keeps the documents whose official date is on or after this day
 	// (YYYY-MM-DD); empty means unbounded.
@@ -1986,7 +1986,11 @@ type SearchDocumentsRequest struct {
 	CreatedTo string `protobuf:"bytes,15,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
 	// created_by keeps the documents created by this internal user (User.id);
 	// empty means anyone.
-	CreatedBy     string `protobuf:"bytes,16,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedBy string `protobuf:"bytes,16,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// my_activity keeps the documents the caller changed (audit) or consulted (access
+	// log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+	// without order_by they are sorted by the caller's last activity, newest first.
+	MyActivity    bool `protobuf:"varint,17,opt,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -2133,6 +2137,13 @@ func (x *SearchDocumentsRequest) GetCreatedBy() string {
 	return ""
 }
 
+func (x *SearchDocumentsRequest) GetMyActivity() bool {
+	if x != nil {
+		return x.MyActivity
+	}
+	return false
+}
+
 // SearchDocumentsResponse is one page of matching documents.
 type SearchDocumentsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -2145,8 +2156,11 @@ type SearchDocumentsResponse struct {
 	// total_size_capped reports that total_size is a lower bound: counting stops
 	// at 10000 matches, and so does paging (refine the search to go further).
 	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// my_activity is the caller's last change and consultation of each subject of
+	// this page; filled only when the request set my_activity.
+	MyActivity    []*SubjectActivity `protobuf:"bytes,5,rep,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchDocumentsResponse) Reset() {
@@ -2205,6 +2219,13 @@ func (x *SearchDocumentsResponse) GetTotalSizeCapped() bool {
 		return x.TotalSizeCapped
 	}
 	return false
+}
+
+func (x *SearchDocumentsResponse) GetMyActivity() []*SubjectActivity {
+	if x != nil {
+		return x.MyActivity
+	}
+	return nil
 }
 
 // LinkDocumentRequest links a document to another subject (delegates to CoreService.LinkSubjects
@@ -2996,7 +3017,7 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\vverified_at\x18\b \x01(\v2\x1a.google.protobuf.TimestampR\n" +
 	"verifiedAt\x127\n" +
 	"\vaudit_event\x18\t \x01(\v2\x16.goeland.v1.AuditEventR\n" +
-	"auditEvent\"\xad\x06\n" +
+	"auditEvent\"\xce\x06\n" +
 	"\x16SearchDocumentsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xf4\x03R\x05query\x125\n" +
 	"\x12document_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x10documentTypeCode\x12\x17\n" +
@@ -3020,13 +3041,17 @@ const file_goeland_v1_document_proto_rawDesc = "" +
 	"\n" +
 	"created_to\x18\x0f \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
 	"\n" +
-	"created_by\x18\x10 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xc0\x01\n" +
+	"created_by\x18\x10 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\x12\x1f\n" +
+	"\vmy_activity\x18\x11 \x01(\bR\n" +
+	"myActivity\"\xfe\x01\n" +
 	"\x17SearchDocumentsResponse\x122\n" +
 	"\tdocuments\x18\x01 \x03(\v2\x14.goeland.v1.DocumentR\tdocuments\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
-	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"\xe6\x01\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\x12<\n" +
+	"\vmy_activity\x18\x05 \x03(\v2\x1b.goeland.v1.SubjectActivityR\n" +
+	"myActivity\"\xe6\x01\n" +
 	"\x13LinkDocumentRequest\x12)\n" +
 	"\vdocument_id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\n" +
 	"documentId\x124\n" +
@@ -3160,7 +3185,8 @@ var file_goeland_v1_document_proto_goTypes = []any{
 	(*RecordMetadata)(nil),                  // 37: goeland.v1.RecordMetadata
 	(*AuditEvent)(nil),                      // 38: goeland.v1.AuditEvent
 	(*SubjectRelationship)(nil),             // 39: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),                 // 40: goeland.v1.ReferenceChange
+	(*SubjectActivity)(nil),                 // 40: goeland.v1.SubjectActivity
+	(*ReferenceChange)(nil),                 // 41: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_document_proto_depIdxs = []int32{
 	34, // 0: goeland.v1.ContentBlob.created_at:type_name -> google.protobuf.Timestamp
@@ -3200,47 +3226,48 @@ var file_goeland_v1_document_proto_depIdxs = []int32{
 	34, // 34: goeland.v1.VerifyDocumentContentResponse.verified_at:type_name -> google.protobuf.Timestamp
 	38, // 35: goeland.v1.VerifyDocumentContentResponse.audit_event:type_name -> goeland.v1.AuditEvent
 	5,  // 36: goeland.v1.SearchDocumentsResponse.documents:type_name -> goeland.v1.Document
-	39, // 37: goeland.v1.LinkDocumentResponse.relationship:type_name -> goeland.v1.SubjectRelationship
-	38, // 38: goeland.v1.LinkDocumentResponse.audit_event:type_name -> goeland.v1.AuditEvent
-	38, // 39: goeland.v1.DeleteDocumentResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	2,  // 40: goeland.v1.ListDocumentTypesResponse.document_types:type_name -> goeland.v1.DocumentType
-	2,  // 41: goeland.v1.CreateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
-	40, // 42: goeland.v1.CreateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	2,  // 43: goeland.v1.UpdateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
-	40, // 44: goeland.v1.UpdateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	6,  // 45: goeland.v1.DocumentService.CreateDocument:input_type -> goeland.v1.CreateDocumentRequest
-	8,  // 46: goeland.v1.DocumentService.AddDocumentVersion:input_type -> goeland.v1.AddDocumentVersionRequest
-	10, // 47: goeland.v1.DocumentService.ListDocumentVersions:input_type -> goeland.v1.ListDocumentVersionsRequest
-	12, // 48: goeland.v1.DocumentService.GetDocument:input_type -> goeland.v1.GetDocumentRequest
-	14, // 49: goeland.v1.DocumentService.UpdateDocumentMetadata:input_type -> goeland.v1.UpdateDocumentMetadataRequest
-	16, // 50: goeland.v1.DocumentService.FinalizeDocument:input_type -> goeland.v1.FinalizeDocumentRequest
-	18, // 51: goeland.v1.DocumentService.VerifyDocumentIntegrity:input_type -> goeland.v1.VerifyDocumentIntegrityRequest
-	20, // 52: goeland.v1.DocumentService.VerifyDocumentContent:input_type -> goeland.v1.VerifyDocumentContentRequest
-	22, // 53: goeland.v1.DocumentService.SearchDocuments:input_type -> goeland.v1.SearchDocumentsRequest
-	24, // 54: goeland.v1.DocumentService.LinkDocument:input_type -> goeland.v1.LinkDocumentRequest
-	26, // 55: goeland.v1.DocumentService.DeleteDocument:input_type -> goeland.v1.DeleteDocumentRequest
-	28, // 56: goeland.v1.DocumentService.ListDocumentTypes:input_type -> goeland.v1.ListDocumentTypesRequest
-	30, // 57: goeland.v1.DocumentService.CreateDocumentType:input_type -> goeland.v1.CreateDocumentTypeRequest
-	32, // 58: goeland.v1.DocumentService.UpdateDocumentType:input_type -> goeland.v1.UpdateDocumentTypeRequest
-	7,  // 59: goeland.v1.DocumentService.CreateDocument:output_type -> goeland.v1.CreateDocumentResponse
-	9,  // 60: goeland.v1.DocumentService.AddDocumentVersion:output_type -> goeland.v1.AddDocumentVersionResponse
-	11, // 61: goeland.v1.DocumentService.ListDocumentVersions:output_type -> goeland.v1.ListDocumentVersionsResponse
-	13, // 62: goeland.v1.DocumentService.GetDocument:output_type -> goeland.v1.GetDocumentResponse
-	15, // 63: goeland.v1.DocumentService.UpdateDocumentMetadata:output_type -> goeland.v1.UpdateDocumentMetadataResponse
-	17, // 64: goeland.v1.DocumentService.FinalizeDocument:output_type -> goeland.v1.FinalizeDocumentResponse
-	19, // 65: goeland.v1.DocumentService.VerifyDocumentIntegrity:output_type -> goeland.v1.VerifyDocumentIntegrityResponse
-	21, // 66: goeland.v1.DocumentService.VerifyDocumentContent:output_type -> goeland.v1.VerifyDocumentContentResponse
-	23, // 67: goeland.v1.DocumentService.SearchDocuments:output_type -> goeland.v1.SearchDocumentsResponse
-	25, // 68: goeland.v1.DocumentService.LinkDocument:output_type -> goeland.v1.LinkDocumentResponse
-	27, // 69: goeland.v1.DocumentService.DeleteDocument:output_type -> goeland.v1.DeleteDocumentResponse
-	29, // 70: goeland.v1.DocumentService.ListDocumentTypes:output_type -> goeland.v1.ListDocumentTypesResponse
-	31, // 71: goeland.v1.DocumentService.CreateDocumentType:output_type -> goeland.v1.CreateDocumentTypeResponse
-	33, // 72: goeland.v1.DocumentService.UpdateDocumentType:output_type -> goeland.v1.UpdateDocumentTypeResponse
-	59, // [59:73] is the sub-list for method output_type
-	45, // [45:59] is the sub-list for method input_type
-	45, // [45:45] is the sub-list for extension type_name
-	45, // [45:45] is the sub-list for extension extendee
-	0,  // [0:45] is the sub-list for field type_name
+	40, // 37: goeland.v1.SearchDocumentsResponse.my_activity:type_name -> goeland.v1.SubjectActivity
+	39, // 38: goeland.v1.LinkDocumentResponse.relationship:type_name -> goeland.v1.SubjectRelationship
+	38, // 39: goeland.v1.LinkDocumentResponse.audit_event:type_name -> goeland.v1.AuditEvent
+	38, // 40: goeland.v1.DeleteDocumentResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	2,  // 41: goeland.v1.ListDocumentTypesResponse.document_types:type_name -> goeland.v1.DocumentType
+	2,  // 42: goeland.v1.CreateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
+	41, // 43: goeland.v1.CreateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	2,  // 44: goeland.v1.UpdateDocumentTypeResponse.document_type:type_name -> goeland.v1.DocumentType
+	41, // 45: goeland.v1.UpdateDocumentTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	6,  // 46: goeland.v1.DocumentService.CreateDocument:input_type -> goeland.v1.CreateDocumentRequest
+	8,  // 47: goeland.v1.DocumentService.AddDocumentVersion:input_type -> goeland.v1.AddDocumentVersionRequest
+	10, // 48: goeland.v1.DocumentService.ListDocumentVersions:input_type -> goeland.v1.ListDocumentVersionsRequest
+	12, // 49: goeland.v1.DocumentService.GetDocument:input_type -> goeland.v1.GetDocumentRequest
+	14, // 50: goeland.v1.DocumentService.UpdateDocumentMetadata:input_type -> goeland.v1.UpdateDocumentMetadataRequest
+	16, // 51: goeland.v1.DocumentService.FinalizeDocument:input_type -> goeland.v1.FinalizeDocumentRequest
+	18, // 52: goeland.v1.DocumentService.VerifyDocumentIntegrity:input_type -> goeland.v1.VerifyDocumentIntegrityRequest
+	20, // 53: goeland.v1.DocumentService.VerifyDocumentContent:input_type -> goeland.v1.VerifyDocumentContentRequest
+	22, // 54: goeland.v1.DocumentService.SearchDocuments:input_type -> goeland.v1.SearchDocumentsRequest
+	24, // 55: goeland.v1.DocumentService.LinkDocument:input_type -> goeland.v1.LinkDocumentRequest
+	26, // 56: goeland.v1.DocumentService.DeleteDocument:input_type -> goeland.v1.DeleteDocumentRequest
+	28, // 57: goeland.v1.DocumentService.ListDocumentTypes:input_type -> goeland.v1.ListDocumentTypesRequest
+	30, // 58: goeland.v1.DocumentService.CreateDocumentType:input_type -> goeland.v1.CreateDocumentTypeRequest
+	32, // 59: goeland.v1.DocumentService.UpdateDocumentType:input_type -> goeland.v1.UpdateDocumentTypeRequest
+	7,  // 60: goeland.v1.DocumentService.CreateDocument:output_type -> goeland.v1.CreateDocumentResponse
+	9,  // 61: goeland.v1.DocumentService.AddDocumentVersion:output_type -> goeland.v1.AddDocumentVersionResponse
+	11, // 62: goeland.v1.DocumentService.ListDocumentVersions:output_type -> goeland.v1.ListDocumentVersionsResponse
+	13, // 63: goeland.v1.DocumentService.GetDocument:output_type -> goeland.v1.GetDocumentResponse
+	15, // 64: goeland.v1.DocumentService.UpdateDocumentMetadata:output_type -> goeland.v1.UpdateDocumentMetadataResponse
+	17, // 65: goeland.v1.DocumentService.FinalizeDocument:output_type -> goeland.v1.FinalizeDocumentResponse
+	19, // 66: goeland.v1.DocumentService.VerifyDocumentIntegrity:output_type -> goeland.v1.VerifyDocumentIntegrityResponse
+	21, // 67: goeland.v1.DocumentService.VerifyDocumentContent:output_type -> goeland.v1.VerifyDocumentContentResponse
+	23, // 68: goeland.v1.DocumentService.SearchDocuments:output_type -> goeland.v1.SearchDocumentsResponse
+	25, // 69: goeland.v1.DocumentService.LinkDocument:output_type -> goeland.v1.LinkDocumentResponse
+	27, // 70: goeland.v1.DocumentService.DeleteDocument:output_type -> goeland.v1.DeleteDocumentResponse
+	29, // 71: goeland.v1.DocumentService.ListDocumentTypes:output_type -> goeland.v1.ListDocumentTypesResponse
+	31, // 72: goeland.v1.DocumentService.CreateDocumentType:output_type -> goeland.v1.CreateDocumentTypeResponse
+	33, // 73: goeland.v1.DocumentService.UpdateDocumentType:output_type -> goeland.v1.UpdateDocumentTypeResponse
+	60, // [60:74] is the sub-list for method output_type
+	46, // [46:60] is the sub-list for method input_type
+	46, // [46:46] is the sub-list for extension type_name
+	46, // [46:46] is the sub-list for extension extendee
+	0,  // [0:46] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_document_proto_init() }

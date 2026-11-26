@@ -267,6 +267,8 @@ export interface SearchActorsParams {
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
   orderBy?: string
+  /** Keep what the caller changed or consulted, sorted by default by its last activity (GLD-088). */
+  myActivity?: boolean
 }
 
 export interface SearchActorsResponse {
@@ -275,6 +277,8 @@ export interface SearchActorsResponse {
   totalSize?: number
   /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
   totalSizeCapped?: boolean
+  /** The caller's last change and consultation of each row, with myActivity (GLD-088). */
+  myActivity?: SubjectActivity[]
 }
 
 export interface GetActorResponse {
@@ -413,6 +417,8 @@ export interface SearchDocumentsParams {
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
   orderBy?: string
+  /** Keep what the caller changed or consulted, sorted by default by its last activity (GLD-088). */
+  myActivity?: boolean
 }
 
 export interface SearchDocumentsResponse {
@@ -421,6 +427,8 @@ export interface SearchDocumentsResponse {
   totalSize?: number
   /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
   totalSizeCapped?: boolean
+  /** The caller's last change and consultation of each row, with myActivity (GLD-088). */
+  myActivity?: SubjectActivity[]
 }
 
 export interface GetDocumentResponse {
@@ -613,6 +621,8 @@ export interface SearchCasesParams {
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
   orderBy?: string
+  /** Keep what the caller changed or consulted, sorted by default by its last activity (GLD-088). */
+  myActivity?: boolean
 }
 
 /** A page of the relationships of a subject, in one direction or both. */
@@ -629,6 +639,8 @@ export interface SearchCasesResponse {
   totalSize?: number
   /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
   totalSizeCapped?: boolean
+  /** The caller's last change and consultation of each row, with myActivity (GLD-088). */
+  myActivity?: SubjectActivity[]
 }
 
 // --- Internal users (CoreService, GLD-025) ------------------------------------
@@ -818,6 +830,8 @@ export interface SearchThingsParams {
   pageToken?: string
   /** order_by: "<field>" or "<field> desc" (GLD-055). */
   orderBy?: string
+  /** Keep what the caller changed or consulted, sorted by default by its last activity (GLD-088). */
+  myActivity?: boolean
 }
 
 export interface SearchThingsResponse {
@@ -826,6 +840,8 @@ export interface SearchThingsResponse {
   totalSize?: number
   /** totalSize is a lower bound: counting stops at 10 000 matches (GLD-053). */
   totalSizeCapped?: boolean
+  /** The caller's last change and consultation of each row, with myActivity (GLD-088). */
+  myActivity?: SubjectActivity[]
 }
 
 // ---------------------------------------------------------------------------
@@ -1222,6 +1238,13 @@ export interface Access {
   confidential?: boolean
   level?: Permission
   source?: AccessSource
+}
+
+/** The caller's last activity on a subject (GLD-088): last change and last consultation. */
+export interface SubjectActivity {
+  subjectId?: string
+  lastChangedAt?: string
+  lastViewedAt?: string
 }
 
 /** What a logged access did (GLD-033, GLD-089; READ_SENSITIVE before GLD-089). */

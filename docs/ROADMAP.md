@@ -708,11 +708,15 @@ placed on Swiss territory.
   `0041`, `core.AccessLogWindow`, `Authorizer.Require` records refused changes. Open for
   production: the log's retention and its validation with the data protection officer
   (PRODUCTION_READINESS, Known limitations).
-- [ ] **GLD-088 — « Mon activité » home page**: the first page after signing in lists the caller's
-  latest cases, documents and other subjects, most recent first: what he created or changed (read
-  from the audit, `actor_user_id`) and what he consulted, which needs a small server-side
-  « recently viewed » record per user (kept short, never audited), so it follows the user across
-  devices. To decide: the list's grouping and its length.
+- [x] **GLD-088 — « Mon tableau de bord » home page**: the first page after signing in lists the
+  caller's latest cases, documents and other subjects, most recent first: what they changed (read
+  from the audit, `actor_user_id`) and what they consulted. Decided 2026-11-26 with the product
+  owner: one tab per kind with its count (a subject once, at its last activity), each the kind's
+  usual list with its filters, no length limit, and « Mes tâches » as the first tab (it leaves the
+  app bar, `/tasks/mine` redirects); the consultations come from the access log (GLD-089) rather
+  than a separate « recently viewed » record. Done 2026-11-26: `/home` (`/` leads there),
+  `my_activity` on the four searches (filter, sort, dates), migration `0042`; may become
+  customizable later.
 
 ## Infrastructure
 

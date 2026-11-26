@@ -1562,7 +1562,7 @@ type SearchActorsRequest struct {
 	// page_token is the next_page_token of the previous page; empty for the first page.
 	PageToken string `protobuf:"bytes,7,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
-	// display_name, actor_kind, category, is_active, created_at (default: display_name). An unknown field is INVALID_ARGUMENT.
+	// display_name, actor_kind, category, is_active, created_at, my_activity (default: display_name; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
 	OrderBy string `protobuf:"bytes,8,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// created_from keeps the actors created on or after this day (YYYY-MM-DD,
 	// Europe/Zurich); empty means unbounded.
@@ -1572,7 +1572,11 @@ type SearchActorsRequest struct {
 	CreatedTo string `protobuf:"bytes,10,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
 	// created_by keeps the actors created by this internal user (User.id);
 	// empty means anyone.
-	CreatedBy     string `protobuf:"bytes,11,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedBy string `protobuf:"bytes,11,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// my_activity keeps the actors the caller changed (audit) or consulted (access
+	// log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+	// without order_by they are sorted by the caller's last activity, newest first.
+	MyActivity    bool `protobuf:"varint,12,opt,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1684,6 +1688,13 @@ func (x *SearchActorsRequest) GetCreatedBy() string {
 	return ""
 }
 
+func (x *SearchActorsRequest) GetMyActivity() bool {
+	if x != nil {
+		return x.MyActivity
+	}
+	return false
+}
+
 // SearchActorsResponse is one page of matching actors.
 type SearchActorsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1696,8 +1707,11 @@ type SearchActorsResponse struct {
 	// total_size_capped reports that total_size is a lower bound: counting stops
 	// at 10000 matches, and so does paging (refine the search to go further).
 	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// my_activity is the caller's last change and consultation of each subject of
+	// this page; filled only when the request set my_activity.
+	MyActivity    []*SubjectActivity `protobuf:"bytes,5,rep,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchActorsResponse) Reset() {
@@ -1756,6 +1770,13 @@ func (x *SearchActorsResponse) GetTotalSizeCapped() bool {
 		return x.TotalSizeCapped
 	}
 	return false
+}
+
+func (x *SearchActorsResponse) GetMyActivity() []*SubjectActivity {
+	if x != nil {
+		return x.MyActivity
+	}
+	return nil
 }
 
 // DeleteActorRequest soft-deletes an actor.
@@ -2324,7 +2345,7 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"\x11_publication_code\"y\n" +
 	"\x13UpdateActorResponse\x12'\n" +
 	"\x05actor\x18\x01 \x01(\v2\x11.goeland.v1.ActorR\x05actor\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xc9\x04\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xea\x04\n" +
 	"\x13SearchActorsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x124\n" +
 	"\n" +
@@ -2343,13 +2364,17 @@ const file_goeland_v1_actor_proto_rawDesc = "" +
 	"created_to\x18\n" +
 	" \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
 	"\n" +
-	"created_by\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xb4\x01\n" +
+	"created_by\x18\v \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\x12\x1f\n" +
+	"\vmy_activity\x18\f \x01(\bR\n" +
+	"myActivity\"\xf2\x01\n" +
 	"\x14SearchActorsResponse\x12)\n" +
 	"\x06actors\x18\x01 \x03(\v2\x11.goeland.v1.ActorR\x06actors\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
-	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"P\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\x12<\n" +
+	"\vmy_activity\x18\x05 \x03(\v2\x1b.goeland.v1.SubjectActivityR\n" +
+	"myActivity\"P\n" +
 	"\x12DeleteActorRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"z\n" +
@@ -2475,7 +2500,8 @@ var file_goeland_v1_actor_proto_goTypes = []any{
 	(*RecordMetadata)(nil),                     // 28: goeland.v1.RecordMetadata
 	(*AuditEvent)(nil),                         // 29: goeland.v1.AuditEvent
 	(*SubjectRelationship)(nil),                // 30: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),                    // 31: goeland.v1.ReferenceChange
+	(*SubjectActivity)(nil),                    // 31: goeland.v1.SubjectActivity
+	(*ReferenceChange)(nil),                    // 32: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_actor_proto_depIdxs = []int32{
 	3,  // 0: goeland.v1.ActorAddress.address_type:type_name -> goeland.v1.AddressType
@@ -2510,33 +2536,34 @@ var file_goeland_v1_actor_proto_depIdxs = []int32{
 	29, // 29: goeland.v1.UpdateActorResponse.update_event:type_name -> goeland.v1.AuditEvent
 	0,  // 30: goeland.v1.SearchActorsRequest.actor_kind:type_name -> goeland.v1.ActorKind
 	9,  // 31: goeland.v1.SearchActorsResponse.actors:type_name -> goeland.v1.Actor
-	29, // 32: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	4,  // 33: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
-	4,  // 34: goeland.v1.CreateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
-	31, // 35: goeland.v1.CreateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
-	4,  // 36: goeland.v1.UpdateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
-	31, // 37: goeland.v1.UpdateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
-	10, // 38: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
-	12, // 39: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
-	14, // 40: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
-	16, // 41: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
-	18, // 42: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
-	20, // 43: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
-	22, // 44: goeland.v1.ActorService.CreateOrganizationCategory:input_type -> goeland.v1.CreateOrganizationCategoryRequest
-	24, // 45: goeland.v1.ActorService.UpdateOrganizationCategory:input_type -> goeland.v1.UpdateOrganizationCategoryRequest
-	11, // 46: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
-	13, // 47: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
-	15, // 48: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
-	17, // 49: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
-	19, // 50: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
-	21, // 51: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
-	23, // 52: goeland.v1.ActorService.CreateOrganizationCategory:output_type -> goeland.v1.CreateOrganizationCategoryResponse
-	25, // 53: goeland.v1.ActorService.UpdateOrganizationCategory:output_type -> goeland.v1.UpdateOrganizationCategoryResponse
-	46, // [46:54] is the sub-list for method output_type
-	38, // [38:46] is the sub-list for method input_type
-	38, // [38:38] is the sub-list for extension type_name
-	38, // [38:38] is the sub-list for extension extendee
-	0,  // [0:38] is the sub-list for field type_name
+	31, // 32: goeland.v1.SearchActorsResponse.my_activity:type_name -> goeland.v1.SubjectActivity
+	29, // 33: goeland.v1.DeleteActorResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	4,  // 34: goeland.v1.ListOrganizationCategoriesResponse.categories:type_name -> goeland.v1.OrganizationCategory
+	4,  // 35: goeland.v1.CreateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
+	32, // 36: goeland.v1.CreateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
+	4,  // 37: goeland.v1.UpdateOrganizationCategoryResponse.organization_category:type_name -> goeland.v1.OrganizationCategory
+	32, // 38: goeland.v1.UpdateOrganizationCategoryResponse.change:type_name -> goeland.v1.ReferenceChange
+	10, // 39: goeland.v1.ActorService.CreateActor:input_type -> goeland.v1.CreateActorRequest
+	12, // 40: goeland.v1.ActorService.GetActor:input_type -> goeland.v1.GetActorRequest
+	14, // 41: goeland.v1.ActorService.UpdateActor:input_type -> goeland.v1.UpdateActorRequest
+	16, // 42: goeland.v1.ActorService.SearchActors:input_type -> goeland.v1.SearchActorsRequest
+	18, // 43: goeland.v1.ActorService.DeleteActor:input_type -> goeland.v1.DeleteActorRequest
+	20, // 44: goeland.v1.ActorService.ListOrganizationCategories:input_type -> goeland.v1.ListOrganizationCategoriesRequest
+	22, // 45: goeland.v1.ActorService.CreateOrganizationCategory:input_type -> goeland.v1.CreateOrganizationCategoryRequest
+	24, // 46: goeland.v1.ActorService.UpdateOrganizationCategory:input_type -> goeland.v1.UpdateOrganizationCategoryRequest
+	11, // 47: goeland.v1.ActorService.CreateActor:output_type -> goeland.v1.CreateActorResponse
+	13, // 48: goeland.v1.ActorService.GetActor:output_type -> goeland.v1.GetActorResponse
+	15, // 49: goeland.v1.ActorService.UpdateActor:output_type -> goeland.v1.UpdateActorResponse
+	17, // 50: goeland.v1.ActorService.SearchActors:output_type -> goeland.v1.SearchActorsResponse
+	19, // 51: goeland.v1.ActorService.DeleteActor:output_type -> goeland.v1.DeleteActorResponse
+	21, // 52: goeland.v1.ActorService.ListOrganizationCategories:output_type -> goeland.v1.ListOrganizationCategoriesResponse
+	23, // 53: goeland.v1.ActorService.CreateOrganizationCategory:output_type -> goeland.v1.CreateOrganizationCategoryResponse
+	25, // 54: goeland.v1.ActorService.UpdateOrganizationCategory:output_type -> goeland.v1.UpdateOrganizationCategoryResponse
+	47, // [47:55] is the sub-list for method output_type
+	39, // [39:47] is the sub-list for method input_type
+	39, // [39:39] is the sub-list for extension type_name
+	39, // [39:39] is the sub-list for extension extendee
+	0,  // [0:39] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_actor_proto_init() }

@@ -126,6 +126,15 @@ func checkStoryRights(t *testing.T, e *e2e, srv *httptest.Server, ownerDSN strin
 	if r := e.call(srv, demodata.PublicToken("bruno"), "GET", "/api/cases/"+subsidy, nil); r.status/100 == 2 {
 		t.Error("Bruno must not open the confidential subsidy")
 	}
+	// « Mon tableau de bord » (GLD-088): Bruno's cases are the permit and the
+	// opposition he worked on, most recent first, never the subsidy.
+	var refs []string
+	for _, c := range list(e.call(srv, demodata.PublicToken("bruno"), "GET", "/api/cases/search?myActivity=true", nil).body, "cases") {
+		refs = append(refs, str(c, "subjectRef", "businessRef"))
+	}
+	if !slices.Contains(refs, "2025-000031") || slices.Contains(refs, "2025-000009") {
+		t.Errorf("Bruno's dashboard lists the permit, never the subsidy: %v", refs)
+	}
 }
 
 // checkStoryDates checks the re-dated history: each case opens and closes on

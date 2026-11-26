@@ -239,6 +239,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Core domain (`pkg/core`)
 
 - `pkg/core/authorizer.go` — `Authorizer`: the Connect adapters' check of the caller's level on the subject an RPC addresses.
+- `pkg/core/activity.go` — The caller's activity (GLD-088): last change and last consultation of listed subjects, `Authorizer.MyActivity` for the list responses.
 - `pkg/core/capped.go` — Capped searches and lists (GLD-053): `CappedPageSQL` (matches read in index order up to the count limit, then the page), `MetadataLateralSQL`, `CapTotal`.
 - `pkg/core/capped_test.go` — Unit tests of the capped total and of the shape of a capped query.
 - `pkg/core/sorting.go` — Sortable lists (GLD-055): `Sort`, `ParseOrderBy` (order_by against a field whitelist), sort fields and their per-sort queries, directions (NULL last).
@@ -247,7 +248,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/access.go` — Access levels, the effective level (most specific grant wins) and `EnsureAccessTx`, creator grants, link and relationship-change rules, grant copy, assignee checks.
 - `pkg/core/access_audit.go` — Access log (GLD-033, GLD-089): reads, downloads, exports and refused changes recorded, granted or denied, once per 15 minutes, and the paged, filtered log.
-- `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and sensitive read audit rows, shared by the access and case domains.
+- `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and access log rows, shared by the access and case domains.
 - `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
 - `pkg/core/subject_search.go` — Global search (GLD-064): `SearchSubjects` over `subject_ref` per kind (label and business reference, start of every word, readable only), best subjects and a capped count per kind.
 - `pkg/core/outbox.go` — Transactional outbox model (GLD-028): `OutboxEvent`, the insert called by `InsertAuditEventTx`, the retry delay and the status / replay service methods.
@@ -329,6 +330,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0039_orphan_uploads.sql` — Schema migration: `content_blob.uploaded_at` and the index of the held blobs by age, for the orphan upload collection (GLD-045).
 - `pkg/core/module/db/migrations/0040_demo_dataset.sql` — Schema migration: the `demo_dataset` marker row `demo-seed` writes, without which the demo authentication mode refuses to start (GLD-085).
 - `pkg/core/module/db/migrations/0041_access_log.sql` — Schema migration: the access log takes every read (READ) and refused change (WRITE_DENIED), whatever the confidentiality (GLD-089).
+- `pkg/core/module/db/migrations/0042_user_activity_indexes.sql` — Schema migration: indexes by user, subject and time on the audit and the access log, for « Mon tableau de bord » (GLD-088).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -650,6 +652,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/task/AssigneePicker.vue` — Chooses a task assignee: an internal user (`UserPicker`), a live org unit or nobody.
 - `cmd/goeland-server/goeland-front/src/components/task/CaseTasksPanel.vue` — Case tasks panel: pending or all tasks, creation, open count for the closure rule.
 - `cmd/goeland-server/goeland-front/src/components/task/TaskDialogs.vue` — Every task dialog (create, edit, assign, status moves, assignment history) behind exposed openers.
+- `cmd/goeland-server/goeland-front/src/components/task/MyTasksPanel.vue` — « Mes tâches » tab of the dashboard: tasks of the caller and their units, status filter, overdue count, disposal approvals.
 - `cmd/goeland-server/goeland-front/src/components/task/TaskTable.vue` — Task table: assignee, deadline with overdue highlight, status and the actions it allows.
 - `cmd/goeland-server/goeland-front/src/components/task/taskForm.ts` — Task statuses, allowed moves mirroring the server, colors and assignee mapping.
 - `cmd/goeland-server/goeland-front/src/components/thing/GeometryPreview.vue` — SVG preview of an LV95 GeoJSON geometry (north up) with its extent.
@@ -662,6 +665,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectLink.vue` — Subject label linking to its detail page (plain text for the current page).
 - `cmd/goeland-server/goeland-front/src/components/core/SubjectRolesPanel.vue` — A subject's relationships by kind then role, titled from the subject on screen and counted (GLD-063).
 - `cmd/goeland-server/goeland-front/src/components/core/DateRangeFields.vue` — A period filter « du / au » as two YYYY-MM-DD day fields (GLD-074).
+- `cmd/goeland-server/goeland-front/src/components/core/MyActivityCell.vue` — « Mon activité » cell of a list row: the caller's latest change or consultation and when (GLD-088).
 - `cmd/goeland-server/goeland-front/src/components/core/PagedListFooter.vue` — Foot of a paged list: rows shown out of the capped total, next page, progress.
 - `cmd/goeland-server/goeland-front/src/components/core/RecordFilterFields.vue` — The creation period and creator filters every list shares (GLD-074).
 - `cmd/goeland-server/goeland-front/src/components/core/SearchFilterCard.vue` — Filter panel of a list: main filters, the others behind « Plus de filtres », Search and Reset (GLD-074).
@@ -687,6 +691,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/locales/en.json` — English UI messages.
 - `cmd/goeland-server/goeland-front/src/locales/fr-CH.json` — Swiss French UI messages (default locale).
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
+- `cmd/goeland-server/goeland-front/src/pages/DashboardPage.vue` — « Mon tableau de bord », the home page (GLD-088): tabs for the caller's tasks and the cases, documents, objects and actors they changed or consulted, with counts.
 - `cmd/goeland-server/goeland-front/src/pages/SearchResultsPage.vue` — Every result of the global search: one tab per kind with its count, holding the kind's list and filters (GLD-064, GLD-074).
 - `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log, the application roles and the sensitive read audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
@@ -704,7 +709,6 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingDetailPage.vue` — Thing detail: identifiers, geometry preview and map link, relationships (link, end, unlink), edit, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitDetailPage.vue` — Unit detail: breadcrumbs, summary, sub-units, relationships, governance, audit; admin edit, add sub-unit, dissolve.
 - `cmd/goeland-server/goeland-front/src/pages/orgunits/OrgUnitTreePage.vue` — Organization tree with filter and dissolved toggle; admin creation.
-- `cmd/goeland-server/goeland-front/src/pages/tasks/MyTasksPage.vue` — "My tasks" page: tasks assigned to the caller and their units, status filter, overdue count.
 - `cmd/goeland-server/goeland-front/src/pages/retention/RetentionDuePage.vue` — Retention page for records managers: deadlines (day, disposition, held cases) with selection into a bordereau, the bordereaux tab and, for administrators, a type's policy applied to its closed cases.
 - `cmd/goeland-server/goeland-front/src/pages/retention/BordereauDetailPage.vue` — A bordereau: its cases and decisions, execution and cancellation, transfer packages to download, proof.
 - `cmd/goeland-server/goeland-front/src/pages/things/ThingListPage.vue` — Thing list page: title, creation button and `ThingSearchList`.
@@ -723,8 +727,10 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/styles/README.md` — Scaffold note on the styles folder.
 - `cmd/goeland-server/goeland-front/src/styles/detail-page.css` — Shared layout of the detail pages: header, facts, labels, jump links (GLD-063, GLD-068, GLD-069).
 - `cmd/goeland-server/goeland-front/src/styles/settings.scss` — Vuetify SASS variable overrides.
+- `cmd/goeland-server/goeland-front/src/utils/activity.ts` — The caller's latest activity on a subject (changed or consulted) and the activities of a response by subject (GLD-088).
 - `cmd/goeland-server/goeland-front/src/utils/address.ts` — Postal code and country rules mirroring the server, address display lines and map link.
 - `cmd/goeland-server/goeland-front/src/utils/authOrigin.ts` — Detects a loopback host mismatch between the SPA and the auth service (127.0.0.1 vs localhost).
+- `cmd/goeland-server/goeland-front/src/utils/__tests__/activity.test.ts` — Vitest unit tests of the caller's latest activity and its index by subject.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/contactRules.test.ts` — Contact rules against the cases shared with the server, display format and links.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/formatters.test.ts` — Byte sizes, short digests and absent or unparseable dates.
 - `cmd/goeland-server/goeland-front/src/utils/__tests__/navigation.test.ts` — Vitest unit test of the navigation entries shown to administrators and records managers only.

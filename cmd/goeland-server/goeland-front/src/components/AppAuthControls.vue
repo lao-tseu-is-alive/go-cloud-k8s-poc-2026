@@ -49,7 +49,7 @@
         </v-list-item>
 
         <v-divider />
-        <v-list-item prepend-icon="mdi-checkbox-marked-circle-outline" :title="t('nav.myTasks')" to="/tasks/mine" />
+        <v-list-item prepend-icon="mdi-checkbox-marked-circle-outline" :title="t('nav.myTasks')" :to="{ path: '/home', query: { tab: 'tasks' } }" />
         <v-list-item prepend-icon="mdi-account-group-outline" :title="t('nav.groups')" to="/groups" />
         <v-list-item v-if="isAdmin" prepend-icon="mdi-cog-outline" :title="t('nav.admin')" to="/admin" />
         <v-divider />

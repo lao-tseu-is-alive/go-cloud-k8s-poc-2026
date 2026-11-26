@@ -10,6 +10,13 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- « Mon tableau de bord » (GLD-088, migration `0042`), the new home page (`/home`, first in the app
+  bar; `/` leads there): « Mes tâches » as its first tab (it leaves the app bar, `/tasks/mine`
+  redirects), then the cases, documents, objects and actors the user changed or consulted, each
+  in its usual list with all its filters and a « Mon activité » column (changed or consulted, and
+  when), latest first. The four searches take `my_activity` (filter, `my_activity` sort, the
+  caller's dates in the response).
+
 - Access log of every subject (GLD-089, migration `0041`): as in the legacy Goéland, every opening
   of a subject's page and every document download is logged, allowed or refused, whatever the
   confidentiality, and so is a change refused for lack of rights (`WRITE_DENIED`); a repeated

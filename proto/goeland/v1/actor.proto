@@ -429,7 +429,7 @@ message SearchActorsRequest {
   // page_token is the next_page_token of the previous page; empty for the first page.
   string page_token = 7 [(buf.validate.field).string.max_len = 1024];
   // order_by sorts the results: "<field>" or "<field> desc", the field one of
-  // display_name, actor_kind, category, is_active, created_at (default: display_name). An unknown field is INVALID_ARGUMENT.
+  // display_name, actor_kind, category, is_active, created_at, my_activity (default: display_name; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
   string order_by = 8 [(buf.validate.field).string = {
     max_len: 64
     pattern: "^$|^[a-z_]+( (asc|desc))?$"
@@ -443,6 +443,10 @@ message SearchActorsRequest {
   // created_by keeps the actors created by this internal user (User.id);
   // empty means anyone.
   string created_by = 11 [(buf.validate.field).string.max_len = 200];
+  // my_activity keeps the actors the caller changed (audit) or consulted (access
+  // log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+  // without order_by they are sorted by the caller's last activity, newest first.
+  bool my_activity = 12;
 }
 
 // SearchActorsResponse is one page of matching actors.
@@ -456,6 +460,9 @@ message SearchActorsResponse {
   // total_size_capped reports that total_size is a lower bound: counting stops
   // at 10000 matches, and so does paging (refine the search to go further).
   bool total_size_capped = 4;
+  // my_activity is the caller's last change and consultation of each subject of
+  // this page; filled only when the request set my_activity.
+  repeated SubjectActivity my_activity = 5;
 }
 
 // DeleteActorRequest soft-deletes an actor.

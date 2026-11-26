@@ -242,7 +242,7 @@ paths:
         - name: orderBy
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
-            display_name, actor_kind, category, is_active, created_at (default: display_name). An unknown field is INVALID_ARGUMENT.
+            display_name, actor_kind, category, is_active, created_at, my_activity (default: display_name; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -267,6 +267,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: myActivity
+          description: |-
+            my_activity keeps the actors the caller changed (audit) or consulted (access
+            log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+            without order_by they are sorted by the caller's last activity, newest first.
+          in: query
+          required: false
+          type: boolean
       tags:
         - ActorService
   /api/actors/{id}:
@@ -641,7 +649,7 @@ paths:
         - name: orderBy
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
-            business_ref, title, case_type, status, opened_at, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+            business_ref, title, case_type, status, opened_at, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -680,6 +688,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: myActivity
+          description: |-
+            my_activity keeps the cases the caller changed (audit) or consulted (access
+            log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+            without order_by they are sorted by the caller's last activity, newest first.
+          in: query
+          required: false
+          type: boolean
       tags:
         - CaseService
   /api/cases/{caseId}/circulations:
@@ -1644,7 +1660,7 @@ paths:
         - name: orderBy
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
-            title, document_type, status, official_date, is_final, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+            title, document_type, status, official_date, is_final, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -1683,6 +1699,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: myActivity
+          description: |-
+            my_activity keeps the documents the caller changed (audit) or consulted (access
+            log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+            without order_by they are sorted by the caller's last activity, newest first.
+          in: query
+          required: false
+          type: boolean
       tags:
         - DocumentService
   /api/documents/{documentId}/links:
@@ -3815,7 +3839,7 @@ paths:
         - name: orderBy
           description: |-
             order_by sorts the results: "<field>" or "<field> desc", the field one of
-            name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+            name, thing_type, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
           in: query
           required: false
           type: string
@@ -3840,6 +3864,14 @@ paths:
           in: query
           required: false
           type: string
+        - name: myActivity
+          description: |-
+            my_activity keeps the things the caller changed (audit) or consulted (access
+            log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+            without order_by they are sorted by the caller's last activity, newest first.
+          in: query
+          required: false
+          type: boolean
       tags:
         - ThingService
   /api/things/{id}:
@@ -8857,6 +8889,14 @@ definitions:
         description: |-
           total_size_capped reports that total_size is a lower bound: counting stops
           at 10000 matches, and so does paging (refine the search to go further).
+      myActivity:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectActivity'
+        description: |-
+          my_activity is the caller's last change and consultation of each subject of
+          this page; filled only when the request set my_activity.
     description: SearchActorsResponse is one page of matching actors.
   v1SearchCasesResponse:
     type: object
@@ -8879,6 +8919,14 @@ definitions:
         description: |-
           total_size_capped reports that total_size is a lower bound: counting stops
           at 10000 matches, and so does paging (refine the search to go further).
+      myActivity:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectActivity'
+        description: |-
+          my_activity is the caller's last change and consultation of each subject of
+          this page; filled only when the request set my_activity.
     description: SearchCasesResponse is one page of matching cases.
   v1SearchDocumentsResponse:
     type: object
@@ -8901,6 +8949,14 @@ definitions:
         description: |-
           total_size_capped reports that total_size is a lower bound: counting stops
           at 10000 matches, and so does paging (refine the search to go further).
+      myActivity:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectActivity'
+        description: |-
+          my_activity is the caller's last change and consultation of each subject of
+          this page; filled only when the request set my_activity.
     description: SearchDocumentsResponse is one page of matching documents.
   v1SearchOrgUnitsResponse:
     type: object
@@ -8950,6 +9006,14 @@ definitions:
         description: |-
           total_size_capped reports that total_size is a lower bound: counting stops
           at 10000 matches, and so does paging (refine the search to go further).
+      myActivity:
+        type: array
+        items:
+          type: object
+          $ref: '#/definitions/v1SubjectActivity'
+        description: |-
+          my_activity is the caller's last change and consultation of each subject of
+          this page; filled only when the request set my_activity.
     description: SearchThingsResponse is one page of search results.
   v1SearchUsersResponse:
     type: object
@@ -9025,6 +9089,27 @@ definitions:
         $ref: '#/definitions/v1AuditEvent'
         description: status_event is the TASK_STARTED audit event.
     description: StartTaskResponse returns the started task.
+  v1SubjectActivity:
+    type: object
+    properties:
+      subjectId:
+        type: string
+        description: subject_id is the subject.
+        readOnly: true
+      lastChangedAt:
+        type: string
+        format: date-time
+        description: last_changed_at is the caller's last change of the subject; absent when never.
+        readOnly: true
+      lastViewedAt:
+        type: string
+        format: date-time
+        description: last_viewed_at is the caller's last consultation of the subject; absent when never.
+        readOnly: true
+    description: |-
+      SubjectActivity is the caller's last activity on a subject (GLD-088): when
+      it last changed it (audit_event) and last consulted it (access log, a read
+      or download allowed).
   v1SubjectKind:
     type: string
     enum:

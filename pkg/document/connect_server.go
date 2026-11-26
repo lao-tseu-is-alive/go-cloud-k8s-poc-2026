@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -302,8 +303,9 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	orderBy := record.MyActivityRequest(req.Msg.MyActivity, viewer.UserID, req.Msg.OrderBy)
 	result, err := s.service.Search(ctx, SearchFilter{
-		OrderBy:            req.Msg.OrderBy,
+		OrderBy:            orderBy,
 		Viewer:             viewer,
 		Query:              req.Msg.Query,
 		DocumentTypeCode:   req.Msg.DocumentTypeCode,
@@ -321,11 +323,20 @@ func (s *ConnectServer) SearchDocuments(ctx context.Context, req *connect.Reques
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	ids := make([]uuid.UUID, len(result.Documents))
+	for i, item := range result.Documents {
+		ids[i] = item.ID
+	}
+	activity, err := s.authz.MyActivity(ctx, req.Msg.MyActivity, viewer, ids)
+	if err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&goelandv1.SearchDocumentsResponse{
 		Documents:       DomainsToProto(result.Documents),
 		NextPageToken:   core.NextPageToken(offset, len(result.Documents), result.TotalSize),
 		TotalSize:       result.TotalSize,
 		TotalSizeCapped: result.TotalCapped,
+		MyActivity:      activity,
 	}), nil
 }
 

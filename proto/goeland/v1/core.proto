@@ -1226,6 +1226,18 @@ message AccessAuditEvent {
   string subject_label = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
+// SubjectActivity is the caller's last activity on a subject (GLD-088): when
+// it last changed it (audit_event) and last consulted it (access log, a read
+// or download allowed).
+message SubjectActivity {
+  // subject_id is the subject.
+  string subject_id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // last_changed_at is the caller's last change of the subject; absent when never.
+  google.protobuf.Timestamp last_changed_at = 2 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // last_viewed_at is the caller's last consultation of the subject; absent when never.
+  google.protobuf.Timestamp last_viewed_at = 3 [(google.api.field_behavior) = OUTPUT_ONLY];
+}
+
 // ListAccessAuditEventsRequest filters and pages the access log.
 message ListAccessAuditEventsRequest {
   // subject_id restricts the log to one subject; empty means every subject

@@ -6,7 +6,12 @@ import { createRouter, createWebHistory } from 'vue-router'
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
   routes: [
-    { path: '/', redirect: '/cases' },
+    { path: '/', redirect: '/home' },
+    {
+      path: '/home',
+      name: 'home',
+      component: () => import('@/pages/DashboardPage.vue'),
+    },
     {
       path: '/search',
       name: 'search',
@@ -47,11 +52,8 @@ const router = createRouter({
       name: 'group-detail',
       component: () => import('@/pages/groups/GroupDetailPage.vue'),
     },
-    {
-      path: '/tasks/mine',
-      name: 'my-tasks',
-      component: () => import('@/pages/tasks/MyTasksPage.vue'),
-    },
+    // « Mes tâches » became a tab of « Mon tableau de bord » (GLD-088): old links keep working.
+    { path: '/tasks/mine', redirect: { path: '/home', query: { tab: 'tasks' } } },
     {
       path: '/retention',
       name: 'retention',

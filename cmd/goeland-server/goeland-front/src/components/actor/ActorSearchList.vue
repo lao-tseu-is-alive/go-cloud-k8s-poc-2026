@@ -1,23 +1,29 @@
 <script setup lang="ts">
-  import type { ActorKind, GoActor, SearchActorsParams } from '@/api/types'
-  import { computed, watch } from 'vue'
+  import type { ActorKind, GoActor, SearchActorsParams, SubjectActivity } from '@/api/types'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchActors } from '@/api/actorClient'
   import { ACTOR_KINDS } from '@/components/actor/actorForm'
   import OrganizationCategorySelect from '@/components/actor/OrganizationCategorySelect.vue'
+  import MyActivityCell from '@/components/core/MyActivityCell.vue'
   import PagedListFooter from '@/components/core/PagedListFooter.vue'
   import RecordFilterFields from '@/components/core/RecordFilterFields.vue'
   import SearchFilterCard from '@/components/core/SearchFilterCard.vue'
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { usePagedSearch } from '@/composables/usePagedSearch'
+  import { activityById } from '@/utils/activity'
   import { formatDateTime } from '@/utils/formatters'
   import { activeCount, emptyRecordFilters, RECORD_FILTER_KEYS } from '@/utils/routeFilters'
 
   // The actor list with its filters (GLD-074), on the actor page and in a tab
   // of the search results; the filters live in the URL.
+  // With myActivity (« Mon tableau de bord », GLD-088) the list keeps what the
+  // caller changed or consulted and shows when.
+  const props = defineProps<{ myActivity?: boolean }>()
   const emit = defineEmits<{ total: [size: number, capped: boolean] }>()
+  const activities = ref<Record<string, SubjectActivity>>({})
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
   const router = useRouter()
@@ -30,7 +36,8 @@
 
   const { filters, sort, items: actors, nextPageToken, totalSize, totalCapped, loading, load, search, reset } = usePagedSearch(
     async (params: ActorFilters) => {
-      const res = await searchActors(params)
+      const res = await searchActors({ ...params, myActivity: props.myActivity || undefined })
+      activities.value = { ...activities.value, ...activityById(res.myActivity) }
       return { ...res, items: res.actors ?? [] }
     }, emptyFilters)
   const kindItems = computed(() => ACTOR_KINDS.map((k: ActorKind) => ({ value: k, title: enumLabel('ActorKind', k) })))
@@ -91,6 +98,7 @@
           <SortableHeader v-model:sort="sort" field="category" :label="t('fields.actor.category')" />
           <SortableHeader v-model:sort="sort" field="is_active" :label="t('fields.actor.is_active')" />
           <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
+          <SortableHeader v-if="myActivity" v-model:sort="sort" field="my_activity" :label="t('dashboard.activity.column')" />
         </tr>
       </thead>
 
@@ -131,10 +139,11 @@
           </td>
 
           <td class="text-caption">{{ formatDateTime(actor.createdAt) }}</td>
+          <MyActivityCell v-if="myActivity" :activity="activities[actor.subjectRef?.id ?? '']" />
         </tr>
 
         <tr v-if="!loading && actors.length === 0">
-          <td class="text-medium-emphasis text-center py-6" colspan="5">{{ t('messages.common.noData') }}</td>
+          <td class="text-medium-emphasis text-center py-6" :colspan="myActivity ? 6 : 5">{{ t('messages.common.noData') }}</td>
         </tr>
       </tbody>
     </v-table>

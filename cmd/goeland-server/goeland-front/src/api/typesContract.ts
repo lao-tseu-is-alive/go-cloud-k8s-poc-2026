@@ -153,6 +153,7 @@ export type TypesContract = [
   Ok<SameEnum<T.AccessSource, corePb.AccessSourceJson>>,
   Ok<Conforms<T.Access, accessPb.AccessJson>>,
   Ok<Conforms<T.AccessAuditEvent, corePb.AccessAuditEventJson>>,
+  Ok<Conforms<T.SubjectActivity, corePb.SubjectActivityJson>>,
   Ok<Conforms<T.ListAccessAuditEventsResponse, corePb.ListAccessAuditEventsResponseJson>>,
   Ok<Conforms<T.AccessGrant, accessPb.AccessGrantJson>>,
   Ok<Conforms<T.SecurityGroup, accessPb.SecurityGroupJson>>,

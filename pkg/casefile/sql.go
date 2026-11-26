@@ -69,11 +69,12 @@ ORDER BY label, code;`
 
 // caseSortFields are the sortable columns of the case list (GLD-055).
 var caseSortFields = map[string]core.SortField{
-	"created_at": {Expr: "c.created_at"},
-	"opened_at":  {Expr: "c.opened_at"},
-	"title":      {Expr: "c.title"},
-	"status":     {Expr: "c.status"},
-	"case_type":  {Expr: "ct.label", Join: "JOIN case_type ct ON ct.id = c.case_type_id"},
+	"my_activity": core.MyActivitySortField("c.id"),
+	"created_at":  {Expr: "c.created_at"},
+	"opened_at":   {Expr: "c.opened_at"},
+	"title":       {Expr: "c.title"},
+	"status":      {Expr: "c.status"},
+	"case_type":   {Expr: "ct.label", Join: "JOIN case_type ct ON ct.id = c.case_type_id"},
 	"business_ref": {
 		Expr: "lpad(sr.business_ref, 20, '0')",                           // numeric references sort by value
 		Join: "JOIN subject_ref sr ON sr.id = c.id AND sr.kind = 'CASE'", // the kind leads the sort index

@@ -1,10 +1,11 @@
 <script setup lang="ts">
-  import type { GoDocument, SearchDocumentsParams } from '@/api/types'
-  import { watch } from 'vue'
+  import type { GoDocument, SearchDocumentsParams, SubjectActivity } from '@/api/types'
+  import { ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchDocuments } from '@/api/documentClient'
   import DateRangeFields from '@/components/core/DateRangeFields.vue'
+  import MyActivityCell from '@/components/core/MyActivityCell.vue'
   import PagedListFooter from '@/components/core/PagedListFooter.vue'
   import RecordFilterFields from '@/components/core/RecordFilterFields.vue'
   import SearchFilterCard from '@/components/core/SearchFilterCard.vue'
@@ -12,12 +13,17 @@
   import DocumentStatusChip from '@/components/document/DocumentStatusChip.vue'
   import DocumentTypeSelect from '@/components/document/DocumentTypeSelect.vue'
   import { usePagedSearch } from '@/composables/usePagedSearch'
+  import { activityById } from '@/utils/activity'
   import { formatDate, formatDateTime } from '@/utils/formatters'
   import { activeCount, emptyRecordFilters, RECORD_FILTER_KEYS } from '@/utils/routeFilters'
 
   // The document list with its filters (GLD-074), on the document page and in
   // a tab of the search results; the filters live in the URL.
+  // With myActivity (« Mon tableau de bord », GLD-088) the list keeps what the
+  // caller changed or consulted and shows when.
+  const props = defineProps<{ myActivity?: boolean }>()
   const emit = defineEmits<{ total: [size: number, capped: boolean] }>()
+  const activities = ref<Record<string, SubjectActivity>>({})
   const { t } = useI18n()
   const router = useRouter()
 
@@ -29,7 +35,8 @@
 
   const { filters, sort, items: documents, nextPageToken, totalSize, totalCapped, loading, load, search, reset } = usePagedSearch(
     async (params: DocumentFilters) => {
-      const res = await searchDocuments(params)
+      const res = await searchDocuments({ ...params, myActivity: props.myActivity || undefined })
+      activities.value = { ...activities.value, ...activityById(res.myActivity) }
       return { ...res, items: res.documents ?? [] }
     }, emptyFilters)
   // Each finished search reports its total (the tab count of the results page).
@@ -81,6 +88,7 @@
           <SortableHeader v-model:sort="sort" field="official_date" :label="t('fields.document.official_date')" />
           <SortableHeader v-model:sort="sort" field="is_final" :label="t('fields.document.is_final')" />
           <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.common.created_at')" />
+          <SortableHeader v-if="myActivity" v-model:sort="sort" field="my_activity" :label="t('dashboard.activity.column')" />
         </tr>
       </thead>
 
@@ -113,10 +121,11 @@
           </td>
 
           <td class="text-caption">{{ formatDateTime(doc.createdAt) }}</td>
+          <MyActivityCell v-if="myActivity" :activity="activities[doc.subjectRef?.id ?? '']" />
         </tr>
 
         <tr v-if="!loading && documents.length === 0">
-          <td class="text-medium-emphasis text-center py-6" colspan="6">{{ t('messages.common.noData') }}</td>
+          <td class="text-medium-emphasis text-center py-6" :colspan="myActivity ? 7 : 6">{{ t('messages.common.noData') }}</td>
         </tr>
       </tbody>
     </v-table>

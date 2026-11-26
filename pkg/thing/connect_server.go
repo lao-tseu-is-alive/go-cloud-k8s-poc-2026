@@ -6,6 +6,7 @@ import (
 	"log/slog"
 
 	"connectrpc.com/connect"
+	"github.com/google/uuid"
 	goelandv1 "github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/gen/goeland/v1/goelandv1connect"
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
@@ -131,8 +132,9 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 	if err != nil {
 		return nil, s.mapError(err)
 	}
+	orderBy := record.MyActivityRequest(req.Msg.MyActivity, viewer.UserID, req.Msg.OrderBy)
 	result, err := s.service.Search(ctx, SearchFilter{
-		OrderBy: req.Msg.OrderBy,
+		OrderBy: orderBy,
 		Viewer:  viewer,
 		Query:   req.Msg.Query, TypeCode: req.Msg.ThingTypeCode, BBox: bbox, IncludeDeleted: req.Msg.IncludeDeleted,
 		Record: record, Limit: int(req.Msg.PageSize), Offset: offset,
@@ -144,8 +146,17 @@ func (s *ConnectServer) SearchThings(ctx context.Context, req *connect.Request[g
 	for i, t := range result.Things {
 		out[i] = DomainToProto(t)
 	}
+	ids := make([]uuid.UUID, len(result.Things))
+	for i, item := range result.Things {
+		ids[i] = item.ID
+	}
+	activity, err := s.authz.MyActivity(ctx, req.Msg.MyActivity, viewer, ids)
+	if err != nil {
+		return nil, err
+	}
 	return connect.NewResponse(&goelandv1.SearchThingsResponse{
 		Things: out, NextPageToken: core.NextPageToken(offset, len(out), result.TotalSize), TotalSize: result.TotalSize, TotalSizeCapped: result.TotalCapped,
+		MyActivity: activity,
 	}), nil
 }
 

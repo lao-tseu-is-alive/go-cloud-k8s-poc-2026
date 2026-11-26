@@ -13,7 +13,8 @@
   import { toOrderBy } from '@/utils/listSort'
 
   // The caller's tasks across cases, earliest deadline first: assigned to them
-  // and, optionally, to the units they belong to.
+  // and, optionally, to the units they belong to, with the disposal approvals
+  // waiting for them; the « Mes tâches » tab of « Mon tableau de bord » (GLD-088).
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
   const { report } = useApiErrors()
@@ -54,9 +55,8 @@
 </script>
 
 <template>
-  <v-container fluid>
+  <div>
     <div class="d-flex flex-wrap align-center ga-2 mb-4">
-      <h1 class="text-h5">{{ t('tasks.mine.title') }}</h1>
       <v-chip size="small">{{ t('tasks.mine.count', { n: total }) }}</v-chip>
       <v-chip v-if="overdue > 0" color="error" prepend-icon="mdi-alarm" size="small">{{ t('tasks.mine.overdue', { n: overdue }) }}</v-chip>
     </div>
@@ -110,5 +110,5 @@
     </v-card>
 
     <TaskDialogs ref="dialogs" @changed="load()" />
-  </v-container>
+  </div>
 </template>

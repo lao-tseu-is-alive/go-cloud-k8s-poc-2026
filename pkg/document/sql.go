@@ -187,6 +187,7 @@ ORDER BY label, code;`
 
 // documentSortFields are the sortable columns of the document list (GLD-055).
 var documentSortFields = map[string]core.SortField{
+	"my_activity":   core.MyActivitySortField("d.id"),
 	"created_at":    {Expr: "d.created_at"},
 	"title":         {Expr: "d.title"},
 	"official_date": {Expr: "d.official_date", Nullable: true},

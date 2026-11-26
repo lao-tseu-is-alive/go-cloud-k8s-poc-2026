@@ -388,7 +388,24 @@
     "created": "Created",
     "createdBy": "Created by"
   },
+  "dashboard": {
+    "title": "My dashboard",
+    "hint": "What you changed or consulted, most recent first. The filters narrow the list.",
+    "tabs": {
+      "tasks": "My tasks",
+      "cases": "Cases",
+      "documents": "Documents",
+      "things": "Things",
+      "actors": "Actors"
+    },
+    "activity": {
+      "column": "My activity",
+      "changed": "Changed",
+      "viewed": "Consulted"
+    }
+  },
   "nav": {
+    "home": "My dashboard",
     "menu": "Menu",
     "language": "Language",
     "groups": "Groups",

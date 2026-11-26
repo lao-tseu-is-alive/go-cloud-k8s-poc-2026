@@ -388,7 +388,24 @@
     "created": "Création",
     "createdBy": "Créé par"
   },
+  "dashboard": {
+    "title": "Mon tableau de bord",
+    "hint": "Ce que vous avez modifié ou consulté, le plus récent d'abord. Les filtres restreignent la liste.",
+    "tabs": {
+      "tasks": "Mes tâches",
+      "cases": "Affaires",
+      "documents": "Documents",
+      "things": "Objets",
+      "actors": "Acteurs"
+    },
+    "activity": {
+      "column": "Mon activité",
+      "changed": "Modifié",
+      "viewed": "Consulté"
+    }
+  },
   "nav": {
+    "home": "Mon tableau de bord",
     "menu": "Menu",
     "language": "Langue",
     "groups": "Groupes",

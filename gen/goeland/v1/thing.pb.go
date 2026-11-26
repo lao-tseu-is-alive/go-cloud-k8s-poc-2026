@@ -1185,7 +1185,7 @@ type SearchThingsRequest struct {
 	// page_token is the next_page_token of the previous page; empty for the first page.
 	PageToken string `protobuf:"bytes,6,opt,name=page_token,json=pageToken,proto3" json:"page_token,omitempty"`
 	// order_by sorts the results: "<field>" or "<field> desc", the field one of
-	// name, thing_type, created_at (default: created_at desc). An unknown field is INVALID_ARGUMENT.
+	// name, thing_type, created_at, my_activity (default: created_at desc; my_activity desc with my_activity). An unknown field is INVALID_ARGUMENT.
 	OrderBy string `protobuf:"bytes,7,opt,name=order_by,json=orderBy,proto3" json:"order_by,omitempty"`
 	// created_from keeps the things created on or after this day (YYYY-MM-DD,
 	// Europe/Zurich); empty means unbounded.
@@ -1195,7 +1195,11 @@ type SearchThingsRequest struct {
 	CreatedTo string `protobuf:"bytes,9,opt,name=created_to,json=createdTo,proto3" json:"created_to,omitempty"`
 	// created_by keeps the things created by this internal user (User.id);
 	// empty means anyone.
-	CreatedBy     string `protobuf:"bytes,10,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	CreatedBy string `protobuf:"bytes,10,opt,name=created_by,json=createdBy,proto3" json:"created_by,omitempty"`
+	// my_activity keeps the things the caller changed (audit) or consulted (access
+	// log) and adds their dates to the response (GLD-088, « Mon tableau de bord »);
+	// without order_by they are sorted by the caller's last activity, newest first.
+	MyActivity    bool `protobuf:"varint,11,opt,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
 	unknownFields protoimpl.UnknownFields
 	sizeCache     protoimpl.SizeCache
 }
@@ -1300,6 +1304,13 @@ func (x *SearchThingsRequest) GetCreatedBy() string {
 	return ""
 }
 
+func (x *SearchThingsRequest) GetMyActivity() bool {
+	if x != nil {
+		return x.MyActivity
+	}
+	return false
+}
+
 // SearchThingsResponse is one page of search results.
 type SearchThingsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
@@ -1312,8 +1323,11 @@ type SearchThingsResponse struct {
 	// total_size_capped reports that total_size is a lower bound: counting stops
 	// at 10000 matches, and so does paging (refine the search to go further).
 	TotalSizeCapped bool `protobuf:"varint,4,opt,name=total_size_capped,json=totalSizeCapped,proto3" json:"total_size_capped,omitempty"`
-	unknownFields   protoimpl.UnknownFields
-	sizeCache       protoimpl.SizeCache
+	// my_activity is the caller's last change and consultation of each subject of
+	// this page; filled only when the request set my_activity.
+	MyActivity    []*SubjectActivity `protobuf:"bytes,5,rep,name=my_activity,json=myActivity,proto3" json:"my_activity,omitempty"`
+	unknownFields protoimpl.UnknownFields
+	sizeCache     protoimpl.SizeCache
 }
 
 func (x *SearchThingsResponse) Reset() {
@@ -1372,6 +1386,13 @@ func (x *SearchThingsResponse) GetTotalSizeCapped() bool {
 		return x.TotalSizeCapped
 	}
 	return false
+}
+
+func (x *SearchThingsResponse) GetMyActivity() []*SubjectActivity {
+	if x != nil {
+		return x.MyActivity
+	}
+	return nil
 }
 
 // DeleteThingRequest soft-deletes a thing (non-destructive).
@@ -1931,7 +1952,7 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"\x0especialization\"y\n" +
 	"\x13UpdateThingResponse\x12'\n" +
 	"\x05thing\x18\x01 \x01(\v2\x11.goeland.v1.ThingR\x05thing\x129\n" +
-	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\xf9\x03\n" +
+	"\fupdate_event\x18\x02 \x01(\v2\x16.goeland.v1.AuditEventR\vupdateEvent\"\x9a\x04\n" +
 	"\x13SearchThingsRequest\x12\x1e\n" +
 	"\x05query\x18\x01 \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\x05query\x12/\n" +
 	"\x0fthing_type_code\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\rthingTypeCode\x12\x1b\n" +
@@ -1947,13 +1968,17 @@ const file_goeland_v1_thing_proto_rawDesc = "" +
 	"created_to\x18\t \x01(\tB&\xbaH#r!2\x1f^$|^[0-9]{4}-[0-9]{2}-[0-9]{2}$R\tcreatedTo\x12'\n" +
 	"\n" +
 	"created_by\x18\n" +
-	" \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\"\xb4\x01\n" +
+	" \x01(\tB\b\xbaH\x05r\x03\x18\xc8\x01R\tcreatedBy\x12\x1f\n" +
+	"\vmy_activity\x18\v \x01(\bR\n" +
+	"myActivity\"\xf2\x01\n" +
 	"\x14SearchThingsResponse\x12)\n" +
 	"\x06things\x18\x01 \x03(\v2\x11.goeland.v1.ThingR\x06things\x12&\n" +
 	"\x0fnext_page_token\x18\x02 \x01(\tR\rnextPageToken\x12\x1d\n" +
 	"\n" +
 	"total_size\x18\x03 \x01(\x05R\ttotalSize\x12*\n" +
-	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\"P\n" +
+	"\x11total_size_capped\x18\x04 \x01(\bR\x0ftotalSizeCapped\x12<\n" +
+	"\vmy_activity\x18\x05 \x03(\v2\x1b.goeland.v1.SubjectActivityR\n" +
+	"myActivity\"P\n" +
 	"\x12DeleteThingRequest\x12\x18\n" +
 	"\x02id\x18\x01 \x01(\tB\b\xbaH\x05r\x03\xb0\x01\x01R\x02id\x12 \n" +
 	"\x06reason\x18\x02 \x01(\tB\b\xbaH\x05r\x03\x18\xd0\x0fR\x06reason\"z\n" +
@@ -2060,7 +2085,8 @@ var file_goeland_v1_thing_proto_goTypes = []any{
 	(*RecordMetadata)(nil),          // 25: goeland.v1.RecordMetadata
 	(*AuditEvent)(nil),              // 26: goeland.v1.AuditEvent
 	(*SubjectRelationship)(nil),     // 27: goeland.v1.SubjectRelationship
-	(*ReferenceChange)(nil),         // 28: goeland.v1.ReferenceChange
+	(*SubjectActivity)(nil),         // 28: goeland.v1.SubjectActivity
+	(*ReferenceChange)(nil),         // 29: goeland.v1.ReferenceChange
 }
 var file_goeland_v1_thing_proto_depIdxs = []int32{
 	0,  // 0: goeland.v1.ThingType.specialization:type_name -> goeland.v1.ThingSpecialization
@@ -2088,33 +2114,34 @@ var file_goeland_v1_thing_proto_depIdxs = []int32{
 	5,  // 22: goeland.v1.UpdateThingResponse.thing:type_name -> goeland.v1.Thing
 	26, // 23: goeland.v1.UpdateThingResponse.update_event:type_name -> goeland.v1.AuditEvent
 	5,  // 24: goeland.v1.SearchThingsResponse.things:type_name -> goeland.v1.Thing
-	26, // 25: goeland.v1.DeleteThingResponse.delete_event:type_name -> goeland.v1.AuditEvent
-	2,  // 26: goeland.v1.ListThingTypesResponse.thing_types:type_name -> goeland.v1.ThingType
-	2,  // 27: goeland.v1.CreateThingTypeResponse.thing_type:type_name -> goeland.v1.ThingType
-	28, // 28: goeland.v1.CreateThingTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	2,  // 29: goeland.v1.UpdateThingTypeResponse.thing_type:type_name -> goeland.v1.ThingType
-	28, // 30: goeland.v1.UpdateThingTypeResponse.change:type_name -> goeland.v1.ReferenceChange
-	6,  // 31: goeland.v1.ThingService.CreateThing:input_type -> goeland.v1.CreateThingRequest
-	8,  // 32: goeland.v1.ThingService.GetThing:input_type -> goeland.v1.GetThingRequest
-	10, // 33: goeland.v1.ThingService.UpdateThing:input_type -> goeland.v1.UpdateThingRequest
-	12, // 34: goeland.v1.ThingService.SearchThings:input_type -> goeland.v1.SearchThingsRequest
-	14, // 35: goeland.v1.ThingService.DeleteThing:input_type -> goeland.v1.DeleteThingRequest
-	16, // 36: goeland.v1.ThingService.ListThingTypes:input_type -> goeland.v1.ListThingTypesRequest
-	18, // 37: goeland.v1.ThingService.CreateThingType:input_type -> goeland.v1.CreateThingTypeRequest
-	20, // 38: goeland.v1.ThingService.UpdateThingType:input_type -> goeland.v1.UpdateThingTypeRequest
-	7,  // 39: goeland.v1.ThingService.CreateThing:output_type -> goeland.v1.CreateThingResponse
-	9,  // 40: goeland.v1.ThingService.GetThing:output_type -> goeland.v1.GetThingResponse
-	11, // 41: goeland.v1.ThingService.UpdateThing:output_type -> goeland.v1.UpdateThingResponse
-	13, // 42: goeland.v1.ThingService.SearchThings:output_type -> goeland.v1.SearchThingsResponse
-	15, // 43: goeland.v1.ThingService.DeleteThing:output_type -> goeland.v1.DeleteThingResponse
-	17, // 44: goeland.v1.ThingService.ListThingTypes:output_type -> goeland.v1.ListThingTypesResponse
-	19, // 45: goeland.v1.ThingService.CreateThingType:output_type -> goeland.v1.CreateThingTypeResponse
-	21, // 46: goeland.v1.ThingService.UpdateThingType:output_type -> goeland.v1.UpdateThingTypeResponse
-	39, // [39:47] is the sub-list for method output_type
-	31, // [31:39] is the sub-list for method input_type
-	31, // [31:31] is the sub-list for extension type_name
-	31, // [31:31] is the sub-list for extension extendee
-	0,  // [0:31] is the sub-list for field type_name
+	28, // 25: goeland.v1.SearchThingsResponse.my_activity:type_name -> goeland.v1.SubjectActivity
+	26, // 26: goeland.v1.DeleteThingResponse.delete_event:type_name -> goeland.v1.AuditEvent
+	2,  // 27: goeland.v1.ListThingTypesResponse.thing_types:type_name -> goeland.v1.ThingType
+	2,  // 28: goeland.v1.CreateThingTypeResponse.thing_type:type_name -> goeland.v1.ThingType
+	29, // 29: goeland.v1.CreateThingTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	2,  // 30: goeland.v1.UpdateThingTypeResponse.thing_type:type_name -> goeland.v1.ThingType
+	29, // 31: goeland.v1.UpdateThingTypeResponse.change:type_name -> goeland.v1.ReferenceChange
+	6,  // 32: goeland.v1.ThingService.CreateThing:input_type -> goeland.v1.CreateThingRequest
+	8,  // 33: goeland.v1.ThingService.GetThing:input_type -> goeland.v1.GetThingRequest
+	10, // 34: goeland.v1.ThingService.UpdateThing:input_type -> goeland.v1.UpdateThingRequest
+	12, // 35: goeland.v1.ThingService.SearchThings:input_type -> goeland.v1.SearchThingsRequest
+	14, // 36: goeland.v1.ThingService.DeleteThing:input_type -> goeland.v1.DeleteThingRequest
+	16, // 37: goeland.v1.ThingService.ListThingTypes:input_type -> goeland.v1.ListThingTypesRequest
+	18, // 38: goeland.v1.ThingService.CreateThingType:input_type -> goeland.v1.CreateThingTypeRequest
+	20, // 39: goeland.v1.ThingService.UpdateThingType:input_type -> goeland.v1.UpdateThingTypeRequest
+	7,  // 40: goeland.v1.ThingService.CreateThing:output_type -> goeland.v1.CreateThingResponse
+	9,  // 41: goeland.v1.ThingService.GetThing:output_type -> goeland.v1.GetThingResponse
+	11, // 42: goeland.v1.ThingService.UpdateThing:output_type -> goeland.v1.UpdateThingResponse
+	13, // 43: goeland.v1.ThingService.SearchThings:output_type -> goeland.v1.SearchThingsResponse
+	15, // 44: goeland.v1.ThingService.DeleteThing:output_type -> goeland.v1.DeleteThingResponse
+	17, // 45: goeland.v1.ThingService.ListThingTypes:output_type -> goeland.v1.ListThingTypesResponse
+	19, // 46: goeland.v1.ThingService.CreateThingType:output_type -> goeland.v1.CreateThingTypeResponse
+	21, // 47: goeland.v1.ThingService.UpdateThingType:output_type -> goeland.v1.UpdateThingTypeResponse
+	40, // [40:48] is the sub-list for method output_type
+	32, // [32:40] is the sub-list for method input_type
+	32, // [32:32] is the sub-list for extension type_name
+	32, // [32:32] is the sub-list for extension extendee
+	0,  // [0:32] is the sub-list for field type_name
 }
 
 func init() { file_goeland_v1_thing_proto_init() }

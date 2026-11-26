@@ -414,6 +414,7 @@ func (s *surface) access() {
 	s.readFilters(asWriter, secret)
 	s.expect(asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit"}), codePermissionDenied, "editing with READ")
 	s.accessAudit(asWriter, open, secret, writer)
+	s.myActivity(asWriter, open, secret)
 	if lvl := str(asWriter("GET", "/api/subjects/"+open+"/access", nil).body, "access", "level"); lvl != "PERMISSION_READ" {
 		s.t.Fatalf("the writer's baseline is READ: %s", lvl)
 	}
@@ -525,6 +526,35 @@ func (s *surface) accessAudit(asWriter func(method, path string, body any) reply
 		s.t.Fatalf("a read repeated within 15 minutes is recorded once: %d", reads)
 	}
 	s.fails(codeInvalidArgument, "GET", "/api/access-audit-events?orderBy=user_id", nil)
+}
+
+// myActivity covers the my_activity filter of the lists (GLD-088): the writer
+// finds the public case it consulted, with the date, not the confidential one
+// it was refused, and a list without the filter carries no activity.
+func (s *surface) myActivity(asWriter func(method, path string, body any) reply, open, secret string) {
+	res := asWriter("GET", "/api/cases/search?myActivity=true&pageSize=200", nil)
+	ids := map[string]bool{}
+	for _, c := range list(res.body, "cases") {
+		ids[str(c, "subjectRef", "id")] = true
+	}
+	if res.status != 200 || !ids[open] || ids[secret] {
+		s.t.Fatalf("the writer's cases are those it consulted, never one refused: %v", res.body)
+	}
+	viewed := false
+	for _, a := range list(res.body, "myActivity") {
+		if str(a, "subjectId") == open && str(a, "lastViewedAt") != "" {
+			viewed = true
+		}
+	}
+	if !viewed {
+		s.t.Fatalf("the consultation date comes with the list: %v", res.body["myActivity"])
+	}
+	if len(list(asWriter("GET", "/api/cases/search?pageSize=5", nil).body, "myActivity")) != 0 {
+		s.t.Fatal("a list without my_activity carries no activity")
+	}
+	for _, path := range []string{"/api/documents/search", "/api/things/search", "/api/actors/search"} {
+		s.ok("GET", path+"?myActivity=true&orderBy=my_activity", nil)
+	}
 }
 
 // groups covers the security group RPCs.

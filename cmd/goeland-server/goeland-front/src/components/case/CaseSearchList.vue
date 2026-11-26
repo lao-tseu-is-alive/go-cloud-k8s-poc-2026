@@ -1,6 +1,6 @@
 <script setup lang="ts">
-  import type { CaseStatus, GoCase, SearchCasesParams } from '@/api/types'
-  import { computed, watch } from 'vue'
+  import type { CaseStatus, GoCase, SearchCasesParams, SubjectActivity } from '@/api/types'
+  import { computed, ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchCases } from '@/api/caseClient'
@@ -8,19 +8,25 @@
   import CaseStatusChip from '@/components/case/CaseStatusChip.vue'
   import CaseTypeSelect from '@/components/case/CaseTypeSelect.vue'
   import DateRangeFields from '@/components/core/DateRangeFields.vue'
+  import MyActivityCell from '@/components/core/MyActivityCell.vue'
   import PagedListFooter from '@/components/core/PagedListFooter.vue'
   import RecordFilterFields from '@/components/core/RecordFilterFields.vue'
   import SearchFilterCard from '@/components/core/SearchFilterCard.vue'
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import { useI18nEnum } from '@/composables/useI18nEnum'
   import { usePagedSearch } from '@/composables/usePagedSearch'
+  import { activityById } from '@/utils/activity'
   import { formatDateTime } from '@/utils/formatters'
   import { activeCount, emptyRecordFilters, RECORD_FILTER_KEYS } from '@/utils/routeFilters'
   import { subjectReference } from '@/utils/subjects'
 
   // The case list with its filters (GLD-074), on the case page and in a tab
   // of the search results; the filters live in the URL.
+  // With myActivity (« Mon tableau de bord », GLD-088) the list keeps what the
+  // caller changed or consulted and shows when.
+  const props = defineProps<{ myActivity?: boolean }>()
   const emit = defineEmits<{ total: [size: number, capped: boolean] }>()
+  const activities = ref<Record<string, SubjectActivity>>({})
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
   const router = useRouter()
@@ -33,7 +39,8 @@
 
   const { filters, sort, items: cases, nextPageToken, totalSize, totalCapped, loading, load, search, reset } = usePagedSearch(
     async (params: CaseFilters) => {
-      const res = await searchCases(params)
+      const res = await searchCases({ ...params, myActivity: props.myActivity || undefined })
+      activities.value = { ...activities.value, ...activityById(res.myActivity) }
       return { ...res, items: res.cases ?? [] }
     }, emptyFilters)
   const statusItems = computed(() => CASE_STATUSES.map((s: CaseStatus) => ({ value: s, title: enumLabel('CaseStatus', s) })))
@@ -96,6 +103,7 @@
           <SortableHeader v-model:sort="sort" field="case_type" :label="t('fields.case.case_type')" />
           <SortableHeader v-model:sort="sort" field="status" :label="t('fields.case.status')" />
           <SortableHeader v-model:sort="sort" field="opened_at" :label="t('fields.case.opened_at')" />
+          <SortableHeader v-if="myActivity" v-model:sort="sort" field="my_activity" :label="t('dashboard.activity.column')" />
         </tr>
       </thead>
 
@@ -120,10 +128,11 @@
           <td>{{ c.caseType?.label ?? c.caseType?.code }}</td>
           <td><CaseStatusChip :status="c.status" /></td>
           <td class="text-caption">{{ formatDateTime(c.openedAt) }}</td>
+          <MyActivityCell v-if="myActivity" :activity="activities[c.subjectRef?.id ?? '']" />
         </tr>
 
         <tr v-if="!loading && cases.length === 0">
-          <td class="text-medium-emphasis text-center py-6" colspan="5">{{ t('messages.common.noData') }}</td>
+          <td class="text-medium-emphasis text-center py-6" :colspan="myActivity ? 6 : 5">{{ t('messages.common.noData') }}</td>
         </tr>
       </tbody>
     </v-table>

@@ -13,4 +13,9 @@ describe('navigation', () => {
     expect(navItemsFor(false, true).some(i => i.to === '/admin')).toBe(false)
     expect(navItemsFor(false, false).some(i => i.to === '/retention')).toBe(false)
   })
+
+  it('opens on the dashboard, which holds the tasks', () => {
+    expect(NAV_ITEMS[0]?.to).toBe('/home')
+    expect(NAV_ITEMS.some(i => i.to === '/tasks/mine')).toBe(false)
+  })
 })

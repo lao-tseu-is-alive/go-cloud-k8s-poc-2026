@@ -1,21 +1,27 @@
 <script setup lang="ts">
-  import type { GoThing, SearchThingsParams } from '@/api/types'
-  import { watch } from 'vue'
+  import type { GoThing, SearchThingsParams, SubjectActivity } from '@/api/types'
+  import { ref, watch } from 'vue'
   import { useI18n } from 'vue-i18n'
   import { useRouter } from 'vue-router'
   import { searchThings } from '@/api/thingClient'
+  import MyActivityCell from '@/components/core/MyActivityCell.vue'
   import PagedListFooter from '@/components/core/PagedListFooter.vue'
   import RecordFilterFields from '@/components/core/RecordFilterFields.vue'
   import SearchFilterCard from '@/components/core/SearchFilterCard.vue'
   import SortableHeader from '@/components/core/SortableHeader.vue'
   import ThingTypeSelect from '@/components/thing/ThingTypeSelect.vue'
   import { usePagedSearch } from '@/composables/usePagedSearch'
+  import { activityById } from '@/utils/activity'
   import { formatDateTime } from '@/utils/formatters'
   import { activeCount, emptyRecordFilters, RECORD_FILTER_KEYS } from '@/utils/routeFilters'
 
   // The thing list with its filters (GLD-074), on the thing page and in a tab
   // of the search results; the filters live in the URL.
+  // With myActivity (« Mon tableau de bord », GLD-088) the list keeps what the
+  // caller changed or consulted and shows when.
+  const props = defineProps<{ myActivity?: boolean }>()
   const emit = defineEmits<{ total: [size: number, capped: boolean] }>()
+  const activities = ref<Record<string, SubjectActivity>>({})
   const { t } = useI18n()
   const router = useRouter()
 
@@ -27,7 +33,8 @@
 
   const { filters, sort, items: things, nextPageToken, totalSize, totalCapped, loading, load, search, reset } = usePagedSearch(
     async (params: ThingFilters) => {
-      const res = await searchThings(params)
+      const res = await searchThings({ ...params, myActivity: props.myActivity || undefined })
+      activities.value = { ...activities.value, ...activityById(res.myActivity) }
       return { ...res, items: res.things ?? [] }
     }, emptyFilters)
   // Each finished search reports its total (the tab count of the results page).
@@ -84,6 +91,7 @@
           <th scope="col">{{ t('fields.thing.identifiers') }}</th>
           <th scope="col">{{ t('fields.thing.area') }}</th>
           <SortableHeader v-model:sort="sort" field="created_at" :label="t('fields.thing.created_at')" />
+          <SortableHeader v-if="myActivity" v-model:sort="sort" field="my_activity" :label="t('dashboard.activity.column')" />
         </tr>
       </thead>
 
@@ -103,10 +111,11 @@
           <td>{{ identifier(th) }}</td>
           <td>{{ th.areaM2 ? `${Math.round(th.areaM2)} m²` : '—' }}</td>
           <td class="text-caption">{{ formatDateTime(th.createdAt) }}</td>
+          <MyActivityCell v-if="myActivity" :activity="activities[th.subjectRef?.id ?? '']" />
         </tr>
 
         <tr v-if="!loading && things.length === 0">
-          <td class="text-medium-emphasis text-center py-6" colspan="5">{{ t('messages.common.noData') }}</td>
+          <td class="text-medium-emphasis text-center py-6" :colspan="myActivity ? 6 : 5">{{ t('messages.common.noData') }}</td>
         </tr>
       </tbody>
     </v-table>
