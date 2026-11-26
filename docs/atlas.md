@@ -22,6 +22,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `LICENSE` — MIT license of the project.
 - `Makefile` — Reproducible entry point for generation, run, build, quality gates (`check`, `release-check`) and dbmate.
 - `README.md` — Project overview, operator walkthrough and current-version banner.
+- `docs/DEMO_SCRIPT.md` — Public demo on synthetic data: principles, reduced catalogue, cast and hero cases; the specification of the generator (GLD-079) and the presenter's thread.
 - `docs/DOCUMENTATION.md` — Normative documentation contract for human and agent contributors.
 - `docs/IMPORT_MAPPING.md` — Legacy data import: principles, runbook (rebuild and rerun), wave 1 mapping and decisions; rules and orders of magnitude only, never real values.
 - `docs/RETENTION.md` — Retention and final disposition of cases: vocabulary, lifecycle, rules, proof, transfer package, elimination, roles, operations and limits (GLD-076, GLD-077); for archivists, data protection and operators.

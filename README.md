@@ -198,7 +198,7 @@ cmd/doccheck/            documentation checker (GoDoc coverage + exact atlas inv
 cmd/goeland-import-orgunits/  optional import of the legacy org unit tree (structure only, dry run by default)
 cmd/goeland-import/      one-shot legacy data import into a brand-new local database (pkg/legacyimport, docs/IMPORT_MAPPING.md)
 .github/workflows/       CI gate, Trivy CVE scan, image build/scan/publish, binary release
-docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract), RETENTION.md (retention and disposition)
+docs/                    DOCUMENTATION.md (doc contract), PRODUCTION_READINESS.md (deployment contract), RETENTION.md (retention and disposition), DEMO_SCRIPT.md (synthetic demo)
 ```
 
 ## Prerequisites

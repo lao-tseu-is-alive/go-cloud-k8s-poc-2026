@@ -617,7 +617,10 @@ placed on Swiss territory.
   ids) writing through the domain services, so the data passes the same validation, rights,
   audit, outbox and timeline rules as the application, and the generator doubles as a regression
   test of the business API. It refuses a database that is not brand new, like `goeland-import`;
-  the generator is committed, never a dump. Profiles: `small` (tests), `demo` (online demo),
+  the generator is committed, never a dump. A language parameter (`--lang`, `fr` by default)
+  picks the catalogue holding every generated text (type labels, hero stories, letters, unit
+  names, name lists); one database is generated in one language, the structure and seed are the
+  same in all of them. Delivered with `fr` and `en` (the SPA already has both). Profiles: `small` (tests), `demo` (online demo),
   `volume` later (set-based, for performance). Content:
   - a reduced catalogue: 8 case types (building permit, opposition / appeal, tree felling,
     advertising sign, public domain occupation, citizen report — a one-off defect fixed by one
@@ -625,7 +628,7 @@ placed on Swiss territory.
     time —, energy subsidy — the confidential one) plus the generic request, each with a retention policy; 12 document types (request
     form, incoming and outgoing letter, plan, photo, report, decision, service opinion, public
     inquiry notice, opposition, supporting document, internal note) in the existing categories;
-  - a few scripted "hero" cases that carry the demo script, and a background of a few hundred
+  - a few scripted "hero" cases that carry the demo script ([DEMO_SCRIPT.md](DEMO_SCRIPT.md)), and a background of a few hundred
     actors, cases, documents and things so lists, filters, search and counts mean something;
   - a fictional org chart, groups and demo users with different roles (administrator, records
     manager, agent, reader);
@@ -643,6 +646,12 @@ placed on Swiss territory.
 - [ ] **GLD-081 — Demo banner**: a deployment setting that shows a permanent « Données fictives de
   démonstration » banner in the SPA, so a screenshot of the demo is never mistaken for real
   records.
+- [ ] **GLD-083 — German demo**: the SPA in `de-CH` (a locale beside `fr-CH` and `en`, kept up to
+  date with every new feature) and the `de` catalogue of the generator, with German-speaking
+  name lists; the data stays Swiss.
+- [ ] **GLD-084 — Spanish demo** (after GLD-082): the SPA in `es` and the `es` catalogue of the
+  generator. A Spanish-speaking audience is outside Switzerland, so it needs a non-Swiss country
+  profile (coordinate system, identifiers, phone numbers and addresses) first.
 - [ ] **GLD-082 — Deployment coordinate system** (later, exploration): geometries are stored as
   `geometry(Geometry, 2056)` and validated inside Switzerland, and parcels and buildings carry
   Swiss register identifiers (EGRID, EGID, commune OFS number). To serve other countries: a
