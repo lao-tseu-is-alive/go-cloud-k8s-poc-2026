@@ -149,16 +149,22 @@ const liveGroupGranteeSQL = `SELECT EXISTS (SELECT 1 FROM security_group WHERE i
 
 const liveUnitGranteeSQL = `SELECT EXISTS (SELECT 1 FROM org_unit WHERE id = @id AND dissolved_at IS NULL);`
 
-// --- sensitive read audit (GLD-033) ------------------------------------------------------
+// --- access log (GLD-033, GLD-089) -------------------------------------------------------
 
 const insertAccessAuditSQL = `
 INSERT INTO access_audit_event (user_id, subject_id, subject_kind, action, outcome, access_level,
                                 access_source, confidentiality_level, document_version_id, request_id)
-VALUES (@user_id, @subject_id, @subject_kind, @action, @outcome, @access_level,
-        @access_source, @confidentiality_level, @document_version_id, @request_id);`
+SELECT @user_id, @subject_id, @subject_kind, @action, @outcome, @access_level,
+       @access_source, @confidentiality_level, @document_version_id, @request_id
+ WHERE @window::interval <= interval '0'
+    OR NOT EXISTS (
+        SELECT 1 FROM access_audit_event p
+         WHERE p.subject_id = @subject_id AND p.occurred_at > now() - @window::interval
+           AND p.user_id = @user_id AND p.action = @action AND p.outcome = @outcome
+           AND p.document_version_id IS NOT DISTINCT FROM @document_version_id::uuid);`
 
-// accessAuditSortFields are the sortable columns of the sensitive read audit:
-// the log grows with every confidential read, so only its indexed date sorts.
+// accessAuditSortFields are the sortable columns of the access log: the log
+// grows with every read, so only its indexed date sorts.
 var accessAuditSortFields = map[string]SortField{
 	"occurred_at": {Expr: "e.occurred_at"},
 }
@@ -183,7 +189,7 @@ SELECT e.id AS id, `+f.Expr+` AS sort_key
 FROM access_audit_event e
 WHERE (@subject_id::uuid IS NULL OR e.subject_id = @subject_id::uuid)
   AND (@user_id = '' OR e.user_id = @user_id)
-  AND (@action = '' OR e.action = @action)
+  AND (@action = '' OR e.action = @action OR (@action = 'READ' AND e.action = 'READ_SENSITIVE'))
   AND (@outcome = '' OR e.outcome = @outcome)
   AND (@from::timestamptz IS NULL OR e.occurred_at >= @from::timestamptz)
   AND (@to::timestamptz IS NULL OR e.occurred_at <= @to::timestamptz)`,

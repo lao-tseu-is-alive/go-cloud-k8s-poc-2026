@@ -5,6 +5,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteCase, getCase, transitionCase, updateCase } from '@/api/caseClient'
+  import AccessLogCard from '@/components/access/AccessLogCard.vue'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import CaseExportPanel from '@/components/case/CaseExportPanel.vue'
   import { CASE_TRANSITIONS, transitionNeedsReason } from '@/components/case/caseForm'
@@ -414,6 +415,8 @@
                 <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
                 <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
               </v-card>
+
+              <AccessLogCard :subject-id="id" />
 
               <v-card v-if="canManage" class="mb-4">
                 <v-card-title class="text-subtitle-1">{{ t('export.title') }}</v-card-title>

@@ -212,7 +212,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0040 (dbmate format)
+  │   └── db/migrations/     0001..0041 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral; Chain
@@ -366,15 +366,19 @@ Every new subject gets its creator's FULL_CONTROL and its owning unit's MANAGE
 confidentiality once (`core.CopyGrantsTx`), and attaching an existing document copies nothing.
 New RPCs must add their check.
 
-**Sensitive read audit (GLD-033):** the detail read of a subject goes through
-`core.Authorizer.AuditedRead` (not `Caller`): on a confidential subject it writes an
-`access_audit_event` (READ_SENSITIVE, GRANTED or DENIED) before answering and fails the read when
-it cannot. A confidential case's timeline is audited the same way, and the governed download
-records DOWNLOAD with the version served (`core.RequireAuditedTx` / `core.RecordGrantedAccessTx`).
-A case export is logged as EXPORT whatever the confidentiality (GLD-029). Lists, searches and
-secondary reads are not logged. `ListAccessAuditEvents`
-(`GET /api/access-audit-events`) needs `goeland:admin`, or FULL_CONTROL on its `subject_id`, and
-shows a label only for a readable subject. A new primary read of a subject uses `AuditedRead`.
+**Access log (GLD-033, GLD-089):** the detail read of a subject goes through
+`core.Authorizer.AuditedRead` (not `Caller`): whatever the confidentiality, it writes an
+`access_audit_event` (READ, GRANTED or DENIED) before answering and fails the read when it cannot.
+A case's timeline is logged the same way, the governed download records DOWNLOAD with the version
+served (`core.RequireAuditedTx` / `core.RecordGrantedAccessTx`), a case export EXPORT (GLD-029),
+and `Authorizer.Require` records a change refused in the adapter (need above READ) as
+WRITE_DENIED. A repeated access within `core.AccessLogWindow` (15 min; exports excepted) is
+recorded once; refusals inside a domain transaction roll back with it and are not logged. Lists,
+searches and secondary reads are not logged; READ_SENSITIVE is the former action, kept in the
+history. `ListAccessAuditEvents` (`GET /api/access-audit-events`) needs `goeland:admin` for the
+whole log, or READ on its `subject_id` (the « Consultations » card of every detail page, open to
+every reader as in the legacy Goéland), and shows a label only for a readable subject. A new
+primary read of a subject uses `AuditedRead`.
 
 **Relationship groups (GLD-063):** a detail page reads its links through
 `CoreService.SummarizeRelationships` (groups per type and direction, counted as the viewer may read

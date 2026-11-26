@@ -163,7 +163,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0040 (dbmate format)
+      └── db/migrations/  0001..0041 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete) + Chain; filestore/ = local implementation,
@@ -462,7 +462,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0025_import_provenance.sql   import_batch + subject_provenance (legacy source ids, one marker per import)
 0026_search_order_indexes.sql  indexes on the order of the searches and lists (production volume)
 0027_sort_indexes.sql        indexes on the sortable columns of the lists
-0028_access_audit.sql        access_audit_event: append-only sensitive read audit (confidential reads and downloads)
+0028_access_audit.sql        access_audit_event: append-only access log (confidential reads and downloads; every read since 0041)
 0029_contact_history_relationship_kinds.sql  replaced contacts ended, not deleted; relationship kinds checked by a trigger
 0030_case_export.sql         case_export: background case export jobs (queue, archive reference, expiry)
 0031_relationship_roles.sql  relationship_type roles (label, plural, end, preposition) read from the subject on screen
@@ -475,6 +475,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0038_deferrable_current_version.sql  deferrable current version reference, for the legacy import
 0039_orphan_uploads.sql      content_blob.uploaded_at: collection of uploads never attached (GLD-045)
 0040_demo_dataset.sql        demo_dataset: marker of a generated demo, required by the demo mode (GLD-085)
+0041_access_log.sql          access_audit_event logs every read, download and refused change (GLD-089)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

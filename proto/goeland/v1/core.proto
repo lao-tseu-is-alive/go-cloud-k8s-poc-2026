@@ -1188,8 +1188,9 @@ message ListAuditEventsResponse {
   int32 total_size = 3;
 }
 
-// AccessAuditEvent is one row of the sensitive read audit (GLD-033): a read or
-// a download of a confidential subject, allowed or refused.
+// AccessAuditEvent is one row of the access log (GLD-033, GLD-089): a detail
+// read of a subject, a download, an export, allowed or refused, or a refused
+// change. A repeated access within 15 minutes is recorded once (not an export).
 message AccessAuditEvent {
   // id is the server-assigned row UUID.
   string id = 1 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1201,8 +1202,10 @@ message AccessAuditEvent {
   string subject_id = 4 [(google.api.field_behavior) = OUTPUT_ONLY];
   // subject_kind is the subject's kind.
   SubjectKind subject_kind = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // action is READ_SENSITIVE (detail read or case timeline), DOWNLOAD (document
-  // bytes) or EXPORT (reserved).
+  // action is READ (detail read or case timeline), DOWNLOAD (document bytes),
+  // EXPORT (a case export and each document it includes), WRITE_DENIED (a change
+  // refused, always DENIED) or READ_SENSITIVE (a confidential read recorded
+  // before GLD-089).
   string action = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
   // outcome is GRANTED or DENIED.
   string outcome = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1210,7 +1213,7 @@ message AccessAuditEvent {
   Permission access_level = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
   // access_source is the rule that produced access_level.
   AccessSource access_source = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // confidentiality_level is the subject's confidentiality then (2 to 5).
+  // confidentiality_level is the subject's confidentiality then (0 to 5).
   int32 confidentiality_level = 10 [(google.api.field_behavior) = OUTPUT_ONLY];
   // document_version_id is the version downloaded; empty unless DOWNLOAD granted.
   string document_version_id = 11 [(google.api.field_behavior) = OUTPUT_ONLY];
@@ -1223,7 +1226,7 @@ message AccessAuditEvent {
   string subject_label = 14 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
-// ListAccessAuditEventsRequest filters and pages the sensitive read audit.
+// ListAccessAuditEventsRequest filters and pages the access log.
 message ListAccessAuditEventsRequest {
   // subject_id restricts the log to one subject; empty means every subject
   // (administrators only).
@@ -1233,13 +1236,16 @@ message ListAccessAuditEventsRequest {
   ];
   // user_id restricts the log to one reader (operator id); empty means any.
   string user_id = 2 [(buf.validate.field).string.max_len = 100];
-  // action restricts the log to one action; empty means any.
+  // action restricts the log to one action (READ also matches READ_SENSITIVE);
+  // empty means any.
   string action = 3 [(buf.validate.field).string = {
     in: [
       "",
+      "READ",
       "READ_SENSITIVE",
       "DOWNLOAD",
-      "EXPORT"
+      "EXPORT",
+      "WRITE_DENIED"
     ]
   }];
   // outcome restricts the log to GRANTED or DENIED accesses; empty means both.
@@ -1269,7 +1275,7 @@ message ListAccessAuditEventsRequest {
   }];
 }
 
-// ListAccessAuditEventsResponse is one page of the sensitive read audit.
+// ListAccessAuditEventsResponse is one page of the access log.
 message ListAccessAuditEventsResponse {
   // events are the rows of this page, in the requested order.
   repeated AccessAuditEvent events = 1;
@@ -1436,9 +1442,9 @@ service CoreService {
     option (google.api.http) = {get: "/api/subjects/{subject_id}/audit"};
   }
 
-  // Page the sensitive read audit (GLD-033): reads and downloads of
-  // confidential subjects, allowed or refused. Requires goeland:admin for the
-  // whole log, or FULL_CONTROL on subject_id for one subject's log.
+  // Page the access log (GLD-033, GLD-089): detail reads, downloads and
+  // exports, allowed or refused, and refused changes. Requires goeland:admin for
+  // the whole log, or READ on subject_id for one subject's log.
   rpc ListAccessAuditEvents(ListAccessAuditEventsRequest) returns (ListAccessAuditEventsResponse) {
     option (google.api.http) = {get: "/api/access-audit-events"};
   }

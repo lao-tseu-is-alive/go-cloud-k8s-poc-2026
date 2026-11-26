@@ -15,17 +15,17 @@
   import { toOrderBy } from '@/utils/listSort'
   import { kindIcon } from '@/utils/subjects'
 
-  // The sensitive read audit (GLD-033): reads and downloads of confidential
-  // subjects, allowed or refused, newest first. With a subjectId it shows that
-  // subject's log (holders of FULL_CONTROL); without, the whole log with
-  // filters (administrators). A subject the caller cannot read comes without
-  // its label and without a link (opening it would only log a refusal).
-  const props = defineProps<{ subjectId?: string }>()
+  // The access log (GLD-033, GLD-089): detail reads, downloads and exports,
+  // allowed or refused, and refused changes, newest first. With a subjectId it
+  // shows that subject's log (anyone who may read the subject); without, the
+  // whole log with filters (administrators). A subject the caller cannot read
+  // comes without its label and without a link (opening it would only log a refusal).
+  const props = withDefaults(defineProps<{ subjectId?: string, pageSize?: number }>(), { subjectId: undefined, pageSize: 50 })
   const { t } = useI18n()
   const { enumLabel } = useI18nEnum()
   const { report } = useApiErrors()
 
-  const ACTIONS: AccessAuditAction[] = ['READ_SENSITIVE', 'DOWNLOAD', 'EXPORT']
+  const ACTIONS: AccessAuditAction[] = ['READ', 'DOWNLOAD', 'EXPORT', 'WRITE_DENIED']
   const OUTCOMES: AccessAuditOutcome[] = ['GRANTED', 'DENIED']
 
   const events = ref<AccessAuditEvent[]>([])
@@ -47,7 +47,7 @@
         action: action.value,
         outcome: outcome.value,
         orderBy: toOrderBy(sort.value),
-        pageSize: 50,
+        pageSize: props.pageSize,
         pageToken: reset ? undefined : nextPageToken.value,
       })
       events.value = reset ? (res.events ?? []) : [...events.value, ...(res.events ?? [])]

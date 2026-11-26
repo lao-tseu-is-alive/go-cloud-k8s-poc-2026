@@ -10,6 +10,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ### Added
 
+- Access log of every subject (GLD-089, migration `0041`): as in the legacy Goéland, every opening
+  of a subject's page and every document download is logged, allowed or refused, whatever the
+  confidentiality, and so is a change refused for lack of rights (`WRITE_DENIED`); a repeated
+  access within 15 minutes is noted once. Anyone who may read a subject sees its log in the
+  « Consultations » card of its page (it replaces the « Journal des accès sensibles » reserved to
+  FULL_CONTROL); `ListAccessAuditEvents` needs READ on the subject (or `goeland:admin` for the
+  whole log). Each document of a case export is now logged as EXPORT, confidential or not.
+
 - Document preview (GLD-087): the document page shows the content of the current version, or of
   the version picked in the versions list: an image, a PDF in the browser's viewer, a text. The
   bytes come through the governed download; a confidential document is previewed on request, since

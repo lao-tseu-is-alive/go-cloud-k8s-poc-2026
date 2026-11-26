@@ -5,6 +5,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteThing, getThing, updateThing } from '@/api/thingClient'
+  import AccessLogCard from '@/components/access/AccessLogCard.vue'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import LinkSubjectDialog from '@/components/core/LinkSubjectDialog.vue'
@@ -319,6 +320,8 @@
                 <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
                 <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
               </v-card>
+
+              <AccessLogCard :subject-id="id" />
             </v-col>
 
             <v-col cols="12" md="6">

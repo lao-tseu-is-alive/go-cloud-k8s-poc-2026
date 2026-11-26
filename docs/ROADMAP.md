@@ -699,6 +699,15 @@ placed on Swiss territory.
   confidential document (level 2 or more) and a large file are previewed on request, a PDF is
   framed from a blob the SPA types `application/pdf`, a text is shown as text (never markup), and
   an eye button in the versions list previews an older version.
+- [x] **GLD-089 — Access log of every subject** (decided 2026-11-26 by the product owner, extends
+  GLD-033): as in the legacy Goéland (`AffaireLogAcces` / `DocumentLogAcces`), every detail read
+  and download is logged, allowed or refused, whatever the confidentiality, and so are the changes
+  refused in the adapters (`WRITE_DENIED`); a repeated access is recorded once per 15 minutes.
+  Anyone who may read a subject reads its log (« Consultations » card of each detail page), the
+  transparency that answered « who saw this case » in the legacy. Done 2026-11-26: migration
+  `0041`, `core.AccessLogWindow`, `Authorizer.Require` records refused changes. Open for
+  production: the log's retention and its validation with the data protection officer
+  (PRODUCTION_READINESS, Known limitations).
 - [ ] **GLD-088 — « Mon activité » home page**: the first page after signing in lists the caller's
   latest cases, documents and other subjects, most recent first: what he created or changed (read
   from the audit, `actor_user_id`) and what he consulted, which needs a small server-side

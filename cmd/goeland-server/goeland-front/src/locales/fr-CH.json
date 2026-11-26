@@ -76,11 +76,10 @@
       "revoked": "Accès retiré."
     },
     "audit": {
-      "tab": "Accès sensibles",
-      "open": "Journal des accès sensibles",
-      "title": "Journal des accès sensibles",
-      "hint": "Lectures et téléchargements des sujets confidentiels, et exports d'affaires, autorisés ou refusés. Les lectures ordinaires ne sont pas journalisées.",
-      "empty": "Aucun accès sensible journalisé.",
+      "subjectTitle": "Consultations",
+      "tab": "Journal des accès",
+      "hint": "Consultations des fiches, téléchargements et exports, autorisés ou refusés, et modifications refusées. Une même action répétée dans les 15 minutes n'est notée qu'une fois.",
+      "empty": "Aucun accès journalisé.",
       "total": "{total} accès",
       "occurredAt": "Date",
       "reader": "Lecteur",
@@ -1146,9 +1145,11 @@
       "CASE_EXPORT_STATUS_EXPIRED": "Expirée"
     },
     "AccessAuditAction": {
-      "READ_SENSITIVE": "Consultation",
+      "READ": "Consultation",
+      "READ_SENSITIVE": "Consultation (confidentiel)",
       "DOWNLOAD": "Téléchargement",
-      "EXPORT": "Export"
+      "EXPORT": "Export",
+      "WRITE_DENIED": "Modification refusée"
     },
     "AccessAuditOutcome": {
       "GRANTED": "Autorisé",

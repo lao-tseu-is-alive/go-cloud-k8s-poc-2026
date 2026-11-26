@@ -7,6 +7,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { linkSubjects, listAllRelationships, unlinkSubjects } from '@/api/coreClient'
   import { createOrgUnit, dissolveOrgUnit, getOrgUnit, updateOrgUnit } from '@/api/orgUnitClient'
+  import AccessLogCard from '@/components/access/AccessLogCard.vue'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import RecordMetadataPanel from '@/components/core/RecordMetadataPanel.vue'
@@ -318,6 +319,8 @@
             <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
             <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
           </v-card>
+
+          <AccessLogCard :subject-id="id" />
 
           <v-card class="mb-4">
             <v-card-title class="text-subtitle-1">{{ t('sections.document.governance') }}</v-card-title>

@@ -246,7 +246,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/businessref.go` — Business reference request, validation, allocated-reference format and lookup filter.
 - `pkg/core/businessref_test.go` — Tests business reference validation and allocated-reference formatting.
 - `pkg/core/access.go` — Access levels, the effective level (most specific grant wins) and `EnsureAccessTx`, creator grants, link and relationship-change rules, grant copy, assignee checks.
-- `pkg/core/access_audit.go` — Sensitive read audit (GLD-033): reads and downloads of confidential subjects recorded, granted or denied, and the paged, filtered log.
+- `pkg/core/access_audit.go` — Access log (GLD-033, GLD-089): reads, downloads, exports and refused changes recorded, granted or denied, once per 15 minutes, and the paged, filtered log.
 - `pkg/core/access_mappers.go` — Proto mappings of grantee kinds, access levels, access sources and sensitive read audit rows, shared by the access and case domains.
 - `pkg/core/default_grants.go` — Default grant templates: line shape and grantee checks, creator units resolved and grants applied once at creation.
 - `pkg/core/subject_search.go` — Global search (GLD-064): `SearchSubjects` over `subject_ref` per kind (label and business reference, start of every word, readable only), best subjects and a capped count per kind.
@@ -328,6 +328,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0038_deferrable_current_version.sql` — Schema migration: `document.current_version_id` deferrable (initially immediate), so the legacy import writes a document with its current version before the version.
 - `pkg/core/module/db/migrations/0039_orphan_uploads.sql` — Schema migration: `content_blob.uploaded_at` and the index of the held blobs by age, for the orphan upload collection (GLD-045).
 - `pkg/core/module/db/migrations/0040_demo_dataset.sql` — Schema migration: the `demo_dataset` marker row `demo-seed` writes, without which the demo authentication mode refuses to start (GLD-085).
+- `pkg/core/module/db/migrations/0041_access_log.sql` — Schema migration: the access log takes every read (READ) and refused change (WRITE_DENIED), whatever the confidentiality (GLD-089).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
 - `pkg/core/module/db/migrations/0031_relationship_roles.sql` — Schema migration: the role a relationship type names (label, plural, end, preposition), seeded and imported types filled (GLD-063).
@@ -603,7 +604,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
 - `cmd/goeland-server/goeland-front/src/components/admin/referenceCatalogues.ts` — Declarative description of the four catalogues (fields, immutability, listing).
 - `cmd/goeland-server/goeland-front/src/components/access/AccessPanel.vue` — Grants of a subject with the caller's level and its source; give, change and revoke for FULL_CONTROL holders, who also open the subject's sensitive access log.
-- `cmd/goeland-server/goeland-front/src/components/access/AccessAuditPanel.vue` — Sensitive read audit: one subject's log, or the whole log filtered by reader, action and outcome; labels and links only for readable subjects.
+- `cmd/goeland-server/goeland-front/src/components/access/AccessLogCard.vue` — « Consultations » card of a detail page: the subject's access log, for anyone who may read it (GLD-089).
+- `cmd/goeland-server/goeland-front/src/components/access/AccessAuditPanel.vue` — Access log: one subject's log, or the whole log filtered by reader, action and outcome; labels and links only for readable subjects.
 - `cmd/goeland-server/goeland-front/src/components/access/grantees.ts` — Shared presentation of grantees and access levels (icons, colors, level list).
 - `cmd/goeland-server/goeland-front/src/components/access/GroupPicker.vue` — Security group search (debounced, by name) bound to the group's subject id.
 - `cmd/goeland-server/goeland-front/src/components/actor/ActorAddressesEditor.vue` — Editable list of typed addresses (role, street, number, complement, postal code, locality, country, principal star).

@@ -1224,10 +1224,10 @@ export interface Access {
   source?: AccessSource
 }
 
-/** What a sensitive access did (GLD-033). */
-export type AccessAuditAction = 'READ_SENSITIVE' | 'DOWNLOAD' | 'EXPORT'
+/** What a logged access did (GLD-033, GLD-089; READ_SENSITIVE before GLD-089). */
+export type AccessAuditAction = 'READ' | 'READ_SENSITIVE' | 'DOWNLOAD' | 'EXPORT' | 'WRITE_DENIED'
 
-/** Whether a sensitive access was allowed. */
+/** Whether a logged access was allowed. */
 export type AccessAuditOutcome = 'GRANTED' | 'DENIED'
 
 /** One row of the sensitive read audit: a read or download of a confidential subject. */

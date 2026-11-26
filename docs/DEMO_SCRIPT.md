@@ -155,13 +155,14 @@ an item is approved by a holder of MANAGE on the case's owning unit, never by th
 - **Story** (SUB 2025-000009, August to November 2025): request form with the installer's quote
   and the income certificate (18 August), check (25 August), subsidy promise (10 September),
   photograph of the installed heat pump and invoice (3 November), payment letter (10 November),
-  case closed (12 November). Emma read the case again in March 2026, so the sensitive read audit
-  already holds a read.
+  case closed (12 November). Emma read the case again in March 2026, so the access log already
+  holds a read.
 - **Access:** confidentiality level 2 (the case type's minimum): its creator and the Énergie unit
   only; Alice, although administrator, does not read it (an application role never opens a
   confidential subject) but consults its audit.
 - **Show:** Bruno finds it neither in the case list nor in the global search; Emma opens it; Alice
-  then reads the sensitive read audit and sees Emma's read.
+  then reads the access log (« Consultations ») and sees Emma's read; on an ordinary case, any
+  reader sees who consulted it.
 
 ### 4.5 Closed case due for disposal « Réclame, Café du Lac (2014) » (David)
 

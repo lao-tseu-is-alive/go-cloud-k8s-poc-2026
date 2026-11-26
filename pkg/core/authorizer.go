@@ -44,24 +44,37 @@ func (a *Authorizer) Caller(ctx context.Context, scope string, subjectID uuid.UU
 	return user, nil
 }
 
-// Require requires need for user on subjectID; failures are Connect errors.
+// Require requires need for user on subjectID; failures are Connect errors. A
+// change refused (need above READ) is recorded in the access log (WRITE_DENIED,
+// GLD-089) before the refusal is returned.
 func (a *Authorizer) Require(ctx context.Context, user *authadapter.AuthenticatedUser, subjectID uuid.UUID, need Level) error {
-	if err := EnsureAccessTx(ctx, a.q, OperatorID(user), subjectID, need); err != nil {
+	userID := OperatorID(user)
+	access, err := EffectiveAccessTx(ctx, a.q, userID, subjectID)
+	if err != nil {
 		return ToConnectError(a.log, "access", err)
 	}
-	return nil
+	denied := access.Require(need)
+	if denied == nil {
+		return nil
+	}
+	if need > LevelRead {
+		if err := RecordWriteDeniedTx(ctx, a.q, userID, access); err != nil {
+			return ToConnectError(a.log, "access", err)
+		}
+	}
+	return ToConnectError(a.log, "access", denied)
 }
 
 // AuditedRead is Caller(ctx, ScopeRead, subjectID, LevelRead) for the detail
-// read of a subject: on a confidential subject the read, or its refusal, is
-// recorded in the sensitive read audit (GLD-033) before the answer, and the
-// read fails when the record cannot be written. It also returns the caller's access.
+// read of a subject: the read, or its refusal, is recorded in the access log
+// (GLD-033, GLD-089) before the answer, and the read fails when the record
+// cannot be written. It also returns the caller's access.
 func (a *Authorizer) AuditedRead(ctx context.Context, subjectID uuid.UUID) (*authadapter.AuthenticatedUser, Access, error) {
 	user, err := RequireCaller(ctx, ScopeRead)
 	if err != nil {
 		return nil, Access{}, err
 	}
-	access, err := AuditedAccessTx(ctx, a.q, OperatorID(user), subjectID, LevelRead, AccessReadSensitive)
+	access, err := AuditedAccessTx(ctx, a.q, OperatorID(user), subjectID, LevelRead, AccessRead)
 	if err != nil {
 		return nil, Access{}, ToConnectError(a.log, "access", err)
 	}

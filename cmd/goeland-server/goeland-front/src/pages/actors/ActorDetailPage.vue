@@ -5,6 +5,7 @@
   import { useI18n } from 'vue-i18n'
   import { useRoute, useRouter } from 'vue-router'
   import { deleteActor, getActor, listOrganizationCategories, updateActor } from '@/api/actorClient'
+  import AccessLogCard from '@/components/access/AccessLogCard.vue'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import ActorAddressesPanel from '@/components/actor/ActorAddressesPanel.vue'
   import ActorContactsPanel from '@/components/actor/ActorContactsPanel.vue'
@@ -457,6 +458,8 @@
                 <v-card-title class="text-subtitle-1">{{ t('access.title') }}</v-card-title>
                 <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess(); reload()" /></v-card-text>
               </v-card>
+
+              <AccessLogCard :subject-id="id" />
             </v-col>
 
             <v-col cols="12" md="6">

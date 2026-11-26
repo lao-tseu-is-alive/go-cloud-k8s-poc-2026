@@ -211,9 +211,9 @@ type CoreServiceClient interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
-	// Page the sensitive read audit (GLD-033): reads and downloads of
-	// confidential subjects, allowed or refused. Requires goeland:admin for the
-	// whole log, or FULL_CONTROL on subject_id for one subject's log.
+	// Page the access log (GLD-033, GLD-089): detail reads, downloads and
+	// exports, allowed or refused, and refused changes. Requires goeland:admin for
+	// the whole log, or READ on subject_id for one subject's log.
 	ListAccessAuditEvents(context.Context, *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error)
 	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
 	// ALREADY_EXISTS for a taken code.
@@ -631,9 +631,9 @@ type CoreServiceHandler interface {
 	// Full probative history for compliance / reconstruction.
 	// Requires goeland:read.
 	ListAuditEvents(context.Context, *connect.Request[v1.ListAuditEventsRequest]) (*connect.Response[v1.ListAuditEventsResponse], error)
-	// Page the sensitive read audit (GLD-033): reads and downloads of
-	// confidential subjects, allowed or refused. Requires goeland:admin for the
-	// whole log, or FULL_CONTROL on subject_id for one subject's log.
+	// Page the access log (GLD-033, GLD-089): detail reads, downloads and
+	// exports, allowed or refused, and refused changes. Requires goeland:admin for
+	// the whole log, or READ on subject_id for one subject's log.
 	ListAccessAuditEvents(context.Context, *connect.Request[v1.ListAccessAuditEventsRequest]) (*connect.Response[v1.ListAccessAuditEventsResponse], error)
 	// Add a relationship type. Requires goeland:admin; logs REFERENCE_CREATED. Fails with
 	// ALREADY_EXISTS for a taken code.

@@ -326,13 +326,19 @@ These are the gaps that make this a POC rather than a production service:
   database and the blob store with the elimination schedule. The retention policies shipped are
   examples.
 
-- **The sensitive read audit has no retention policy.** Access is enforced on every mutation and
+- **The access log is visible to colleagues** (GLD-089): anyone who may read a subject sees who
+  consulted it or was refused. The legacy Goéland worked this way, but logging employees' activity
+  and showing it to others falls under data protection and the rules on monitoring employees'
+  behaviour (OLT 3 art. 26): have its purpose (data security, not appraisal) validated with the
+  data protection officer and human resources before production.
+- **The access log has no retention policy.** Access is enforced on every mutation and
   read (GLD-048), searches and lists return only readable subjects, and document bytes are
   downloaded through `GET /api/documents/{id}/content` with READ on the document (GLD-049).
-  Reading or downloading a confidential subject, or being refused it, is recorded in the
-  append-only `access_audit_event` (GLD-033), but the table grows without limit: its legal
-  retention period (and partitioning to purge it) must be decided with the data protection
-  officer and the archivist before production. Ordinary reads and list results are not logged.
+  Reading or downloading any subject, being refused it, and a refused change are recorded in the
+  append-only `access_audit_event` (GLD-033, GLD-089; the legacy logged about 3,000 case reads a
+  day), but the table grows without limit: its legal retention period (and partitioning to purge
+  it) must be decided with the data protection officer and the archivist before production. List
+  results are not logged.
   Every authenticated caller still holds `goeland:read` and `goeland:write` as scopes.
 - **The immutability guards stop at the schema owner** (§2): the runtime role cannot touch them,
   but the schema owner (and any superuser) still can; keep its credentials to the migrate job.

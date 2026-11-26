@@ -76,11 +76,10 @@
       "revoked": "Access revoked."
     },
     "audit": {
-      "tab": "Sensitive access",
-      "open": "Sensitive access log",
-      "title": "Sensitive access log",
-      "hint": "Reads and downloads of confidential subjects, and case exports, allowed or refused. Ordinary reads are not logged.",
-      "empty": "No sensitive access logged.",
+      "subjectTitle": "Consultations",
+      "tab": "Access log",
+      "hint": "Page views, downloads and exports, allowed or refused, and refused changes. The same action repeated within 15 minutes is noted once.",
+      "empty": "No access logged.",
       "total": "{total} accesses",
       "occurredAt": "Date",
       "reader": "Reader",
@@ -1146,9 +1145,11 @@
       "CASE_EXPORT_STATUS_EXPIRED": "Expired"
     },
     "AccessAuditAction": {
-      "READ_SENSITIVE": "Read",
+      "READ": "Read",
+      "READ_SENSITIVE": "Read (confidential)",
       "DOWNLOAD": "Download",
-      "EXPORT": "Export"
+      "EXPORT": "Export",
+      "WRITE_DENIED": "Change refused"
     },
     "AccessAuditOutcome": {
       "GRANTED": "Allowed",

@@ -5265,8 +5265,9 @@ func (x *ListAuditEventsResponse) GetTotalSize() int32 {
 	return 0
 }
 
-// AccessAuditEvent is one row of the sensitive read audit (GLD-033): a read or
-// a download of a confidential subject, allowed or refused.
+// AccessAuditEvent is one row of the access log (GLD-033, GLD-089): a detail
+// read of a subject, a download, an export, allowed or refused, or a refused
+// change. A repeated access within 15 minutes is recorded once (not an export).
 type AccessAuditEvent struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// id is the server-assigned row UUID.
@@ -5279,8 +5280,10 @@ type AccessAuditEvent struct {
 	SubjectId string `protobuf:"bytes,4,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	// subject_kind is the subject's kind.
 	SubjectKind SubjectKind `protobuf:"varint,5,opt,name=subject_kind,json=subjectKind,proto3,enum=goeland.v1.SubjectKind" json:"subject_kind,omitempty"`
-	// action is READ_SENSITIVE (detail read or case timeline), DOWNLOAD (document
-	// bytes) or EXPORT (reserved).
+	// action is READ (detail read or case timeline), DOWNLOAD (document bytes),
+	// EXPORT (a case export and each document it includes), WRITE_DENIED (a change
+	// refused, always DENIED) or READ_SENSITIVE (a confidential read recorded
+	// before GLD-089).
 	Action string `protobuf:"bytes,6,opt,name=action,proto3" json:"action,omitempty"`
 	// outcome is GRANTED or DENIED.
 	Outcome string `protobuf:"bytes,7,opt,name=outcome,proto3" json:"outcome,omitempty"`
@@ -5288,7 +5291,7 @@ type AccessAuditEvent struct {
 	AccessLevel Permission `protobuf:"varint,8,opt,name=access_level,json=accessLevel,proto3,enum=goeland.v1.Permission" json:"access_level,omitempty"`
 	// access_source is the rule that produced access_level.
 	AccessSource AccessSource `protobuf:"varint,9,opt,name=access_source,json=accessSource,proto3,enum=goeland.v1.AccessSource" json:"access_source,omitempty"`
-	// confidentiality_level is the subject's confidentiality then (2 to 5).
+	// confidentiality_level is the subject's confidentiality then (0 to 5).
 	ConfidentialityLevel int32 `protobuf:"varint,10,opt,name=confidentiality_level,json=confidentialityLevel,proto3" json:"confidentiality_level,omitempty"`
 	// document_version_id is the version downloaded; empty unless DOWNLOAD granted.
 	DocumentVersionId string `protobuf:"bytes,11,opt,name=document_version_id,json=documentVersionId,proto3" json:"document_version_id,omitempty"`
@@ -5431,7 +5434,7 @@ func (x *AccessAuditEvent) GetSubjectLabel() string {
 	return ""
 }
 
-// ListAccessAuditEventsRequest filters and pages the sensitive read audit.
+// ListAccessAuditEventsRequest filters and pages the access log.
 type ListAccessAuditEventsRequest struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// subject_id restricts the log to one subject; empty means every subject
@@ -5439,7 +5442,8 @@ type ListAccessAuditEventsRequest struct {
 	SubjectId string `protobuf:"bytes,1,opt,name=subject_id,json=subjectId,proto3" json:"subject_id,omitempty"`
 	// user_id restricts the log to one reader (operator id); empty means any.
 	UserId string `protobuf:"bytes,2,opt,name=user_id,json=userId,proto3" json:"user_id,omitempty"`
-	// action restricts the log to one action; empty means any.
+	// action restricts the log to one action (READ also matches READ_SENSITIVE);
+	// empty means any.
 	Action string `protobuf:"bytes,3,opt,name=action,proto3" json:"action,omitempty"`
 	// outcome restricts the log to GRANTED or DENIED accesses; empty means both.
 	Outcome string `protobuf:"bytes,4,opt,name=outcome,proto3" json:"outcome,omitempty"`
@@ -5551,7 +5555,7 @@ func (x *ListAccessAuditEventsRequest) GetOrderBy() string {
 	return ""
 }
 
-// ListAccessAuditEventsResponse is one page of the sensitive read audit.
+// ListAccessAuditEventsResponse is one page of the access log.
 type ListAccessAuditEventsResponse struct {
 	state protoimpl.MessageState `protogen:"open.v1"`
 	// events are the rows of this page, in the requested order.
@@ -6099,12 +6103,12 @@ const file_goeland_v1_core_proto_rawDesc = "" +
 	"\n" +
 	"request_id\x18\f \x01(\tB\x04\xe2A\x01\x03R\trequestId\x12'\n" +
 	"\fbusiness_ref\x18\r \x01(\tB\x04\xe2A\x01\x03R\vbusinessRef\x12)\n" +
-	"\rsubject_label\x18\x0e \x01(\tB\x04\xe2A\x01\x03R\fsubjectLabel\"\xd1\x03\n" +
+	"\rsubject_label\x18\x0e \x01(\tB\x04\xe2A\x01\x03R\fsubjectLabel\"\xe5\x03\n" +
 	"\x1cListAccessAuditEventsRequest\x12*\n" +
 	"\n" +
 	"subject_id\x18\x01 \x01(\tB\v\xbaH\b\xd8\x01\x01r\x03\xb0\x01\x01R\tsubjectId\x12 \n" +
-	"\auser_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06userId\x12A\n" +
-	"\x06action\x18\x03 \x01(\tB)\xbaH&r$R\x00R\x0eREAD_SENSITIVER\bDOWNLOADR\x06EXPORTR\x06action\x122\n" +
+	"\auser_id\x18\x02 \x01(\tB\a\xbaH\x04r\x02\x18dR\x06userId\x12U\n" +
+	"\x06action\x18\x03 \x01(\tB=\xbaH:r8R\x00R\x04READR\x0eREAD_SENSITIVER\bDOWNLOADR\x06EXPORTR\fWRITE_DENIEDR\x06action\x122\n" +
 	"\aoutcome\x18\x04 \x01(\tB\x18\xbaH\x15r\x13R\x00R\aGRANTEDR\x06DENIEDR\aoutcome\x12.\n" +
 	"\x04from\x18\x05 \x01(\v2\x1a.google.protobuf.TimestampR\x04from\x12*\n" +
 	"\x02to\x18\x06 \x01(\v2\x1a.google.protobuf.TimestampR\x02to\x12'\n" +

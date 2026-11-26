@@ -504,9 +504,10 @@ func (s *ConnectServer) UpdateRelationshipType(ctx context.Context, req *connect
 	}), nil
 }
 
-// ListAccessAuditEvents pages the sensitive read audit (GLD-033): the whole
-// log for an administrator, one subject's log for a holder of FULL_CONTROL on
-// it. Labels are shown only for subjects the caller may read.
+// ListAccessAuditEvents pages the access log (GLD-033, GLD-089): the whole log
+// for an administrator, one subject's log for anyone who may read the subject
+// (who consulted it, who was refused, in the open as in the legacy Goéland).
+// Labels are shown only for subjects the caller may read.
 func (s *ConnectServer) ListAccessAuditEvents(ctx context.Context, req *connect.Request[goelandv1.ListAccessAuditEventsRequest]) (*connect.Response[goelandv1.ListAccessAuditEventsResponse], error) {
 	subjectID, err := OptionalUUID(req.Msg.SubjectId)
 	if err != nil {
@@ -518,9 +519,9 @@ func (s *ConnectServer) ListAccessAuditEvents(ctx context.Context, req *connect.
 	}
 	if !user.HasScope(ScopeAdmin) {
 		if subjectID == nil {
-			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("the whole sensitive read audit needs goeland:admin; name a subject"))
+			return nil, connect.NewError(connect.CodePermissionDenied, errors.New("the whole access log needs goeland:admin; name a subject"))
 		}
-		if err := s.authz.Require(ctx, user, *subjectID, LevelFullControl); err != nil {
+		if err := s.authz.Require(ctx, user, *subjectID, LevelRead); err != nil {
 			return nil, err
 		}
 	}

@@ -6,6 +6,7 @@
   import { useRoute, useRouter } from 'vue-router'
   import { addGroupMember, archiveGroup, getGroup, removeGroupMember, updateGroup } from '@/api/accessClient'
   import { listAuditEvents } from '@/api/coreClient'
+  import AccessLogCard from '@/components/access/AccessLogCard.vue'
   import AccessPanel from '@/components/access/AccessPanel.vue'
   import AuditTimeline from '@/components/core/AuditTimeline.vue'
   import SortableHeader from '@/components/core/SortableHeader.vue'
@@ -177,6 +178,8 @@
           <v-card class="mb-4" :title="t('access.title')">
             <v-card-text><AccessPanel :access="access" :subject-id="id" @changed="reloadAccess" /></v-card-text>
           </v-card>
+
+          <AccessLogCard :subject-id="id" />
 
           <v-card :title="t('sections.document.audit')">
             <v-card-text><AuditTimeline :events="audit" /></v-card-text>

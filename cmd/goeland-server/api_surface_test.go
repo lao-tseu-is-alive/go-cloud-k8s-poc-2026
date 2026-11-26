@@ -412,8 +412,8 @@ func (s *surface) access() {
 	}
 	s.expect(asWriter("GET", "/api/cases/"+secret, nil), codePermissionDenied, "a confidential case needs a grant")
 	s.readFilters(asWriter, secret)
-	s.accessAudit(asWriter, secret, writer)
 	s.expect(asWriter("PATCH", "/api/cases/"+open, map[string]any{"title": "Réécrit"}), codePermissionDenied, "editing with READ")
+	s.accessAudit(asWriter, open, secret, writer)
 	if lvl := str(asWriter("GET", "/api/subjects/"+open+"/access", nil).body, "access", "level"); lvl != "PERMISSION_READ" {
 		s.t.Fatalf("the writer's baseline is READ: %s", lvl)
 	}
@@ -484,12 +484,13 @@ func (s *surface) citedLabels(asWriter func(method, path string, body any) reply
 	}
 }
 
-// accessAudit covers the sensitive read audit (GLD-033) over HTTP: reads of a
-// confidential case are recorded, granted or denied, and the log is read by an
-// administrator (or a holder of FULL_CONTROL on the subject) only.
-func (s *surface) accessAudit(asWriter func(method, path string, body any) reply, secret, writer string) {
+// accessAudit covers the access log (GLD-033, GLD-089) over HTTP: reads of a
+// case are recorded, granted or denied, whatever its confidentiality, and so is
+// a refused change; the whole log is read by an administrator, a subject's log
+// by anyone who may read the subject.
+func (s *surface) accessAudit(asWriter func(method, path string, body any) reply, open, secret, writer string) {
 	s.ok("GET", "/api/cases/"+secret, nil)
-	events := list(s.ok("GET", "/api/access-audit-events?subjectId="+secret+"&action=READ_SENSITIVE", nil), "events")
+	events := list(s.ok("GET", "/api/access-audit-events?subjectId="+secret+"&action=READ", nil), "events")
 	outcomes := map[string]bool{}
 	for _, e := range events {
 		outcomes[str(e, "outcome")] = true
@@ -502,7 +503,27 @@ func (s *surface) accessAudit(asWriter func(method, path string, body any) reply
 		s.t.Fatalf("the writer's refusals are listed by reader and outcome: %v", refused)
 	}
 	s.expect(asWriter("GET", "/api/access-audit-events", nil), codePermissionDenied, "the whole log needs goeland:admin")
-	s.expect(asWriter("GET", "/api/access-audit-events?subjectId="+secret, nil), codePermissionDenied, "a subject's log needs FULL_CONTROL")
+	s.expect(asWriter("GET", "/api/access-audit-events?subjectId="+secret, nil), codePermissionDenied, "a subject's log needs READ on it")
+	actions := map[string]string{}
+	for _, e := range list(asWriter("GET", "/api/access-audit-events?subjectId="+open, nil).body, "events") {
+		if str(e, "userId") == writer {
+			actions[str(e, "action")] = str(e, "outcome")
+		}
+	}
+	if actions["READ"] != "GRANTED" || actions["WRITE_DENIED"] != "DENIED" {
+		s.t.Fatalf("a reader of a public case sees its log: the writer's read and refused change: %v", actions)
+	}
+	s.ok("GET", "/api/cases/"+open, nil)
+	s.ok("GET", "/api/cases/"+open, nil)
+	reads := 0
+	for _, e := range list(s.ok("GET", "/api/access-audit-events?subjectId="+open+"&action=READ&outcome=GRANTED", nil), "events") {
+		if str(e, "userId") != writer {
+			reads++
+		}
+	}
+	if reads != 1 {
+		s.t.Fatalf("a read repeated within 15 minutes is recorded once: %d", reads)
+	}
 	s.fails(codeInvalidArgument, "GET", "/api/access-audit-events?orderBy=user_id", nil)
 }
 

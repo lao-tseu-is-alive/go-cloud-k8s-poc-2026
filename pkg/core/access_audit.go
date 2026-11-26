@@ -9,30 +9,44 @@ import (
 	"github.com/jackc/pgx/v5"
 )
 
-// Sensitive read audit (GLD-033, spec v2 §34). Reading or downloading a
-// confidential subject (confidentiality_level >= ConfidentialLevel), or being
-// refused it, leaves an access_audit_event row, written before the answer: when
-// the row cannot be written the read fails (no trace, no read). Ordinary reads
-// and lists are not logged; mutations stay in audit_event.
+// Access log (GLD-089, extending the sensitive read audit GLD-033, spec v2
+// §34). The detail read of any subject, the download of any document's bytes
+// and the export of a case, allowed or refused, and a refused change of a
+// subject leave an access_audit_event row, written before the answer: when the
+// row cannot be written the read fails (no trace, no read). A repeated access
+// (same reader, subject, action, outcome and version) within AccessLogWindow is
+// recorded once, so the page reloads of one visit make one consultation; an
+// export is always recorded. Lists, searches and secondary reads are not
+// logged; successful mutations stay in audit_event.
 
-// AccessAction is what a sensitive access did; it mirrors access_audit_event.action.
+// AccessLogWindow is the period within which a repeated access is recorded once.
+const AccessLogWindow = 15 * time.Minute
+
+// AccessAction is what an access did; it mirrors access_audit_event.action.
 type AccessAction string
 
-// Sensitive access actions.
+// Access actions.
 const (
-	// AccessReadSensitive is the detail read of a confidential subject (its
-	// Get RPC, or the timeline of a confidential case).
+	// AccessRead is the detail read of a subject (its Get RPC, or the
+	// timeline of a case), whatever its confidentiality.
+	AccessRead AccessAction = "READ"
+	// AccessReadSensitive is the detail read of a confidential subject as
+	// GLD-033 recorded it; no longer written (AccessRead), kept in the history
+	// and matched by a filter on AccessRead.
 	AccessReadSensitive AccessAction = "READ_SENSITIVE"
-	// AccessDownload is the download of a confidential document's bytes.
+	// AccessDownload is the download of a document's bytes.
 	AccessDownload AccessAction = "DOWNLOAD"
-	// AccessExport is reserved for the export of a confidential subject.
+	// AccessExport is the export of a case and of each document it includes.
 	AccessExport AccessAction = "EXPORT"
+	// AccessWriteDenied is a change of a subject refused for lack of level
+	// (always DENIED; a change allowed is in audit_event).
+	AccessWriteDenied AccessAction = "WRITE_DENIED"
 )
 
-// AccessOutcome tells whether a sensitive access was allowed.
+// AccessOutcome tells whether an access was allowed.
 type AccessOutcome string
 
-// Sensitive access outcomes.
+// Access outcomes.
 const (
 	// AccessGranted is an access the caller's level allowed.
 	AccessGranted AccessOutcome = "GRANTED"
@@ -40,7 +54,7 @@ const (
 	AccessDenied AccessOutcome = "DENIED"
 )
 
-// AccessAuditEvent is one row of the sensitive read audit.
+// AccessAuditEvent is one row of the access log.
 type AccessAuditEvent struct {
 	// ID is the server-assigned row id.
 	ID uuid.UUID `db:"id"`
@@ -73,7 +87,7 @@ type AccessAuditEvent struct {
 	SubjectLabel string `db:"subject_label"`
 }
 
-// AccessAuditFilter selects a page of the sensitive read audit.
+// AccessAuditFilter selects a page of the access log.
 type AccessAuditFilter struct {
 	// Viewer is the lister: labels are shown only for subjects it may read.
 	Viewer Viewer
@@ -81,7 +95,8 @@ type AccessAuditFilter struct {
 	SubjectID *uuid.UUID
 	// UserID restricts the log to one reader; empty means any.
 	UserID string
-	// Action restricts the log to one action; empty means any.
+	// Action restricts the log to one action (AccessRead also matches the
+	// former AccessReadSensitive); empty means any.
 	Action AccessAction
 	// Outcome restricts the log to one outcome; empty means any.
 	Outcome AccessOutcome
@@ -99,7 +114,7 @@ type AccessAuditFilter struct {
 	Sort Sort
 }
 
-// AccessAuditResult is a page of the sensitive read audit.
+// AccessAuditResult is a page of the access log.
 type AccessAuditResult struct {
 	// Events is the requested page.
 	Events []*AccessAuditEvent
@@ -109,12 +124,12 @@ type AccessAuditResult struct {
 	TotalCapped bool
 }
 
-// RequireAuditedTx requires need from access; a refused access to a
-// confidential subject is recorded (DENIED) before ErrPermissionDenied is returned.
+// RequireAuditedTx requires need from access; a refusal is recorded (DENIED)
+// before ErrPermissionDenied is returned.
 func RequireAuditedTx(ctx context.Context, q Querier, userID string, access Access, need Level, action AccessAction) error {
 	denied := access.Require(need)
-	if denied == nil || !access.Confidential {
-		return denied
+	if denied == nil {
+		return nil
 	}
 	if err := insertAccessAuditTx(ctx, q, userID, access, action, AccessDenied, nil); err != nil {
 		return err
@@ -122,25 +137,19 @@ func RequireAuditedTx(ctx context.Context, q Querier, userID string, access Acce
 	return denied
 }
 
-// RecordGrantedAccessTx records an allowed access to a confidential subject
-// (versionID names the downloaded version, nil otherwise); it does nothing
-// for a subject that is not confidential.
+// RecordGrantedAccessTx records an allowed access (versionID names the
+// downloaded version, nil otherwise).
 func RecordGrantedAccessTx(ctx context.Context, q Querier, userID string, access Access, action AccessAction, versionID *uuid.UUID) error {
-	if !access.Confidential {
-		return nil
-	}
 	return insertAccessAuditTx(ctx, q, userID, access, action, AccessGranted, versionID)
 }
 
-// RecordAccessTx records an access whatever the subject's confidentiality: a
-// case export is logged even for an ordinary case (GLD-029).
+// RecordAccessTx records an access with its outcome (a case export, GLD-029).
 func RecordAccessTx(ctx context.Context, q Querier, userID string, access Access, action AccessAction, outcome AccessOutcome) error {
 	return insertAccessAuditTx(ctx, q, userID, access, action, outcome, nil)
 }
 
-// AuditedAccessTx is EnsureAccessTx for a sensitive read: it requires need on
-// subjectID and records action, allowed or refused, when the subject is
-// confidential. It returns the caller's access.
+// AuditedAccessTx is EnsureAccessTx for a logged access: it requires need on
+// subjectID and records action, allowed or refused. It returns the caller's access.
 func AuditedAccessTx(ctx context.Context, q Querier, userID string, subjectID uuid.UUID, need Level, action AccessAction) (Access, error) {
 	access, err := EffectiveAccessTx(ctx, q, userID, subjectID)
 	if err != nil {
@@ -152,20 +161,30 @@ func AuditedAccessTx(ctx context.Context, q Querier, userID string, subjectID uu
 	return access, RecordGrantedAccessTx(ctx, q, userID, access, action, nil)
 }
 
-// insertAccessAuditTx writes one access_audit_event row.
+// RecordWriteDeniedTx records a change of a subject refused to userID.
+func RecordWriteDeniedTx(ctx context.Context, q Querier, userID string, access Access) error {
+	return insertAccessAuditTx(ctx, q, userID, access, AccessWriteDenied, AccessDenied, nil)
+}
+
+// insertAccessAuditTx writes one access_audit_event row, unless the same
+// access was recorded within AccessLogWindow (an export always is).
 func insertAccessAuditTx(ctx context.Context, q Querier, userID string, access Access, action AccessAction, outcome AccessOutcome, versionID *uuid.UUID) error {
+	window := AccessLogWindow
+	if action == AccessExport {
+		window = 0
+	}
 	if _, err := q.Exec(ctx, insertAccessAuditSQL, pgx.NamedArgs{
 		"user_id": userID, "subject_id": access.SubjectID, "subject_kind": string(access.Kind),
 		"action": string(action), "outcome": string(outcome), "access_level": int16(access.Level),
 		"access_source": string(access.Source), "confidentiality_level": access.Confidentiality,
-		"document_version_id": versionID, "request_id": RequestIDFromContext(ctx),
+		"document_version_id": versionID, "request_id": RequestIDFromContext(ctx), "window": window,
 	}); err != nil {
-		return fmt.Errorf("record sensitive access: %w", err)
+		return fmt.Errorf("record access: %w", err)
 	}
 	return nil
 }
 
-// ListAccessAudit pages the sensitive read audit; the caller has checked who may read it.
+// ListAccessAudit pages the access log; the caller has checked who may read it.
 func (s *Service) ListAccessAudit(ctx context.Context, filter AccessAuditFilter) (AccessAuditResult, error) {
 	limit, err := NormalizePageSize(filter.Limit)
 	if err != nil {
@@ -178,7 +197,7 @@ func (s *Service) ListAccessAudit(ctx context.Context, filter AccessAuditFilter)
 	return s.repo.ListAccessAudit(ctx, filter)
 }
 
-// ListAccessAudit returns a page of the sensitive read audit.
+// ListAccessAudit returns a page of the access log.
 func (r *PostgresRepository) ListAccessAudit(ctx context.Context, filter AccessAuditFilter) (AccessAuditResult, error) {
 	rows, err := r.pool.Query(ctx, SortedQuery(listAccessAuditSQL, filter.Sort, defaultAccessAuditSort), filter.Viewer.AddTo(pgx.NamedArgs{
 		"subject_id": filter.SubjectID, "user_id": filter.UserID, "action": string(filter.Action),
@@ -186,7 +205,7 @@ func (r *PostgresRepository) ListAccessAudit(ctx context.Context, filter AccessA
 		"count_limit": CountLimit, "limit": filter.Limit, "offset": filter.Offset,
 	}))
 	if err != nil {
-		return AccessAuditResult{}, fmt.Errorf("list sensitive accesses: %w", err)
+		return AccessAuditResult{}, fmt.Errorf("list accesses: %w", err)
 	}
 	type row struct {
 		AccessAuditEvent
@@ -194,7 +213,7 @@ func (r *PostgresRepository) ListAccessAudit(ctx context.Context, filter AccessA
 	}
 	listed, err := pgx.CollectRows(rows, pgx.RowToStructByNameLax[row])
 	if err != nil {
-		return AccessAuditResult{}, fmt.Errorf("read sensitive accesses: %w", err)
+		return AccessAuditResult{}, fmt.Errorf("read accesses: %w", err)
 	}
 	result := AccessAuditResult{Events: make([]*AccessAuditEvent, len(listed))}
 	for i := range listed {

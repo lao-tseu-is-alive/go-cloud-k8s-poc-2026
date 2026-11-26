@@ -184,7 +184,7 @@ func checkDisposalStory(t *testing.T, pool *pgxpool.Pool) {
 	err := pool.QueryRow(t.Context(), `
 		SELECT (SELECT count(*) FROM subject_retention r WHERE r.ended_at IS NULL AND r.until_on <= current_date),
 		       (SELECT count(*) FROM retention_hold h WHERE h.released_at IS NULL),
-		       (SELECT count(*) FROM access_audit_event a WHERE a.action = 'READ_SENSITIVE' AND a.outcome = 'GRANTED')`).Scan(&due, &held, &sensitive)
+		       (SELECT count(*) FROM access_audit_event a WHERE a.action = 'READ' AND a.outcome = 'GRANTED' AND a.confidentiality_level >= 2)`).Scan(&due, &held, &sensitive)
 	if err != nil || due != 2 || held != 1 || sensitive < 1 {
 		t.Errorf("disposal story: due=%d held=%d sensitive reads=%d (%v)", due, held, sensitive, err)
 	}
