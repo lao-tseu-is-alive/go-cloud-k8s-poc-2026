@@ -1,0 +1,220 @@
+{
+  "type": "FeatureCollection",
+  "name": "goeland-demo-things",
+  "features": [
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "tilleuls-parcel",
+        "thingType": "PARCEL",
+        "hero": "4.1",
+        "wanted": "Garden plot of a 1960s detached house on a quiet residential street; the neighbour's house (M. Rochat, opposition 4.2) less than 10 m to the north. Follow a real parcel outline if you like: its identifiers stay fictional."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.6490523,
+              46.5283427
+            ],
+            [
+              6.6495736,
+              46.5283463
+            ],
+            [
+              6.6495696,
+              46.5286162
+            ],
+            [
+              6.6490483,
+              46.5286126
+            ],
+            [
+              6.6490523,
+              46.5283427
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "tilleuls-building",
+        "thingType": "BUILDING",
+        "hero": "4.1",
+        "wanted": "Footprint of the house on that parcel (about 12 x 10 m), set back from the street."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.6491815,
+              46.5284156
+            ],
+            [
+              6.6494161,
+              46.5284172
+            ],
+            [
+              6.6494146,
+              46.5285252
+            ],
+            [
+              6.64918,
+              46.5285235
+            ],
+            [
+              6.6491815,
+              46.5284156
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "cedres-streetlight",
+        "thingType": "INFRASTRUCTURE",
+        "hero": "4.6",
+        "wanted": "A street light on the pavement of a residential avenue with apartment buildings, ideally a street sloping down towards the lake."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6286808,
+          46.5221721
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "port12-street",
+        "thingType": "STREET",
+        "hero": "4.3",
+        "wanted": "About 50 m of a town-centre street in front of an apartment building, along the pavement (the stretch that is hardly ever cleaned)."
+      },
+      "geometry": {
+        "type": "LineString",
+        "coordinates": [
+          [
+            6.634577,
+            46.5200549
+          ],
+          [
+            6.6353562,
+            46.5202403
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "port12-building",
+        "thingType": "BUILDING",
+        "hero": "4.3",
+        "wanted": "A 1930s apartment building of four or five storeys with a recessed entrance, owned by a property company."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.634704,
+              46.5202807
+            ],
+            [
+              6.6350949,
+              46.5202834
+            ],
+            [
+              6.635093,
+              46.5204094
+            ],
+            [
+              6.6347021,
+              46.5204066
+            ],
+            [
+              6.634704,
+              46.5202807
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "vignes4-building",
+        "thingType": "BUILDING",
+        "hero": "4.4",
+        "wanted": "A detached house in a residential area on the slopes, renovated with a heat pump (confidential subsidy)."
+      },
+      "geometry": {
+        "type": "Polygon",
+        "coordinates": [
+          [
+            [
+              6.6633222,
+              46.5148569
+            ],
+            [
+              6.6635046,
+              46.5148581
+            ],
+            [
+              6.6635032,
+              46.5149571
+            ],
+            [
+              6.6633208,
+              46.5149558
+            ],
+            [
+              6.6633222,
+              46.5148569
+            ]
+          ]
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "cafe-du-lac-sign",
+        "thingType": "ADVERTISEMENT",
+        "hero": "4.5",
+        "wanted": "A projecting sign on the facade of an old café in a narrow lower-town street near the lake."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6255769,
+          46.5118944
+        ]
+      }
+    },
+    {
+      "type": "Feature",
+      "properties": {
+        "key": "felling-tree",
+        "thingType": "TREE",
+        "hero": "background",
+        "wanted": "A large tree in a private garden, to be felled (background case)."
+      },
+      "geometry": {
+        "type": "Point",
+        "coordinates": [
+          6.6440797,
+          46.5385636
+        ]
+      }
+    }
+  ]
+}

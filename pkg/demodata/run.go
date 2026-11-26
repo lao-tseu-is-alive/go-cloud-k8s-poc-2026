@@ -23,7 +23,9 @@ type run struct {
 	err   error
 	units map[string]string   // unit key -> org unit id
 	users map[string]*v1.User // user key -> recorded user
-	count map[string]int      // kind -> number created
+	// places are the things of the stories, from geodata/things.geojson.
+	places map[string]place
+	count  map[string]int // kind -> number created
 }
 
 // call sends req as the demo user and returns the reply message, or nil after
@@ -102,13 +104,19 @@ func (r *run) link(user, source, target, typeCode string) {
 	})
 }
 
-// document uploads the rendering of doc and files it in caseID (a PDF, or a
-// PNG for a photograph), dated date; final documents can no longer change.
+// document uploads the PDF rendering of doc and files it in caseID, dated
+// date; final documents can no longer change.
 func (r *run) document(user, docType string, doc docText, date, caseID string, final bool) string {
-	content, filename := renderPDF(doc.Title, doc.Lines, r.t.Footer), "document.pdf"
-	if docType == docPhoto {
-		content, filename = renderPhoto(len(doc.Title)), "photo.png"
-	}
+	return r.file(user, docType, doc, date, caseID, final, "document.pdf", renderPDF(doc.Title, doc.Lines, r.t.Footer))
+}
+
+// photo files the demo photograph asset (assets/) in caseID as a final photo.
+func (r *run) photo(user string, doc docText, asset, date, caseID string) string {
+	return r.file(user, docPhoto, doc, date, caseID, true, asset, r.asset(asset))
+}
+
+// file uploads content as filename and files it as a document of caseID.
+func (r *run) file(user, docType string, doc docText, date, caseID string, final bool, filename string, content []byte) string {
 	blob := r.uploadAs(user, filename, content)
 	r.count["documents"]++
 	return call(r, user, "create document "+doc.Title, r.c.documents.CreateDocument, &v1.CreateDocumentRequest{

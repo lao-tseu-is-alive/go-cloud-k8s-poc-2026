@@ -91,6 +91,8 @@ type permitText struct {
 	RequestForm docText
 	// Plan is the architect's plan (version 1).
 	Plan docText
+	// SitePhoto is the photograph of the house from the street.
+	SitePhoto docText
 	// InquiryNotice is the public inquiry notice.
 	InquiryNotice docText
 	// Decision is the permit granted.
@@ -131,6 +133,8 @@ type oppositionText struct {
 	CaseDescription string
 	// Letter is the neighbour's opposition letter.
 	Letter docText
+	// HeatPumpPhoto is the neighbour's photograph of the planned heat pump site.
+	HeatPumpPhoto docText
 	// Acknowledgement is the acknowledgement of receipt.
 	Acknowledgement docText
 	// ConciliationNote is the minutes of the conciliation meeting.

@@ -64,6 +64,7 @@ var textsFR = textSet{
 			"Plan de situation 1:500, façades sud et ouest 1:100.",
 			"Implantation de l'agrandissement à 6 m de la limite sud.",
 		}},
+		SitePhoto: docText{"Photo de la villa et des tilleuls depuis le chemin", []string{"Photographie jointe à la demande."}},
 		InquiryNotice: docText{"Avis d'enquête publique — Villa Les Tilleuls", []string{
 			"Mise à l'enquête publique du 21 mars au 19 avril 2025.",
 			"Les oppositions sont adressées par écrit au greffe municipal.",
@@ -97,6 +98,7 @@ var textsFR = textSet{
 			"et la pompe à chaleur sera trop proche de ma chambre.",
 			"Paul Rochat, chemin des Tilleuls 9.",
 		}},
+		HeatPumpPhoto: docText{"Photo de l'emplacement prévu de la pompe à chaleur", []string{"Photographie jointe à l'opposition."}},
 		Acknowledgement: docText{"Accusé de réception de l'opposition de M. Paul Rochat", []string{
 			"Monsieur, nous accusons réception de votre opposition du 10 avril 2025.",
 			"Vous serez convié à une séance de conciliation.",

@@ -3,6 +3,8 @@ package demodata
 import (
 	"bytes"
 	"context"
+	"math"
+	"os"
 	"reflect"
 	"strconv"
 	"strings"
@@ -95,14 +97,6 @@ func TestRenderPDF(t *testing.T) {
 	}
 }
 
-// TestRenderPhoto checks that photos are PNGs and differ by seed.
-func TestRenderPhoto(t *testing.T) {
-	a, b := renderPhoto(1), renderPhoto(2)
-	if !bytes.HasPrefix(a, []byte("\x89PNG")) || bytes.Equal(a, b) {
-		t.Error("photos must be distinct PNG images")
-	}
-}
-
 // TestSessionVerifier checks that each demo user's token authenticates that
 // user only, and that requests carry the token of the user they act as.
 func TestSessionVerifier(t *testing.T) {
@@ -150,5 +144,48 @@ func TestPublicSession(t *testing.T) {
 	token, _ := drawn.tokenFor(as(ctx, userAlice))
 	if _, err := verifier.VerifyBearerToken(ctx, token); err == nil {
 		t.Error("a token drawn for demo-seed must not sign in on the demo mode")
+	}
+}
+
+// TestPlaces checks things.geojson: every feature converts to LV95 inside the
+// map, and the conversion agrees with swisstopo's reference point (Bern).
+func TestPlaces(t *testing.T) {
+	places, err := loadPlaces()
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, key := range []string{"tilleuls-parcel", "tilleuls-building", "cedres-streetlight"} {
+		if places[key].geometry == "" {
+			t.Errorf("geodata/things.geojson lacks %s", key)
+		}
+	}
+	east, north := wgs84ToLV95(7.438632495, 46.951082877)
+	if math.Abs(east-2_600_000) > 1.5 || math.Abs(north-1_200_000) > 1.5 {
+		t.Errorf("Bern converts to %.1f, %.1f", east, north)
+	}
+	if _, err := toLV95([]any{2.35, 48.85}); err == nil {
+		t.Error("a position outside the map tiles (Paris) must be refused")
+	}
+}
+
+// TestAssets checks the demo photographs: JPEG files under 400 KB, each
+// recorded with its prompt in assets/README.md.
+func TestAssets(t *testing.T) {
+	entries, err := assets.ReadDir("assets")
+	if err != nil || len(entries) == 0 {
+		t.Fatalf("no demo photograph: %v", err)
+	}
+	readme, err := os.ReadFile("assets/README.md")
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, e := range entries {
+		content, _ := assets.ReadFile("assets/" + e.Name())
+		if !bytes.HasPrefix(content, []byte{0xFF, 0xD8, 0xFF}) || len(content) > 400_000 {
+			t.Errorf("%s: a JPEG under 400 KB expected (%d bytes)", e.Name(), len(content))
+		}
+		if !bytes.Contains(readme, []byte("`"+e.Name()+"`")) {
+			t.Errorf("%s is not recorded in assets/README.md", e.Name())
+		}
 	}
 }

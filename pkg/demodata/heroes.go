@@ -36,13 +36,13 @@ func (r *run) permitAndOpposition() {
 	architect := r.organization(userBruno, "Atelier Molard SA", "BUREAU_ARCHITECTE", "contact@atelier-molard.example.ch")
 	contractor := r.organization(userBruno, "Bâtisud Sàrl", "METIER_BATIMENT", "")
 	parcel := r.thing(userBruno, &v1.CreateThingRequest{
-		ThingTypeCode: "PARCEL", Name: t.ParcelName, GeometryGeojson: rectangle(tilleulsEast, tilleulsNorth, 40, 30),
+		ThingTypeCode: "PARCEL", Name: t.ParcelName, GeometryGeojson: r.placeOf("tilleuls-parcel", "PARCEL"),
 		Specialization: &v1.CreateThingRequest_Parcel{Parcel: &v1.ParcelDetails{
 			CommuneOfs: demoCommuneOFS, ParcelNumber: "1101", Egrid: tilleulsEGRID, SurfaceM2: 1200,
 		}},
 	})
 	building := r.thing(userBruno, &v1.CreateThingRequest{
-		ThingTypeCode: "BUILDING", Name: t.BuildingName, GeometryGeojson: rectangle(tilleulsEast+10, tilleulsNorth+8, 18, 12),
+		ThingTypeCode: "BUILDING", Name: t.BuildingName, GeometryGeojson: r.placeOf("tilleuls-building", "BUILDING"),
 		Specialization: &v1.CreateThingRequest_Building{Building: &v1.BuildingDetails{Egid: tilleulsEGID, ConstructionYear: 1962}},
 	})
 	r.link(userBruno, parcel, owner, "THING_HAS_ACTOR_OWNER")
@@ -58,8 +58,10 @@ func (r *run) permitAndOpposition() {
 	form := r.document(userBruno, docForm, t.RequestForm, "2025-03-03", permit, true)
 	plan := r.document(userBruno, docPlan, t.Plan, "2025-03-03", permit, false)
 	r.link(userBruno, plan, building, "DOCUMENT_REPRESENTS_THING")
+	site := r.photo(userBruno, t.SitePhoto, "permit-villa-lime-trees.jpg", "2025-03-03", permit)
+	r.link(userBruno, site, building, "DOCUMENT_REPRESENTS_THING")
 	r.link(userBruno, plan, architect, "DOCUMENT_AUTHORED_BY_ACTOR")
-	r.entry(userBruno, permit, request, t.Filed, participants, "2025-03-03", form, plan)
+	r.entry(userBruno, permit, request, t.Filed, participants, "2025-03-03", form, plan, site)
 	check := r.task(userBruno, permit, "DOCUMENT_CHECK", t.CheckTask, userBruno, "")
 	r.complete(userBruno, check, t.CheckTaskNote)
 
@@ -92,9 +94,11 @@ func (r *run) oppose(permit string) string {
 	r.link(userBruno, opposition, neighbour, "CASE_HAS_ACTOR_REQUESTER")
 	letter := r.document(userBruno, docOpposition, t.Letter, "2025-04-10", opposition, true)
 	r.link(userBruno, letter, neighbour, "DOCUMENT_AUTHORED_BY_ACTOR")
+	pump := r.photo(userBruno, t.HeatPumpPhoto, "permit-heat-pump.jpg", "2025-04-10", opposition)
+	r.link(userBruno, pump, neighbour, "DOCUMENT_AUTHORED_BY_ACTOR")
 	ack := r.document(userBruno, docOutgoingLetter, t.Acknowledgement, "2025-04-14", opposition, true)
 	r.link(userBruno, ack, neighbour, "DOCUMENT_SENT_TO_ACTOR")
-	r.entry(userBruno, opposition, request, t.Received, participants, "2025-04-14", letter, ack)
+	r.entry(userBruno, opposition, request, t.Received, participants, "2025-04-14", letter, pump, ack)
 	note := r.document(userBruno, docInternalNote, t.ConciliationNote, "2025-05-06", opposition, true)
 	r.entry(userBruno, opposition, comment, t.Conciliation, internal, "2025-05-06", note)
 	return opposition
@@ -113,12 +117,12 @@ func (r *run) citizenReport() {
 	t := r.t.Report
 	resident := r.person(userChloe, madame, "Sofia", "Keller", "sofia.keller@example.ch")
 	lamp := r.thing(userChloe, &v1.CreateThingRequest{
-		ThingTypeCode: "INFRASTRUCTURE", Name: t.LampName, GeometryGeojson: point(cedresEast, cedresNorth),
+		ThingTypeCode: "INFRASTRUCTURE", Name: t.LampName, GeometryGeojson: r.placeOf("cedres-streetlight", "INFRASTRUCTURE"),
 	})
 	report := r.newCase(userChloe, caseCitizenReport, t.CaseTitle, t.CaseDescription, unitRoads, 0)
 	r.link(userChloe, report, lamp, "CASE_CONCERNS_THING")
 	r.link(userChloe, report, resident, "CASE_HAS_ACTOR_REQUESTER")
-	photo := r.document(userChloe, docPhoto, t.Photo, "2026-02-12", report, true)
+	photo := r.photo(userChloe, t.Photo, "report-streetlight-off.jpg", "2026-02-12", report)
 	r.link(userChloe, photo, lamp, "DOCUMENT_REPRESENTS_THING")
 	r.entry(userChloe, report, request, t.Received, participants, "2026-02-12", photo)
 	repair := r.task(userChloe, report, "OTHER", t.Task, "", unitLighting)

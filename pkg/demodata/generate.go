@@ -45,7 +45,11 @@ func Generate(ctx context.Context, clients *Clients, opts Options) (Report, erro
 	if !slices.Contains(profiles, opts.Profile) {
 		return Report{}, fmt.Errorf("demo profile %q is not supported (supported: %v)", opts.Profile, profiles)
 	}
-	r := &run{ctx: ctx, c: clients, t: texts, units: map[string]string{}, users: map[string]*v1.User{}, count: map[string]int{}}
+	places, err := loadPlaces()
+	if err != nil {
+		return Report{}, err
+	}
+	r := &run{ctx: ctx, c: clients, t: texts, places: places, units: map[string]string{}, users: map[string]*v1.User{}, count: map[string]int{}}
 	r.setupUsers()
 	r.setupCatalogue()
 	r.setupOrgChart()
@@ -54,22 +58,4 @@ func Generate(ctx context.Context, clients *Clients, opts Options) (Report, erro
 	report := Report{Profile: opts.Profile, Language: texts.Language, Counts: r.count}
 	report.Counts["users"] = len(r.users)
 	return report, r.err
-}
-
-// Story coordinates: the fictional municipality lies on the territory of the
-// City of Lausanne (LV95, EPSG:2056), inside the extent of its map tiles.
-const (
-	tilleulsEast, tilleulsNorth = 2_539_420.0, 1_153_310.0
-	cedresEast, cedresNorth     = 2_537_850.0, 1_152_640.0
-)
-
-// rectangle is a GeoJSON polygon of width × height metres from its south-west corner.
-func rectangle(east, north, width, height float64) string {
-	return fmt.Sprintf(`{"type":"Polygon","coordinates":[[[%.1f,%.1f],[%.1f,%.1f],[%.1f,%.1f],[%.1f,%.1f],[%.1f,%.1f]]]}`,
-		east, north, east+width, north, east+width, north+height, east, north+height, east, north)
-}
-
-// point is a GeoJSON point.
-func point(east, north float64) string {
-	return fmt.Sprintf(`{"type":"Point","coordinates":[%.1f,%.1f]}`, east, north)
 }

@@ -64,6 +64,7 @@ var textsEN = textSet{
 			"Site plan 1:500, south and west elevations 1:100.",
 			"Extension placed 6 m from the southern boundary.",
 		}},
+		SitePhoto: docText{"Photo of the house and the lime trees from the street", []string{"Photograph filed with the application."}},
 		InquiryNotice: docText{"Public inquiry notice — Villa Les Tilleuls", []string{
 			"Public inquiry from 21 March to 19 April 2025.",
 			"Oppositions are sent in writing to the town clerk's office.",
@@ -97,6 +98,7 @@ var textsEN = textSet{
 			"and the heat pump will be too close to my bedroom.",
 			"Paul Rochat, chemin des Tilleuls 9.",
 		}},
+		HeatPumpPhoto: docText{"Photo of the planned heat pump site", []string{"Photograph filed with the opposition."}},
 		Acknowledgement: docText{"Acknowledgement of the opposition of Mr Paul Rochat", []string{
 			"Dear Sir, we acknowledge receipt of your opposition of 10 April 2025.",
 			"You will be invited to a conciliation meeting.",

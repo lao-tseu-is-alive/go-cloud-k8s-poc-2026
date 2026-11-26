@@ -107,7 +107,7 @@ func checkDemoDatabase(t *testing.T, dsn, lang string) {
 	if closed != 3 || admins != 1 || records != 1 || namespaces != "OPC,OPP,SIG" {
 		t.Errorf("closed=%d admins=%d records=%d namespaces=%q", closed, admins, records, namespaces)
 	}
-	if versions != 10 { // 9 documents, the plan in two versions
+	if versions != 12 { // 11 documents, the plan in two versions
 		t.Errorf("document versions: %d", versions)
 	}
 	var label string

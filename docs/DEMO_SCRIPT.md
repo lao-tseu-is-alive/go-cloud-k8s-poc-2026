@@ -38,6 +38,10 @@ every document of this repository.
   `fr` by default; `en` with GLD-079, `de` with GLD-083, `es` with GLD-084). Every text is in a
   catalogue per language; the cases, links, dates and seed are the same in every language. The
   French labels quoted in this script are those of the `fr` catalogue.
+- **Photographs and places live in the repository** (`pkg/demodata`): the AI-generated
+  photographs in `assets/` (their prompts in `assets/README.md`; no real photograph, person or
+  brand) and the positions of the things in `geodata/things.geojson`, which anyone can edit with
+  geojson.io or QGIS (`geodata/README.md`). The PDF documents are generated in the demo language.
 - **Third parties are not actors.** When a citizen writes about other people (the complaint of
   §4.3), they are never created as actors, and what the police reports about them is an internal
   note with restricted visibility.

@@ -479,15 +479,26 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 
 - `pkg/demodata/doc.go` — Package documentation: a fictional municipality generated through the public API, one demo user at a time, every value invented (GLD-079).
 - `pkg/demodata/catalogue.go` — The demo's org chart, case types, document types and retention policies, and their creation (or relabelling of the seeded ones) by the demo administrator; the users' memberships and roles.
-- `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer, and small PNG photographs.
-- `pkg/demodata/generate.go` — `Generate`: language and profile checks, the order of the stories, the report; story coordinates and GeoJSON helpers.
+- `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer.
+- `pkg/demodata/generate.go` — `Generate`: language, profile and places checks, the order of the stories, the report.
 - `pkg/demodata/heroes.go` — The hero cases of docs/DEMO_SCRIPT.md built so far: building permit (§4.1), opposition (§4.2), citizen report (§4.6); fictional register identifiers.
+- `pkg/demodata/places.go` — Embeds `geodata/things.geojson` and the photographs; converts the WGS84 geometries to LV95 (swisstopo approximate formulas) and checks their type and extent.
+- `pkg/demodata/assets/README.md` — Provenance of the demo photographs: AI-generated, how they were reduced, the prompt of each.
+- `pkg/demodata/assets/complaint-litter-entrance.jpg` — AI-generated photograph: litter at a building entrance (§4.3 complaint).
+- `pkg/demodata/assets/complaint-pavement-dirty.jpg` — AI-generated photograph: an uncleaned pavement and gutter (§4.3 complaint).
+- `pkg/demodata/assets/permit-heat-pump.jpg` — AI-generated photograph: a heat pump near the neighbour's house (§4.2 opposition).
+- `pkg/demodata/assets/permit-villa-lime-trees.jpg` — AI-generated photograph: the house and its two lime trees (§4.1 building permit).
+- `pkg/demodata/assets/report-streetlight-off.jpg` — AI-generated photograph: a street light out at night (§4.6 citizen report).
+- `pkg/demodata/assets/sign-cafe-du-lac.jpg` — AI-generated photograph: the « Café du Lac » sign (§4.5 disposal).
+- `pkg/demodata/assets/subsidy-heat-pump-installed.jpg` — AI-generated photograph: a heat pump installed at a renovated house (§4.4 subsidy).
+- `pkg/demodata/geodata/README.md` — How to edit the demo geometries (geojson.io or QGIS, WGS84) and what each property means.
+- `pkg/demodata/geodata/things.geojson` — Editable WGS84 positions of the things of the demo stories, one feature per story key, with what to look for.
 - `pkg/demodata/run.go` — One generation: typed API calls that stop at the first refused request, and the steps the stories use (actors, things, cases, documents, timeline, tasks, circulations).
 - `pkg/demodata/session.go` — The demo users, their bearer tokens (drawn per run for demo-seed, public for the demo mode) and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
 - `pkg/demodata/texts.go` — The catalogue of generated texts and the supported languages.
 - `pkg/demodata/texts_en.go` — English texts of the demo.
 - `pkg/demodata/texts_fr.go` — French texts of the demo (default language).
-- `pkg/demodata/demodata_test.go` — Unit tests: every language complete, PDF structure and encoding, photos, demo user tokens.
+- `pkg/demodata/demodata_test.go` — Unit tests: every language complete, PDF structure and encoding, places and their conversion, photographs and their provenance, demo user tokens.
 
 ## Integration tests (`pkg/integration`)
 

@@ -3,9 +3,6 @@ package demodata
 import (
 	"bytes"
 	"fmt"
-	"image"
-	"image/color"
-	"image/png"
 	"strings"
 )
 
@@ -78,26 +75,4 @@ func pdfText(s string) string {
 		}
 	}
 	return b.String()
-}
-
-// renderPhoto returns a small PNG standing for a photograph: a night sky over a
-// street, its colours drawn from seed so each photo has its own bytes.
-func renderPhoto(seed int) []byte {
-	const width, height = 320, 240
-	img := image.NewRGBA(image.Rect(0, 0, width, height))
-	for y := range height {
-		for x := range width {
-			c := color.RGBA{R: uint8(20 + y/8), G: uint8(30 + y/6), B: uint8(60 + y/4 + seed%40), A: 255}
-			if y > height*2/3 {
-				c = color.RGBA{R: 70, G: 70, B: uint8(75 + seed%20), A: 255}
-			}
-			if x > 150 && x < 156 && y > 60 {
-				c = color.RGBA{R: 40, G: 40, B: 45, A: 255}
-			}
-			img.Set(x, y, c)
-		}
-	}
-	var out bytes.Buffer
-	_ = png.Encode(&out, img) // encoding an in-memory RGBA image does not fail
-	return out.Bytes()
 }
