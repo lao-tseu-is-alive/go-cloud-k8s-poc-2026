@@ -1,8 +1,11 @@
 package integration
 
 import (
+	"errors"
+	"strconv"
 	"sync"
 	"testing"
+	"time"
 
 	"github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/pkg/core"
 )
@@ -36,7 +39,7 @@ func TestRecordUserLifecycle(t *testing.T) {
 	}
 
 	again, err := env.coreRepo.RecordUser(env.ctx, profile)
-	if err != nil || again.SubjectID != first.SubjectID || again.LastSeenAt.Before(first.LastSeenAt) {
+	if err != nil || again.SubjectID != first.SubjectID || again.LastSeenAt.Before(*first.LastSeenAt) {
 		t.Fatalf("unchanged refresh: %+v (%v)", again, err)
 	}
 	if n := countUserEvents(t, env, first, "USER_PROFILE_UPDATED"); n != 0 {
@@ -97,5 +100,36 @@ WHERE sr.kind = 'USER' AND rm.created_by = $1`, profile.UserID).Scan(&count); er
 	}
 	if count != 1 {
 		t.Fatalf("USER subjects created for the user = %d, want 1", count)
+	}
+}
+
+// TestRegisterUser covers the pre-registration of an employee (GLD-093): no
+// sign-in yet, audited by the administrator, a known user refused, then the
+// first sign-in completes the user from the token and keeps who registered it.
+func TestRegisterUser(t *testing.T) {
+	env := newTestEnv(t)
+	id := strconv.FormatInt(900_000_000_000+time.Now().UnixNano()%1_000_000_000, 10)
+	in := core.RegisterUserInput{UserID: id, DisplayName: "Nouvelle Employée", Email: " New@Example.org ", Reason: "arrivée", OperatorID: testOperator}
+
+	user, ev, err := env.coreSvc.RegisterUser(env.ctx, in)
+	if err != nil || user.FirstSeenAt != nil || user.LastSeenAt != nil || user.RegisteredBy != testOperator || user.Email != "new@example.org" {
+		t.Fatalf("pre-registered user: %+v (%v)", user, err)
+	}
+	if ev.EventType != "USER_PREREGISTERED" || ev.ActorUserID != testOperator || ev.Reason != "arrivée" {
+		t.Fatalf("pre-registration event: %+v", ev)
+	}
+	if _, _, err := env.coreSvc.RegisterUser(env.ctx, in); !errors.Is(err, core.ErrConflict) {
+		t.Fatalf("a known user is refused: %v", err)
+	}
+	for _, bad := range []string{"abc", "0", "-3", ""} {
+		if _, _, err := env.coreSvc.RegisterUser(env.ctx, core.RegisterUserInput{UserID: bad, DisplayName: "X", Reason: "r", OperatorID: testOperator}); !errors.Is(err, core.ErrInvalidInput) {
+			t.Fatalf("user id %q must be refused: %v", bad, err)
+		}
+	}
+
+	signedIn, err := env.coreRepo.RecordUser(env.ctx, core.UserProfile{UserID: id, DisplayName: "Nouvelle Employée-Tout", Email: "new@example.org"})
+	if err != nil || signedIn.FirstSeenAt == nil || signedIn.LastSeenAt == nil || signedIn.SubjectID != user.SubjectID ||
+		signedIn.DisplayName != "Nouvelle Employée-Tout" || signedIn.RegisteredBy != testOperator {
+		t.Fatalf("the first sign-in completes the user: %+v (%v)", signedIn, err)
 	}
 }

@@ -656,6 +656,15 @@ placed on Swiss territory.
   Then the consultations of the stories (DEMO_SCRIPT §4.7): reads and downloads at story times
   and two refusals, recorded without the 15-minute window (`core.WithEveryAccessLogged`, set by
   `demo-seed` only). Released in v0.24.0 (profile `small`); what remains is GLD-092.
+- [~] **GLD-093 — User administration** (asked by the product owner, 2026-11-26, done first): a
+  new employee must be ready before their first sign-in. Administrators pre-register a user (the
+  authentication service's numeric id, name, e-mail, optionally a unit; `RegisterUser`, audited
+  USER_PREREGISTERED, migration `0043`), and every user has an administration page
+  (`/admin/users/:id`) with their units, security groups and roles, each change with a reason. The
+  identity stays the directory's: the first sign-in completes the user and later ones refresh the
+  name and e-mail, so they are not edited in Goéland. With it, the app bar shows « Organigramme »
+  (the org units, read only for non-administrators) to everyone and « Groupes » to administrators
+  only. Done 2026-11-26.
 - [ ] **GLD-092 — Demo: ongoing work and background** (split from GLD-079 at the v0.24.0 release):
   cases in progress dated from the generation day (DEMO_SCRIPT §4.8 to §4.12, agreed 2026-11-26):
   tasks open, in progress, overdue, assigned to a user or a unit, reassigned, cancelled, reopened,

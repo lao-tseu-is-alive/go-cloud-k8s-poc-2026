@@ -8,6 +8,19 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+### Added
+
+- User administration (GLD-093, migration `0043`): an administrator pre-registers a new employee
+  before their first sign-in (`RegisterUser`, `POST /api/users`: the directory's id, name, e-mail
+  and optionally a unit), and manages each user's units, security groups and roles on their page
+  (Administration › Utilisateurs › a name). The first sign-in completes a pre-registered user from
+  the token; the identity is never edited in Goéland.
+
+### Changed
+
+- The app bar shows « Organigramme » (the org units) to everyone and « Groupes » to administrators
+  only (GLD-093).
+
 ## [0.24.0] - 2026-11-26
 
 The public demo on synthetic data and what it showed was missing. `goeland-server demo-seed` and

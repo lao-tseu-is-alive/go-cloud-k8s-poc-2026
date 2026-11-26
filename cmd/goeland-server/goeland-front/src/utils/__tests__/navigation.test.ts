@@ -5,7 +5,9 @@ describe('navigation', () => {
   it('shows the administration to administrators only', () => {
     expect(navItemsFor(true, true)).toHaveLength(NAV_ITEMS.length)
     expect(navItemsFor(false).some(i => i.to === '/admin')).toBe(false)
-    expect(navItemsFor(false)).toHaveLength(NAV_ITEMS.length - 2)
+    expect(navItemsFor(false)).toHaveLength(NAV_ITEMS.length - 3)
+    expect(navItemsFor(false).some(i => i.to === '/groups')).toBe(false)
+    expect(navItemsFor(false).some(i => i.to === '/org-units')).toBe(true)
   })
 
   it('shows the retention deadlines to records managers', () => {

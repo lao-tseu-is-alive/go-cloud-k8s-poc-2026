@@ -19,7 +19,8 @@ export const NAV_ITEMS: readonly NavItem[] = [
   { to: '/things', icon: 'mdi-map-marker-outline', label: 'nav.things', primary: true },
   { to: '/actors', icon: 'mdi-account-multiple', label: 'nav.actors', primary: true },
   { to: '/org-units', icon: 'mdi-sitemap-outline', label: 'nav.orgUnits' },
-  { to: '/groups', icon: 'mdi-account-group-outline', label: 'nav.groups' },
+  // Security groups are a rights mechanism administrators manage (GLD-090, GLD-093).
+  { to: '/groups', icon: 'mdi-account-group-outline', label: 'nav.groups', admin: true },
   { to: '/retention', icon: 'mdi-archive-clock-outline', label: 'nav.retention', records: true },
   { to: '/admin', icon: 'mdi-cog-outline', label: 'nav.admin', admin: true },
 ]

@@ -4159,6 +4159,36 @@ paths:
             $ref: '#/definitions/TimelineServiceWithdrawTimelineEntryBody'
       tags:
         - TimelineService
+  /api/users:
+    post:
+      summary: |-
+        Pre-register an employee before their first sign-in (GLD-093), so units,
+        groups and roles can be given at once; audited as USER_PREREGISTERED on
+        the user's subject. Requires goeland:admin. Fails with ALREADY_EXISTS for
+        a known user.
+      operationId: RegisterUser
+      responses:
+        "200":
+          description: A successful response.
+          schema:
+            $ref: '#/definitions/v1RegisterUserResponse'
+        default:
+          description: An unexpected error response.
+          schema:
+            $ref: '#/definitions/rpcStatus'
+      parameters:
+        - name: body
+          description: |-
+            RegisterUserRequest pre-registers an employee before their first sign-in
+            (GLD-093), so an administrator can give them units, groups and roles at
+            once. Their identity stays the directory's: the next sign-in overwrites the
+            name and e-mail given here with the token's.
+          in: body
+          required: true
+          schema:
+            $ref: '#/definitions/v1RegisterUserRequest'
+      tags:
+        - CoreService
   /api/users/search:
     get:
       summary: Find internal users by name or e-mail. Requires goeland:read.
@@ -4230,7 +4260,9 @@ paths:
             $ref: '#/definitions/rpcStatus'
       parameters:
         - name: userId
-          description: user_id is the internal user (User.id); it must have signed in once.
+          description: |-
+            user_id is the internal user (User.id); it must have signed in once or
+            have been pre-registered.
           in: path
           required: true
           type: string
@@ -8579,6 +8611,38 @@ definitions:
     description: |-
       ReferenceChange is one entry of the append-only log of reference data changes
       (case types, relationship types, organization categories, document types).
+  v1RegisterUserRequest:
+    type: object
+    properties:
+      userId:
+        type: string
+        description: |-
+          user_id is the user's id in the authentication service (the operator id
+          Goéland records: a positive integer); an existing user is ALREADY_EXISTS.
+      displayName:
+        type: string
+        description: display_name is the user's name, as the directory spells it (1 to 200 characters).
+      email:
+        type: string
+        description: email is the user's e-mail address; empty when unknown.
+      reason:
+        type: string
+        description: reason explains the registration (a new employee, ...); it is audited.
+    description: |-
+      RegisterUserRequest pre-registers an employee before their first sign-in
+      (GLD-093), so an administrator can give them units, groups and roles at
+      once. Their identity stays the directory's: the next sign-in overwrites the
+      name and e-mail given here with the token's.
+  v1RegisterUserResponse:
+    type: object
+    properties:
+      user:
+        $ref: '#/definitions/v1User'
+        description: user is the new user, without a first sign-in yet.
+      auditEvent:
+        $ref: '#/definitions/v1AuditEvent'
+        description: audit_event is the USER_PREREGISTERED event on the user's subject.
+    description: RegisterUserResponse returns the pre-registered user and its USER_PREREGISTERED event.
   v1RelatedSubjectDetail:
     type: object
     properties:
@@ -10035,18 +10099,26 @@ definitions:
       firstSeenAt:
         type: string
         format: date-time
-        description: first_seen_at is when the user was first recorded.
+        description: |-
+          first_seen_at is the user's first sign-in; absent for a user pre-registered
+          by an administrator who has not signed in yet (GLD-093).
         readOnly: true
       lastSeenAt:
         type: string
         format: date-time
-        description: last_seen_at is when the user was last recorded.
+        description: last_seen_at is when the user was last recorded; absent before the first sign-in.
         readOnly: true
       roles:
         type: array
         items:
           type: string
         description: roles are the codes of the application roles the user currently holds, sorted.
+        readOnly: true
+      registeredBy:
+        type: string
+        description: |-
+          registered_by is the administrator who pre-registered the user (User.id);
+          empty for a user recorded at their first sign-in.
         readOnly: true
     description: |-
       User is an internal, authenticated user (an employee), recorded from its

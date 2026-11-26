@@ -539,12 +539,16 @@ message User {
   // is_admin reports whether the user currently holds the ADMIN application
   // role (the goeland:admin scope); the token never decides it.
   bool is_admin = 5 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // first_seen_at is when the user was first recorded.
+  // first_seen_at is the user's first sign-in; absent for a user pre-registered
+  // by an administrator who has not signed in yet (GLD-093).
   google.protobuf.Timestamp first_seen_at = 6 [(google.api.field_behavior) = OUTPUT_ONLY];
-  // last_seen_at is when the user was last recorded.
+  // last_seen_at is when the user was last recorded; absent before the first sign-in.
   google.protobuf.Timestamp last_seen_at = 7 [(google.api.field_behavior) = OUTPUT_ONLY];
   // roles are the codes of the application roles the user currently holds, sorted.
   repeated string roles = 8 [(google.api.field_behavior) = OUTPUT_ONLY];
+  // registered_by is the administrator who pre-registered the user (User.id);
+  // empty for a user recorded at their first sign-in.
+  string registered_by = 9 [(google.api.field_behavior) = OUTPUT_ONLY];
 }
 
 // GetCurrentUserRequest asks who the caller is; it has no fields.
@@ -676,9 +680,43 @@ message ListUserRolesResponse {
   repeated UserRole roles = 1;
 }
 
+// RegisterUserRequest pre-registers an employee before their first sign-in
+// (GLD-093), so an administrator can give them units, groups and roles at
+// once. Their identity stays the directory's: the next sign-in overwrites the
+// name and e-mail given here with the token's.
+message RegisterUserRequest {
+  // user_id is the user's id in the authentication service (the operator id
+  // Goéland records: a positive integer); an existing user is ALREADY_EXISTS.
+  string user_id = 1 [(buf.validate.field).string.pattern = "^[1-9][0-9]{0,18}$"];
+  // display_name is the user's name, as the directory spells it (1 to 200 characters).
+  string display_name = 2 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 200
+  }];
+  // email is the user's e-mail address; empty when unknown.
+  string email = 3 [
+    (buf.validate.field).string.email = true,
+    (buf.validate.field).ignore = IGNORE_IF_ZERO_VALUE
+  ];
+  // reason explains the registration (a new employee, ...); it is audited.
+  string reason = 4 [(buf.validate.field).string = {
+    min_len: 1
+    max_len: 2000
+  }];
+}
+
+// RegisterUserResponse returns the pre-registered user and its USER_PREREGISTERED event.
+message RegisterUserResponse {
+  // user is the new user, without a first sign-in yet.
+  User user = 1;
+  // audit_event is the USER_PREREGISTERED event on the user's subject.
+  AuditEvent audit_event = 2;
+}
+
 // GrantUserRoleRequest grants a role to a user (administrators only).
 message GrantUserRoleRequest {
-  // user_id is the internal user (User.id); it must have signed in once.
+  // user_id is the internal user (User.id); it must have signed in once or
+  // have been pre-registered.
   string user_id = 1 [(buf.validate.field).string = {
     min_len: 1
     max_len: 200
@@ -1379,6 +1417,17 @@ service CoreService {
   // List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
   rpc ListUserRoles(ListUserRolesRequest) returns (ListUserRolesResponse) {
     option (google.api.http) = {get: "/api/users/{user_id}/roles"};
+  }
+
+  // Pre-register an employee before their first sign-in (GLD-093), so units,
+  // groups and roles can be given at once; audited as USER_PREREGISTERED on
+  // the user's subject. Requires goeland:admin. Fails with ALREADY_EXISTS for
+  // a known user.
+  rpc RegisterUser(RegisterUserRequest) returns (RegisterUserResponse) {
+    option (google.api.http) = {
+      post: "/api/users"
+      body: "*"
+    };
   }
 
   // Grant an application role to a user, audited on the user's subject.

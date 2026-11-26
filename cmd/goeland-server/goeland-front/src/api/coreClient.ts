@@ -1,4 +1,4 @@
-import type { AuditEvent, BatchGetUsersResponse, GetCurrentUserResponse, ListRelationshipsResponse, RelationshipGroup, RelationshipType, SearchSubjectsParams, SearchSubjectsResponse, SearchUsersResponse, SubjectKind, SubjectRelationship, SubjectSearchGroup, SummarizeRelationshipsResponse, User } from './types'
+import type { AuditEvent, BatchGetUsersResponse, GetCurrentUserResponse, ListRelationshipsResponse, RegisterUserResponse, RelationshipGroup, RelationshipType, SearchSubjectsParams, SearchSubjectsResponse, SearchUsersResponse, SubjectKind, SubjectRelationship, SubjectSearchGroup, SummarizeRelationshipsResponse, User } from './types'
 /**
  * CoreService REST calls: relationship types, relationships, audit, subjects.
  */
@@ -135,6 +135,12 @@ export function getCurrentUser (): Promise<GetCurrentUserResponse> {
 export async function searchUsers (query: string, pageSize = 20, signal?: AbortSignal): Promise<User[]> {
   const res = await apiFetch<SearchUsersResponse>('/api/users/search', { query: { query, pageSize }, signal })
   return res.users ?? []
+}
+
+/** Pre-registers an employee before their first sign-in (administrators, GLD-093). */
+export async function registerUser (input: { userId: string, displayName: string, email?: string, reason: string }): Promise<User> {
+  const res = await apiFetch<RegisterUserResponse>('/api/users', { method: 'POST', body: input })
+  return res.user as User
 }
 
 /** The global search: per kind, the best subjects matching params.query and their count. */

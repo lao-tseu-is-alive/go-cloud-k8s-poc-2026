@@ -436,6 +436,22 @@ func (s *ConnectServer) ListUserRoles(ctx context.Context, req *connect.Request[
 	return connect.NewResponse(&goelandv1.ListUserRolesResponse{Roles: userRolesToProto(roles)}), nil
 }
 
+// RegisterUser pre-registers an employee (administrators only, GLD-093).
+func (s *ConnectServer) RegisterUser(ctx context.Context, req *connect.Request[goelandv1.RegisterUserRequest]) (*connect.Response[goelandv1.RegisterUserResponse], error) {
+	admin, err := RequireCaller(ctx, ScopeAdmin)
+	if err != nil {
+		return nil, err
+	}
+	m := req.Msg
+	user, ev, err := s.service.RegisterUser(ctx, RegisterUserInput{
+		UserID: m.UserId, DisplayName: m.DisplayName, Email: m.Email, Reason: m.Reason, OperatorID: OperatorID(admin),
+	})
+	if err != nil {
+		return nil, s.mapError(err)
+	}
+	return connect.NewResponse(&goelandv1.RegisterUserResponse{User: DomainUserToProto(user), AuditEvent: DomainAuditEventToProto(ev)}), nil
+}
+
 // GrantUserRole grants an application role (administrators only).
 func (s *ConnectServer) GrantUserRole(ctx context.Context, req *connect.Request[goelandv1.GrantUserRoleRequest]) (*connect.Response[goelandv1.GrantUserRoleResponse], error) {
 	user, err := RequireCaller(ctx, ScopeAdmin)

@@ -44,6 +44,51 @@ func (r *PostgresRepository) RecordUser(ctx context.Context, profile UserProfile
 	return user, nil
 }
 
+// RegisterUser pre-registers an employee before their first sign-in (GLD-093):
+// the USER subject, its governance, the app_user row without a sign-in and a
+// USER_PREREGISTERED audit event by the administrator, in one transaction. A
+// known user is ErrConflict.
+func (r *PostgresRepository) RegisterUser(ctx context.Context, in RegisterUserInput) (*AppUser, *AuditEvent, error) {
+	var user *AppUser
+	var event *AuditEvent
+	err := InTx(ctx, r.pool, "register user", func(tx pgx.Tx) error {
+		if _, err := tx.Exec(ctx, lockAppUserSQL, pgx.NamedArgs{"user_id": in.UserID}); err != nil {
+			return fmt.Errorf("lock app_user: %w", err)
+		}
+		_, err := collectAppUser(tx.Query(ctx, getAppUserForUpdateSQL, pgx.NamedArgs{"user_id": in.UserID}))
+		if err == nil {
+			return fmt.Errorf("%w: user %s is already known", ErrConflict, in.UserID)
+		}
+		if !errors.Is(err, pgx.ErrNoRows) {
+			return fmt.Errorf("get app_user: %w", err)
+		}
+		profile := UserProfile{UserID: in.UserID, DisplayName: in.DisplayName, Email: in.Email}
+		ref, err := InsertSubjectRefTx(ctx, tx, SubjectKindUser, profile.label(), "")
+		if err != nil {
+			return fmt.Errorf("insert user subject: %w", err)
+		}
+		gov := CreateSubjectInput{Kind: SubjectKindUser, DisplayLabel: ref.DisplayLabel, OperatorID: in.OperatorID, OwnerUserID: in.UserID}
+		if _, err := InsertRecordMetadataTx(ctx, tx, gov, ref.ID); err != nil {
+			return fmt.Errorf("insert user record_metadata: %w", err)
+		}
+		if user, err = collectAppUser(tx.Query(ctx, preregisterAppUserSQL, pgx.NamedArgs{
+			"user_id": in.UserID, "subject_id": ref.ID, "display_name": in.DisplayName, "email": in.Email,
+			"registered_by": in.OperatorID,
+		})); err != nil {
+			return fmt.Errorf("insert app_user: %w", err)
+		}
+		event, err = InsertAuditEventTx(ctx, tx, AuditEvent{
+			SubjectID: ref.ID, EventType: "USER_PREREGISTERED", ActorUserID: in.OperatorID,
+			AfterState: userAuditState(user.DisplayName), Reason: in.Reason,
+		})
+		return err
+	})
+	if err != nil {
+		return nil, nil, err
+	}
+	return user, event, nil
+}
+
 // registerUserTx creates the USER subject, its governance and the app_user row.
 func registerUserTx(ctx context.Context, q Querier, profile UserProfile) (*AppUser, error) {
 	ref, err := InsertSubjectRefTx(ctx, q, SubjectKindUser, profile.label(), "")

@@ -374,7 +374,7 @@ UNION ALL
 // appUserColumns projects an app_user row (alias u) with its current roles:
 // is_admin and roles are derived from app_user_role, never stored on the user.
 const appUserColumns = `
-u.user_id, u.subject_id, u.display_name, u.email, u.first_seen_at, u.last_seen_at,
+u.user_id, u.subject_id, u.display_name, u.email, u.first_seen_at, u.last_seen_at, u.registered_by,
 EXISTS (SELECT 1 FROM app_user_role r WHERE r.user_id = u.user_id AND r.role_code = 'ADMIN' AND r.revoked_at IS NULL) AS is_admin,
 ARRAY(SELECT r.role_code FROM app_user_role r WHERE r.user_id = u.user_id AND r.revoked_at IS NULL ORDER BY r.role_code) AS roles`
 
@@ -395,8 +395,15 @@ RETURNING ` + appUserColumns + `;`
 
 const updateAppUserSQL = `
 UPDATE app_user AS u
-SET display_name = @display_name, email = @email, last_seen_at = now()
+SET display_name = @display_name, email = @email, last_seen_at = now(),
+    first_seen_at = coalesce(u.first_seen_at, now()) -- a pre-registered user's first sign-in
 WHERE u.user_id = @user_id
+RETURNING ` + appUserColumns + `;`
+
+// preregisterAppUserSQL inserts a pre-registered user (GLD-093): no sign-in yet.
+const preregisterAppUserSQL = `
+INSERT INTO app_user AS u (user_id, subject_id, display_name, email, first_seen_at, last_seen_at, registered_by)
+VALUES (@user_id, @subject_id, @display_name, @email, NULL, NULL, @registered_by)
 RETURNING ` + appUserColumns + `;`
 
 const getAppUsersSQL = `

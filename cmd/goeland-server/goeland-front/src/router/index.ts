@@ -70,6 +70,11 @@ const router = createRouter({
       component: () => import('@/pages/admin/AdminPage.vue'),
     },
     {
+      path: '/admin/users/:id',
+      name: 'admin-user',
+      component: () => import('@/pages/admin/UserAdminPage.vue'),
+    },
+    {
       path: '/documents',
       name: 'documents',
       component: () => import('@/pages/documents/DocumentListPage.vue'),

@@ -267,14 +267,15 @@ func DomainUserToProto(u *AppUser) *goelandv1.User {
 		return nil
 	}
 	return &goelandv1.User{
-		Id:          u.UserID,
-		SubjectId:   u.SubjectID.String(),
-		DisplayName: u.DisplayName,
-		Email:       u.Email,
-		IsAdmin:     u.IsAdmin,
-		FirstSeenAt: TimestampOrNil(u.FirstSeenAt),
-		LastSeenAt:  TimestampOrNil(u.LastSeenAt),
-		Roles:       slices.Clone(u.Roles),
+		Id:           u.UserID,
+		SubjectId:    u.SubjectID.String(),
+		DisplayName:  u.DisplayName,
+		Email:        u.Email,
+		IsAdmin:      u.IsAdmin,
+		FirstSeenAt:  TimestampPtrOrNil(u.FirstSeenAt),
+		LastSeenAt:   TimestampPtrOrNil(u.LastSeenAt),
+		RegisteredBy: u.RegisteredBy,
+		Roles:        slices.Clone(u.Roles),
 	}
 }
 

@@ -101,6 +101,7 @@ export type TypesContract = [
   Ok<Conforms<T.ListRelationshipsResponse, corePb.ListRelationshipsResponseJson>>,
   Ok<Conforms<T.SearchCasesResponse, casePb.SearchCasesResponseJson>>,
   Ok<Conforms<T.User, corePb.UserJson>>,
+  Ok<Conforms<T.RegisterUserResponse, corePb.RegisterUserResponseJson>>,
   Ok<Conforms<T.AppRole, corePb.AppRoleJson>>,
   Ok<Conforms<T.UserRole, corePb.UserRoleJson>>,
   Ok<Conforms<T.ListAppRolesResponse, corePb.ListAppRolesResponseJson>>,

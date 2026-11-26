@@ -656,6 +656,14 @@ export interface User {
   lastSeenAt?: string
   /** Codes of the application roles currently held (GLD-047), sorted. */
   roles?: string[]
+  /** The administrator who pre-registered the user (GLD-093); empty when recorded at sign-in. */
+  registeredBy?: string
+}
+
+/** A pre-registered user and its USER_PREREGISTERED event (GLD-093). */
+export interface RegisterUserResponse {
+  user?: User
+  auditEvent?: AuditEvent
 }
 
 /** An application role of the catalogue (ADMIN is the role behind goeland:admin). */

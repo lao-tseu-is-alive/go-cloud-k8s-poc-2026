@@ -213,7 +213,7 @@ pkg/authadapter/             JWT + PAT + dev token verification (shared, ecosyst
 pkg/core/                    transversal domain
   ├── tx.go                  exported tx-scoped helpers reused by sibling domains
   ├── module/                bundleable module + OWNS the full schema bootstrap
-  │   └── db/migrations/     0001..0042 (dbmate format)
+  │   └── db/migrations/     0001..0043 (dbmate format)
 pkg/document/                document domain (reuses core primitives)
   └── module/                bundleable module (NO migrations; core owns schema)
 pkg/blobstore/               content-bytes contract (Put/Get/Delete, spec v2 §23), domain-neutral; Chain
@@ -484,6 +484,10 @@ every verified caller is recorded in `app_user` (a USER subject; created on firs
 best effort, never fails authentication). Governance/audit keep storing the operator id;
 the SPA resolves ids to names through `BatchGetUsers` (`stores/users.ts`, `UserLabel.vue`)
 and reads the caller, its effective scopes, roles and admin flag from `GetCurrentUser` (`GET /api/me`).
+An administrator may pre-register an employee before their first sign-in (`RegisterUser`, GLD-093:
+the directory's numeric id, `first_seen_at` NULL until the first sign-in completes the user, migration
+`0043`) and manages a user's units, groups and roles on `/admin/users/:id`; the identity itself stays
+the directory's (the next sign-in overwrites the name and e-mail).
 
 Scopes: `goeland:read` (read RPCs), `goeland:write` (mutations). Env vars are
 `GOELAND_*`; DB vars are `DB_*` / `DATABASE_URL`.

@@ -330,6 +330,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/core/module/db/migrations/0039_orphan_uploads.sql` — Schema migration: `content_blob.uploaded_at` and the index of the held blobs by age, for the orphan upload collection (GLD-045).
 - `pkg/core/module/db/migrations/0040_demo_dataset.sql` — Schema migration: the `demo_dataset` marker row `demo-seed` writes, without which the demo authentication mode refuses to start (GLD-085).
 - `pkg/core/module/db/migrations/0041_access_log.sql` — Schema migration: the access log takes every read (READ) and refused change (WRITE_DENIED), whatever the confidentiality (GLD-089).
+- `pkg/core/module/db/migrations/0043_user_preregistration.sql` — Schema migration: pre-registered users, without a sign-in yet (`first_seen_at` NULL) and with the administrator who registered them (GLD-093).
 - `pkg/core/module/db/migrations/0042_user_activity_indexes.sql` — Schema migration: indexes by user, subject and time on the audit and the access log, for « Mon tableau de bord » (GLD-088).
 - `pkg/core/module/db/migrations/0033_creator_indexes.sql` — Schema migration: `created_by` indexes on cases, documents, things and actors for the creator filter of the lists (GLD-074).
 - `pkg/core/module/db/migrations/0032_subject_search.sql` — Schema migration: the per-kind search index of `subject_ref` (accent-folded label and reference, kind token) replacing the unused label index (GLD-064).
@@ -602,7 +603,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/components/SignInPanel.vue` — Signed-out screen: how to sign in for the configured mode (the demo user picker in demo mode), retry, unreachable auth service, loopback host mismatch.
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceCatalogPanel.vue` — Generic editor of one reference catalogue: list, create, edit, (de)activate, with a logged reason.
 - `cmd/goeland-server/goeland-front/src/components/admin/CaseTypeDefaultGrantsDialog.vue` — Editor of a case type's default grants (users, groups, units, the creator's units) with a logged reason.
-- `cmd/goeland-server/goeland-front/src/components/admin/UsersAdminPanel.vue` — Administration › Utilisateurs (GLD-091): the internal users with their roles, administrators marked, search and filter.
+- `cmd/goeland-server/goeland-front/src/components/admin/UsersAdminPanel.vue` — Administration › Utilisateurs (GLD-091): the internal users with their roles, administrators marked, search and filter, each opening its page; the pre-registration of a new employee (GLD-093).
 - `cmd/goeland-server/goeland-front/src/components/admin/RolesAdminPanel.vue` — Holders of a role with grant, revoke (reasons, last administrator protected) and each user's role history.
 - `cmd/goeland-server/goeland-front/src/components/admin/OutboxPanel.vue` — Administration › Outbox: pending, given-up and kept events, consumers, latest failures and replay (GLD-028).
 - `cmd/goeland-server/goeland-front/src/components/admin/ReferenceChangesPanel.vue` — Read-only, paged view of the reference change log.
@@ -695,7 +696,8 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `cmd/goeland-server/goeland-front/src/main.ts` — SPA bootstrap: registers plugins and mounts the app.
 - `cmd/goeland-server/goeland-front/src/pages/DashboardPage.vue` — « Mon tableau de bord », the home page (GLD-088): tabs for the caller's tasks and the cases, documents, objects and actors they changed or consulted, with counts.
 - `cmd/goeland-server/goeland-front/src/pages/SearchResultsPage.vue` — Every result of the global search: one tab per kind with its count, holding the kind's list and filters (GLD-064, GLD-074).
-- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: one tab per reference catalogue, the change log, the application roles and the sensitive read audit.
+- `cmd/goeland-server/goeland-front/src/pages/admin/AdminPage.vue` — Administration page for holders of the ADMIN role: the users, the application roles, one tab per reference catalogue, the change log, the access log and the outbox.
+- `cmd/goeland-server/goeland-front/src/pages/admin/UserAdminPage.vue` — An internal user as administrators manage it (GLD-093): identity from the directory, units, security groups and roles, each change with a reason.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorCreatePage.vue` — Actor creation page.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorDetailPage.vue` — Actor detail: identity, addresses, complements, relationships in both directions (link, end, unlink), edit, activation, soft delete, governance and audit.
 - `cmd/goeland-server/goeland-front/src/pages/actors/ActorListPage.vue` — Actor list page: title, creation button and `ActorSearchList`.

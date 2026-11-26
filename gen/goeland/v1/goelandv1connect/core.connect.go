@@ -95,6 +95,9 @@ const (
 	// CoreServiceListUserRolesProcedure is the fully-qualified name of the CoreService's ListUserRoles
 	// RPC.
 	CoreServiceListUserRolesProcedure = "/goeland.v1.CoreService/ListUserRoles"
+	// CoreServiceRegisterUserProcedure is the fully-qualified name of the CoreService's RegisterUser
+	// RPC.
+	CoreServiceRegisterUserProcedure = "/goeland.v1.CoreService/RegisterUser"
 	// CoreServiceGrantUserRoleProcedure is the fully-qualified name of the CoreService's GrantUserRole
 	// RPC.
 	CoreServiceGrantUserRoleProcedure = "/goeland.v1.CoreService/GrantUserRole"
@@ -177,6 +180,11 @@ type CoreServiceClient interface {
 	ListRoleHolders(context.Context, *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error)
 	// List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
 	ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error)
+	// Pre-register an employee before their first sign-in (GLD-093), so units,
+	// groups and roles can be given at once; audited as USER_PREREGISTERED on
+	// the user's subject. Requires goeland:admin. Fails with ALREADY_EXISTS for
+	// a known user.
+	RegisterUser(context.Context, *connect.Request[v1.RegisterUserRequest]) (*connect.Response[v1.RegisterUserResponse], error)
 	// Grant an application role to a user, audited on the user's subject.
 	// Requires goeland:admin.
 	GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error)
@@ -312,6 +320,12 @@ func NewCoreServiceClient(httpClient connect.HTTPClient, baseURL string, opts ..
 			connect.WithSchema(coreServiceMethods.ByName("ListUserRoles")),
 			connect.WithClientOptions(opts...),
 		),
+		registerUser: connect.NewClient[v1.RegisterUserRequest, v1.RegisterUserResponse](
+			httpClient,
+			baseURL+CoreServiceRegisterUserProcedure,
+			connect.WithSchema(coreServiceMethods.ByName("RegisterUser")),
+			connect.WithClientOptions(opts...),
+		),
 		grantUserRole: connect.NewClient[v1.GrantUserRoleRequest, v1.GrantUserRoleResponse](
 			httpClient,
 			baseURL+CoreServiceGrantUserRoleProcedure,
@@ -418,6 +432,7 @@ type coreServiceClient struct {
 	listAppRoles           *connect.Client[v1.ListAppRolesRequest, v1.ListAppRolesResponse]
 	listRoleHolders        *connect.Client[v1.ListRoleHoldersRequest, v1.ListRoleHoldersResponse]
 	listUserRoles          *connect.Client[v1.ListUserRolesRequest, v1.ListUserRolesResponse]
+	registerUser           *connect.Client[v1.RegisterUserRequest, v1.RegisterUserResponse]
 	grantUserRole          *connect.Client[v1.GrantUserRoleRequest, v1.GrantUserRoleResponse]
 	revokeUserRole         *connect.Client[v1.RevokeUserRoleRequest, v1.RevokeUserRoleResponse]
 	linkSubjects           *connect.Client[v1.LinkSubjectsRequest, v1.LinkSubjectsResponse]
@@ -488,6 +503,11 @@ func (c *coreServiceClient) ListRoleHolders(ctx context.Context, req *connect.Re
 // ListUserRoles calls goeland.v1.CoreService.ListUserRoles.
 func (c *coreServiceClient) ListUserRoles(ctx context.Context, req *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error) {
 	return c.listUserRoles.CallUnary(ctx, req)
+}
+
+// RegisterUser calls goeland.v1.CoreService.RegisterUser.
+func (c *coreServiceClient) RegisterUser(ctx context.Context, req *connect.Request[v1.RegisterUserRequest]) (*connect.Response[v1.RegisterUserResponse], error) {
+	return c.registerUser.CallUnary(ctx, req)
 }
 
 // GrantUserRole calls goeland.v1.CoreService.GrantUserRole.
@@ -600,6 +620,11 @@ type CoreServiceHandler interface {
 	ListRoleHolders(context.Context, *connect.Request[v1.ListRoleHoldersRequest]) (*connect.Response[v1.ListRoleHoldersResponse], error)
 	// List a user's role assignments, optionally with the revoked ones. Requires goeland:read.
 	ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error)
+	// Pre-register an employee before their first sign-in (GLD-093), so units,
+	// groups and roles can be given at once; audited as USER_PREREGISTERED on
+	// the user's subject. Requires goeland:admin. Fails with ALREADY_EXISTS for
+	// a known user.
+	RegisterUser(context.Context, *connect.Request[v1.RegisterUserRequest]) (*connect.Response[v1.RegisterUserResponse], error)
 	// Grant an application role to a user, audited on the user's subject.
 	// Requires goeland:admin.
 	GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error)
@@ -731,6 +756,12 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 		connect.WithSchema(coreServiceMethods.ByName("ListUserRoles")),
 		connect.WithHandlerOptions(opts...),
 	)
+	coreServiceRegisterUserHandler := connect.NewUnaryHandler(
+		CoreServiceRegisterUserProcedure,
+		svc.RegisterUser,
+		connect.WithSchema(coreServiceMethods.ByName("RegisterUser")),
+		connect.WithHandlerOptions(opts...),
+	)
 	coreServiceGrantUserRoleHandler := connect.NewUnaryHandler(
 		CoreServiceGrantUserRoleProcedure,
 		svc.GrantUserRole,
@@ -845,6 +876,8 @@ func NewCoreServiceHandler(svc CoreServiceHandler, opts ...connect.HandlerOption
 			coreServiceListRoleHoldersHandler.ServeHTTP(w, r)
 		case CoreServiceListUserRolesProcedure:
 			coreServiceListUserRolesHandler.ServeHTTP(w, r)
+		case CoreServiceRegisterUserProcedure:
+			coreServiceRegisterUserHandler.ServeHTTP(w, r)
 		case CoreServiceGrantUserRoleProcedure:
 			coreServiceGrantUserRoleHandler.ServeHTTP(w, r)
 		case CoreServiceRevokeUserRoleProcedure:
@@ -926,6 +959,10 @@ func (UnimplementedCoreServiceHandler) ListRoleHolders(context.Context, *connect
 
 func (UnimplementedCoreServiceHandler) ListUserRoles(context.Context, *connect.Request[v1.ListUserRolesRequest]) (*connect.Response[v1.ListUserRolesResponse], error) {
 	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.ListUserRoles is not implemented"))
+}
+
+func (UnimplementedCoreServiceHandler) RegisterUser(context.Context, *connect.Request[v1.RegisterUserRequest]) (*connect.Response[v1.RegisterUserResponse], error) {
+	return nil, connect.NewError(connect.CodeUnimplemented, errors.New("goeland.v1.CoreService.RegisterUser is not implemented"))
 }
 
 func (UnimplementedCoreServiceHandler) GrantUserRole(context.Context, *connect.Request[v1.GrantUserRoleRequest]) (*connect.Response[v1.GrantUserRoleResponse], error) {

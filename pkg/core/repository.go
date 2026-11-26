@@ -31,6 +31,7 @@ type Repository interface {
 	ReplayOutbox(ctx context.Context, ids []uuid.UUID, all bool) (int32, error)
 	ListAccessAudit(ctx context.Context, filter AccessAuditFilter) (AccessAuditResult, error)
 	RecordUser(ctx context.Context, profile UserProfile) (*AppUser, error)
+	RegisterUser(ctx context.Context, in RegisterUserInput) (*AppUser, *AuditEvent, error)
 	GetUsers(ctx context.Context, userIDs []string) ([]*AppUser, error)
 	SearchUsers(ctx context.Context, query string, limit int) ([]*AppUser, error)
 	ListAppRoles(ctx context.Context) ([]*AppRole, error)

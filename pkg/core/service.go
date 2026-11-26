@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"log/slog"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/google/uuid"
@@ -256,6 +257,21 @@ func (s *Service) CurrentUser(ctx context.Context, user *authadapter.Authenticat
 		return nil, fmt.Errorf("current user: %w", err)
 	}
 	return recorded, nil
+}
+
+// RegisterUser pre-registers an employee before their first sign-in (GLD-093):
+// the user id must be the authentication service's (a positive integer), the
+// name is required, and a known user is ErrConflict.
+func (s *Service) RegisterUser(ctx context.Context, in RegisterUserInput) (*AppUser, *AuditEvent, error) {
+	in.UserID, in.DisplayName = strings.TrimSpace(in.UserID), strings.TrimSpace(in.DisplayName)
+	in.Email, in.Reason = strings.ToLower(strings.TrimSpace(in.Email)), strings.TrimSpace(in.Reason)
+	if id, err := strconv.ParseInt(in.UserID, 10, 64); err != nil || id <= 0 {
+		return nil, nil, fmt.Errorf("%w: the user id is the authentication service's, a positive integer", ErrInvalidInput)
+	}
+	if in.DisplayName == "" || in.Reason == "" {
+		return nil, nil, fmt.Errorf("%w: a name and a reason are required", ErrInvalidInput)
+	}
+	return s.repo.RegisterUser(ctx, in)
 }
 
 // SearchUsers finds internal users by name or e-mail (substring; the name

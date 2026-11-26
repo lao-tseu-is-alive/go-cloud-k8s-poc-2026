@@ -163,7 +163,7 @@ pkg/version/             build/version metadata
 pkg/authadapter/         JWT + PAT + dev token verification (shared)
 pkg/core/                transversal domain: model, sql, storage, service, mappers, connect_server
   └── module/            bundleable module + embedded migrations (owns schema bootstrap)
-      └── db/migrations/  0001..0042 (dbmate format)
+      └── db/migrations/  0001..0043 (dbmate format)
 pkg/document/            document domain (reuses core primitives)
   └── module/            bundleable module (schema owned by core)
 pkg/blobstore/           content-bytes contract (Put/Get/Delete) + Chain; filestore/ = local implementation,
@@ -477,6 +477,7 @@ Numbered, commented dbmate files in `pkg/core/module/db/migrations/`:
 0040_demo_dataset.sql        demo_dataset: marker of a generated demo, required by the demo mode (GLD-085)
 0041_access_log.sql          access_audit_event logs every read, download and refused change (GLD-089)
 0042_user_activity_indexes.sql  audit and access log by user and subject, for « Mon tableau de bord » (GLD-088)
+0043_user_preregistration.sql   app_user: pre-registered users (no sign-in yet, registered_by) (GLD-093)
 ```
 
 The **core module owns the full schema bootstrap** for this POC because the document

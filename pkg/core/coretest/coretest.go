@@ -136,6 +136,11 @@ func (StubRepository) ActiveRoles(context.Context, string) ([]string, error) {
 	return nil, nil
 }
 
+// RegisterUser returns zero values.
+func (StubRepository) RegisterUser(context.Context, core.RegisterUserInput) (*core.AppUser, *core.AuditEvent, error) {
+	return nil, nil, nil
+}
+
 // GrantUserRole returns zero values.
 func (StubRepository) GrantUserRole(context.Context, core.RoleChangeInput) (*core.UserRole, *core.AuditEvent, error) {
 	return nil, nil, nil

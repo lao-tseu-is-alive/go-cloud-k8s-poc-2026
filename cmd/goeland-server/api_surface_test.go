@@ -6,8 +6,10 @@ import (
 	"net/http"
 	"net/url"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/google/uuid"
 )
@@ -435,6 +437,7 @@ func (s *surface) access() {
 	s.ok("POST", "/api/grants/"+str(granted, "grant", "id")+"/revoke", map[string]any{"reason": "fin"})
 	s.fails(codeNotFound, "POST", missing("/api/grants")+"/revoke", map[string]any{"reason": "x"})
 	s.groups(writer)
+	s.registerUser()
 }
 
 // readFilters covers GLD-049 over HTTP: a confidential case is found by its
@@ -555,6 +558,22 @@ func (s *surface) myActivity(asWriter func(method, path string, body any) reply,
 	for _, path := range []string{"/api/documents/search", "/api/things/search", "/api/actors/search"} {
 		s.ok("GET", path+"?myActivity=true&orderBy=my_activity", nil)
 	}
+}
+
+// registerUser covers the pre-registration of an employee (GLD-093): an
+// administrator registers a user who has not signed in, then may give them a
+// role at once; the writer may not, a known or malformed id is refused.
+func (s *surface) registerUser() {
+	id := strconv.FormatInt(800_000_000_000+time.Now().UnixNano()%1_000_000_000, 10)
+	body := map[string]any{"userId": id, "displayName": "Nouvel employé " + s.token, "email": "nouveau@example.org", "reason": "arrivée"}
+	user := s.ok("POST", "/api/users", body)
+	if str(user, "user", "id") != id || str(user, "user", "firstSeenAt") != "" || str(user, "user", "registeredBy") == "" {
+		s.t.Fatalf("a pre-registered user has not signed in yet: %v", user)
+	}
+	s.fails(codeAlreadyExists, "POST", "/api/users", body)
+	s.fails(codeInvalidArgument, "POST", "/api/users", map[string]any{"userId": "abc", "displayName": "X", "reason": "r"})
+	s.expect(s.call(s.writer, writerToken, "POST", "/api/users", body), codePermissionDenied, "users are registered by an administrator")
+	s.ok("POST", "/api/users/"+id+"/roles", map[string]any{"roleCode": "RECORDS_MANAGER", "reason": "archiviste dès son arrivée"})
 }
 
 // groups covers the security group RPCs.

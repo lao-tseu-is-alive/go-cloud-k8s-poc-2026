@@ -46,11 +46,29 @@ type AppUser struct {
 	IsAdmin bool `db:"is_admin"`
 	// Roles are the codes of the roles the user currently holds, sorted.
 	Roles []string `db:"roles"`
-	// FirstSeenAt is when the user was first recorded.
-	FirstSeenAt time.Time `db:"first_seen_at"`
+	// FirstSeenAt is the user's first sign-in; nil for a user pre-registered by
+	// an administrator who has not signed in yet (GLD-093).
+	FirstSeenAt *time.Time `db:"first_seen_at"`
 	// LastSeenAt is when the user was last recorded (refreshed at most every
-	// userSeenRefresh while the profile is unchanged).
-	LastSeenAt time.Time `db:"last_seen_at"`
+	// userSeenRefresh while the profile is unchanged); nil before the first sign-in.
+	LastSeenAt *time.Time `db:"last_seen_at"`
+	// RegisteredBy is the administrator who pre-registered the user; empty for
+	// a user recorded at their first sign-in.
+	RegisteredBy string `db:"registered_by"`
+}
+
+// RegisterUserInput pre-registers an employee before their first sign-in (GLD-093).
+type RegisterUserInput struct {
+	// UserID is the user's id in the authentication service (the operator id).
+	UserID string
+	// DisplayName is the user's name; the first sign-in overwrites it with the token's.
+	DisplayName string
+	// Email is the user's e-mail address, possibly empty.
+	Email string
+	// Reason explains the registration; it is audited.
+	Reason string
+	// OperatorID is the administrator registering the user.
+	OperatorID string
 }
 
 // UserProfile is what a verified token says about its user.
