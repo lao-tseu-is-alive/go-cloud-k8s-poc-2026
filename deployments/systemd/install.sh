@@ -142,9 +142,20 @@ install_env_file() {
     if [[ -n "$password" ]]; then
         sed -i "s|^DB_PASSWORD=.*|DB_PASSWORD=${password}|" "$target"
     fi
-    if grep -q '^DB_PASSWORD=<' "$target"; then
-        fail "${target}: DB_PASSWORD is still a placeholder (its role existed already): set it, then rerun"
-    fi
+}
+
+# require_passwords stops when an env file still holds the sample's password placeholder: its
+# role existed before, so its password is not known here. Checked once both files are written,
+# so a password generated for the other role is never lost.
+require_passwords() {
+    local target missing=false
+    for target in "$@"; do
+        if grep -q '^DB_PASSWORD=<' "$target"; then
+            echo "install.sh: ${target}: set DB_PASSWORD (its role existed already), then rerun" >&2
+            missing=true
+        fi
+    done
+    [[ "$missing" == false ]] || exit 1
 }
 
 configure_database_and_settings() {
@@ -154,6 +165,7 @@ configure_database_and_settings() {
     app_password="$(ensure_role "$APP_ROLE")"
     install_env_file seed.env.sample "${CONF_DIR}/seed.env" 600 root "$owner_password"
     install_env_file config.env.sample "${CONF_DIR}/config.env" 640 "$SERVICE_USER" "$app_password"
+    require_passwords "${CONF_DIR}/seed.env" "${CONF_DIR}/config.env"
 }
 
 install_units() {
