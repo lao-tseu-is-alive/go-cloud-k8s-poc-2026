@@ -42,12 +42,28 @@ Prerequisites: PostgreSQL with PostGIS (`postgresql-16-postgis-3` or similar) on
 systemd 249 or later, and the release binary from
 [GitHub Releases](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/releases).
 
-Copy this directory to the server, put the release binary next to `install.sh`, then:
+Copy this directory to the server (a clone of the repository, or just these files), download the
+release binary next to `install.sh` and check it against the release's `SHA256.txt`:
 
 ```bash
-sudo ./install.sh            # French demo; -l en for English, -t for the nightly reset
+VERSION=v0.26.0   # the release to install
+BASE=https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/releases/download/${VERSION}
+curl -fsSLO "${BASE}/goeland-server-linux-amd64.tar.gz" -O "${BASE}/SHA256.txt"
+sha256sum --check --ignore-missing SHA256.txt
+tar -xzf goeland-server-linux-amd64.tar.gz
+
+sudo ./install.sh            # French demo, profile from seed.env (demo)
 journalctl -u goeland-demo-reset -f   # in another terminal, to follow the generation
 ```
+
+Options of `install.sh`:
+
+| Option | Effect |
+| --- | --- |
+| `-b <binary>` | The binary to install (default: `goeland-server-linux-amd64` next to the script, else the one already installed) |
+| `-l fr\|en` | Demo language, written only into env files the script creates (default `fr`) |
+| `-t` | Also enable the nightly reset timer (03:30) |
+| `-n` | Install only: do not generate the demo nor start the server |
 
 `install.sh` is idempotent; it:
 
@@ -91,7 +107,27 @@ systemctl start goeland-demo-reset.service
 journalctl -u goeland-demo-reset -f
 ```
 
-The server listens on `127.0.0.1:8080`: put a TLS reverse proxy (nginx, Caddy) in front of it.
+## Reverse proxy
+
+The server listens on `127.0.0.1:8080` only: put a TLS reverse proxy in front of it. It sets its own
+security headers (CSP, `X-Frame-Options`, ...); the proxy adds TLS, HSTS and allows uploads as large
+as `GOELAND_MAX_UPLOAD_BYTES` (100 MiB by default, nginx refuses more than 1 MB unless told). With
+nginx and a Let's Encrypt certificate (`certbot --nginx`):
+
+```nginx
+server {
+    listen 443 ssl;
+    server_name demo.example.org;
+    server_tokens off;
+    add_header Strict-Transport-Security "max-age=31536000" always;
+    client_max_body_size 100m;
+
+    location / {
+        proxy_pass http://127.0.0.1:8080/;   # not localhost: it may resolve to ::1 first
+    }
+    # ssl_certificate ... (managed by certbot)
+}
+```
 
 ## Daily use
 
@@ -106,18 +142,48 @@ Regenerate the demo the day before showing it at the latest: its work in progres
 §4.8 to §4.12) is dated from the generation day, so the deadlines (« en retard », « aujourd'hui »)
 stay true; a nightly timer also wipes what visitors changed.
 
-**A new release:** `sudo ./install.sh -b <new-binary>` from the updated directory (it keeps the
-env files and refreshes the units), or replace `/usr/local/bin/goeland-server-linux-amd64` and run
-the reset. The
-server in `verify` mode refuses to start while a migration of the new version is pending; the reset
-applies it as the schema owner.
-
 **Amount of data:** `GOELAND_DEMO_PROFILE` in `seed.env` is `demo` (the stories and their
 background of about 400 cases, [DEMO_SCRIPT.md §5](../../docs/DEMO_SCRIPT.md), a few minutes) or
 `small` (the stories only, a few seconds); a `seed.env` without it generates `small`.
 
 **English demo:** set `GOELAND_DEMO_LANG=en` in `seed.env` (and, to keep both, a second database
 and document path), then run the reset.
+
+## Upgrade to a new release
+
+1. Read the release's section of [CHANGELOG.md](../../CHANGELOG.md), above all its « Upgrading »
+   notes.
+2. Update this directory (`git pull` in the clone, or the files of the new tag): the units, the
+   samples and `install.sh` may have changed with the release.
+3. Download and check the new binary as in [Install](#install).
+4. Compare your settings with the samples: `install.sh` keeps existing env files, so a variable a
+   release added is not in them yet (`GOELAND_DEMO_PROFILE` came with v0.26.0; a missing one takes
+   its default):
+
+   ```bash
+   diff <(sed -n 's/=.*//p' seed.env.sample | sort) <(sudo sed -n 's/=.*//p' /etc/goeland/seed.env | sort)
+   diff <(sed -n 's/=.*//p' config.env.sample | sort) <(sudo sed -n 's/=.*//p' /etc/goeland/config.env | sort)
+   ```
+
+5. Install and regenerate: `sudo ./install.sh -b goeland-server-linux-amd64`. It replaces the
+   binary, refreshes the units and runs the reset, which applies the new migrations as the schema
+   owner (the server in `verify` mode refuses to start while one is pending) and regenerates the
+   demo with the stories of the new version.
+6. Check the version served: `curl -s 127.0.0.1:8080/goAppInfo`.
+
+A demo is always regenerated, never migrated in place: what visitors changed is not kept.
+
+## Uninstall
+
+```bash
+systemctl disable --now goeland.service goeland-demo-reset.timer
+rm /etc/systemd/system/goeland{.service,-demo-reset.service,-demo-reset.timer} /usr/local/sbin/goeland-demo-recreate-db
+systemctl daemon-reload
+runuser -u postgres -- dropdb goeland_demo
+runuser -u postgres -- psql -c 'DROP ROLE goeland_app;' -c 'DROP ROLE goeland_owner;'
+rm -rf /etc/goeland /var/lib/goeland /usr/local/bin/goeland-server-linux-amd64
+userdel goeland
+```
 
 ## Simpler variant: one role
 
@@ -138,3 +204,18 @@ migrates at startup; the two-role setup above is the one production uses.
   not generate (perhaps a real one). The reset never drops it; drop it yourself if it is disposable.
 - **Password prompts from `psql`:** the root step uses the `postgres` OS user over the socket; if
   `pg_hba.conf` does not allow `peer` for `local` connections of `postgres`, restore that line.
+- **Uploads fail with « 413 Request Entity Too Large »:** the reverse proxy limits the request size
+  (`client_max_body_size` with nginx, see [Reverse proxy](#reverse-proxy)).
+- **The reset is slow:** profile `demo` writes some 8,000 requests (about two minutes on a laptop);
+  `TimeoutStartSec=15min` in `goeland-demo-reset.service` leaves room for a small server.
+
+## See also
+
+- [docs/DEMO_SCRIPT.md](../../docs/DEMO_SCRIPT.md): the demo users, the stories to show (§6 gives an
+  order) and the background.
+- [.env_sample](../../.env_sample): every variable the server reads, with its default.
+- [docs/PRODUCTION_READINESS.md](../../docs/PRODUCTION_READINESS.md): what a real deployment needs
+  beyond this demo (authentication, backups, object storage, ...).
+- [deployments/k8s/README.md](../k8s/README.md): the same server on Kubernetes.
+- [scripts/demo_seed.sh](../../scripts/demo_seed.sh): the demo on a development machine, from the
+  sources.

@@ -8,6 +8,14 @@ change bumps the **minor** version and features/fixes bump the **patch** version
 
 ## [Unreleased]
 
+## [0.26.0] - 2026-11-27
+
+The demo on a server of its own, and a demo that looks lived in. `deployments/systemd/` serves the
+synthetic demo from the release binary with an idempotent installer, a reset unit and a nightly
+timer; profile `demo` adds about 400 cases of background around the stories (GLD-094). Upgrading:
+no migration; on a systemd demo server, add `GOELAND_DEMO_PROFILE=demo` to `/etc/goeland/seed.env`
+and follow « Upgrade to a new release » in `deployments/systemd/README.md`.
+
 ### Added
 
 - `deployments/systemd/`: the synthetic demo on a Linux server from the release binary, with a

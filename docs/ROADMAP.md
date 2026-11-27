@@ -1,6 +1,6 @@
 # Goéland POC Roadmap
 
-Tracked version: **v0.25.0**.
+Tracked version: **v0.26.0**.
 
 This document is the source of truth for implementation order, scope and task
 state. How the built system relates to the spec (active: v2) lives in
@@ -55,9 +55,10 @@ the S3 storage on Garage (GLD-020) in v0.23.0; the synthetic demo generator (GLD
 mode and banner (GLD-085, GLD-081), the document preview (GLD-087), the access log of every subject
 (GLD-089), « Mon tableau de bord » (GLD-088), the administration of units and groups by
 administrators only (GLD-090) and the users list (GLD-091) in v0.24.0; the user administration with
-pre-registration (GLD-093) and the demo's work in progress (GLD-092) in v0.25.0. Next: the demo's
-background data (GLD-094) and the map source (GLD-080), then an MCP server over the API restricted
-to the demo data.
+pre-registration (GLD-093) and the demo's work in progress (GLD-092) in v0.25.0; the demo's
+background data (GLD-094) and its systemd deployment in v0.26.0. Next: the places of the demo in
+QGIS (GLD-095) and the map source (GLD-080), then an MCP server over the API restricted to the demo
+data.
 
 ## Cross-cutting quality
 
@@ -676,7 +677,7 @@ placed on Swiss territory.
   with their grants, and the English labels of the seeded catalogues; `TestDemoSeed` checks them;
   the task lists show a case reference with its namespace. Released in v0.25.0; what remains is
   GLD-094.
-- [~] **GLD-094 — Demo: background data and finishing** (split from GLD-092 at the v0.25.0
+- [x] **GLD-094 — Demo: background data and finishing** (split from GLD-092 at the v0.25.0
   release): the background of profile `demo` (DEMO_SCRIPT §5, a few hundred actors, cases,
   documents and things around the heroes), the places of §4.8 to §4.12 edited in QGIS (provisional
   points today), and the SYSTEM timeline titles of the task module (« Tâche terminée »), still
@@ -685,7 +686,12 @@ placed on Swiss territory.
   about two minutes, chosen by `GOELAND_DEMO_PROFILE` (`scripts/demo_seed.sh`, the systemd reset);
   `TestDemoSeedBackground` runs it capped at two cases per type. The task titles need no change:
   the SPA already shows those SYSTEM entries in the interface language from their metadata (the
-  stored title stays the server's French, like every system entry). Remains: the QGIS places.
+  stored title stays the server's French, like every system entry). Released in v0.26.0; what
+  remains is GLD-095.
+- [ ] **GLD-095 — Demo: places edited in QGIS** (split from GLD-094 at the v0.26.0 release): the
+  product owner places the things of §4.8 to §4.12 (chalet des Pins, cedar of the Roseraie park,
+  Café du Lac terrace, house rue du Midi 7) in QGIS, in `pkg/demodata/geodata/things.geojson`
+  (provisional points today).
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native
