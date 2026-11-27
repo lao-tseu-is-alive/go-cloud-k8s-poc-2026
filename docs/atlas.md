@@ -120,6 +120,7 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `deployments/k8s/10-postgis.yaml` — Disposable PostGIS Deployment and Service for the smoke deployment.
 - `deployments/k8s/20-goeland.yaml` — ConfigMap, hardened Deployment with probes, and Service of the Goéland server.
 - `deployments/systemd/README.md` — The synthetic demo on a Linux server from the release binary: two database roles, the server and reset units, install, daily use, troubleshooting.
+- `deployments/systemd/install.sh` — Idempotent installer and upgrader of the systemd demo: binary, service user, database roles with generated passwords, env files, units, then the first reset.
 - `deployments/systemd/goeland.service` — systemd unit of the Goéland server (runtime role, demo mode, hardened).
 - `deployments/systemd/goeland-demo-reset.service` — One-shot unit regenerating the demo: stops the server, recreates the database, runs `demo-seed` and `migrate` as the schema owner, starts the server again.
 - `deployments/systemd/goeland-demo-reset.timer` — Optional nightly run of the demo reset.

@@ -58,3 +58,4 @@ cmd/goeland-server/goeland-front/dist
 history.txt
 # Real settings of a deployment (only the *.sample files are tracked)
 deployments/**/*.env
+deployments/systemd/goeland-server-*

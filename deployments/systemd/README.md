@@ -7,6 +7,7 @@ The server runs as a systemd service; a second, one-shot service regenerates the
 
 | File | Installed as | Role |
 | --- | --- | --- |
+| `install.sh` | (run from this directory) | Installs or upgrades everything below, then generates the demo |
 | `goeland.service` | `/etc/systemd/system/goeland.service` | The server, as the runtime role, in demo mode |
 | `goeland-demo-reset.service` | `/etc/systemd/system/goeland-demo-reset.service` | Stops the server, recreates the demo, starts the server again |
 | `goeland-demo-reset.timer` | `/etc/systemd/system/goeland-demo-reset.timer` | Optional: the reset every night at 03:30 |
@@ -41,10 +42,32 @@ Prerequisites: PostgreSQL with PostGIS (`postgresql-16-postgis-3` or similar) on
 systemd 249 or later, and the release binary from
 [GitHub Releases](https://github.com/lao-tseu-is-alive/go-cloud-k8s-poc-2026/releases).
 
+Copy this directory to the server, put the release binary next to `install.sh`, then:
+
+```bash
+sudo ./install.sh            # French demo; -l en for English, -t for the nightly reset
+journalctl -u goeland-demo-reset -f   # in another terminal, to follow the generation
+```
+
+`install.sh` is idempotent; it:
+
+- installs the binary;
+- creates the `goeland` user and its directories;
+- creates the two database roles with random passwords. They are written into `/etc/goeland/*.env` and never printed;
+- installs the env files and the units;
+- runs the reset, which generates the demo and starts the server.
+
+Whatever already exists is kept: a user, a directory, a role, or an env file. A role that existed
+before the script ran has a password the script cannot know. In that case, it stops and asks you to
+set that password in the env file. `-n` installs without generating the demo.
+
+The same steps by hand:
+
 ```bash
 # 1. The binary and the service user
 install -m 755 goeland-server-linux-amd64 /usr/local/bin/
-useradd --system --no-create-home --shell /usr/sbin/nologin goeland
+groupadd --system goeland
+useradd --system --no-create-home --shell /usr/sbin/nologin --gid goeland goeland
 install -d -o goeland -g goeland -m 750 /var/lib/goeland /var/lib/goeland/demo_documents
 
 # 2. The database roles (once)
@@ -83,7 +106,9 @@ Regenerate the demo the day before showing it at the latest: its work in progres
 §4.8 to §4.12) is dated from the generation day, so the deadlines (« en retard », « aujourd'hui »)
 stay true; a nightly timer also wipes what visitors changed.
 
-**A new release:** replace `/usr/local/bin/goeland-server-linux-amd64`, then run the reset. The
+**A new release:** `sudo ./install.sh -b <new-binary>` from the updated directory (it keeps the
+env files and refreshes the units), or replace `/usr/local/bin/goeland-server-linux-amd64` and run
+the reset. The
 server in `verify` mode refuses to start while a migration of the new version is pending; the reset
 applies it as the schema owner.
 
