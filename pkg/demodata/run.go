@@ -130,14 +130,7 @@ func (r *run) newCase(user, caseType, number, title, description, unit string, c
 }
 
 // namespaceOf is the reference namespace of a demo case type.
-func namespaceOf(caseType string) string {
-	for _, ct := range caseTypes {
-		if ct.code == caseType {
-			return ct.namespace
-		}
-	}
-	return ""
-}
+func namespaceOf(caseType string) string { return caseTypeByCode(caseType).namespace }
 
 // link relates two subjects.
 func (r *run) link(user, source, target, typeCode string) {

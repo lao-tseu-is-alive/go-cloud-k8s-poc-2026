@@ -161,7 +161,9 @@ These are deliberate betterments beyond the spec — keep them:
   `goeland-server demo-seed` generates a fictional municipality through the API as its demo users
   (docs/DEMO_SCRIPT.md), and `GOELAND_AUTH_MODE=demo` lets a visitor pick a demo user, guarded by
   the `demo_dataset` marker so it can never serve real data. Rationale: show the POC, and later
-  an MCP server, without any real data reaching an audience or an online model.
+  an MCP server, without any real data reaching an audience or an online model. Profile `demo`
+  (2026-11-27, GLD-094) adds a reproducible background of about 400 cases, so lists and counts
+  look like a municipality's.
 
 ### 3b. Neutral architectural choices (vs the spec's suggestions)
 

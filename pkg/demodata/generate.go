@@ -15,11 +15,17 @@ const (
 	// ProfileSmall is the catalogue, the org chart, the demo users and the hero
 	// cases: what the tests and a first demo need.
 	ProfileSmall = "small"
+	// ProfileDemo adds the background around the heroes (DEMO_SCRIPT §5):
+	// about 300 actors, 400 cases, 1,500 documents and 200 things, so lists,
+	// filters, search and counts mean something.
+	ProfileDemo = "demo"
 )
 
-// profiles lists the profiles built so far; "demo" (background volume) and
-// "volume" come later.
-var profiles = []string{ProfileSmall}
+// profiles lists the profiles built so far.
+var profiles = []string{ProfileSmall, ProfileDemo}
+
+// Profiles returns the profiles the generator supports, smallest first.
+func Profiles() []string { return slices.Clone(profiles) }
 
 // setupTime is when the fictional municipality set up its catalogue, org
 // chart and users, before the oldest story.
@@ -30,13 +36,17 @@ var errNotAdmin = errors.New("the demo administrator is not ADMIN: bootstrap it 
 
 // Options selects what Generate writes.
 type Options struct {
-	// Profile is the amount of data (ProfileSmall).
+	// Profile is the amount of data (Profiles(); ProfileSmall by default).
 	Profile string
 	// Language is the language of every generated text (Languages(); "fr" by default).
 	Language string
 	// Clock, when set, is told the story time before each step, so the caller
 	// can re-date afterwards what the server stamped at generation time.
 	Clock func(context.Context, time.Time) error
+	// BackgroundLimit, when positive, caps the background of ProfileDemo to
+	// that many cases per case type (the tests: the full background takes
+	// about two minutes).
+	BackgroundLimit int
 	// Today is the generation day the ongoing work is dated from (§4.8 to
 	// §4.12); the zero value means today in Europe/Zurich.
 	Today time.Time
@@ -48,6 +58,9 @@ type Options struct {
 func Generate(ctx context.Context, clients *Clients, opts Options) (Report, error) {
 	if opts.Language == "" {
 		opts.Language = "fr"
+	}
+	if opts.Profile == "" {
+		opts.Profile = ProfileSmall
 	}
 	texts, err := textsFor(opts.Language)
 	if err != nil {
@@ -73,6 +86,9 @@ func Generate(ctx context.Context, clients *Clients, opts Options) (Report, erro
 	r.subsidy()
 	r.citizenReport()
 	r.ongoing(cafe, tutu)
+	if opts.Profile == ProfileDemo {
+		r.background(opts.BackgroundLimit)
+	}
 	report := Report{Profile: opts.Profile, Language: texts.Language, Counts: r.count}
 	report.Counts["users"] = len(r.users)
 	return report, r.err

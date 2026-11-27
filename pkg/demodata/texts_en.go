@@ -225,7 +225,8 @@ var textsEN = textSet{
 		HeldClosingReason: "Sign authorized",
 		HoldReason:        "Dispute pending on the sign's brightness: keep the case",
 	},
-	Ongoing: ongoingEN,
-	Groups:  groupsEN,
-	Seeded:  &seededEN,
+	Ongoing:    ongoingEN,
+	Groups:     groupsEN,
+	Background: backgroundEN,
+	Seeded:     &seededEN,
 }

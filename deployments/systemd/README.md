@@ -112,6 +112,10 @@ the reset. The
 server in `verify` mode refuses to start while a migration of the new version is pending; the reset
 applies it as the schema owner.
 
+**Amount of data:** `GOELAND_DEMO_PROFILE` in `seed.env` is `demo` (the stories and their
+background of about 400 cases, [DEMO_SCRIPT.md §5](../../docs/DEMO_SCRIPT.md), a few minutes) or
+`small` (the stories only, a few seconds); a `seed.env` without it generates `small`.
+
 **English demo:** set `GOELAND_DEMO_LANG=en` in `seed.env` (and, to keep both, a second database
 and document path), then run the reset.
 

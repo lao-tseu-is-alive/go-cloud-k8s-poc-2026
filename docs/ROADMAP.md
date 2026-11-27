@@ -676,11 +676,16 @@ placed on Swiss territory.
   with their grants, and the English labels of the seeded catalogues; `TestDemoSeed` checks them;
   the task lists show a case reference with its namespace. Released in v0.25.0; what remains is
   GLD-094.
-- [ ] **GLD-094 — Demo: background data and finishing** (split from GLD-092 at the v0.25.0
+- [~] **GLD-094 — Demo: background data and finishing** (split from GLD-092 at the v0.25.0
   release): the background of profile `demo` (DEMO_SCRIPT §5, a few hundred actors, cases,
   documents and things around the heroes), the places of §4.8 to §4.12 edited in QGIS (provisional
   points today), and the SYSTEM timeline titles of the task module (« Tâche terminée »), still
-  French in an English demo.
+  French in an English demo. Progress 2026-11-27: profile `demo` (`pkg/demodata/background.go`,
+  fixed seed): 314 actors, 413 cases, 1,526 documents and 212 things with the stories, generated in
+  about two minutes, chosen by `GOELAND_DEMO_PROFILE` (`scripts/demo_seed.sh`, the systemd reset);
+  `TestDemoSeedBackground` runs it capped at two cases per type. The task titles need no change:
+  the SPA already shows those SYSTEM entries in the interface language from their metadata (the
+  stored title stays the server's French, like every system entry). Remains: the QGIS places.
 - [ ] **GLD-080 — Configurable map source**: the thing map is wired to the City of Lausanne's
   WMTS (`utils/lausanneMap.ts`, its origin in the CSP of `headers.go`). Make the source a
   deployment setting: Lausanne (default, unchanged) or swisstopo (`wmts.geo.admin.ch`, native

@@ -15,6 +15,11 @@ change bumps the **minor** version and features/fixes bump the **patch** version
   PostgreSQL password for root) and an optional nightly timer, sample settings for the two database
   roles, an idempotent `install.sh` (roles created with generated passwords, never printed) and a
   README.
+- Demo profile `demo` (GLD-094, DEMO_SCRIPT §5): the stories with a background of about 300
+  actors, 400 cases over every case type, 1,500 documents and 200 things of the last four years,
+  drawn from a fixed seed, so lists, filters, search and counts mean something; chosen with
+  `GOELAND_DEMO_PROFILE` (`scripts/demo_seed.sh`, `deployments/systemd/seed.env`, where it is the
+  default). It takes about two minutes; `small` stays the default of `demo-seed` and of the script.
 
 ## [0.25.0] - 2026-11-26
 

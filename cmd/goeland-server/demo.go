@@ -49,7 +49,7 @@ var errNotBrandNew = errors.New("the database already holds data: demo-seed only
 // listens on a network.
 func demoSeedMain(args []string) int {
 	flags := flag.NewFlagSet("demo-seed", flag.ContinueOnError)
-	profile := flags.String("profile", demodata.ProfileSmall, "amount of data: "+demodata.ProfileSmall)
+	profile := flags.String("profile", demodata.ProfileSmall, "amount of data: "+strings.Join(demodata.Profiles(), ", "))
 	lang := flags.String("lang", "fr", "language of the generated texts: "+strings.Join(demodata.Languages(), ", "))
 	if err := flags.Parse(args); err != nil {
 		return 2
@@ -133,7 +133,7 @@ func generateDemo(ctx context.Context, clients *demodata.Clients, ownerURL strin
 
 // demoDataset is the marker row demo-seed writes once the demo is generated.
 type demoDataset struct {
-	// Profile is the generator profile of the demo (small, ...).
+	// Profile is the generator profile of the demo (small or demo).
 	Profile string
 	// Language is the language of the generated texts.
 	Language string

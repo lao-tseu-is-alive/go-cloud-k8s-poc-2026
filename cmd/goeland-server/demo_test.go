@@ -57,6 +57,52 @@ func TestDemoSeed(t *testing.T) {
 	}
 }
 
+// TestDemoSeedBackground generates profile demo with a capped background
+// (two cases per case type) and checks it: each background case is filed in
+// its type's namespace above the stories' numbers, with its requester, the
+// things are of every kind, and the due list still holds the two cases of §4.5.
+func TestDemoSeedBackground(t *testing.T) {
+	const perType = 2
+	adminDSN := coretest.TestDatabaseURL(t, "demo-seed test")
+	ownerDSN := freshDatabase(t, adminDSN)
+	cfg := e2eBlobStore(t)
+	cfg.DatabaseURL, cfg.DBMigrate = runtimeDatabaseURL(t, ownerDSN), migrateVerify
+	cfg.demoOwnerURL = ownerDSN
+	cfg.MaxConnections, cfg.RequestTimeout, cfg.MaxUploadBytes, cfg.ShutdownPeriod = 4, 10*time.Second, 1<<20, time.Second
+	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
+	opts := demodata.Options{Profile: demodata.ProfileDemo, Language: "en", BackgroundLimit: perType}
+	report, err := runDemoSeed(t.Context(), cfg, opts, quiet)
+	if err != nil {
+		t.Fatalf("demo-seed: %v", err)
+	}
+	if want := 13 + 9*perType; report.Counts["cases"] != want || report.Profile != demodata.ProfileDemo {
+		t.Errorf("profile %s, %d cases, want %d", report.Profile, report.Counts["cases"], want)
+	}
+	pool, err := pgxpool.New(t.Context(), ownerDSN)
+	if err != nil {
+		t.Fatalf("connect: %v", err)
+	}
+	defer pool.Close()
+	var namespaces string
+	var background, withRequester, lines, polygons int
+	err = pool.QueryRow(t.Context(), `
+		WITH bg AS (SELECT s.id, s.business_ref_namespace AS ns FROM subject_ref s
+		             WHERE s.kind = 'CASE' AND split_part(s.business_ref, '-', 2)::int >= 151)
+		SELECT (SELECT string_agg(DISTINCT ns, ',' ORDER BY ns) FROM bg),
+		       (SELECT count(*) FROM bg),
+		       (SELECT count(DISTINCT r.source_subject_id) FROM subject_relationship r JOIN bg ON bg.id = r.source_subject_id
+		          JOIN relationship_type rt ON rt.id = r.relationship_type_id WHERE rt.code = 'CASE_HAS_ACTOR_REQUESTER'),
+		       (SELECT count(*) FROM thing WHERE GeometryType(geom) = 'LINESTRING'),
+		       (SELECT count(*) FROM thing WHERE GeometryType(geom) = 'POLYGON')`).Scan(&namespaces, &background, &withRequester, &lines, &polygons)
+	if err != nil {
+		t.Fatalf("read the background: %v", err)
+	}
+	if namespaces != "ABA,GEN,ODP,OPC,OPP,PLA,REC,SIG,SUB" || background != 9*perType || withRequester != background || lines == 0 || polygons == 0 {
+		t.Errorf("background: namespaces=%q cases=%d with requester=%d streets=%d parcels=%d", namespaces, background, withRequester, lines, polygons)
+	}
+	checkDisposalStory(t, pool)
+}
+
 // checkDemoMode serves the generated demo in demo mode: GET /config lists the
 // demo users with their public tokens, each token signs in as its user, and
 // only Alice is an administrator (GLD-085).

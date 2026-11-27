@@ -301,12 +301,14 @@ docs/                        DOCUMENTATION.md (normative doc contract), ROADMAP.
 - **Synthetic demo (GLD-079):** `scripts/demo_seed.sh [-r | -s] [-e <env-file>] [<database>] [fr|en]`
   (creates the database if missing, owner from `.env`; `-e` adds Git-ignored demo settings,
   `.env_demo.sample`; `-r` drops a previous demo first, only one carrying the `demo_dataset` marker;
-  `-s` serves the existing demo instead) runs `goeland-server demo-seed -profile small -lang fr|en`
+  `-s` serves the existing demo instead) runs `goeland-server demo-seed -profile small|demo -lang fr|en` (`GOELAND_DEMO_PROFILE`; `demo` adds
+  the background of DEMO_SCRIPT §5, `pkg/demodata/background.go`, about two minutes)
   (`cmd/goeland-server/demo.go`, `pkg/demodata`) writes docs/DEMO_SCRIPT.md into a brand-new
   database through the in-process API, each request as a demo user (tokens drawn per run, never
   a listener). Every value is invented: never sample, copy or anonymize real data into it. Every
   text lives in `texts_<lang>.go` (`TestTextsAreComplete`); `TestDemoSeed` runs it per language in
-  a fresh database as the runtime role, so an API change that breaks the demo fails `make check`.
+  a fresh database as the runtime role (`TestDemoSeedBackground` runs profile `demo` capped by
+  `Options.BackgroundLimit`), so an API change that breaks the demo fails `make check`.
 - `make fmt` — `gofmt -w .` (repo-wide; prefer `gofmt -w` on touched files only).
 - `make generate` — lint protos, update buf deps, regenerate Go + ConnectRPC + OpenAPI.
   OpenAPI paths come from the `google.api.http` annotations; when you add an RPC,

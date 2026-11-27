@@ -491,6 +491,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 ## Synthetic demo data (`pkg/demodata`)
 
 - `pkg/demodata/doc.go` — Package documentation: a fictional municipality generated through the public API, one demo user at a time, every value invented (GLD-079).
+- `pkg/demodata/background.go` — The background of profile `demo` (DEMO_SCRIPT §5): actors, things and some 400 cases of the last four years drawn from a fixed seed, each created at its first use by the agent of the case's unit.
+- `pkg/demodata/background_names.go` — Invented first and last names, companies, streets and the map area of the background (the same in every language).
+- `pkg/demodata/background_test.go` — Unit tests of the background: texts of every case type in every language, unique actor names, geometries inside the map, reference numbers.
 - `pkg/demodata/catalogue.go` — The demo's org chart, case types, document types and retention policies, and their creation (or relabelling of the seeded ones) by the demo administrator; the users' memberships and roles.
 - `pkg/demodata/consult.go` — Consultations of the stories (GLD-089): opening cases, things and documents (with the download) as a demo user, and the refusals a story expects.
 - `pkg/demodata/content.go` — Generated document bytes: one-page PDFs in WinAnsi Helvetica with the demo footer.
@@ -512,6 +515,9 @@ remove or rename an entry in the same change as the file. Git-ignored outputs
 - `pkg/demodata/run.go` — One generation: typed API calls that stop at the first refused request, and the steps the stories use (actors, things, cases, documents, timeline, tasks, circulations).
 - `pkg/demodata/session.go` — The demo users, their bearer tokens (drawn per run for demo-seed, public for the demo mode) and verifier, and the Connect clients (plus the upload endpoint) sending each request as one user.
 - `pkg/demodata/texts.go` — The catalogue of generated texts and the supported languages.
+- `pkg/demodata/texts_background.go` — Text types of the background: case subjects per type, thing names, document lines, timeline entries.
+- `pkg/demodata/texts_background_fr.go` — French texts of the background.
+- `pkg/demodata/texts_background_en.go` — English texts of the background.
 - `pkg/demodata/texts_en.go` — English texts of the demo.
 - `pkg/demodata/texts_ongoing.go` — Text types of the ongoing work, of the demo groups and of the seeded catalogue labels, and the seeded codes an English demo relabels.
 - `pkg/demodata/texts_ongoing_fr.go` — French texts of the ongoing work and of the demo groups.

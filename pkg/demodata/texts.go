@@ -43,6 +43,8 @@ type textSet struct {
 	Ongoing ongoingText
 	// Groups names the demo security groups.
 	Groups groupsText
+	// Background is the background of profile demo (§5).
+	Background backgroundText
 	// Seeded relabels the seeded catalogues; nil keeps the migrations' French.
 	Seeded *seededText
 }

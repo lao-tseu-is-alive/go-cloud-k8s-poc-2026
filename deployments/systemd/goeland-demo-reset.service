@@ -20,7 +20,7 @@ WorkingDirectory=/var/lib/goeland
 EnvironmentFile=/etc/goeland/seed.env
 # "+" runs this step as root: drop and recreate the demo database, empty its documents.
 ExecStartPre=+/usr/local/sbin/goeland-demo-recreate-db
-ExecStart=/usr/local/bin/goeland-server-linux-amd64 demo-seed -profile small -lang ${GOELAND_DEMO_LANG}
+ExecStart=/usr/local/bin/goeland-server-linux-amd64 demo-seed -profile ${GOELAND_DEMO_PROFILE} -lang ${GOELAND_DEMO_LANG}
 # Grants the runtime role (GOELAND_DB_APP_ROLE) on the freshly migrated schema.
 ExecStartPost=/usr/local/bin/goeland-server-linux-amd64 migrate
 TimeoutStartSec=15min

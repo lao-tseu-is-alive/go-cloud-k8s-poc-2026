@@ -16,7 +16,8 @@
 #
 # The database is the argument, else DB_NAME of the -e file itself (never the
 # one of .env: that is the development database). The language is the
-# argument, else GOELAND_DEMO_LANG, else fr. The superuser connection is
+# argument, else GOELAND_DEMO_LANG, else fr; the profile is GOELAND_DEMO_PROFILE
+# (small, or demo with the background of DEMO_SCRIPT §5), else small. The superuser connection is
 # GOELAND_DEMO_ADMIN_URL, by default postgres@DB_HOST:DB_PORT (local trust
 # authentication).
 #
@@ -176,6 +177,8 @@ main() {
     local lang="${positional[1]:-${GOELAND_DEMO_LANG:-fr}}"
     [[ "$database" =~ ^[a-z][a-z0-9_]{0,62}$ ]] || fail "give the database as argument or as DB_NAME in the -e file (lower-case letters, digits and _)"
     [[ "$lang" =~ ^(fr|en)$ ]] || fail "language must be fr or en"
+    local profile="${GOELAND_DEMO_PROFILE:-small}"
+    [[ "$profile" =~ ^(small|demo)$ ]] || fail "GOELAND_DEMO_PROFILE must be small or demo"
     local owner="${DB_USER:-}"
     local host="${DB_HOST:-127.0.0.1}"
     local port="${DB_PORT:-5432}"
@@ -202,8 +205,8 @@ main() {
         echo "## serving the demo database ${database} (auth mode ${GOELAND_AUTH_MODE:-jwt}), documents in the ${GOELAND_BLOB_STORE:-file} store"
         exec go run ./cmd/goeland-server
     fi
-    echo "## generating the demo (profile small, language ${lang}) into ${database}, documents in the ${GOELAND_BLOB_STORE:-file} store"
-    go run ./cmd/goeland-server demo-seed -profile small -lang "$lang"
+    echo "## generating the demo (profile ${profile}, language ${lang}) into ${database}, documents in the ${GOELAND_BLOB_STORE:-file} store"
+    go run ./cmd/goeland-server demo-seed -profile "$profile" -lang "$lang"
     echo "## done: serve it with DB_NAME=${database}, DATABASE_URL unset and the same blob store settings;"
     echo "## or with -s and GOELAND_AUTH_MODE=demo: pick a demo user on the sign-in screen (docs/DEMO_SCRIPT.md §7)"
 }

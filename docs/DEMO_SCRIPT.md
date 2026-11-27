@@ -231,9 +231,15 @@ and relationship types and their roles).
 ## 5. Background data
 
 Generated around the heroes so lists, filters, search and counts mean something (profile `demo`,
-orders of magnitude): about 300 actors, 400 cases spread over the 8 types, 1,500 documents and
-200 things, including a tree to fell and a café terrace on the public domain. The profile `small`
-keeps the heroes and a minimal background for the tests.
+`pkg/demodata/background.go`): about 300 actors, 400 cases spread over the 8 types and the generic
+request, 1,500 documents and 200 things (buildings, some with their parcel, trees, street sections,
+signs) in the town north of the lake. Each case is filed on a working day of the last four years by
+the agent of its unit, with its requester, the thing it concerns and its documents; most are taken
+in hand, answered and closed, one in ten stays in progress, and none carries an open task, so
+« Mes tâches » keeps to the stories. Closed within four years, none is due for disposal: the due
+list keeps the two cases of §4.5. The names, addresses and dates are drawn from a fixed seed, so
+every generation writes the same background; its reference numbers start at 151 in each namespace
+and year, above the stories'. The profile `small` keeps the heroes only, for the tests.
 
 ## 6. Suggested demo order
 
@@ -261,7 +267,8 @@ scripts/demo_seed.sh -e .env_demo_small_fr other_db en   # arguments win over th
 Settings come from the environment, then from the `-e` file, then from `.env`: the demo file
 only holds what differs and **no secret** (the database role and its password stay in `.env`).
 The database is the argument, else `DB_NAME` of the `-e` file itself, never the development
-database of `.env`; the language is the argument, else `GOELAND_DEMO_LANG`, else `fr`.
+database of `.env`; the language is the argument, else `GOELAND_DEMO_LANG`, else `fr`; the profile
+is `GOELAND_DEMO_PROFILE`, else `small` (`demo` adds the background of §5, about two minutes).
 
 `demo-seed` must connect as the schema owner (the role that ran the migrations, `DB_USER` with the
 script) to re-date the history it generated. The script creates the database when it does not
